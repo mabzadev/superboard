@@ -113,6 +113,12 @@ const fr: Record<string, string> = {
 	"Wait for event": "Attendre un événement",
 	"Continue when an event happens, or after a time limit":
 		"Continuer quand un événement se produit, ou après un délai maximal",
+	"Send a template through an approved sender": "Envoyer un modèle avec un expéditeur approuvé",
+	"Webhook, SMS, push, WhatsApp or Slack": "Webhook, SMS, push, WhatsApp ou Slack",
+	"Wait before continuing": "Attendre avant de continuer",
+	"Split by subscriber or event data": "Séparer selon les données de l’abonné ou de l’événement",
+	"Write subscriber attributes": "Enregistrer des attributs de l’abonné",
+	"Finish the journey": "Terminer le parcours",
 	"Wait until": "Attendre jusqu’à",
 	"Time limit in hours": "Délai maximal en heures",
 	"If the event happens": "Si l’événement se produit",

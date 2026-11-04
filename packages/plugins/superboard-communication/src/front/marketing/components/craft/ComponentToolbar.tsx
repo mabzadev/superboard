@@ -2,6 +2,8 @@ import { useEditor } from "@craftjs/core";
 import { ArrowUp, Move, Trash2 } from "lucide-react";
 import { useCallback } from "react";
 
+import { useStudioI18n } from "../../studio/i18n.js";
+
 export const ComponentToolbar = ({
 	label,
 	nodeId,
@@ -12,6 +14,7 @@ export const ComponentToolbar = ({
 	dragConnector: (ref: HTMLElement) => void;
 }) => {
 	const { actions, query } = useEditor();
+	const { t } = useStudioI18n();
 
 	const toolbarRef = useCallback((node: HTMLDivElement | null) => {
 		if (!node) return;
@@ -35,7 +38,7 @@ export const ComponentToolbar = ({
 			className="flex bg-blue-400 text-secondary items-center absolute -left-[1px] gap-2 p-1 z-[999] shadow-md"
 		>
 			<div className="text-sm">
-				<label>{label}</label>
+				<label>{t(label)}</label>
 			</div>
 			<button
 				onClick={() => {
@@ -43,7 +46,7 @@ export const ComponentToolbar = ({
 					if (parentId) actions.selectNode(parentId);
 				}}
 				className="flex rounded cursor-pointer"
-				aria-label="Move component up"
+				aria-label={t("Move component up")}
 			>
 				<ArrowUp className="h-[18px] w-[18px]" />
 			</button>
@@ -53,14 +56,14 @@ export const ComponentToolbar = ({
 				}}
 				className="flex rounded cursor-grab"
 				role="button"
-				aria-label="Drag to reorder"
+				aria-label={t("Drag to reorder")}
 			>
 				<Move className="h-[18px] w-[18px]" />
 			</div>
 			<button
 				className="cursor-pointer"
 				onClick={() => actions.delete(nodeId)}
-				aria-label="Delete component"
+				aria-label={t("Delete component")}
 			>
 				<Trash2 className="h-[18px] w-[18px]" />
 			</button>

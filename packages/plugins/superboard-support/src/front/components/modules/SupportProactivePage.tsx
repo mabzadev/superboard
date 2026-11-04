@@ -31,8 +31,26 @@ import {
 	useSupportCollection,
 } from "../support/SupportUi.js";
 
+const optionLabels: Record<string, string> = {
+	one_off: "One off",
+	ongoing: "Ongoing",
+	all_customers: "All customers",
+	active_customers: "Active customers",
+	new_customers: "New customers",
+	returning_customers: "Returning customers",
+};
+const optionLabel = (value: string) => optionLabels[value] ?? value.replaceAll("_", " ");
+
+const actionMessages = {
+	schedule: "Campaign scheduled",
+	start: "Campaign started",
+	pause: "Campaign paused",
+	resume: "Campaign resumed",
+	cancel: "Campaign cancelled",
+};
+
 export default function SupportProactivePage({ inboxId }: { inboxId?: string } = {}) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 
 	const { selectedProject } = useProjectSelection();
 	const projectRef = selectedProject?.id;
@@ -70,9 +88,9 @@ export default function SupportProactivePage({ inboxId }: { inboxId?: string } =
 				scheduledAt: "",
 			}));
 			await campaigns.reload();
-			showSuccessNotification("Proactive Support campaign created");
+			showSuccessNotification(t("Proactive Support campaign created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -90,9 +108,9 @@ export default function SupportProactivePage({ inboxId }: { inboxId?: string } =
 					: undefined;
 			await runSupportCampaignAction(projectRef, campaign.id, action, scheduledAt);
 			await campaigns.reload();
-			showSuccessNotification(`Campaign ${action === "start" ? "started" : `${action}d`}`);
+			showSuccessNotification(t(actionMessages[action]));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -235,10 +253,12 @@ export default function SupportProactivePage({ inboxId }: { inboxId?: string } =
 												{campaign.message}
 											</p>
 											<p className="mt-2 text-xs text-muted-foreground">
-												{campaign.campaign_type.replaceAll("_", " ")} {t("· Inbox")}
-												{campaign.inbox_id}
+												{t("{type} · Inbox {inbox}", {
+													type: t(optionLabel(campaign.campaign_type)),
+													inbox: campaign.inbox_id,
+												})}
 												{campaign.scheduled_at
-													? ` · ${new Date(campaign.scheduled_at).toLocaleString()}`
+													? ` · ${new Date(campaign.scheduled_at).toLocaleString(locale)}`
 													: ""}
 											</p>
 										</div>
@@ -302,15 +322,16 @@ function Select({
 	onChange: (value: string) => void;
 	options: string[];
 }) {
+	const { t } = useSupportI18n();
 	return (
 		<select
-			className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm capitalize"
+			className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
 			value={value}
 			onChange={(event) => onChange(event.target.value)}
 		>
 			{options.map((option) => (
 				<option key={option} value={option}>
-					{option.replaceAll("_", " ")}
+					{t(optionLabel(option))}
 				</option>
 			))}
 		</select>

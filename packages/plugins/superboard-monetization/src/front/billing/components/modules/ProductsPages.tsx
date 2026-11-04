@@ -28,6 +28,7 @@ import {
 	DialogTitle,
 } from "@superboard/front-ui/ui/dialog.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
+import { Label } from "@superboard/front-ui/ui/label.js";
 import { Switch } from "@superboard/front-ui/ui/switch.js";
 import {
 	Table,
@@ -38,8 +39,8 @@ import {
 	TableRow,
 } from "@superboard/front-ui/ui/table.js";
 import { Tabs, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
-import { Archive, Check, Eye, Pencil, Plus, RefreshCw, RotateCcw, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Archive, Check, Eye, Pencil, Plus, RefreshCw, RotateCcw, Search, X } from "lucide-react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 import { useMonetizationI18n } from "../../../i18n.js";
 import {
@@ -77,17 +78,31 @@ import {
 import { BillingLedgerMigration } from "./BillingLedgerMigration.js";
 
 const selectClass = "h-9 w-full rounded-md border bg-background px-3 text-sm";
+const filterSelectClass = "h-[34px] rounded-md border bg-background px-3 text-sm";
 const asIdentifier = (value: string) => value.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
 const enabled = (value: number | boolean) => value === true || value === 1;
-const money = (micros = 0, currency = "USD") =>
-	new Intl.NumberFormat(undefined, { style: "currency", currency }).format(micros / 1_000_000);
-const dateTime = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
+const money = (micros = 0, currency = "USD", locale?: string) =>
+	new Intl.NumberFormat(locale, { style: "currency", currency }).format(micros / 1_000_000);
+const dateTime = (value?: string | null, locale?: string) =>
+	value ? new Date(value).toLocaleString(locale) : "—";
 const defaultFrom = () => new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10);
 const today = () => new Date().toISOString().slice(0, 10);
+const purchaseStatuses = ["pending", "active", "expired", "cancelled", "refunded", "failed"];
+const storeLabels: Record<string, string> = {
+	apple: "Apple",
+	google: "Google",
+	stripe: "Stripe",
+	manual: "Manual",
+};
+const environmentLabels: Record<string, string> = {
+	sandbox: "Sandbox",
+	production: "Production",
+};
 
 export function PurchasesPage() {
 	const { t, locale } = useMonetizationI18n();
 	const { selectedProject } = useProjectSelection();
+	const fieldId = useId();
 	const [items, setItems] = useState<Purchase[]>([]);
 	const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
 	const [products, setProducts] = useState<Product[]>([]);
@@ -101,6 +116,7 @@ export function PurchasesPage() {
 		product_id: "",
 		store: "",
 	});
+	const [recording, setRecording] = useState(false);
 	const [customerId, setCustomerId] = useState("");
 	const [productId, setProductId] = useState("");
 	const [store, setStore] = useState("manual");
@@ -143,13 +159,21 @@ export function PurchasesPage() {
 			);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setLoading(false);
 		}
-	}, [filters, selectedProject]);
+	}, [filters, locale, selectedProject]);
 
-	useEffect(() => void load(), [load]);
+	useEffect(() => {
+		Promise.resolve()
+			.then(load)
+			.catch(() => undefined);
+	}, [load]);
+
+	const setFilter = (name: keyof typeof filters, value: string) => {
+		setFilters((current) => ({ ...current, [name]: value }));
+	};
 
 	const recordPurchase = async () => {
 		if (!selectedProject || !customerId || !productId || !transactionId) return;
@@ -168,10 +192,11 @@ export function PurchasesPage() {
 				payload: { source: "dashboard" },
 			});
 			setTransactionId("");
+			setRecording(false);
 			showSuccessNotification(t("Sandbox purchase recorded"));
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -190,7 +215,7 @@ export function PurchasesPage() {
 			showSuccessNotification(t("Purchase refunded"));
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -199,7 +224,7 @@ export function PurchasesPage() {
 		try {
 			setPurchaseDetail(await getPurchase(selectedProject.id, purchaseId));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -218,10 +243,14 @@ export function PurchasesPage() {
 			);
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
+	const labelFor = (labels: Record<string, string>, value: string) => {
+		const message = labels[value];
+		return message ? t(message) : value;
+	};
 	const totals = statistics?.totals;
 	return (
 		<ModulePage
@@ -237,65 +266,84 @@ export function PurchasesPage() {
 					<BillingLedgerMigration
 						key={selectedProject.id}
 						projectRef={selectedProject.id}
-						onComplete={() => setFilters((value) => ({ ...value, from: "", to: "" }))}
+						onComplete={() => {
+							setFilters((value) => ({ ...value, from: "", to: "" }));
+						}}
 					/>
-					<Card>
-						<CardHeader>
-							<CardTitle>{t("Filters")}</CardTitle>
-							<CardDescription>
-								{t("Results stay scoped to the selected project and environment.")}
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-							<LabeledInput
-								label={t("From")}
-								type="date"
-								value={filters.from}
-								onChange={(from) => setFilters((value) => ({ ...value, from }))}
-							/>
-							<LabeledInput
-								label={t("To")}
-								type="date"
-								value={filters.to}
-								onChange={(to) => setFilters((value) => ({ ...value, to }))}
-							/>
-							<LabeledInput
-								label={t("Financial customer")}
+					<div className="flex flex-wrap items-center gap-2">
+						<div className="relative min-w-40 flex-1">
+							<Search className="absolute start-3 top-2.5 size-4 text-muted-foreground" />
+							<Input
+								type="search"
+								className="ps-9"
+								aria-label={t("Financial customer")}
+								placeholder={t("Financial customer")}
 								value={filters.customer_id}
-								placeholder={t("customer_123")}
-								onChange={(customer_id) => setFilters((value) => ({ ...value, customer_id }))}
+								onChange={(event) => {
+									setFilter("customer_id", event.currentTarget.value);
+								}}
 							/>
-							<LabeledSelect
-								label={t("Product")}
-								value={filters.product_id}
-								onChange={(product_id) => setFilters((value) => ({ ...value, product_id }))}
-								options={products.map((item) => ({
-									value: item.id,
-									label: item.display_name,
-								}))}
-								empty={t("All products")}
-							/>
-							<LabeledSelect
-								label={t("Store")}
-								value={filters.store}
-								onChange={(store) => setFilters((value) => ({ ...value, store }))}
-								options={["apple", "google", "stripe", "manual"].map((value) => ({
-									value,
-									label: t(value),
-								}))}
-								empty={t("All stores")}
-							/>
-							<LabeledSelect
-								label={t("Status")}
-								value={filters.status}
-								onChange={(status) => setFilters((value) => ({ ...value, status }))}
-								options={["pending", "active", "expired", "cancelled", "refunded", "failed"].map(
-									(value) => ({ value, label: value }),
-								)}
-								empty={t("All statuses")}
-							/>
-						</CardContent>
-					</Card>
+						</div>
+						<Input
+							type="date"
+							className="w-auto"
+							aria-label={t("From")}
+							value={filters.from}
+							onChange={(event) => {
+								setFilter("from", event.currentTarget.value);
+							}}
+						/>
+						<Input
+							type="date"
+							className="w-auto"
+							aria-label={t("To")}
+							value={filters.to}
+							onChange={(event) => {
+								setFilter("to", event.currentTarget.value);
+							}}
+						/>
+						<FilterSelect
+							label={t("Product")}
+							value={filters.product_id}
+							onChange={(value) => {
+								setFilter("product_id", value);
+							}}
+							options={products.map((item) => ({ value: item.id, label: item.display_name }))}
+							empty={t("All products")}
+						/>
+						<FilterSelect
+							label={t("Store")}
+							value={filters.store}
+							onChange={(value) => {
+								setFilter("store", value);
+							}}
+							options={Object.entries(storeLabels).map(([value, message]) => ({
+								value,
+								label: t(message),
+							}))}
+							empty={t("All stores")}
+						/>
+						<FilterSelect
+							label={t("Status")}
+							value={filters.status}
+							onChange={(value) => {
+								setFilter("status", value);
+							}}
+							options={purchaseStatuses.map((value) => ({ value, label: statusLabel(t, value) }))}
+							empty={t("All statuses")}
+						/>
+						<Button
+							variant="outline"
+							size="icon"
+							aria-label={t("Refresh purchases")}
+							disabled={loading}
+							onClick={() => {
+								load().catch(() => undefined);
+							}}
+						>
+							<RefreshCw className={loading ? "animate-spin" : ""} />
+						</Button>
+					</div>
 
 					<Card>
 						<CardHeader>
@@ -330,7 +378,7 @@ export function PurchasesPage() {
 										<TableCell>{Number(row.units_sold).toLocaleString(locale)}</TableCell>
 										<TableCell>{Number(row.first_time_purchases).toLocaleString(locale)}</TableCell>
 										<TableCell>
-											{money(Number(row.revenue_micros), row.currency || "USD")}
+											{money(Number(row.revenue_micros), row.currency || "USD", locale)}
 										</TableCell>
 										<TableCell>{Number(row.cancellations).toLocaleString(locale)}</TableCell>
 									</TableRow>
@@ -345,27 +393,22 @@ export function PurchasesPage() {
 							label={t("Active subscriptions")}
 							value={String(totals?.active_subscriptions ?? 0)}
 						/>
-						<Metric label={t("Gross revenue")} value={money(totals?.gross_revenue_micros)} />
-						<Metric label={t("Refunded")} value={money(totals?.refunded_micros)} />
-						<Metric label={t("Net revenue")} value={money(totals?.net_revenue_micros)} />
+						<Metric
+							label={t("Gross revenue")}
+							value={money(totals?.gross_revenue_micros, "USD", locale)}
+						/>
+						<Metric label={t("Refunded")} value={money(totals?.refunded_micros, "USD", locale)} />
+						<Metric
+							label={t("Net revenue")}
+							value={money(totals?.net_revenue_micros, "USD", locale)}
+						/>
 						<Metric label={t("Refunds")} value={String(totals?.refunds ?? 0)} />
 					</div>
 
 					<Card>
-						<CardHeader className="flex-row items-center justify-between gap-3">
-							<div>
-								<CardTitle>{t("Revenue timeline")}</CardTitle>
-								<CardDescription>{t("Daily volume and gross revenue.")}</CardDescription>
-							</div>
-							<Button
-								variant="outline"
-								size="icon"
-								aria-label={t("Refresh purchases")}
-								disabled={loading}
-								onClick={() => void load()}
-							>
-								<RefreshCw className={loading ? "animate-spin" : ""} />
-							</Button>
+						<CardHeader>
+							<CardTitle>{t("Revenue timeline")}</CardTitle>
+							<CardDescription>{t("Daily volume and gross revenue.")}</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<DataTable
@@ -376,159 +419,99 @@ export function PurchasesPage() {
 									<TableRow key={row.bucket}>
 										<TableCell>{row.bucket}</TableCell>
 										<TableCell>{row.purchases.toLocaleString(locale)}</TableCell>
-										<TableCell>{money(row.revenue_micros)}</TableCell>
+										<TableCell>{money(row.revenue_micros, "USD", locale)}</TableCell>
 									</TableRow>
 								))}
 							</DataTable>
 						</CardContent>
 					</Card>
 
-					<div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-						<Card>
-							<CardHeader>
-								<CardTitle>{t("Record sandbox purchase")}</CardTitle>
-								<CardDescription>
-									{t(
-										"Validate catalog, entitlement and subscription flows without touching a live store.",
-									)}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-3">
-								<Input
-									placeholder={t("Financial customer ID")}
-									value={customerId}
-									onChange={(event) => setCustomerId(event.target.value)}
-								/>
-								<select
-									aria-label={t("Product")}
-									className={selectClass}
-									value={productId}
-									onChange={(event) => setProductId(event.target.value)}
-								>
-									<option value="">{t("Select a product")}</option>
-									{products
-										.filter((item) => item.status === "active")
-										.map((item) => (
-											<option key={item.id} value={item.id}>
-												{item.display_name}
-											</option>
-										))}
-								</select>
-								<select
-									aria-label={t("Store")}
-									className={selectClass}
-									value={store}
-									onChange={(event) => setStore(event.target.value)}
-								>
-									<option value="manual">{t("Manual")}</option>
-									<option value="apple">{t("Apple")}</option>
-									<option value="google">{t("Google")}</option>
-									<option value="stripe">{t("Stripe")}</option>
-								</select>
-								<Input
-									placeholder={t("External transaction ID")}
-									value={transactionId}
-									onChange={(event) => setTransactionId(event.target.value)}
-								/>
-								<div className="grid grid-cols-[1fr_90px] gap-2">
-									<Input
-										type="number"
-										min="0"
-										step="0.01"
-										placeholder={t("Price")}
-										value={price}
-										onChange={(event) => setPrice(event.target.value)}
-									/>
-									<Input
-										aria-label={t("Currency")}
-										maxLength={3}
-										value={currency}
-										onChange={(event) => setCurrency(event.target.value.toUpperCase())}
-									/>
-								</div>
-								<Button
-									className="w-full"
-									disabled={!customerId || !productId || !transactionId || Number(price) < 0}
-									onClick={() => void recordPurchase()}
-								>
-									<Plus />
-									{t("Record purchase")}
-								</Button>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
+					<Card>
+						<CardHeader className="flex-row flex-wrap items-center justify-between gap-3 space-y-0">
+							<div className="space-y-1.5">
 								<CardTitle>{t("Purchase history")}</CardTitle>
 								<CardDescription>
 									{t("{count} matching transactions", { count: items.length })}
 								</CardDescription>
-							</CardHeader>
-							<CardContent className="overflow-x-auto">
-								<DataTable
-									headers={[
-										t("Product"),
-										t("Customer"),
-										t("Store"),
-										t("Status"),
-										t("Purchased"),
-										t("Expires"),
-										t("Amount"),
-										"",
-									]}
-									empty={t("No purchases match these filters.")}
-								>
-									{items.map((item) => (
-										<TableRow key={item.id}>
-											<TableCell>
-												<b>{item.product_name || item.product_identifier || item.product_id}</b>
-												<code className="block max-w-40 truncate text-xs text-muted-foreground">
-													{item.external_transaction_id}
-												</code>
-											</TableCell>
-											<TableCell>{item.external_customer_id}</TableCell>
-											<TableCell className="capitalize">
-												{item.store}
-												<span className="block text-xs text-muted-foreground">
-													{item.environment}
-												</span>
-											</TableCell>
-											<TableCell>
-												<StatusBadge status={item.status} />
-											</TableCell>
-											<TableCell>{dateTime(item.purchased_at)}</TableCell>
-											<TableCell>{dateTime(item.expires_at)}</TableCell>
-											<TableCell>
-												{money(item.purchased_price_micros, item.currency || "USD")}
-											</TableCell>
-											<TableCell>
-												<div className="flex gap-1">
-													<Button
-														variant="ghost"
-														size="icon"
-														aria-label={t("View purchase {transaction}", {
-															transaction: item.external_transaction_id,
-														})}
-														onClick={() => void showPurchase(item.id)}
-													>
-														<Eye />
-													</Button>
-													<Button
-														variant="outline"
-														size="sm"
-														disabled={item.status === "refunded"}
-														onClick={() => void refund(item)}
-													>
-														<RotateCcw />
-														{t("Refund")}
-													</Button>
-												</div>
-											</TableCell>
-										</TableRow>
-									))}
-								</DataTable>
-							</CardContent>
-						</Card>
-					</div>
+							</div>
+							<Button
+								onClick={() => {
+									setRecording(true);
+								}}
+							>
+								<Plus />
+								{t("Record sandbox purchase")}
+							</Button>
+						</CardHeader>
+						<CardContent className="overflow-x-auto">
+							<DataTable
+								headers={[
+									t("Product"),
+									t("Customer"),
+									t("Store"),
+									t("Status"),
+									t("Purchased"),
+									t("Expires"),
+									t("Amount"),
+									"",
+								]}
+								empty={t("No purchases match these filters.")}
+							>
+								{items.map((item) => (
+									<TableRow key={item.id}>
+										<TableCell>
+											<b>{item.product_name || item.product_identifier || item.product_id}</b>
+											<code className="block max-w-40 truncate text-xs text-muted-foreground">
+												{item.external_transaction_id}
+											</code>
+										</TableCell>
+										<TableCell>{item.external_customer_id}</TableCell>
+										<TableCell>
+											{labelFor(storeLabels, item.store)}
+											<span className="block text-xs text-muted-foreground">
+												{labelFor(environmentLabels, item.environment)}
+											</span>
+										</TableCell>
+										<TableCell>
+											<StatusBadge status={item.status} />
+										</TableCell>
+										<TableCell>{dateTime(item.purchased_at, locale)}</TableCell>
+										<TableCell>{dateTime(item.expires_at, locale)}</TableCell>
+										<TableCell>
+											{money(item.purchased_price_micros, item.currency || "USD", locale)}
+										</TableCell>
+										<TableCell>
+											<div className="flex gap-1">
+												<Button
+													variant="ghost"
+													size="icon"
+													aria-label={t("View purchase {transaction}", {
+														transaction: item.external_transaction_id,
+													})}
+													onClick={() => {
+														showPurchase(item.id).catch(() => undefined);
+													}}
+												>
+													<Eye />
+												</Button>
+												<Button
+													variant="outline"
+													size="sm"
+													disabled={item.status === "refunded"}
+													onClick={() => {
+														refund(item).catch(() => undefined);
+													}}
+												>
+													<RotateCcw />
+													{t("Refund")}
+												</Button>
+											</div>
+										</TableCell>
+									</TableRow>
+								))}
+							</DataTable>
+						</CardContent>
+					</Card>
 
 					{purchaseDetail && (
 						<Card>
@@ -543,19 +526,21 @@ export function PurchasesPage() {
 									variant="ghost"
 									size="icon"
 									aria-label={t("Close purchase detail")}
-									onClick={() => setPurchaseDetail(undefined)}
+									onClick={() => {
+										setPurchaseDetail(undefined);
+									}}
 								>
 									<X />
 								</Button>
 							</CardHeader>
-							<CardContent className="grid gap-6 lg:grid-cols-2">
-								<div>
-									<p className="mb-2 text-sm font-medium">{t("Granted entitlements")}</p>
+							<CardContent className="space-y-6">
+								<section>
+									<h3 className="mb-2 text-sm font-medium">{t("Granted entitlements")}</h3>
 									<div className="space-y-2">
 										{purchaseDetail.entitlements.map((item) => (
 											<div key={item.id} className="rounded-md border p-3">
 												<b>{item.display_name}</b>
-												<code className="ml-2 text-xs text-muted-foreground">
+												<code className="ms-2 text-xs text-muted-foreground">
 													{item.identifier}
 												</code>
 											</div>
@@ -566,9 +551,9 @@ export function PurchasesPage() {
 											</p>
 										)}
 									</div>
-								</div>
-								<div>
-									<p className="mb-2 text-sm font-medium">{t("Refund history")}</p>
+								</section>
+								<section>
+									<h3 className="mb-2 text-sm font-medium">{t("Refund history")}</h3>
 									<div className="space-y-2">
 										{purchaseDetail.refunds.map((item) => (
 											<div
@@ -577,7 +562,7 @@ export function PurchasesPage() {
 											>
 												<span>
 													<StatusBadge status={item.status} />
-													<span className="ml-2 text-xs text-muted-foreground">
+													<span className="ms-2 text-xs text-muted-foreground">
 														{item.reason || t("No reason")}
 													</span>
 												</span>
@@ -585,6 +570,7 @@ export function PurchasesPage() {
 													{money(
 														item.amount_micros,
 														item.currency || purchaseDetail.currency || "USD",
+														locale,
 													)}
 												</b>
 											</div>
@@ -593,7 +579,7 @@ export function PurchasesPage() {
 											<p className="text-sm text-muted-foreground">{t("No refunds recorded.")}</p>
 										)}
 									</div>
-								</div>
+								</section>
 							</CardContent>
 						</Card>
 					)}
@@ -627,15 +613,17 @@ export function PurchasesPage() {
 										<TableCell>
 											<StatusBadge status={item.status} />
 										</TableCell>
-										<TableCell>{dateTime(item.current_period_ends_at)}</TableCell>
+										<TableCell>{dateTime(item.current_period_ends_at, locale)}</TableCell>
 										<TableCell>{enabled(item.auto_renew) ? t("Auto-renew") : t("Off")}</TableCell>
-										<TableCell>{dateTime(item.updated_at)}</TableCell>
+										<TableCell>{dateTime(item.updated_at, locale)}</TableCell>
 										<TableCell>
 											{item.status === "cancelled" || item.status === "expired" ? (
 												<Button
 													size="sm"
 													variant="outline"
-													onClick={() => void changeSubscription(item, "active")}
+													onClick={() => {
+														changeSubscription(item, "active").catch(() => undefined);
+													}}
 												>
 													<RotateCcw />
 													{t("Restore")}
@@ -644,7 +632,9 @@ export function PurchasesPage() {
 												<Button
 													size="sm"
 													variant="outline"
-													onClick={() => void changeSubscription(item, "cancelled")}
+													onClick={() => {
+														changeSubscription(item, "cancelled").catch(() => undefined);
+													}}
 												>
 													<X />
 													{t("Cancel")}
@@ -656,6 +646,127 @@ export function PurchasesPage() {
 							</DataTable>
 						</CardContent>
 					</Card>
+
+					<Dialog open={recording} onOpenChange={setRecording}>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>{t("Record sandbox purchase")}</DialogTitle>
+								<DialogDescription>
+									{t(
+										"Validate catalog, entitlement and subscription flows without touching a live store.",
+									)}
+								</DialogDescription>
+							</DialogHeader>
+							<form
+								className="space-y-4"
+								onSubmit={(event) => {
+									event.preventDefault();
+									recordPurchase().catch(() => undefined);
+								}}
+							>
+								<div className="grid gap-1">
+									<Label htmlFor={`${fieldId}-customer`}>{t("Financial customer ID")}</Label>
+									<Input
+										id={`${fieldId}-customer`}
+										required
+										value={customerId}
+										onChange={(event) => {
+											setCustomerId(event.currentTarget.value);
+										}}
+									/>
+								</div>
+								<label className="grid gap-1 text-sm font-medium">
+									{t("Product")}
+									<select
+										className={selectClass}
+										value={productId}
+										onChange={(event) => {
+											setProductId(event.currentTarget.value);
+										}}
+									>
+										<option value="">{t("Select a product")}</option>
+										{products
+											.filter((item) => item.status === "active")
+											.map((item) => (
+												<option key={item.id} value={item.id}>
+													{item.display_name}
+												</option>
+											))}
+									</select>
+								</label>
+								<label className="grid gap-1 text-sm font-medium">
+									{t("Store")}
+									<select
+										className={selectClass}
+										value={store}
+										onChange={(event) => {
+											setStore(event.currentTarget.value);
+										}}
+									>
+										<option value="manual">{t("Manual")}</option>
+										<option value="apple">{t("Apple")}</option>
+										<option value="google">{t("Google")}</option>
+										<option value="stripe">{t("Stripe")}</option>
+									</select>
+								</label>
+								<div className="grid gap-1">
+									<Label htmlFor={`${fieldId}-transaction`}>{t("External transaction ID")}</Label>
+									<Input
+										id={`${fieldId}-transaction`}
+										required
+										value={transactionId}
+										onChange={(event) => {
+											setTransactionId(event.currentTarget.value);
+										}}
+									/>
+								</div>
+								<div className="grid grid-cols-[1fr_90px] gap-2">
+									<div className="grid gap-1">
+										<Label htmlFor={`${fieldId}-price`}>{t("Price")}</Label>
+										<Input
+											id={`${fieldId}-price`}
+											type="number"
+											min="0"
+											step="0.01"
+											value={price}
+											onChange={(event) => {
+												setPrice(event.currentTarget.value);
+											}}
+										/>
+									</div>
+									<div className="grid gap-1">
+										<Label htmlFor={`${fieldId}-currency`}>{t("Currency")}</Label>
+										<Input
+											id={`${fieldId}-currency`}
+											maxLength={3}
+											value={currency}
+											onChange={(event) => {
+												setCurrency(event.currentTarget.value.toUpperCase());
+											}}
+										/>
+									</div>
+								</div>
+								<DialogFooter>
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => {
+											setRecording(false);
+										}}
+									>
+										{t("Cancel")}
+									</Button>
+									<Button
+										type="submit"
+										disabled={!customerId || !productId || !transactionId || Number(price) < 0}
+									>
+										<Plus />
+										{t("Record purchase")}
+									</Button>
+								</DialogFooter>
+							</form>
+						</DialogContent>
+					</Dialog>
 				</div>
 			)}
 		</ModulePage>
@@ -2078,13 +2189,14 @@ function StatusBadge({ status }: { status: string }) {
 	const destructive = ["failed", "refunded", "cancelled", "expired", "archived"].includes(status);
 	const positive = ["active", "succeeded", "trialing", "grace_period"].includes(status);
 	return (
-		<Badge
-			variant={destructive ? "destructive" : positive ? "default" : "outline"}
-			className="capitalize"
-		>
-			{t(status).replaceAll("_", " ")}
+		<Badge variant={destructive ? "destructive" : positive ? "default" : "outline"}>
+			{statusLabel(t, status)}
 		</Badge>
 	);
+}
+function statusLabel(t: (message: string) => string, status: string) {
+	const label = t(status).replaceAll("_", " ");
+	return label.charAt(0).toUpperCase() + label.slice(1);
 }
 function RowActions({ onEdit, onArchive }: { onEdit: () => void; onArchive?: () => void }) {
 	return (
@@ -2116,7 +2228,7 @@ function LabeledInput({
 		</label>
 	);
 }
-function LabeledSelect({
+function FilterSelect({
 	label,
 	value,
 	onChange,
@@ -2130,20 +2242,20 @@ function LabeledSelect({
 	empty: string;
 }) {
 	return (
-		<label className="space-y-1 text-xs">
-			{label}
-			<select
-				className={selectClass}
-				value={value}
-				onChange={(event) => onChange(event.target.value)}
-			>
-				<option value="">{empty}</option>
-				{options.map((option) => (
-					<option key={option.value} value={option.value}>
-						{option.label}
-					</option>
-				))}
-			</select>
-		</label>
+		<select
+			aria-label={label}
+			className={filterSelectClass}
+			value={value}
+			onChange={(event) => {
+				onChange(event.currentTarget.value);
+			}}
+		>
+			<option value="">{empty}</option>
+			{options.map((option) => (
+				<option key={option.value} value={option.value}>
+					{option.label}
+				</option>
+			))}
+		</select>
 	);
 }

@@ -81,19 +81,19 @@ try {
 				page.getByText(fr ? "Boîte d’envoi" : "Delivery outbox", { exact: true }),
 			).toHaveCount(0);
 			const first = page.getByRole("tab", {
-				name: fr ? "Paramètres d’envoi" : "Delivery settings",
+				name: fr ? "Expéditeurs et domaines" : "Senders & domains",
 				exact: true,
 			});
 			await first.focus();
 			await first.press("ArrowRight");
 			await expect(
 				page.getByRole("tab", {
-					name: fr ? "Webhooks marketing" : "Marketing webhooks",
+					name: fr ? "Préférences d’envoi" : "Sending preferences",
 					exact: true,
 				}),
 			).toHaveAttribute("aria-selected", "true");
 			for (const [tab, endpoint] of [
-				["delivery", marketing],
+				["delivery", email],
 				["email", email],
 			]) {
 				await open(tab, locale);
@@ -108,12 +108,14 @@ try {
 					await page
 						.getByPlaceholder(fr ? "Serveur SMTP" : "SMTP host", { exact: true })
 						.fill("smtp.invalid");
-					await page.locator('input[type="password"]').fill("issue82-local-test-secret");
+					await page.locator('input[type="password"]').first().fill("issue82-local-test-secret");
 				}
 				await page
 					.getByPlaceholder(fr ? "Adresse d’expédition" : "From email", { exact: true })
 					.fill("issue82@example.invalid");
-				const enabled = page.getByRole("switch");
+				const enabled = page.getByRole("switch", {
+					name: fr ? "Disponible comme expéditeur de secours" : "Enabled for failover pool",
+				});
 				await enabled.uncheck();
 				console.log(
 					"Saving",
@@ -164,7 +166,7 @@ try {
 						page.getByPlaceholder(fr ? "Serveur SMTP" : "SMTP host", { exact: true }),
 					).toHaveValue("smtp.invalid");
 				if (settings.provider !== "aws-ses" && profile.provider !== "aws-ses")
-					await expect(page.locator('input[type="password"]')).toHaveValue("");
+					await expect(page.locator('input[type="password"]').first()).toHaveValue("");
 				const saveAgain = page.waitForResponse(
 					(r) =>
 						(r.url() === endpoint + "/settings/smtp" && r.request().method() === "PUT") ||
@@ -189,18 +191,31 @@ try {
 			]) {
 				await open(tab, locale);
 				const provider = `issue82_${locale}_${Date.now()}`;
+				if (endpoint === marketing) {
+					await page.getByLabel(fr ? "Événements pour" : "Events for", { exact: true }).click();
+					await page
+						.getByRole("option", {
+							name: fr ? "Campagnes et parcours" : "Campaigns and journeys",
+							exact: true,
+						})
+						.click();
+				}
 				await page
-					.getByPlaceholder(fr ? "Identifiant du fournisseur" : "Provider identifier", {
+					.getByLabel(fr ? "Identifiant du fournisseur" : "Provider identifier", {
 						exact: true,
 					})
 					.fill(provider);
-				await page.locator('input[type="password"]').fill("short");
+				const secret = page.getByLabel(
+					fr ? "Secret partagé (16 caractères minimum)" : "Shared secret (minimum 16 characters)",
+					{ exact: true },
+				);
+				await secret.fill("short");
 				const create = page.getByRole("button", {
 					name: fr ? "Créer le point de réception" : "Create endpoint",
 					exact: true,
 				});
 				await expect(create).toBeDisabled();
-				await page.locator('input[type="password"]').fill("issue82-local-webhook-secret");
+				await secret.fill("issue82-local-webhook-secret");
 				const saved = page.waitForResponse(
 					(r) =>
 						r.url() === endpoint + "/settings/provider-webhooks" && r.request().method() === "POST",
@@ -215,12 +230,20 @@ try {
 				assert.ok(!JSON.stringify(rows).includes("issue82-local-webhook-secret"));
 				await page.reload();
 				await hydrate();
-				await expect(page.getByText(provider, { exact: true })).toBeVisible();
+				await expect(page.getByText(provider)).toBeVisible();
 			}
 			await page.goto(
 				new URL(`/communication/marketing-email?tab=settings&lang=${locale}`, origin).href,
 			);
-			await page.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])').waitFor();
+			await page.waitForURL((url) => url.pathname === "/communication/settings");
+			await hydrate();
+			await expect(
+				page.getByRole("tab", {
+					name: fr ? "Expéditeurs et domaines" : "Senders & domains",
+					exact: true,
+				}),
+			).toHaveAttribute("aria-selected", "true");
+			await open("languages", locale);
 			const frequency = page.getByLabel(
 				fr ? "Intervalle marketing (heures)" : "Marketing frequency (hours)",
 				{ exact: true },
@@ -229,11 +252,16 @@ try {
 			const saved = page.waitForResponse(
 				(r) => r.url() === studio && r.request().method() === "PUT",
 			);
-			await page.getByRole("button", { name: fr ? "Enregistrer" : "Save", exact: true }).click();
+			await page
+				.locator("section")
+				.filter({ has: frequency })
+				.last()
+				.getByRole("button", { name: fr ? "Enregistrer" : "Save", exact: true })
+				.click();
 			assert.equal((await saved).status(), 200);
 			assert.equal((await read(studio)).marketing_frequency_hours, fr ? 47 : 46);
 			await page.reload();
-			await page.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])').waitFor();
+			await hydrate();
 			await expect(frequency).toHaveValue(fr ? "47" : "46");
 			await open("configuration", locale);
 			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
@@ -256,7 +284,7 @@ try {
 			const result = await checked.json();
 			assert.ok(result.checkedAt);
 			const inventory = result.diagnostic;
-			assert.equal(inventory.pluginId, "supbrd-plug-communication");
+			assert.equal(inventory.pluginId, "superboard-communication");
 			assert.ok(
 				inventory.workers.some((worker) => worker.service === "email" && worker.physicalName),
 			);

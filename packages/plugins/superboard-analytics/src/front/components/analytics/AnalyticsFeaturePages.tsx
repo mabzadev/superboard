@@ -885,7 +885,9 @@ export function AnalyticsFeedbackPage() {
 					<Card>
 						<CardHeader>
 							<CardTitle>{t("Recent responses")}</CardTitle>
-							<CardDescription>Ratings of 4–5 are positive; 1–2 require attention.</CardDescription>
+							<CardDescription>
+								{t("Ratings of 4–5 are positive; 1–2 require attention.")}
+							</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<FeatureTable

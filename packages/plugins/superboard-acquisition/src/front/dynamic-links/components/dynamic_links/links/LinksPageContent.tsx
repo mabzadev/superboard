@@ -130,7 +130,7 @@ import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
 
 export default function LinksPageContent({ campaignId }: { campaignId?: string }) {
 	const { itemId, selectItem } = useAcquisitionSelection();
-	const { tr } = useFlowI18n();
+	const { tr, locale } = useFlowI18n();
 	const embedded = useEmbeddedPage();
 	const { selectedProject } = useProjectSelection();
 	const {
@@ -161,16 +161,9 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 	const [selectedColumns, setSelectedColumns] = useState([
 		"ads_platform",
 		"title",
-		"tags",
+		"destination",
 		"views",
-		"opens",
 		"installs",
-		"reinstalls",
-		"reactivations",
-		"app_opens",
-		"user_referred",
-		"time_spent",
-		"revenue",
 		"date",
 	]);
 
@@ -383,22 +376,23 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 	};
 
 	const columns = useMemo(
-		() => getLinksTableColumns(sort, setSort, openEdit),
-		[openEdit, sort, setSort],
+		() => getLinksTableColumns(sort, setSort, openEdit, tr, locale),
+		[openEdit, sort, setSort, tr, locale],
 	);
 
 	const columnOptions = [
-		{ label: "Tags", value: "tags" },
-		{ label: "Views", value: "views" },
-		{ label: "Opens", value: "opens" },
-		{ label: "Installs", value: "installs" },
-		{ label: "Reinstalls", value: "reinstalls" },
-		{ label: "Reactivations", value: "reactivations" },
-		{ label: "App opens", value: "app_opens" },
-		{ label: "Users referred", value: "user_referred" },
-		{ label: "Time spent", value: "time_spent" },
-		{ label: "Revenue", value: "revenue" },
-		{ label: "Date", value: "date" },
+		{ label: tr("Destination"), value: "destination" },
+		{ label: tr("Tags"), value: "tags" },
+		{ label: tr("Views"), value: "views" },
+		{ label: tr("Opens"), value: "opens" },
+		{ label: tr("Installs"), value: "installs" },
+		{ label: tr("Reinstalls"), value: "reinstalls" },
+		{ label: tr("Reactivations"), value: "reactivations" },
+		{ label: tr("App opens"), value: "app_opens" },
+		{ label: tr("Users referred"), value: "user_referred" },
+		{ label: tr("Time spent"), value: "time_spent" },
+		{ label: tr("Revenue"), value: "revenue" },
+		{ label: tr("Date"), value: "date" },
 	];
 
 	const selectedLink = links.find((link) => link.id === itemId);

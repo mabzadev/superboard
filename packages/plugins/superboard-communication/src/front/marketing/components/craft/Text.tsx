@@ -13,6 +13,7 @@ import {
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 
+import { useStudioI18n } from "../../studio/i18n.js";
 import { ComponentToolbar } from "./ComponentToolbar.js";
 
 const TEXT_SIZE_MAP: Record<string, string> = {
@@ -134,6 +135,7 @@ export const TextComponent = ({
 };
 
 export const TextSettings = () => {
+	const { t } = useStudioI18n();
 	const {
 		actions: { setProp },
 		props,
@@ -144,7 +146,7 @@ export const TextSettings = () => {
 	return (
 		<div className="flex flex-col gap-3 px-3 py-2">
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Size</Label>
+				<Label className="text-xs text-muted-foreground">{t("Size")}</Label>
 				<Select
 					value={props.textSize}
 					onValueChange={(v) => setProp((p: Record<string, string>) => (p.textSize = v))}
@@ -153,9 +155,9 @@ export const TextSettings = () => {
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="text-sm">Small</SelectItem>
-						<SelectItem value="text-base">Base</SelectItem>
-						<SelectItem value="text-lg">Large</SelectItem>
+						<SelectItem value="text-sm">{t("Small")}</SelectItem>
+						<SelectItem value="text-base">{t("Base")}</SelectItem>
+						<SelectItem value="text-lg">{t("Large")}</SelectItem>
 						<SelectItem value="text-xl">XL</SelectItem>
 						<SelectItem value="text-2xl">2XL</SelectItem>
 					</SelectContent>
@@ -163,7 +165,7 @@ export const TextSettings = () => {
 			</div>
 
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Align</Label>
+				<Label className="text-xs text-muted-foreground">{t("Align")}</Label>
 				<RadioGroup className="flex gap-3">
 					{[
 						{ value: "text-left", label: "Left", id: "t1" },
@@ -181,7 +183,7 @@ export const TextSettings = () => {
 								checked={props.textAlign === item.value}
 							/>
 							<Label htmlFor={item.id} className="text-xs">
-								{item.label}
+								{t(item.label)}
 							</Label>
 						</div>
 					))}
@@ -189,7 +191,7 @@ export const TextSettings = () => {
 			</div>
 
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Weight</Label>
+				<Label className="text-xs text-muted-foreground">{t("Weight")}</Label>
 				<RadioGroup className="grid grid-cols-2 gap-2">
 					{[
 						{ value: "font-light", label: "Light", id: "f1" },
@@ -208,7 +210,7 @@ export const TextSettings = () => {
 								checked={props.fontWeight === item.value}
 							/>
 							<Label htmlFor={item.id} className="text-xs">
-								{item.label}
+								{t(item.label)}
 							</Label>
 						</div>
 					))}
@@ -216,7 +218,7 @@ export const TextSettings = () => {
 			</div>
 
 			<div className="flex items-center justify-between">
-				<Label className="text-xs text-muted-foreground">Color</Label>
+				<Label className="text-xs text-muted-foreground">{t("Color")}</Label>
 				<div className="flex items-center gap-1.5">
 					<Input
 						value={props.textColor}

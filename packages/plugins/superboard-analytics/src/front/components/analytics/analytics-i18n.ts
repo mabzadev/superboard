@@ -55,6 +55,8 @@ const french: Record<string, string> = {
 	"Installation Drop": "Baisse des installations",
 	"Purchase Drop": "Baisse des achats",
 	"No Data": "Absence de données",
+	"Metric Threshold": "Seuil d’indicateur",
+	Custom: "Personnalisée",
 	"Crash Rate": "Taux de plantages",
 	"Crash Count": "Nombre de plantages",
 	Conversion: "Conversion",
@@ -70,6 +72,9 @@ const french: Record<string, string> = {
 	Success: "Réussite",
 	Retrying: "Nouvelle tentative",
 	Pending: "En attente",
+	Sent: "Envoyée",
+	Partial: "Partielle",
+	Delivered: "Livré",
 	"checkout.completed": "checkout.completed",
 	"account.activated": "account.activated",
 	checkout_banner: "checkout_banner",
@@ -207,6 +212,11 @@ const french: Record<string, string> = {
 	Billing: "Facturation",
 	Server: "Serveur",
 	Sdk: "SDK",
+	Identity: "Identité",
+	System: "Système",
+	"Initial Purchase": "Premier achat",
+	"Trial Converted": "Essai converti",
+	Manual: "Manuel",
 	Dashboards: "Tableaux de bord",
 	"Build project dashboards from reusable product, revenue, stability and audience widgets.":
 		"Composez les tableaux de bord du projet avec des widgets réutilisables sur le produit, les revenus, la stabilité et l’audience.",
@@ -278,6 +288,8 @@ const french: Record<string, string> = {
 	Positive: "Positifs",
 	"Recent responses": "Réponses récentes",
 	"No feedback has been submitted yet.": "Aucun avis n’a encore été envoyé.",
+	"Ratings of 4–5 are positive; 1–2 require attention.":
+		"Les notes de 4 à 5 sont positives ; celles de 1 à 2 demandent votre attention.",
 	Cohorts: "Cohortes",
 	"Define reusable audiences from behavior and keep their estimated size current.":
 		"Créez des audiences réutilisables selon les comportements et actualisez leur taille estimée.",
@@ -415,6 +427,7 @@ const french: Record<string, string> = {
 	Bar: "Barres",
 	Pie: "Secteurs",
 	Text: "Texte",
+	Map: "Carte",
 	Private: "Privé",
 	Project: "Projet",
 	Profile: "Profil",
@@ -549,6 +562,7 @@ const interpolation: Record<"en" | "fr", Messages> = {
 		"Report updated": [["type"], " · updated ", ["date"]],
 		"Delete item": ["Delete ", ["name"]],
 		"Open incident count": [["count", "number"], " open"],
+		"Module failure": [["source"], ": ", ["message"]],
 	},
 	fr: {
 		"Quick start progress": [["complete"], " étapes essentielles sur ", ["total"], " terminées."],
@@ -596,6 +610,7 @@ const interpolation: Record<"en" | "fr", Messages> = {
 		"Open incident count": [
 			["count", "plural", { one: ["#", " ouvert"], other: ["#", " ouverts"] }],
 		],
+		"Module failure": [["source"], " : ", ["message"]],
 	},
 };
 

@@ -55,6 +55,7 @@ const columnLabels: Record<string, string> = {
 	placement_identifier: "Placement",
 	occurred_at: "Occurred",
 };
+const translatedColumns = new Set(["store", "status"]);
 const contextFields = [
 	["Country", "country"],
 	["Language", "language"],
@@ -641,7 +642,7 @@ function RecordTable({
 							<TableRow key={text(row, "id") || `${text(row, columns[0] ?? "id")}:${index}`}>
 								{columns.map((column) => (
 									<TableCell key={column} className="max-w-56 truncate">
-										{display(row[column])}
+										{translatedColumns.has(column) ? t(display(row[column])) : display(row[column])}
 									</TableCell>
 								))}
 							</TableRow>

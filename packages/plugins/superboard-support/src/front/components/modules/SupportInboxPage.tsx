@@ -65,9 +65,9 @@ import {
 } from "../../api/support/workforceService.js";
 import { useSupportI18n } from "../../i18n.js";
 
-const dateTime = (value?: string | null) =>
+const dateTime = (locale: string, value?: string | null) =>
 	value
-		? new Intl.DateTimeFormat("en", {
+		? new Intl.DateTimeFormat(locale, {
 				dateStyle: "short",
 				timeStyle: "short",
 			}).format(new Date(value))
@@ -83,6 +83,15 @@ const priorityLabel: Record<UnifiedInboxItem["priority"], string> = {
 const sourceLabel: Record<UnifiedInboxItem["source_type"], string> = {
 	conversation: "Support",
 	refund_case: "Refund case",
+};
+
+const isSourceType = (value: string): value is UnifiedInboxItem["source_type"] =>
+	Object.hasOwn(sourceLabel, value);
+
+const conversationStatusLabel: Record<string, string> = {
+	open: "Open",
+	pending: "Pending",
+	closed: "Closed",
 };
 
 export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
@@ -116,7 +125,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 		inboxes: Array<{ value: string; label: string }>;
 	}>({ agents: [], teams: [], inboxes: [] });
 	const [selectedMacroId, setSelectedMacroId] = useState("");
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 	const [query, setQuery] = useState(() =>
 		typeof window === "undefined" ? "" : inboxDeepLink(window.location.search).query,
 	);
@@ -187,25 +196,28 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 				return requested?.id || result.data?.[0]?.id || "";
 			});
 		} catch (error) {
-			showErrorNotification(error instanceof Error ? error.message : "Unable to load the Inbox");
+			showErrorNotification(error instanceof Error ? error.message : t("Unable to load the Inbox"));
 		} finally {
 			setLoading(false);
 		}
-	}, [projectId, statusFilter, typeFilter, inboxId]);
+	}, [projectId, statusFilter, typeFilter, inboxId, t]);
 
+	const selectedItemId = selected?.id;
+	const selectedSourceId = selected?.source_id;
+	const selectedSourceType = selected?.source_type;
 	const loadMessages = useCallback(async () => {
-		if (!projectId || selected?.source_type !== "conversation") {
+		if (!projectId || selectedSourceType !== "conversation" || !selectedSourceId) {
 			setMessages([]);
 			return;
 		}
 		try {
-			const result = await getInboxMessages(projectId, selected.source_id);
+			const result = await getInboxMessages(projectId, selectedSourceId);
 			setMessages(result.data || []);
 			try {
-				await markInboxConversationRead(projectId, selected.source_id);
+				await markInboxConversationRead(projectId, selectedSourceId);
 				setItems((current) =>
 					current.map((item) =>
-						item.id === selected.id
+						item.id === selectedItemId
 							? { ...item, source: { ...item.source, unread_count: 0 } }
 							: item,
 					),
@@ -213,10 +225,10 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 			} catch {}
 		} catch (error) {
 			showErrorNotification(
-				error instanceof Error ? error.message : "Unable to load the conversation",
+				error instanceof Error ? error.message : t("Unable to load the conversation"),
 			);
 		}
-	}, [projectId, selected?.id, selected?.source_id, selected?.source_type]);
+	}, [projectId, selectedItemId, selectedSourceId, selectedSourceType, t]);
 
 	useEffect(() => {
 		const requested = inboxDeepLink(window.location.search);
@@ -428,7 +440,9 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 			await Promise.all([loadMessages(), loadItems()]);
 		} catch (error) {
 			setReply(value);
-			showErrorNotification(error instanceof Error ? error.message : "Unable to send the message");
+			showErrorNotification(
+				error instanceof Error ? error.message : t("Unable to send the message"),
+			);
 		}
 	};
 
@@ -451,7 +465,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 			await loadItems();
 		} catch (error) {
 			showErrorNotification(
-				error instanceof Error ? error.message : "Unable to update the conversation",
+				error instanceof Error ? error.message : t("Unable to update the conversation"),
 			);
 		}
 	};
@@ -478,7 +492,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 	const attach = async (file?: File) => {
 		if (!file || !projectId || selected?.source_type !== "conversation") return;
 		if (file.size > 10 * 1024 * 1024) {
-			showErrorNotification("Attachments are limited to 10 MB");
+			showErrorNotification(t("Attachments are limited to 10 MB"));
 			return;
 		}
 		setUploading(true);
@@ -507,7 +521,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 			await Promise.all([loadMessages(), loadItems()]);
 		} catch (error) {
 			showErrorNotification(
-				error instanceof Error ? error.message : "Unable to send the attachment",
+				error instanceof Error ? error.message : t("Unable to send the attachment"),
 			);
 		} finally {
 			setUploading(false);
@@ -527,7 +541,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 			window.setTimeout(() => URL.revokeObjectURL(url), 0);
 		} catch (error) {
 			showErrorNotification(
-				error instanceof Error ? error.message : "Unable to download the attachment",
+				error instanceof Error ? error.message : t("Unable to download the attachment"),
 			);
 		}
 	};
@@ -541,15 +555,15 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 			await executeSupportMacro(projectId, selected.source_id, selectedMacroId);
 			setSelectedMacroId("");
 			await loadItems();
-			showSuccessNotification("Macro applied");
+			showSuccessNotification(t("Macro applied"));
 		} catch (error) {
-			showErrorNotification(error instanceof Error ? error.message : "Unable to apply macro");
+			showErrorNotification(error instanceof Error ? error.message : t("Unable to apply macro"));
 		}
 	};
 
 	return (
 		<div className="flex min-h-full flex-col overflow-hidden">
-			{!publicApiUrl && <p role="alert">{publicConfig.endpointError("Support API")}</p>}
+			{!publicApiUrl && <p role="alert">{publicConfig.endpointError(t("Support API"))}</p>}
 			<div className={`flex min-h-0 flex-1 flex-col gap-4 overflow-hidden ${inboxId ? "" : "p-6"}`}>
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					{!inboxId && (
@@ -587,48 +601,54 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 							</Button>
 						</form>
 						<select
-							aria-label="Filter by source"
+							aria-label={t("Filter by source")}
 							className="rounded-md border bg-background px-3 text-sm"
 							value={typeFilter}
 							onChange={(event) => setTypeFilter(event.target.value)}
 						>
-							<option value="all">All conversations</option>
-							<option value="conversation">Support</option>
+							<option value="all">{t("All conversations")}</option>
+							<option value="conversation">{t("Support")}</option>
 						</select>
 						<select
-							aria-label="Filter by status"
+							aria-label={t("Filter by status")}
 							className="rounded-md border bg-background px-3 text-sm"
 							value={statusFilter}
 							onChange={(event) => setStatusFilter(event.target.value)}
 						>
-							<option value="">All statuses</option>
-							<option value="open">Open</option>
-							<option value="pending">Pending</option>
-							<option value="closed">Closed</option>
+							<option value="">{t("All statuses")}</option>
+							<option value="open">{t("Open")}</option>
+							<option value="pending">{t("Pending")}</option>
+							<option value="closed">{t("Closed")}</option>
 						</select>
 						<Button variant="outline" disabled={loading} onClick={() => void loadItems()}>
 							<RefreshCw className="mr-2 h-4 w-4" />
-							Refresh
+							{t("Refresh")}
 						</Button>
 					</div>
 				</div>
 				<SectionNavigation />
 				<Alert>
 					<ShieldCheck />
-					<AlertTitle>Isolated Support runtime</AlertTitle>
+					<AlertTitle>{t("Isolated Support runtime")}</AlertTitle>
 					<AlertDescription>
-						Conversations, attachments and real-time events are handled by the dedicated Support
-						Worker and database.
+						{t(
+							"Conversations, attachments and real-time events are handled by the dedicated Support Worker and database.",
+						)}
 					</AlertDescription>
 				</Alert>
 				{degradedSources.map((source) => (
 					<Alert key={`${source.source_type}:${source.code}`} variant="destructive">
 						<AlertTitle>
-							{sourceLabel[source.source_type as UnifiedInboxItem["source_type"]] || "Inbox source"}{" "}
-							is unavailable
+							{t("{source} is unavailable", {
+								source: t(
+									isSourceType(source.source_type)
+										? sourceLabel[source.source_type]
+										: "Inbox source",
+								),
+							})}
 						</AlertTitle>
 						<AlertDescription>
-							{source.message}. Other Inbox sources continue to work.
+							{t("{message}. Other Inbox sources continue to work.", { message: source.message })}
 						</AlertDescription>
 					</Alert>
 				))}
@@ -652,7 +672,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 											)}
 									</div>
 									<Badge variant={item.priority === "urgent" ? "destructive" : "outline"}>
-										{priorityLabel[item.priority]}
+										{t(priorityLabel[item.priority])}
 									</Badge>
 								</div>
 								<div className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -660,9 +680,10 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 								</div>
 								<div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
 									<span>
-										{sourceLabel[item.source_type]} · {item.status}
+										{t(sourceLabel[item.source_type])} ·{" "}
+										{t(conversationStatusLabel[item.status] ?? item.status)}
 									</span>
-									<span>{dateTime(item.updated_at)}</span>
+									<span>{dateTime(locale, item.updated_at)}</span>
 								</div>
 							</button>
 						))}
@@ -693,20 +714,22 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 																<WifiOff className="mr-1 h-3 w-3" />
 															)}
 															{realtimeStatus === "live"
-																? "Live"
+																? t("Live")
 																: realtimeStatus === "idle"
-																	? "Offline"
-																	: "Connecting"}
+																	? t("Offline")
+																	: t("Connecting")}
 														</Badge>
 													</div>
 													<div className="truncate text-xs text-muted-foreground">
-														Customer {selected.customer_reference || "—"}
+														{t("Customer {reference}", {
+															reference: selected.customer_reference || "—",
+														})}
 													</div>
 												</div>
 											</div>
 											<div className="flex gap-2">
 												<select
-													aria-label="Priority"
+													aria-label={t("Priority")}
 													className="rounded-md border bg-background px-2 text-sm"
 													value={selected.priority}
 													onChange={(event) =>
@@ -717,12 +740,12 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 												>
 													{Object.entries(priorityLabel).map(([value, label]) => (
 														<option key={value} value={value}>
-															{label}
+															{t(label)}
 														</option>
 													))}
 												</select>
 												<select
-													aria-label="Status"
+													aria-label={t("Status")}
 													className="rounded-md border bg-background px-2 text-sm"
 													value={selected.status}
 													onChange={(event) =>
@@ -731,36 +754,36 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 														})
 													}
 												>
-													<option value="open">Open</option>
-													<option value="pending">Pending</option>
-													<option value="closed">Closed</option>
+													<option value="open">{t("Open")}</option>
+													<option value="pending">{t("Pending")}</option>
+													<option value="closed">{t("Closed")}</option>
 												</select>
 											</div>
 											<div className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-5">
 												<ConfigurationSelect
-													label="Assigned agent"
+													label={t("Assigned agent")}
 													value={String(selected.source.assigned_user_id || "")}
 													options={agents}
 													onChange={(value) => void update({ assigned_user_id: value || null })}
 												/>
 												<ConfigurationSelect
-													label="Assigned team"
+													label={t("Assigned team")}
 													value={String(selected.source.assigned_team_id || "")}
 													options={teams}
 													onChange={(value) => void update({ assigned_team_id: value || null })}
 												/>
 												<ConfigurationSelect
-													label="Inbox"
+													label={t("Inbox")}
 													value={String(selected.source.inbox_id || "")}
 													options={inboxes}
 													onChange={(value) => void update({ inbox_id: value || null })}
 												/>
 												<input
 													key={`${selected.id}:labels:${String(selected.source.labels_json || "")}`}
-													aria-label="Conversation labels"
+													aria-label={t("Conversation labels")}
 													className="rounded-md border bg-background px-3 py-2 text-sm"
 													defaultValue={conversationLabels(selected.source.labels_json).join(", ")}
-													placeholder="Labels, comma separated"
+													placeholder={t("Labels, comma separated")}
 													onBlur={(event) =>
 														void update({
 															labels: event.target.value
@@ -772,7 +795,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 												/>
 												<input
 													key={`${selected.id}:snooze:${String(selected.source.snoozed_until || "")}`}
-													aria-label="Snooze until"
+													aria-label={t("Snooze until")}
 													type="datetime-local"
 													className="rounded-md border bg-background px-3 py-2 text-sm"
 													defaultValue={localDateTime(String(selected.source.snoozed_until || ""))}
@@ -804,7 +827,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 													>
 														<p className="whitespace-pre-wrap text-sm">
 															{message.body ||
-																(message.attachment_name ? "Attachment" : "Empty message")}
+																(message.attachment_name ? t("Attachment") : t("Empty message"))}
 														</p>
 														{message.attachment_name && (
 															<Button
@@ -827,18 +850,18 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 															className={`mt-1 text-[11px] ${message.sender_kind === "agent" && message.visibility !== "private" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
 														>
 															{message.visibility === "private"
-																? "Private note"
+																? t("Private note")
 																: message.sender_kind === "agent"
-																	? "Team"
-																	: "Customer"}{" "}
-															· {dateTime(message.created_at)}
+																	? t("Team")
+																	: t("Customer")}{" "}
+															· {dateTime(locale, message.created_at)}
 														</div>
 													</Card>
 												</div>
 											))}
 											{customerTyping && (
 												<div aria-live="polite" className="text-xs text-muted-foreground">
-													Customer is typing…
+													{t("Customer is typing…")}
 												</div>
 											)}
 											<div ref={messagesEnd} />
@@ -852,7 +875,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 										>
 											<div className="mb-2 flex flex-wrap gap-2">
 												<select
-													aria-label="Insert canned response"
+													aria-label={t("Insert canned response")}
 													className="rounded-md border bg-background px-2 py-1 text-xs"
 													value=""
 													onChange={(event) => {
@@ -862,7 +885,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 														if (response) updateReply(response.content);
 													}}
 												>
-													<option value="">Insert canned response…</option>
+													<option value="">{t("Insert canned response…")}</option>
 													{cannedResponses.map((item) => (
 														<option key={item.id} value={item.id}>
 															{item.name}
@@ -870,12 +893,12 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 													))}
 												</select>
 												<select
-													aria-label="Select macro"
+													aria-label={t("Select macro")}
 													className="rounded-md border bg-background px-2 py-1 text-xs"
 													value={selectedMacroId}
 													onChange={(event) => setSelectedMacroId(event.target.value)}
 												>
-													<option value="">Select macro…</option>
+													<option value="">{t("Select macro…")}</option>
 													{macros.map((item) => (
 														<option key={item.value} value={item.value}>
 															{item.label}
@@ -889,7 +912,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 													disabled={!selectedMacroId}
 													onClick={() => void executeMacro()}
 												>
-													Apply macro
+													{t("Apply macro")}
 												</Button>
 											</div>
 											<div className="flex gap-2">
@@ -903,7 +926,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 													type="button"
 													variant="outline"
 													disabled={uploading || privateNote}
-													aria-label="Attach a file"
+													aria-label={t("Attach a file")}
 													onClick={() => fileInput.current?.click()}
 												>
 													<Paperclip className="h-4 w-4" />
@@ -915,13 +938,13 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 													onChange={(event) => updateReply(event.target.value)}
 													placeholder={
 														privateNote
-															? "Write a private note for the team…"
-															: "Reply to the customer…"
+															? t("Write a private note for the team…")
+															: t("Reply to the customer…")
 													}
 												/>
 												<Button type="submit" disabled={!reply.trim() || uploading}>
 													<Send className="mr-2 h-4 w-4" />
-													{privateNote ? "Add note" : "Send"}
+													{privateNote ? t("Add note") : t("Send")}
 												</Button>
 											</div>
 											<label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
@@ -933,7 +956,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 														setPrivateNote(event.target.checked);
 													}}
 												/>
-												Private note — visible only to agents
+												{t("Private note — visible only to agents")}
 											</label>
 										</form>
 									</>
@@ -1024,6 +1047,7 @@ function ConversationAttributes({
 	value: unknown;
 	onSave: (value: Record<string, string>) => Promise<void>;
 }) {
+	const { t } = useSupportI18n();
 	const [attributes, setAttributes] = useState(() => conversationAttributes(value));
 	useEffect(() => {
 		setAttributes(conversationAttributes(value));
@@ -1031,7 +1055,7 @@ function ConversationAttributes({
 	return (
 		<div className="space-y-2 rounded-md border p-3">
 			<div className="flex items-center justify-between gap-3">
-				<p className="text-sm font-medium">Custom attributes</p>
+				<p className="text-sm font-medium">{t("Custom attributes")}</p>
 				<Button
 					size="sm"
 					type="button"
@@ -1043,15 +1067,15 @@ function ConversationAttributes({
 						])
 					}
 				>
-					<Plus /> Add
+					<Plus /> {t("Add")}
 				</Button>
 			</div>
 			{attributes.map((attribute, index) => (
 				<div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]" key={attribute.id}>
 					<input
-						aria-label={`Conversation attribute ${index + 1} name`}
+						aria-label={t("Conversation attribute {index} name", { index: index + 1 })}
 						className="rounded-md border bg-background px-3 py-2 text-sm"
-						placeholder="Attribute name"
+						placeholder={t("Attribute name")}
 						value={attribute.key}
 						onChange={(event) =>
 							setAttributes((current) =>
@@ -1062,9 +1086,9 @@ function ConversationAttributes({
 						}
 					/>
 					<input
-						aria-label={`Conversation attribute ${index + 1} value`}
+						aria-label={t("Conversation attribute {index} value", { index: index + 1 })}
 						className="rounded-md border bg-background px-3 py-2 text-sm"
-						placeholder="Value"
+						placeholder={t("Value")}
 						value={attribute.value}
 						onChange={(event) =>
 							setAttributes((current) =>
@@ -1075,7 +1099,7 @@ function ConversationAttributes({
 						}
 					/>
 					<Button
-						aria-label={`Remove conversation attribute ${index + 1}`}
+						aria-label={t("Remove conversation attribute {index}", { index: index + 1 })}
 						size="icon"
 						type="button"
 						variant="ghost"
@@ -1088,7 +1112,7 @@ function ConversationAttributes({
 				</div>
 			))}
 			{attributes.length === 0 ? (
-				<p className="text-sm text-muted-foreground">No custom attributes.</p>
+				<p className="text-sm text-muted-foreground">{t("No custom attributes.")}</p>
 			) : null}
 			<div className="flex justify-end">
 				<Button
@@ -1104,7 +1128,7 @@ function ConversationAttributes({
 						)
 					}
 				>
-					<Save /> Save attributes
+					<Save /> {t("Save attributes")}
 				</Button>
 			</div>
 		</div>
@@ -1121,6 +1145,7 @@ function mergeMessage(current: InboxMessage[], message: InboxMessage) {
 }
 
 function SourceDetail({ item }: { item: UnifiedInboxItem }) {
+	const { t, locale } = useSupportI18n();
 	const source = item.source;
 	return (
 		<div className="flex flex-1 items-center justify-center bg-muted/20 p-6">
@@ -1129,25 +1154,34 @@ function SourceDetail({ item }: { item: UnifiedInboxItem }) {
 					<div className="flex items-center gap-3">
 						<SourceIcon type={item.source_type} />
 						<div>
-							<Badge variant="outline">{sourceLabel[item.source_type]}</Badge>
+							<Badge variant="outline">{t(sourceLabel[item.source_type])}</Badge>
 							<h2 className="mt-2 text-xl font-semibold">{item.title}</h2>
 						</div>
 					</div>
 					<Badge variant={item.priority === "urgent" ? "destructive" : "outline"}>
-						{priorityLabel[item.priority]}
+						{t(priorityLabel[item.priority])}
 					</Badge>
 				</div>
 				<p className="mt-5 whitespace-pre-wrap text-sm text-muted-foreground">{item.preview}</p>
 				<div className="mt-5 grid gap-3 rounded-md border p-4 text-sm sm:grid-cols-2">
-					<Detail label="Status" value={item.status} />
-					<Detail label="Customer" value={item.customer_reference || "—"} />
-					<Detail label="Provider" value={String(source.provider || "—")} />
-					<Detail label="Deadline" value={dateTime(String(source.deadline_at || ""))} />
+					<Detail label={t("Status")} value={item.status} />
+					<Detail label={t("Customer")} value={item.customer_reference || "—"} />
+					<Detail
+						label={t("Provider")}
+						value={typeof source.provider === "string" && source.provider ? source.provider : "—"}
+					/>
+					<Detail
+						label={t("Deadline")}
+						value={dateTime(
+							locale,
+							typeof source.deadline_at === "string" ? source.deadline_at : "",
+						)}
+					/>
 				</div>
 				<div className="mt-5 flex justify-end">
 					<Button asChild>
 						<Link href={item.destination}>
-							Open Refund Center
+							{t("Open Refund Center")}
 							<ExternalLink className="ml-2 h-4 w-4" />
 						</Link>
 					</Button>

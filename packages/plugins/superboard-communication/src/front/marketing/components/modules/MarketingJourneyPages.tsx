@@ -176,7 +176,7 @@ export function MarketingJourneysPage() {
 					: builderDefinition,
 			};
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(inputErrorMessage(cause, t));
 			return;
 		}
 		setBusy(true);
@@ -525,7 +525,7 @@ export function MarketingJourneysPage() {
 								<div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
 									{Object.entries(statistics).map(([key, value]) => (
 										<div key={key} className="rounded-lg border p-3">
-											<p className="text-xs text-muted-foreground">{labelize(key)}</p>
+											<p className="text-xs text-muted-foreground">{t(labelize(key))}</p>
 											<p className="text-xl font-semibold tabular-nums">{value}</p>
 										</div>
 									))}
@@ -662,7 +662,7 @@ function MarketingChannelsEditor() {
 				Object.entries(parsed).map(([key, value]) => [key, String(value)]),
 			);
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(inputErrorMessage(cause, t));
 			return;
 		}
 		const payload: MarketingChannelConnectorInput = {
@@ -816,7 +816,7 @@ function MarketingChannelsEditor() {
 											</Badge>
 										</div>
 										<p className="mt-1 truncate text-sm text-muted-foreground">
-											{labelize(connector.channel)} {t("·")} {connector.endpoint_url}
+											{t(labelize(connector.channel))} {t("·")} {connector.endpoint_url}
 										</p>
 										<p className="mt-1 text-xs text-muted-foreground">
 											{t(connector.secret_configured ? "Signed requests" : "Unsigned requests")}
@@ -861,13 +861,28 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function StatusBadge({ status }: { status: MarketingJourney["status"] }) {
+	const { t } = useStudioI18n();
 	return (
 		<Badge
 			variant={status === "active" ? "secondary" : status === "archived" ? "outline" : "default"}
 		>
-			{labelize(status)}
+			{t(labelize(status))}
 		</Badge>
 	);
+}
+
+class JsonInputError extends Error {
+	label: string;
+	constructor(message: string, label: string) {
+		super(message);
+		this.label = label;
+	}
+}
+
+function inputErrorMessage(cause: unknown, t: ReturnType<typeof useStudioI18n>["t"]) {
+	return cause instanceof JsonInputError
+		? t(cause.message, { label: t(cause.label) })
+		: moduleErrorMessage(cause);
 }
 
 function parseObject(value: string, label: string) {
@@ -875,10 +890,10 @@ function parseObject(value: string, label: string) {
 	try {
 		parsed = JSON.parse(value);
 	} catch {
-		throw new Error(`${label} must contain valid JSON.`);
+		throw new JsonInputError("{label} must contain valid JSON.", label);
 	}
 	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-		throw new Error(`${label} must be a JSON object.`);
+		throw new JsonInputError("{label} must be a JSON object.", label);
 	}
 	return parsed as Record<string, unknown>;
 }

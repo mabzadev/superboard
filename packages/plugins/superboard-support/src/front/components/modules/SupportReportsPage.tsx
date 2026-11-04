@@ -23,7 +23,12 @@ import {
 } from "../../api/support/reportsService.js";
 import { useSupportI18n } from "../../i18n.js";
 import { SupportModulePage as ModulePage } from "../support/SupportModulePage.js";
-import { SupportEmpty, SupportMetric, SupportViewSelect } from "../support/SupportUi.js";
+import {
+	SupportEmpty,
+	SupportMetric,
+	SupportViewSelect,
+	supportStatusLabel,
+} from "../support/SupportUi.js";
 
 const breakdownOrder = [
 	"inbox",
@@ -37,7 +42,7 @@ const breakdownOrder = [
 type Breakdown = (typeof breakdownOrder)[number];
 
 export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {}) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 
 	const { selectedProject } = useProjectSelection();
 	const projectRef = selectedProject?.id;
@@ -65,11 +70,11 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 			setExports(exportResult.data);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setLoading(false);
 		}
-	}, [from, projectRef, to, inboxId]);
+	}, [from, projectRef, to, inboxId, locale]);
 	useEffect(() => void load(), [load]);
 
 	useEffect(() => {
@@ -89,10 +94,12 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 					const updates = new Map(results.map((result) => [result.data.id, result.data]));
 					setExports((current) => current.map((item) => updates.get(item.id) ?? item));
 				})
-				.catch((cause) => setError(moduleErrorMessage(cause)));
+				.catch((cause: unknown) => {
+					setError(moduleErrorMessage(cause, locale));
+				});
 		}, 1500);
 		return () => window.clearInterval(timer);
-	}, [exports, projectRef]);
+	}, [exports, projectRef, locale]);
 
 	const requestExport = async () => {
 		if (!projectRef) return;
@@ -104,9 +111,9 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 			});
 			const job = await getSupportReportExport(projectRef, result.data.id);
 			setExports((current) => [job.data, ...current.filter((item) => item.id !== job.data.id)]);
-			showSuccessNotification(`Report export ${result.data.id} queued`);
+			showSuccessNotification(t("Report export {id} queued", { id: result.data.id }));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -121,7 +128,7 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 			anchor.click();
 			URL.revokeObjectURL(url);
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -147,7 +154,7 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 			label: t("Proactive Support"),
 			title: t("Campaign delivery"),
 			rows: (report?.proactive_support ?? []).map((item) => ({
-				dimension: item.status,
+				dimension: t(supportStatusLabel(item.status)),
 				conversations: item.count,
 			})),
 		},
@@ -203,14 +210,15 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 							value={
 								report?.csat.average == null ? "—" : `${Number(report.csat.average).toFixed(2)} / 5`
 							}
-							description={`${number(report?.csat.responses)} responses`}
+							description={t("{count} responses", { count: number(report?.csat.responses) })}
 						/>
 						<SupportMetric
 							label={t("SLA events")}
 							value={(report?.sla ?? []).reduce((total, item) => total + Number(item.count), 0)}
 							description={
-								(report?.sla ?? []).map((item) => `${item.status}: ${item.count}`).join(" · ") ||
-								"No SLA events"
+								(report?.sla ?? [])
+									.map((item) => `${t(supportStatusLabel(item.status))}: ${item.count}`)
+									.join(" · ") || t("No SLA events")
 							}
 						/>
 					</div>
@@ -246,7 +254,7 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 										className="flex items-center justify-between gap-3 rounded-md border p-3"
 									>
 										<div>
-											<div className="font-medium">{job.status}</div>
+											<div className="font-medium">{t(supportStatusLabel(job.status))}</div>
 											<div className="text-xs text-muted-foreground">{job.id}</div>
 										</div>
 										{job.status === "completed" ? (

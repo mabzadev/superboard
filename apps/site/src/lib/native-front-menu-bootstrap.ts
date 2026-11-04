@@ -9,6 +9,7 @@ import {
 import legacyAuthenticationMenus from "../../seed/legacy-authentication-menus.json";
 import legacyProductMenus from "../../seed/legacy-product-menus.json";
 import legacySectionMenus from "../../seed/legacy-section-menus.json";
+import legacySettingsMenus from "../../seed/legacy-settings-menus.json";
 import legacyMenu from "../../seed/legacy-superboard-menu.json";
 import { retiredFrontPageDestination } from "./retired-front-pages.js";
 
@@ -63,6 +64,7 @@ const renamedDefaultItems = new Map<string, readonly [readonly string[], string,
 const communicationRoots = new Set(["/communication/campaigns", "/communication/marketing-email"]);
 
 const pendingLabel = "superboard-front-menu:initializing";
+const cssClassSeparator = /\s+/u;
 
 export async function ensureNativeFrontMenus(
 	db: Parameters<typeof applySeed>[0],
@@ -95,6 +97,7 @@ export async function ensureNativeFrontMenus(
 			...legacyProductMenus,
 			...legacyAuthenticationMenus,
 			...legacySectionMenus,
+			...legacySettingsMenus,
 		].some(
 			(entry) =>
 				entry.locale === locale &&
@@ -104,6 +107,16 @@ export async function ensureNativeFrontMenus(
 			await repository.setItems(menu.id, locale, seedItems(definition.items));
 			await repository.update(menu.id, { label: definition.label });
 		} else {
+			const settingsGroup = items.find((item) => {
+				const classes = item.cssClasses?.split(cssClassSeparator) ?? [];
+				return (
+					item.parentId === null &&
+					classes.includes("sb-icon-settings") &&
+					!classes.includes("sb-nav-local")
+				);
+			});
+			const inSettingsGroup = (item: MenuItem) =>
+				settingsGroup !== undefined && item.parentId === settingsGroup.id;
 			for (const item of items) {
 				if (
 					item.parentId &&
@@ -315,7 +328,16 @@ export async function ensureNativeFrontMenus(
 				const acquisitionDefinition = definition.items.find(
 					(entry) => entry.label === "Acquisition",
 				);
-				const expected = acquisitionDefinition?.children ?? [];
+				const previousSettings = legacySettingsMenus
+					.find((entry) => entry.locale === locale)
+					?.items.find((entry) => entry.url === acquisitionDefinition?.url)
+					?.children?.find((entry) => entry.url === "/acquisition/settings");
+				const expected: SeedMenuItem[] = [
+					...(acquisitionDefinition?.children ?? []),
+					...(!settingsGroup && previousSettings
+						? [{ ...previousSettings, type: "custom" as const }]
+						: []),
+				];
 				const descendants = new Set<string>();
 				const collect = (parentId: string) => {
 					for (const item of items.filter((entry) => entry.parentId === parentId)) {
@@ -350,10 +372,16 @@ export async function ensureNativeFrontMenus(
 					kept.add(existing.id);
 					if (item.url === "/acquisition/settings") settingsId = existing.id;
 				}
+				settingsId ??= items.find(
+					(item) =>
+						descendants.has(item.id) &&
+						canonicalFrontHref(item.customUrl ?? "") === "/acquisition/settings",
+				)?.id;
 				const obsolete = items.filter(
 					(item) =>
 						descendants.has(item.id) &&
 						!kept.has(item.id) &&
+						item.id !== settingsId &&
 						acquisitionMenuPaths.has(canonicalFrontHref(item.customUrl ?? "")),
 				);
 				const removedIds = new Set(obsolete.map((item) => item.id));
@@ -383,11 +411,11 @@ export async function ensureNativeFrontMenus(
 				if (!settings) {
 					await repository.createItem(menu.id, locale, {
 						type: "custom",
-						label,
+						label: settingsGroup ? "Communication" : label,
 						customUrl: "/communication/settings",
-						parentId: communicationParent.id,
+						parentId: settingsGroup?.id ?? communicationParent.id,
 					});
-				} else if (settings.parentId !== communicationParent.id) {
+				} else if (settings.parentId !== communicationParent.id && !inSettingsGroup(settings)) {
 					const order =
 						Math.max(
 							-1,
@@ -431,6 +459,7 @@ export async function ensureNativeFrontMenus(
 					const child = items.find(
 						(item) => item.customUrl === customUrl && item.id !== communicationParent.id,
 					);
+					if (child && inSettingsGroup(child)) continue;
 					if (child)
 						await repository.updateItem(menu.id, child.id, {
 							label,
@@ -460,11 +489,11 @@ export async function ensureNativeFrontMenus(
 				if (!settings) {
 					await repository.createItem(menu.id, locale, {
 						type: "custom",
-						label,
+						label: settingsGroup ? "Analytics" : label,
 						customUrl: "/analytics/settings",
-						parentId: analyticsParent.id,
+						parentId: settingsGroup?.id ?? analyticsParent.id,
 					});
-				} else if (settings.parentId !== analyticsParent.id) {
+				} else if (settings.parentId !== analyticsParent.id && !inSettingsGroup(settings)) {
 					const order =
 						Math.max(
 							-1,
@@ -486,7 +515,8 @@ export async function ensureNativeFrontMenus(
 					item.parentId === null &&
 					item.customUrl === "/auth/users" &&
 					(item.cssClasses === "sb-icon-users" ||
-						["Authentification", "Authentication"].includes(item.label)),
+						["Authentification", "Authentication"].includes(item.label)) &&
+					items.some((child) => child.parentId === item.id),
 			);
 			if (authentication) {
 				const descendants = new Set<string>();
@@ -549,18 +579,22 @@ export async function ensureNativeFrontMenus(
 			if (supportParent && !items.some((item) => item.customUrl === "/support/settings")) {
 				await repository.createItem(menu.id, locale, {
 					type: "custom",
-					label: locale === "fr" ? "Paramètres du support" : "Support settings",
+					label: settingsGroup
+						? "Support"
+						: locale === "fr"
+							? "Paramètres du support"
+							: "Support settings",
 					customUrl: "/support/settings",
-					parentId: supportParent.id,
+					parentId: settingsGroup?.id ?? supportParent.id,
 				});
 			}
 			const dataParent = items.find((i) => i.customUrl === "/data/content" && i.parentId === null);
 			if (dataParent && !items.some((i) => i.customUrl === "/data/settings")) {
 				await repository.createItem(menu.id, locale, {
 					type: "custom",
-					label: "Configuration",
+					label: settingsGroup ? "Data" : "Configuration",
 					customUrl: "/data/settings",
-					parentId: dataParent.id,
+					parentId: settingsGroup?.id ?? dataParent.id,
 				});
 			}
 			const monetizationParent = items.find(
@@ -569,9 +603,15 @@ export async function ensureNativeFrontMenus(
 			if (monetizationParent && !items.some((i) => i.customUrl === "/monetization/settings")) {
 				await repository.createItem(menu.id, locale, {
 					type: "custom",
-					label: locale === "fr" ? "Paramètres" : "Settings",
+					label: settingsGroup
+						? locale === "fr"
+							? "Monétisation"
+							: "Monetization"
+						: locale === "fr"
+							? "Paramètres"
+							: "Settings",
 					customUrl: "/monetization/settings",
-					parentId: monetizationParent.id,
+					parentId: settingsGroup?.id ?? monetizationParent.id,
 				});
 			}
 		}

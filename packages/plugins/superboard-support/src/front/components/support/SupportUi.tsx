@@ -24,6 +24,7 @@ export function useSupportCollection<T>(
 	loader: (projectRef: string, query: SupportCursorQuery) => Promise<SupportCursorPage<T>>,
 	options: { searchable?: boolean; limit?: number; inboxId?: string; portalId?: string } = {},
 ) {
+	const { locale } = useSupportI18n();
 	const [items, setItems] = useState<T[]>([]);
 	const [query, setQuery] = useState("");
 	const [appliedQuery, setAppliedQuery] = useState("");
@@ -54,7 +55,7 @@ export function useSupportCollection<T>(
 				setNextCursor(result.pagination.next_cursor);
 				setError(null);
 			} catch (cause) {
-				setError(moduleErrorMessage(cause));
+				setError(moduleErrorMessage(cause, locale));
 				if (!append) setItems([]);
 			} finally {
 				setLoading(false);
@@ -64,6 +65,7 @@ export function useSupportCollection<T>(
 		[
 			appliedQuery,
 			loader,
+			locale,
 			options.limit,
 			options.searchable,
 			options.inboxId,
@@ -193,18 +195,20 @@ export function SupportSection({
 }
 
 export function SupportError({ message }: { message: string | null }) {
+	const { t } = useSupportI18n();
 	if (!message) return null;
 	return (
 		<Alert variant="destructive">
-			<AlertTitle>Unable to load Support data</AlertTitle>
+			<AlertTitle>{t("Unable to load Support data")}</AlertTitle>
 			<AlertDescription>{message}</AlertDescription>
 		</Alert>
 	);
 }
 
 export function SupportLoading() {
+	const { t } = useSupportI18n();
 	return (
-		<div aria-label="Loading" className="space-y-3">
+		<div aria-label={t("Loading")} className="space-y-3">
 			<Skeleton className="h-20 w-full" />
 			<Skeleton className="h-20 w-full" />
 			<Skeleton className="h-20 w-full" />
@@ -230,29 +234,93 @@ export function SupportLoadMore({
 	loading: boolean;
 	onClick: () => void;
 }) {
+	const { t } = useSupportI18n();
 	if (!visible) return null;
 	return (
 		<div className="flex justify-center">
 			<Button variant="outline" disabled={loading} onClick={onClick}>
-				{loading ? "Loading…" : "Load more"}
+				{loading ? t("Loading…") : t("Load more")}
 			</Button>
 		</div>
 	);
 }
 
+export const supportChannelLabels: Record<string, string> = {
+	widget: "Web widget",
+	api: "Support API",
+	email_google: "Google email",
+	email_microsoft: "Microsoft email",
+	smtp: "SMTP email",
+	whatsapp_cloud: "WhatsApp Cloud",
+	facebook_messenger: "Facebook Messenger",
+	instagram: "Instagram",
+	twilio_sms: "Twilio SMS",
+	twilio_voice: "Twilio Voice",
+	whatsapp_calls: "WhatsApp Calls",
+	telegram: "Telegram",
+	line: "LINE",
+	tiktok: "TikTok",
+	twitter: "X",
+};
+
+export function supportChannelLabel(value: string) {
+	return supportChannelLabels[value] ?? value;
+}
+
+const statusLabels: Record<string, string> = {
+	configuration_required: "Not configured",
+	live_validated: "Live",
+	active: "Active",
+	disabled: "Disabled",
+	degraded: "Degraded",
+	configured: "Configured",
+	draft: "Draft",
+	published: "Published",
+	archived: "Archived",
+	scheduled: "Scheduled",
+	running: "Running",
+	paused: "Paused",
+	completed: "Completed",
+	cancelled: "Cancelled",
+	failed: "Failed",
+	queued: "Queued",
+	processing: "Processing",
+	processed: "Processed",
+	ignored: "Ignored",
+	pending: "Pending",
+	claimed: "Claimed",
+	indexing: "Indexing",
+	indexed: "Indexed",
+	deleted: "Deleted",
+	online: "Online",
+	busy: "Busy",
+	offline: "Offline",
+	read: "Read",
+	unread: "Unread",
+	open: "Open",
+	closed: "Closed",
+	quarantined: "Quarantined",
+	discarded: "Discarded",
+	sending: "Sending",
+	sent: "Sent",
+	delivered: "Delivered",
+	met: "Met",
+	breached: "Breached",
+};
+
+export function supportStatusLabel(value: string) {
+	return statusLabels[value] ?? value.replaceAll("_", " ");
+}
+
 export function SupportStatus({ value }: { value?: string | null }) {
+	const { t } = useSupportI18n();
 	const normalized = value || "configuration_required";
-	const label =
-		normalized === "configuration_required"
-			? "Not configured"
-			: normalized === "live_validated"
-				? "Live"
-				: normalized.replaceAll("_", " ");
+	const known = statusLabels[normalized];
 	const variant =
 		normalized === "degraded" ? "destructive" : normalized === "disabled" ? "secondary" : "outline";
 	return (
-		<Badge className="capitalize" variant={variant}>
-			{label}
+		<Badge className={known ? undefined : "capitalize"} variant={variant}>
+			{known ? t(known) : normalized.replaceAll("_", " ")}
 		</Badge>
 	);
 }
@@ -280,9 +348,10 @@ export function SupportMetric({
 }
 
 export function AccessNotice({ children }: { children: ReactNode }) {
+	const { t } = useSupportI18n();
 	return (
 		<Alert>
-			<AlertTitle>Restricted action</AlertTitle>
+			<AlertTitle>{t("Restricted action")}</AlertTitle>
 			<AlertDescription>{children}</AlertDescription>
 		</Alert>
 	);

@@ -3,6 +3,7 @@
 import DataTable from "@superboard/front-ui/common/DataTable.js";
 import type { AccessorKeyColumnDef } from "@tanstack/react-table";
 
+import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
 import type { CampaignAnalyticsRow } from "../../../api/dynamic-links/dynamicLinksService.js";
 import CampaignsEmptyState from "./CampaignsEmptyState.js";
 
@@ -25,6 +26,7 @@ export function CampaignAnalyticsTable({
 	onCreateCampaign: () => void;
 	onOpenCampaign: (campaignId: string) => void;
 }) {
+	const { tr } = useFlowI18n();
 	return (
 		<DataTable
 			columns={columns}
@@ -32,10 +34,10 @@ export function CampaignAnalyticsTable({
 			selectedColumns={selectedColumns}
 			onRowClick={(row) => onOpenCampaign(row.id)}
 			getRowId={(row) => row.id}
-			getRowAriaLabel={(row) => `View campaign ${row.name}`}
+			getRowAriaLabel={(row) => tr("View campaign {name}").replace("{name}", row.name)}
 			loading={loading}
 			hasFilters={hasFilters}
-			ariaLabel="Acquisition campaigns"
+			ariaLabel={tr("Acquisition campaigns")}
 			stickyHeader
 			containerClassName="@container relative min-h-0 overflow-auto overscroll-none rounded-md border border-sidebar-border [&>[data-slot=table-container]]:overflow-visible"
 			emptyState={

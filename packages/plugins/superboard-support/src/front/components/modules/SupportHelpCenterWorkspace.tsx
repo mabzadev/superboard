@@ -119,7 +119,7 @@ function PortalSettings({
 	project: string;
 	update: (portal: SupportPortal) => void;
 }) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 	const [draft, setDraft] = useState(portal);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -137,7 +137,7 @@ function PortalSettings({
 			setDraft(result.data);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -148,7 +148,7 @@ function PortalSettings({
 			onSubmit={(event) => {
 				event.preventDefault();
 				void save().catch((cause: unknown) => {
-					setError(moduleErrorMessage(cause));
+					setError(moduleErrorMessage(cause, locale));
 				});
 			}}
 		>
@@ -198,7 +198,7 @@ function PortalSettings({
 }
 
 function PortalReport({ portalId, project }: { portalId: string; project: string }) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 	const [report, setReport] = useState<{
 		articles: number;
 		published: number;
@@ -218,12 +218,12 @@ function PortalReport({ portalId, project }: { portalId: string; project: string
 				if (active) setReport(result.data);
 			})
 			.catch((cause: unknown) => {
-				if (active) setError(moduleErrorMessage(cause));
+				if (active) setError(moduleErrorMessage(cause, locale));
 			});
 		return () => {
 			active = false;
 		};
-	}, [portalId, project]);
+	}, [portalId, project, locale]);
 	return (
 		<>
 			<SupportError message={error} />

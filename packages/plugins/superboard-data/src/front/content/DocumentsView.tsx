@@ -1,3 +1,4 @@
+import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import {
 	Table,
@@ -25,6 +26,7 @@ import {
 } from "./workspace.js";
 
 const SEARCH_DELAY_MS = 300;
+const NEW_DOCUMENT = "new";
 
 export function DocumentsView({
 	collections,
@@ -38,13 +40,17 @@ export function DocumentsView({
 	trash: boolean;
 }) {
 	const { t, locale } = useDataI18n();
+	const router = useRouter();
+	const pathname = usePathname();
+	const address = useSearchParams();
 	const operation = useOperation();
 	const [language, setLanguage] = useState<string>(locale);
 	const [search, setSearch] = useState("");
 	const [query, setQuery] = useState("");
 	const [status, setStatus] = useState("");
 	const [cursor, setCursor] = useState("");
-	const [selected, setSelected] = useState<string | null>(null);
+	const requested = trash ? null : address.get("document") || null;
+	const selected = requested === NEW_DOCUMENT ? "" : requested;
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			const next = search.trim();
@@ -64,8 +70,20 @@ export function DocumentsView({
 			: {}),
 	});
 	const resource = useResource<Page<Document>>(
-		`${collectionPath(collection)}${trash ? "/trash" : ""}?${params}`,
+		selected === null ? `${collectionPath(collection)}${trash ? "/trash" : ""}?${params}` : null,
 	);
+	function showDocument(id: string | null, replace = false) {
+		const next = new URLSearchParams(address);
+		if (id === null) next.delete("document");
+		else {
+			next.set("collection", collection);
+			next.set("document", id);
+		}
+		const query = next.toString();
+		const href = query ? `${pathname}?${query}` : pathname;
+		if (replace) router.replace(href);
+		else router.push(href);
+	}
 	if (selected !== null)
 		return (
 			<DocumentEditor
@@ -74,12 +92,11 @@ export function DocumentsView({
 				id={selected}
 				language={language}
 				onBack={() => {
-					setSelected(null);
-					resource.refresh();
+					showDocument(null);
 				}}
 				onSelect={(item) => {
 					setLanguage(item.locale);
-					setSelected(item.id);
+					showDocument(item.id, selected === "");
 				}}
 			/>
 		);
@@ -140,7 +157,7 @@ export function DocumentsView({
 						<Button
 							className="ms-auto"
 							onClick={() => {
-								setSelected("");
+								showDocument(NEW_DOCUMENT);
 							}}
 						>
 							{t.new}
@@ -177,7 +194,7 @@ export function DocumentsView({
 												variant="link"
 												className="h-auto px-0 py-0 font-medium text-foreground"
 												onClick={() => {
-													setSelected(item.id);
+													showDocument(item.id);
 												}}
 											>
 												{documentTitle(item)}

@@ -1,3 +1,4 @@
+import { ArrowLeft } from "@superboard/front-ui/icons";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { useState } from "react";
@@ -51,6 +52,7 @@ export function DocumentEditor({
 	return (
 		<div className="max-w-3xl space-y-4 pt-4">
 			<Button variant="ghost" size="sm" onClick={onBack}>
+				<ArrowLeft className="rtl:-scale-x-100" />
 				{t.back}
 			</Button>
 			{resource.error || fields.error ? (

@@ -1,3 +1,4 @@
+import { FrontContextProvider } from "@superboard/front-ui/context";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -27,7 +28,10 @@ vi.mock(
 	}),
 );
 
-import { PaywallsPage } from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/paywalls/components/modules/PaywallsPage.js";
+import {
+	PaywallStatisticsPage,
+	PaywallsPage,
+} from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/paywalls/components/modules/PaywallsPage.js";
 
 describe("PaywallsPage", () => {
 	beforeEach(() => {
@@ -63,5 +67,42 @@ describe("PaywallsPage", () => {
 		expect(
 			screen.queryByText("Conversion, revenue and event performance for the last 30 days."),
 		).not.toBeInTheDocument();
+	});
+
+	it("names the paywall results in French", async () => {
+		services.getPaywallStatistics.mockResolvedValue({
+			filters: {},
+			totals: {
+				impression: 4,
+				cta: 2,
+				conversion_rate: 0,
+				revenue_micros: 0,
+				revenue_by_currency: {},
+			},
+			series: [{ bucket: "2026-10-01", event_type: "dismiss", count: 2 }],
+		});
+		render(
+			<FrontContextProvider
+				value={{
+					instanceId: "1",
+					pluginId: "superboard-paywalls",
+					path: "/acquisition/paywalls/statistics",
+					parameters: {},
+					locale: "fr",
+					operator: null,
+					projectScope: null,
+					activePluginIds: ["superboard-paywalls"],
+				}}
+			>
+				<PaywallStatisticsPage />
+			</FrontContextProvider>,
+		);
+		expect(await screen.findByText("Aucun achat")).toBeInTheDocument();
+		expect(screen.getByText("affichages").nextElementSibling).toHaveTextContent("4");
+		expect(screen.getByText("clics sur l’appel à l’action")).toBeInTheDocument();
+		expect(screen.getByRole("cell", { name: "Fermetures" })).toBeInTheDocument();
+		expect(screen.getByLabelText("Fuseau horaire")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Tous les emplacements")).toBeInTheDocument();
+		expect(screen.getByRole("option", { name: "Semaine" })).toBeInTheDocument();
 	});
 });

@@ -36,11 +36,19 @@ import {
 
 export type HelpCenterSection = "articles" | "structure" | "portals" | "translations";
 
+const savedMessages = {
+	portal: "Portal saved",
+	category: "Category saved",
+	folder: "Folder saved",
+	article: "Article saved",
+	translation: "Translation saved",
+};
+
 export default function SupportHelpCenterPage({
 	portalId,
 	section = "articles",
 }: { portalId?: string; section?: HelpCenterSection } = {}) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 
 	const { selectedProject } = useProjectSelection();
 	const projectRef = selectedProject?.id;
@@ -161,9 +169,9 @@ export default function SupportHelpCenterPage({
 				setTranslation((current) => ({ ...current, title: "", content: "" }));
 				await translations.reload();
 			}
-			showSuccessNotification(`${kind.charAt(0).toUpperCase()}${kind.slice(1)} saved`);
+			showSuccessNotification(t(savedMessages[kind]));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -174,9 +182,9 @@ export default function SupportHelpCenterPage({
 		try {
 			await publishSupportArticle(projectRef, id);
 			await articles.reload();
-			showSuccessNotification("Article published and queued for indexing");
+			showSuccessNotification(t("Article published and queued for indexing"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 

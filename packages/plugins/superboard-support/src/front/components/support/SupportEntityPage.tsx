@@ -79,12 +79,12 @@ export function SupportEntityPage<T extends { id: string; name: string }>({
 				}
 			})
 			.catch((cause: unknown) => {
-				if (active) setError(moduleErrorMessage(cause));
+				if (active) setError(moduleErrorMessage(cause, locale));
 			});
 		return () => {
 			active = false;
 		};
-	}, [project, id, resource]);
+	}, [project, id, resource, locale]);
 	const add = async () => {
 		if (!project || !name.trim()) return;
 		setSaving(true);
@@ -92,7 +92,7 @@ export function SupportEntityPage<T extends { id: string; name: string }>({
 			const result = await create(project, name.trim());
 			window.location.assign(supportEntityUrl(path, parameter, result.data.id, locale));
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 			setSaving(false);
 		}
 	};
@@ -140,7 +140,7 @@ export function SupportEntityPage<T extends { id: string; name: string }>({
 					onSubmit={(event) => {
 						event.preventDefault();
 						void add().catch((cause: unknown) => {
-							setError(moduleErrorMessage(cause));
+							setError(moduleErrorMessage(cause, locale));
 						});
 					}}
 				>

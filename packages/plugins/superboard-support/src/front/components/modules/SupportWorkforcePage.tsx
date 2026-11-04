@@ -55,8 +55,18 @@ import {
 	SupportSearchToolbar,
 	SupportStatus,
 	SupportViewSelect,
+	supportChannelLabel,
 	useSupportCollection,
 } from "../support/SupportUi.js";
+
+const optionLabels: Record<string, string> = {
+	agent: "Agent",
+	supervisor: "Supervisor",
+	online: "Online",
+	busy: "Busy",
+	offline: "Offline",
+};
+const optionLabel = (value: string) => optionLabels[value] ?? supportChannelLabel(value);
 
 type WorkforceView = "members" | "teams" | "inboxes" | "routing" | "leaves" | "capacity";
 
@@ -98,7 +108,7 @@ const emptyCapacity = { name: "", default_capacity: 10, active: true };
 const emptyLeave = { membershipId: "", startsAt: "", endsAt: "", reason: "" };
 
 export default function SupportWorkforcePage() {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 	const [view, setView] = useState<WorkforceView>("members");
 
 	const { selectedProject } = useProjectSelection();
@@ -131,9 +141,9 @@ export default function SupportWorkforcePage() {
 			setSummary((await getWorkforceSummary(projectRef)).data);
 			setSummaryError(null);
 		} catch (cause) {
-			setSummaryError(moduleErrorMessage(cause));
+			setSummaryError(moduleErrorMessage(cause, locale));
 		}
-	}, [projectRef]);
+	}, [projectRef, locale]);
 	useEffect(() => void loadSummary(), [loadSummary]);
 
 	const saveMember = async () => {
@@ -147,9 +157,9 @@ export default function SupportWorkforcePage() {
 			});
 			setMember(emptyMember);
 			await Promise.all([memberships.reload(), loadSummary()]);
-			showSuccessNotification("Support member added");
+			showSuccessNotification(t("Support member added"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -166,9 +176,9 @@ export default function SupportWorkforcePage() {
 			});
 			setTeam(emptyTeam);
 			await Promise.all([teams.reload(), loadSummary()]);
-			showSuccessNotification("Support team created");
+			showSuccessNotification(t("Support team created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -185,9 +195,9 @@ export default function SupportWorkforcePage() {
 			});
 			setInbox(emptyInbox);
 			await Promise.all([inboxes.reload(), loadSummary()]);
-			showSuccessNotification("Support inbox created");
+			showSuccessNotification(t("Support inbox created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -203,9 +213,9 @@ export default function SupportWorkforcePage() {
 			});
 			setCapacity(emptyCapacity);
 			await capacities.reload();
-			showSuccessNotification("Capacity policy created");
+			showSuccessNotification(t("Capacity policy created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -223,9 +233,9 @@ export default function SupportWorkforcePage() {
 			});
 			setLeave(emptyLeave);
 			await Promise.all([leaves.reload(), loadSummary()]);
-			showSuccessNotification("Leave schedule created");
+			showSuccessNotification(t("Leave schedule created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -246,7 +256,7 @@ export default function SupportWorkforcePage() {
 			setTeamMembers(teamResult.data);
 			setInboxMembers(inboxResult.data);
 		} catch (cause) {
-			setRoutingError(moduleErrorMessage(cause));
+			setRoutingError(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -271,67 +281,67 @@ export default function SupportWorkforcePage() {
 			}
 			await reloadRouting();
 			showSuccessNotification(
-				linked ? "Support routing membership added" : "Support routing membership removed",
+				linked ? t("Support routing membership added") : t("Support routing membership removed"),
 			);
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
 	};
 
 	const removeMember = async (id: string) => {
-		if (!projectRef || !window.confirm("Remove this member from Support?")) return;
+		if (!projectRef || !window.confirm(t("Remove this member from Support?"))) return;
 		try {
 			await deleteSupportMembership(projectRef, id);
 			await Promise.all([memberships.reload(), loadSummary()]);
-			showSuccessNotification("Support member removed");
+			showSuccessNotification(t("Support member removed"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
 	const removeTeam = async (id: string) => {
-		if (!projectRef || !window.confirm("Delete this Support team?")) return;
+		if (!projectRef || !window.confirm(t("Delete this Support team?"))) return;
 		try {
 			await deleteSupportTeam(projectRef, id);
 			await Promise.all([teams.reload(), loadSummary()]);
-			showSuccessNotification("Support team deleted");
+			showSuccessNotification(t("Support team deleted"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
 	const removeInbox = async (id: string) => {
-		if (!projectRef || !window.confirm("Delete this Support inbox?")) return;
+		if (!projectRef || !window.confirm(t("Delete this Support inbox?"))) return;
 		try {
 			await deleteSupportInbox(projectRef, id);
 			await Promise.all([inboxes.reload(), loadSummary()]);
-			showSuccessNotification("Support inbox deleted");
+			showSuccessNotification(t("Support inbox deleted"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
 	const removeCapacity = async (id: string) => {
-		if (!projectRef || !window.confirm("Delete this capacity policy?")) return;
+		if (!projectRef || !window.confirm(t("Delete this capacity policy?"))) return;
 		try {
 			await deleteSupportCapacityPolicy(projectRef, id);
 			await capacities.reload();
-			showSuccessNotification("Capacity policy deleted");
+			showSuccessNotification(t("Capacity policy deleted"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
 	const removeLeave = async (id: string) => {
-		if (!projectRef || !window.confirm("Delete this leave schedule?")) return;
+		if (!projectRef || !window.confirm(t("Delete this leave schedule?"))) return;
 		try {
 			await deleteSupportLeave(projectRef, id);
 			await Promise.all([leaves.reload(), loadSummary()]);
-			showSuccessNotification("Leave schedule deleted");
+			showSuccessNotification(t("Leave schedule deleted"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -344,9 +354,11 @@ export default function SupportWorkforcePage() {
 				availability: item.active ? "offline" : item.availability,
 			});
 			await Promise.all([memberships.reload(), loadSummary()]);
-			showSuccessNotification(item.active ? "Support member disabled" : "Support member enabled");
+			showSuccessNotification(
+				item.active ? t("Support member disabled") : t("Support member enabled"),
+			);
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -358,9 +370,9 @@ export default function SupportWorkforcePage() {
 		try {
 			await updateSupportTeam(projectRef, id, { active: !active });
 			await Promise.all([teams.reload(), loadSummary()]);
-			showSuccessNotification(active ? "Support team disabled" : "Support team enabled");
+			showSuccessNotification(active ? t("Support team disabled") : t("Support team enabled"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -374,9 +386,9 @@ export default function SupportWorkforcePage() {
 				status: active ? "disabled" : "active",
 			});
 			await Promise.all([inboxes.reload(), loadSummary()]);
-			showSuccessNotification(active ? "Support inbox disabled" : "Support inbox enabled");
+			showSuccessNotification(active ? t("Support inbox disabled") : t("Support inbox enabled"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -388,9 +400,11 @@ export default function SupportWorkforcePage() {
 		try {
 			await updateSupportCapacityPolicy(projectRef, id, { active: !active });
 			await capacities.reload();
-			showSuccessNotification(active ? "Capacity policy disabled" : "Capacity policy enabled");
+			showSuccessNotification(
+				active ? t("Capacity policy disabled") : t("Capacity policy enabled"),
+			);
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -540,8 +554,11 @@ export default function SupportWorkforcePage() {
 													<div>
 														<p className="font-medium">{item.display_name}</p>
 														<p className="text-sm text-muted-foreground">
-															{item.auth_user_id} · {item.role} {t("· capacity")}
-															{item.capacity}
+															{t("{user} · {role} · capacity {capacity}", {
+																user: item.auth_user_id,
+																role: t(optionLabel(item.role)),
+																capacity: item.capacity,
+															})}
 														</p>
 													</div>
 													<div className="flex items-center gap-2">
@@ -552,10 +569,10 @@ export default function SupportWorkforcePage() {
 															variant="outline"
 															onClick={() => void setMemberActive(item)}
 														>
-															{item.active ? "Disable" : "Enable"}
+															{item.active ? t("Disable") : t("Enable")}
 														</Button>
 														<Button
-															aria-label={`Remove ${item.display_name}`}
+															aria-label={t("Remove {name}", { name: item.display_name })}
 															size="icon"
 															variant="ghost"
 															onClick={() => void removeMember(item.id)}
@@ -634,7 +651,7 @@ export default function SupportWorkforcePage() {
 													<div>
 														<p className="font-medium">{item.name}</p>
 														<p className="text-sm text-muted-foreground">
-															{item.description || "No description"}
+															{item.description || t("No description")}
 														</p>
 													</div>
 													<div className="flex items-center gap-2">
@@ -645,10 +662,10 @@ export default function SupportWorkforcePage() {
 															variant="outline"
 															onClick={() => void setTeamActive(item.id, item.active)}
 														>
-															{item.active ? "Disable" : "Enable"}
+															{item.active ? t("Disable") : t("Enable")}
 														</Button>
 														<Button
-															aria-label={`Delete ${item.name}`}
+															aria-label={t("Delete {name}", { name: item.name })}
 															size="icon"
 															variant="ghost"
 															onClick={() => void removeTeam(item.id)}
@@ -745,7 +762,7 @@ export default function SupportWorkforcePage() {
 													<div>
 														<p className="font-medium">{item.name}</p>
 														<p className="text-sm text-muted-foreground">
-															{item.identifier} · {item.channel_type}
+															{item.identifier} · {t(supportChannelLabel(item.channel_type))}
 														</p>
 													</div>
 													<div className="flex items-center gap-2">
@@ -756,10 +773,10 @@ export default function SupportWorkforcePage() {
 															variant="outline"
 															onClick={() => void setInboxActive(item.id, item.status === "active")}
 														>
-															{item.status === "active" ? "Disable" : "Enable"}
+															{item.status === "active" ? t("Disable") : t("Enable")}
 														</Button>
 														<Button
-															aria-label={`Delete ${item.name}`}
+															aria-label={t("Delete {name}", { name: item.name })}
 															size="icon"
 															variant="ghost"
 															onClick={() => void removeInbox(item.id)}
@@ -943,8 +960,8 @@ export default function SupportWorkforcePage() {
 														)?.display_name || item.membership_id}
 													</p>
 													<p className="text-sm text-muted-foreground">
-														{new Date(item.starts_at).toLocaleString()} –{" "}
-														{new Date(item.ends_at).toLocaleString()}
+														{new Date(item.starts_at).toLocaleString(locale)} –{" "}
+														{new Date(item.ends_at).toLocaleString(locale)}
 													</p>
 												</div>
 												<Button
@@ -1015,8 +1032,7 @@ export default function SupportWorkforcePage() {
 											<div>
 												<p className="font-medium">{item.name}</p>
 												<p className="text-sm text-muted-foreground">
-													{t("Default capacity")}
-													{item.default_capacity}
+													{t("Default capacity: {count}", { count: item.default_capacity })}
 												</p>
 											</div>
 											<div className="flex items-center gap-2">
@@ -1027,10 +1043,10 @@ export default function SupportWorkforcePage() {
 													variant="outline"
 													onClick={() => void setCapacityActive(item.id, item.active)}
 												>
-													{item.active ? "Disable" : "Enable"}
+													{item.active ? t("Disable") : t("Enable")}
 												</Button>
 												<Button
-													aria-label={`Delete ${item.name}`}
+													aria-label={t("Delete {name}", { name: item.name })}
 													size="icon"
 													variant="ghost"
 													onClick={() => void removeCapacity(item.id)}
@@ -1108,7 +1124,7 @@ function NativeSelect({
 			{optionsWithLabels.length ? <option value="">{t("Select")}</option> : null}
 			{options.map((option) => (
 				<option key={option} value={option}>
-					{option.replaceAll("_", " ")}
+					{t(optionLabel(option))}
 				</option>
 			))}
 			{optionsWithLabels.map((option) => (

@@ -15,7 +15,7 @@ import {
 import { useSupportI18n } from "../../i18n.js";
 import { SupportEntityPage } from "../support/SupportEntityPage.js";
 import { SupportDetail } from "../support/SupportModulePage.js";
-import { SupportError } from "../support/SupportUi.js";
+import { SupportError, supportChannelLabel } from "../support/SupportUi.js";
 import SupportAutomationsPage from "./SupportAutomationsPage.js";
 import SupportChannelsPage from "./SupportChannelsPage.js";
 import { SupportInboxMembers } from "./SupportInboxMembers.js";
@@ -34,8 +34,8 @@ const hubSections = {
 
 export default function SupportInboxWorkspace() {
 	const search = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
-	if (search?.has("id") || search?.get("q")?.trim()) return <InboxPage />;
 	if (search?.has("inbox")) return <InboxEntities />;
+	if (search?.has("id") || search?.get("q")?.trim()) return <InboxPage />;
 	return <InboxHub />;
 }
 
@@ -137,7 +137,7 @@ function InboxEntities() {
 							"twitter",
 						].map((value) => (
 							<option key={value} value={value}>
-								{value}
+								{t(supportChannelLabel(value))}
 							</option>
 						))}
 					</select>
@@ -180,6 +180,7 @@ function inboxDetailTab(search: string): InboxTab {
 	if (tab && tab !== "settings" && isInboxTab(tab)) return tab;
 	const section = params.get("section");
 	if (tab === "settings" && section && isInboxTab(section)) return section;
+	if (!tab && (params.has("id") || params.get("q")?.trim())) return "conversations";
 	return "general";
 }
 
@@ -250,7 +251,7 @@ function InboxSettings({
 	project: string;
 	update: (item: SupportInbox) => void;
 }) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 	const [draft, setDraft] = useState(inbox);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -268,7 +269,7 @@ function InboxSettings({
 			setDraft(result.data);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -279,7 +280,7 @@ function InboxSettings({
 			onSubmit={(event) => {
 				event.preventDefault();
 				void save().catch((cause: unknown) => {
-					setError(moduleErrorMessage(cause));
+					setError(moduleErrorMessage(cause, locale));
 				});
 			}}
 		>
@@ -296,7 +297,7 @@ function InboxSettings({
 			<Label htmlFor="inbox-identifier">{t("Identifier")}</Label>
 			<Input id="inbox-identifier" value={inbox.identifier} readOnly />
 			<p className="text-sm text-muted-foreground">
-				{t("Channel")}: {inbox.channel_type}
+				{t("Channel: {channel}", { channel: t(supportChannelLabel(inbox.channel_type)) })}
 			</p>
 			{(
 				[

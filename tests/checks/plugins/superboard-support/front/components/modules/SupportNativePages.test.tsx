@@ -21,6 +21,8 @@ const services = vi.hoisted(() => ({
 	readNotification: vi.fn(),
 	snoozeNotification: vi.fn(),
 	deleteNotification: vi.fn(),
+	notifySuccess: vi.fn(),
+	notifyError: vi.fn(),
 }));
 
 vi.mock(
@@ -80,9 +82,12 @@ vi.mock(
 	}),
 );
 vi.mock("../../../../../../../packages/supbrd-front-ui/src/shared/lib/Notifications.js", () => ({
-	showErrorNotification: vi.fn(),
-	showSuccessNotification: vi.fn(),
+	showErrorNotification: services.notifyError,
+	showSuccessNotification: services.notifySuccess,
 }));
+
+import { FrontContextProvider } from "@superboard/front-ui/context";
+import { ApiError, getErrorMessage } from "@superboard/front-ui/lib/ApiError.js";
 
 import SupportChannelsPage from "../../../../../../../packages/plugins/superboard-support/src/front/components/modules/SupportChannelsPage.js";
 import SupportInboxWorkspace from "../../../../../../../packages/plugins/superboard-support/src/front/components/modules/SupportInboxWorkspace.js";
@@ -203,6 +208,31 @@ describe("native Support Grow pages", () => {
 		expect(container.textContent).not.toMatch(/coming soon|migration|legacy/i);
 	});
 
+	it("explains a failed connection list in French", async () => {
+		services.listProviders.mockRejectedValue(new ApiError(getErrorMessage(404), 404));
+		render(
+			<FrontContextProvider
+				value={{
+					instanceId: "1",
+					pluginId: "superboard-support",
+					path: "/support/inbox",
+					parameters: {},
+					locale: "fr",
+					operator: null,
+					projectScope: null,
+					activePluginIds: ["superboard-support"],
+				}}
+			>
+				<SupportChannelsPage />
+			</FrontContextProvider>,
+		);
+
+		const alert = await screen.findByRole("alert");
+		expect(within(alert).getByText("Impossible de charger les données du support")).toBeVisible();
+		expect(within(alert).getByText("La ressource demandée est introuvable.")).toBeVisible();
+		expect(screen.getByRole("heading", { level: 3, name: "Connexions" })).toBeVisible();
+	});
+
 	it("shows channels and connections as stacked sections without sub-tabs", async () => {
 		render(<SupportChannelsPage />);
 
@@ -263,6 +293,35 @@ describe("native Support Grow pages", () => {
 		expect(await screen.findByText("Customer Telegram")).toBeInTheDocument();
 		expect(screen.getAllByRole("tablist")).toHaveLength(1);
 	});
+
+	it.each([
+		["success", "configuration_pending", "notifySuccess", "Support channel authorized"],
+		[
+			"error",
+			"authorization_failed",
+			"notifyError",
+			"Support channel authorization was not completed",
+		],
+	] as const)(
+		"reports a channel authorization %s on the Inbox channels and clears the return address",
+		async (result, code, notification, message) => {
+			window.history.replaceState(
+				null,
+				"",
+				`/support/inbox?section=channels&connection=provider-1&support_result=${result}&support_code=${code}&lang=en`,
+			);
+			render(<SupportInboxWorkspace />);
+
+			expect(await screen.findByText("Customer Telegram")).toBeInTheDocument();
+			await waitFor(() => expect(services[notification]).toHaveBeenCalledWith(message));
+			const address = new URL(window.location.href);
+			expect(address.searchParams.get("section")).toBe("channels");
+			expect(address.searchParams.get("lang")).toBe("en");
+			expect(address.searchParams.has("connection")).toBe(false);
+			expect(address.searchParams.has("support_result")).toBe(false);
+			expect(address.searchParams.has("support_code")).toBe(false);
+		},
+	);
 
 	it("exposes native notification preferences and read-all controls", async () => {
 		services.listNotifications.mockResolvedValue({

@@ -185,7 +185,7 @@ export default function DashboardPageContent() {
 		setFailures(
 			results.flatMap((result, source) =>
 				result.status === "rejected"
-					? [{ source, message: moduleErrorMessage(result.reason) }]
+					? [{ source, message: moduleErrorMessage(result.reason, locale) }]
 					: [],
 			),
 		);
@@ -210,6 +210,7 @@ export default function DashboardPageContent() {
 		userEnabled,
 		linksEnabled,
 		productsEnabled,
+		locale,
 	]);
 
 	useEffect(() => {
@@ -321,7 +322,9 @@ export default function DashboardPageContent() {
 							<AlertDescription>
 								{t("Available modules are still shown.")}{" "}
 								{failures
-									.map(({ source, message }) => `${t(sourceNames[source] ?? "")}: ${message}`)
+									.map(({ source, message }) =>
+										t("Module failure", { source: t(sourceNames[source] ?? ""), message }),
+									)
 									.join(" · ")}
 							</AlertDescription>
 						</Alert>

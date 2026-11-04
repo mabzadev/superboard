@@ -18,7 +18,7 @@ const descriptions: Record<string, string> = {
 	Reinstalls: "The number of reinstalls attributed to campaign links.",
 	Reactivations: "The number of inactive customers brought back by the campaign.",
 	"App opens": "Application open events attributed to the campaign.",
-	"Users Referred": "Customers referred or converted by campaign links.",
+	"Users referred": "Customers referred or converted by campaign links.",
 };
 
 function sortableHeader(
@@ -26,6 +26,7 @@ function sortableHeader(
 	sortKey: string,
 	sort: SortType,
 	setSort: React.Dispatch<React.SetStateAction<SortType>>,
+	tr: (english: string) => string,
 	tooltip = false,
 ) {
 	return (
@@ -40,13 +41,13 @@ function sortableHeader(
 						}))
 					}
 				>
-					{label}
+					{tr(label)}
 					{checkSortDirection(sortKey, sort)}
 				</Button>
 			</TooltipTrigger>
 			{tooltip ? (
 				<TooltipContent className="max-w-xs">
-					<p>{descriptions[label]}</p>
+					<p>{tr(descriptions[label] ?? "")}</p>
 				</TooltipContent>
 			) : null}
 		</Tooltip>
@@ -60,11 +61,12 @@ function metric(value: number) {
 export function createCampaignAnalyticsColumns(
 	sort: SortType,
 	setSort: React.Dispatch<React.SetStateAction<SortType>>,
+	tr: (english: string) => string = (english) => english,
 ): AccessorKeyColumnDef<CampaignAnalyticsRow>[] {
 	return [
 		{
 			accessorKey: "title",
-			header: () => sortableHeader("Title", "name", sort, setSort),
+			header: () => sortableHeader("Title", "name", sort, setSort, tr),
 			cell: ({ row }) => (
 				<div className="min-w-44">
 					<p className="font-medium">{row.original.name}</p>
@@ -74,48 +76,48 @@ export function createCampaignAnalyticsColumns(
 		},
 		{
 			accessorKey: "views",
-			header: () => sortableHeader("Views", "views", sort, setSort, true),
+			header: () => sortableHeader("Views", "views", sort, setSort, tr, true),
 			cell: ({ row }) => metric(row.original.total_views),
 		},
 		{
 			accessorKey: "opens",
-			header: () => sortableHeader("Opens", "opens", sort, setSort, true),
+			header: () => sortableHeader("Opens", "opens", sort, setSort, tr, true),
 			cell: ({ row }) => metric(row.original.total_opens),
 		},
 		{
 			accessorKey: "installs",
-			header: () => sortableHeader("Installs", "installs", sort, setSort, true),
+			header: () => sortableHeader("Installs", "installs", sort, setSort, tr, true),
 			cell: ({ row }) => metric(row.original.total_installs),
 		},
 		{
 			accessorKey: "reinstalls",
-			header: () => sortableHeader("Reinstalls", "reinstalls", sort, setSort, true),
+			header: () => sortableHeader("Reinstalls", "reinstalls", sort, setSort, tr, true),
 			cell: ({ row }) => metric(row.original.total_reinstalls),
 		},
 		{
 			accessorKey: "reactivations",
-			header: () => sortableHeader("Reactivations", "reactivations", sort, setSort, true),
+			header: () => sortableHeader("Reactivations", "reactivations", sort, setSort, tr, true),
 			cell: ({ row }) => metric(row.original.total_reactivations),
 		},
 		{
 			accessorKey: "app_opens",
-			header: () => sortableHeader("App opens", "app_opens", sort, setSort, true),
+			header: () => sortableHeader("App opens", "app_opens", sort, setSort, tr, true),
 			cell: ({ row }) => metric(row.original.total_app_opens),
 		},
 		{
 			accessorKey: "user_referred",
-			header: () => sortableHeader("Users Referred", "user_referred", sort, setSort, true),
+			header: () => sortableHeader("Users referred", "user_referred", sort, setSort, tr, true),
 			cell: ({ row }) => metric(row.original.total_user_referred),
 		},
 		{
 			accessorKey: "revenue",
-			header: () => sortableHeader("Revenue", "revenue", sort, setSort),
+			header: () => sortableHeader("Revenue", "revenue", sort, setSort, tr),
 			cell: ({ row }) =>
 				row.original.total_revenue ? formatCurrencyFromCents(row.original.total_revenue) : "—",
 		},
 		{
 			accessorKey: "date",
-			header: () => sortableHeader("Date", "created_at", sort, setSort),
+			header: () => sortableHeader("Date", "created_at", sort, setSort, tr),
 			cell: ({ row }) => formatSlashDate(row.original.created_at),
 		},
 	];

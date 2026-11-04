@@ -1,3 +1,4 @@
+import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { useEffect, useState } from "react";
@@ -16,11 +17,14 @@ function requestedTab() {
 }
 export default function ContentPage() {
 	const { t, locale } = useDataI18n();
+	const router = useRouter();
+	const pathname = usePathname();
+	const search = useSearchParams();
 	const [tab, setTab] = useState<string>(requestedTab);
 	const collections = useResource<Page<Collection>>("/_emdash/api/schema/collections");
-	const [chosen, setChosen] = useState("");
 	const rows = collections.data?.items.filter((item) => item.slug !== "views") ?? [];
-	const collection = rows.some((item) => item.slug === chosen) ? chosen : (rows[0]?.slug ?? "");
+	const requested = search.get("collection");
+	const collection = rows.find((item) => item.slug === requested)?.slug ?? rows[0]?.slug ?? "";
 	useEffect(() => {
 		const update = () => {
 			setTab(requestedTab());
@@ -34,7 +38,14 @@ export default function ContentPage() {
 		setTab(value);
 		const url = new URL(window.location.href);
 		url.searchParams.set("tab", value);
+		url.searchParams.delete("document");
 		window.history.pushState(null, "", url);
+	}
+	function chooseCollection(value: string) {
+		const next = new URLSearchParams(search);
+		next.set("collection", value);
+		next.delete("document");
+		router.replace(`${pathname}?${next}`);
 	}
 	return (
 		<section className="ds-page space-y-5">
@@ -59,7 +70,7 @@ export default function ContentPage() {
 					<CollectionsView
 						collections={rows}
 						collection={collection}
-						onSelect={setChosen}
+						onSelect={chooseCollection}
 						onChanged={collections.refresh}
 					/>
 				</TabsContent>
@@ -89,7 +100,7 @@ export default function ContentPage() {
 								key={`${collection}:${value}`}
 								collections={rows}
 								collection={collection}
-								onCollectionChange={setChosen}
+								onCollectionChange={chooseCollection}
 								trash={value === "trash"}
 							/>
 						)}

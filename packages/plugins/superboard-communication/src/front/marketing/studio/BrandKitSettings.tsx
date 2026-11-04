@@ -121,9 +121,9 @@ export function BrandKitSettings({ project }: { project: string }) {
 					/>
 					{brand.social_links.map((link, index) => (
 						<div key={link.network} className="flex flex-wrap items-end gap-3">
-							<span className="w-28 pb-2 text-sm font-medium">{socialLabel(link.network)}</span>
+							<span className="w-28 pb-2 text-sm font-medium">{t(socialLabel(link.network))}</span>
 							<Input
-								aria-label={socialLabel(link.network)}
+								aria-label={t(socialLabel(link.network))}
 								type="url"
 								value={link.url}
 								onChange={(event) => {
@@ -157,7 +157,7 @@ export function BrandKitSettings({ project }: { project: string }) {
 							items={{
 								"": t("Choose a network"),
 								...Object.fromEntries(
-									unusedNetworks.map((network) => [network, socialLabel(network)]),
+									unusedNetworks.map((network) => [network, t(socialLabel(network))]),
 								),
 							}}
 						/>

@@ -4,6 +4,8 @@ import { Input } from "@superboard/front-ui/ui/input.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
 import clsx from "clsx";
 
+import { useStudioI18n } from "../../studio/i18n.js";
+
 export const RootContainer = ({ children }: RootContainerCraftProps) => {
 	const {
 		connectors: { connect },
@@ -84,6 +86,7 @@ export const RootContainer = ({ children }: RootContainerCraftProps) => {
 };
 
 export const RootContainerSettings = () => {
+	const { t } = useStudioI18n();
 	const {
 		actions: { setProp },
 		props,
@@ -94,7 +97,7 @@ export const RootContainerSettings = () => {
 	return (
 		<div className="flex flex-col gap-3 px-3 py-2">
 			<div className="flex items-center justify-between">
-				<Label className="text-xs text-muted-foreground">Background</Label>
+				<Label className="text-xs text-muted-foreground">{t("Background")}</Label>
 				<div className="flex items-center gap-1.5">
 					<Input
 						value={props.background}

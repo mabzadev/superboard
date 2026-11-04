@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen, waitFor, within } from "../../../../../packages/supbrd-front-ui/render.js";
@@ -22,6 +23,29 @@ const item = (id: string, title: string, customer: string) => ({
 	source: { external_user_id: customer },
 });
 
+vi.mock("../../../../../../../packages/plugins/superboard-support/src/front/transport.js", () => ({
+	GET: vi.fn(async (url: string) => ({
+		data: url.endsWith("/workforce/inboxes/inbox-1")
+			? {
+					data: {
+						id: "inbox-1",
+						name: "Web support",
+						identifier: "web-support",
+						channel_type: "widget",
+						status: "active",
+						auto_assignment: true,
+						allow_reopen: true,
+						csat_enabled: true,
+					},
+				}
+			: { data: [], pagination: { limit: 50, has_more: false, next_cursor: null } },
+	})),
+	POST: vi.fn(),
+	PUT: vi.fn(),
+	PATCH: vi.fn(),
+	DELETE: vi.fn(),
+	request: vi.fn(),
+}));
 vi.mock(
 	"../../../../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js",
 	() => ({
@@ -69,6 +93,9 @@ vi.mock("../../../../../../../packages/supbrd-front-ui/src/shared/lib/Notificati
 	showSuccessNotification: vi.fn(),
 }));
 
+import { FrontContextProvider } from "@superboard/front-ui/context";
+import type { ReactNode } from "react";
+
 import InboxPage from "../../../../../../../packages/plugins/superboard-support/src/front/components/modules/SupportInboxPage.js";
 import SupportInboxWorkspace from "../../../../../../../packages/plugins/superboard-support/src/front/components/modules/SupportInboxWorkspace.js";
 
@@ -76,6 +103,11 @@ describe("Support Inbox customer search", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		Element.prototype.scrollIntoView ??= () => undefined;
+		globalThis.ResizeObserver ??= class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		};
 		services.getUnifiedInboxItems.mockResolvedValue({
 			data: [item("c-1", "Billing question", "user-1"), item("c-2", "Login issue", "user-2")],
 			degraded_sources: [],
@@ -123,6 +155,99 @@ describe("Support Inbox customer search", () => {
 		).toBeInTheDocument();
 		expect(screen.queryByText("Select an Inbox item.")).not.toBeInTheDocument();
 		expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
+	});
+
+	it.each(["/support/inbox?inbox=inbox-1&tab=conversations", "/support/inbox?inbox=inbox-1"])(
+		"keeps the open inbox when a search started from %s is reloaded",
+		async (address) => {
+			services.getSupportContacts.mockResolvedValue({ data: [] });
+			window.history.replaceState(null, "", address);
+			const user = userEvent.setup();
+			const { unmount } = render(<SupportInboxWorkspace />);
+			await screen.findByRole("heading", { level: 1, name: "Web support" });
+			if (!new URL(window.location.href).searchParams.has("tab"))
+				await user.click(screen.getByRole("tab", { name: "Conversations" }));
+			await user.type(
+				await screen.findByRole("searchbox", { name: "Search conversations" }),
+				"user-1",
+			);
+			await user.click(screen.getByRole("button", { name: "Search" }));
+			const searched = new URL(window.location.href);
+			expect(searched.searchParams.get("inbox")).toBe("inbox-1");
+			expect(searched.searchParams.get("q")).toBe("user-1");
+			unmount();
+			services.getUnifiedInboxItems.mockClear();
+
+			render(<SupportInboxWorkspace />);
+
+			expect(await screen.findByRole("heading", { level: 1, name: "Web support" })).toBeVisible();
+			expect(screen.queryByRole("heading", { level: 1, name: "Inbox" })).not.toBeInTheDocument();
+			expect(screen.getByRole("tab", { name: "Conversations" })).toHaveAttribute(
+				"aria-selected",
+				"true",
+			);
+			expect(await screen.findByRole("searchbox", { name: "Search conversations" })).toHaveValue(
+				"user-1",
+			);
+			await waitFor(() =>
+				expect(services.getUnifiedInboxItems).toHaveBeenCalledWith(
+					"project-1",
+					expect.objectContaining({ inbox_id: "inbox-1" }),
+				),
+			);
+			const list = await screen.findByRole("complementary");
+			await waitFor(() => expect(within(list).getByText("Billing question")).toBeInTheDocument());
+			expect(within(list).queryByText("Login issue")).not.toBeInTheDocument();
+		},
+	);
+
+	it("opens the conversations of an inbox from a link that carries a search", async () => {
+		services.getSupportContacts.mockResolvedValue({ data: [] });
+		window.history.replaceState(null, "", "/support/inbox?inbox=inbox-1&q=user-1");
+		render(<SupportInboxWorkspace />);
+		expect(await screen.findByRole("tab", { name: "Conversations" })).toHaveAttribute(
+			"aria-selected",
+			"true",
+		);
+		expect(await screen.findByRole("searchbox", { name: "Search conversations" })).toHaveValue(
+			"user-1",
+		);
+	});
+
+	it("shows the open conversation in French", async () => {
+		window.history.replaceState(null, "", "/support/inbox?q=user-1&lang=fr");
+		const french = ({ children }: { children: ReactNode }) => (
+			<FrontContextProvider
+				value={{
+					instanceId: "1",
+					pluginId: "superboard-support",
+					path: "/support/inbox",
+					parameters: {},
+					locale: "fr",
+					operator: null,
+					projectScope: null,
+					activePluginIds: ["superboard-support"],
+				}}
+			>
+				{children}
+			</FrontContextProvider>
+		);
+		const { container } = render(<InboxPage />, { wrapper: french });
+
+		expect(await screen.findByPlaceholderText("Répondez au client…")).toBeVisible();
+		expect(screen.getByText("Environnement du support isolé")).toBeVisible();
+		expect(screen.getByRole("button", { name: "Actualiser" })).toBeVisible();
+		expect(screen.getByRole("combobox", { name: "Filtrer par statut" })).toHaveDisplayValue(
+			"Tous les statuts",
+		);
+		expect(screen.getByRole("combobox", { name: "Statut" })).toHaveDisplayValue("Ouverte");
+		expect(screen.getByRole("combobox", { name: "Priorité" })).toHaveDisplayValue("Normale");
+		expect(screen.getByRole("button", { name: "Appliquer la macro" })).toBeDisabled();
+		expect(screen.getByText("Note privée — visible uniquement par les agents")).toBeVisible();
+		expect(screen.getByRole("button", { name: /Envoyer/ })).toBeDisabled();
+		expect(container.textContent).not.toMatch(
+			/Isolated Support runtime|All conversations|Refresh|Customer|Private note|Apply macro|Normal\b/,
+		);
 	});
 
 	it("does not repeat the Inbox title inside an inbox", async () => {

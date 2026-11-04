@@ -1,3 +1,4 @@
+import { FrontContextProvider } from "@superboard/front-ui/context";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -28,7 +29,10 @@ vi.mock(
 	}),
 );
 
-import { OnboardingsPage } from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/onboardings/components/modules/OnboardingPages.js";
+import {
+	OnboardingStatisticsPage,
+	OnboardingsPage,
+} from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/onboardings/components/modules/OnboardingPages.js";
 
 describe("OnboardingsPage", () => {
 	beforeEach(() => {
@@ -65,5 +69,37 @@ describe("OnboardingsPage", () => {
 		expect(
 			screen.queryByText("Completion and drop-off across published onboarding flows."),
 		).not.toBeInTheDocument();
+	});
+
+	it("names the onboarding results in French", async () => {
+		services.getOnboardingStatistics.mockResolvedValue({
+			filters: {},
+			totals: { impression: 5, step_view: 3, complete: 1 },
+			series: [{ date: "2026-10-01", event_type: "step_view", count: 3 }],
+			funnel: [],
+			completion_rate: 0.2,
+			drop_off_rate: 0.8,
+		});
+		render(
+			<FrontContextProvider
+				value={{
+					instanceId: "1",
+					pluginId: "superboard-onboardings",
+					path: "/onboardings/statistics",
+					parameters: {},
+					locale: "fr",
+					operator: null,
+					projectScope: null,
+					activePluginIds: ["superboard-onboardings"],
+				}}
+			>
+				<OnboardingStatisticsPage />
+			</FrontContextProvider>,
+		);
+		expect(await screen.findByText("étapes vues")).toBeInTheDocument();
+		expect(screen.getByText("affichages").nextElementSibling).toHaveTextContent("5");
+		expect(screen.getByText("parcours terminés")).toBeInTheDocument();
+		expect(screen.getByRole("cell", { name: "Étapes vues" })).toBeInTheDocument();
+		expect(screen.getByLabelText("Intervalle")).toBeInTheDocument();
 	});
 });

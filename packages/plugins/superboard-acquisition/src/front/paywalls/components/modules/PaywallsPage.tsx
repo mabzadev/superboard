@@ -789,6 +789,7 @@ function PaywallDeliveryControls({
 	experiences: PaywallExperience[];
 	onChanged: () => Promise<void>;
 }) {
+	const { tr } = useFlowI18n();
 	const { t } = useExperienceI18n();
 	const published = versions.filter(({ status }) => status === "published");
 	const [key, setKey] = useState("default");
@@ -826,7 +827,7 @@ function PaywallDeliveryControls({
 				editingPlacementId,
 			);
 			setEditingPlacementId(undefined);
-			showSuccessNotification(editingPlacementId ? "Placement updated" : "Placement saved");
+			showSuccessNotification(tr(editingPlacementId ? "Placement updated" : "Placement saved"));
 			await onChanged();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -1222,7 +1223,7 @@ export function PaywallStatisticsPage({ itemVersions }: { itemVersions?: Paywall
 						{summary.map(([label, value]) => (
 							<Card key={label}>
 								<CardHeader>
-									<CardDescription>{label.replaceAll("_", " ")}</CardDescription>
+									<CardDescription>{tr(label.replaceAll("_", " "))}</CardDescription>
 									<CardTitle className="text-3xl">{Number(value).toLocaleString()}</CardTitle>
 								</CardHeader>
 							</Card>
@@ -1245,7 +1246,7 @@ export function PaywallStatisticsPage({ itemVersions }: { itemVersions?: Paywall
 								<CardDescription>
 									{Object.entries(data?.totals.revenue_by_currency ?? {})
 										.map(([currency, micros]) => `${moneyValue(micros, currency)}`)
-										.join(" · ") || "No purchases"}
+										.join(" · ") || tr("No purchases")}
 								</CardDescription>
 							</CardHeader>
 						</Card>
@@ -1271,8 +1272,14 @@ export function PaywallStatisticsPage({ itemVersions }: { itemVersions?: Paywall
 									{(data?.series ?? []).map((row, index) => (
 										<TableRow key={`${String(row.bucket)}:${String(row.event_type)}:${index}`}>
 											<TableCell>{String(row.bucket)}</TableCell>
-											<TableCell className="capitalize">
-												{String(row.event_type).replaceAll("_", " ")}
+											<TableCell>
+												{sentenceCase(
+													tr(
+														typeof row.event_type === "string"
+															? row.event_type.replaceAll("_", " ")
+															: "",
+													),
+												)}
 											</TableCell>
 											<TableCell>{Number(row.count ?? 0).toLocaleString()}</TableCell>
 											<TableCell>
@@ -1297,6 +1304,10 @@ export function PaywallStatisticsPage({ itemVersions }: { itemVersions?: Paywall
 			)}
 		</ModulePage>
 	);
+}
+
+function sentenceCase(label: string) {
+	return label.charAt(0).toLocaleUpperCase() + label.slice(1);
 }
 
 function moneyValue(micros: number, currency: string) {

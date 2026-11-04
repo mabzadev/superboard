@@ -14,7 +14,7 @@ import { useSupportI18n } from "../../i18n.js";
 import { SupportError, SupportLoadMore, useSupportCollection } from "../support/SupportUi.js";
 
 export function SupportInboxMembers({ project, inboxId }: { project: string; inboxId: string }) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 	const agents = useSupportCollection(project, listSupportMemberships);
 	const [members, setMembers] = useState<SupportMembership[]>([]);
 	const [selected, setSelected] = useState("");
@@ -25,9 +25,9 @@ export function SupportInboxMembers({ project, inboxId }: { project: string; inb
 			setMembers((await listSupportInboxMembers(project, inboxId)).data);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [project, inboxId]);
+	}, [project, inboxId, locale]);
 	useEffect(() => {
 		let active = true;
 		void listSupportInboxMembers(project, inboxId)
@@ -38,12 +38,12 @@ export function SupportInboxMembers({ project, inboxId }: { project: string; inb
 				}
 			})
 			.catch((cause: unknown) => {
-				if (active) setError(moduleErrorMessage(cause));
+				if (active) setError(moduleErrorMessage(cause, locale));
 			});
 		return () => {
 			active = false;
 		};
-	}, [project, inboxId]);
+	}, [project, inboxId, locale]);
 	const change = async (id: string, add: boolean) => {
 		setBusy(true);
 		try {
@@ -51,7 +51,7 @@ export function SupportInboxMembers({ project, inboxId }: { project: string; inb
 			else await unlinkSupportInboxMember(project, inboxId, id);
 			await load();
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setBusy(false);
 		}

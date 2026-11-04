@@ -12,21 +12,9 @@
 			},
 			{
 				"type": "custom",
-				"label": "Authentication",
+				"label": "Users",
 				"url": "/auth/users",
-				"cssClasses": "sb-icon-users",
-				"children": [
-					{
-						"type": "custom",
-						"label": "Users",
-						"url": "/auth/users"
-					},
-					{
-						"type": "custom",
-						"label": "Settings",
-						"url": "/auth/settings?lang=en"
-					}
-				]
+				"cssClasses": "sb-icon-users"
 			},
 			{
 				"type": "custom",
@@ -43,11 +31,6 @@
 						"type": "custom",
 						"label": "Files and media",
 						"url": "/data/files"
-					},
-					{
-						"type": "custom",
-						"label": "Configuration",
-						"url": "/data/settings"
 					}
 				]
 			},
@@ -66,11 +49,6 @@
 						"type": "custom",
 						"label": "Catalog",
 						"url": "/monetization/products"
-					},
-					{
-						"type": "custom",
-						"label": "Settings",
-						"url": "/monetization/settings"
 					}
 				]
 			},
@@ -104,11 +82,6 @@
 						"type": "custom",
 						"label": "Activity",
 						"url": "/communication/statistics"
-					},
-					{
-						"type": "custom",
-						"label": "Settings",
-						"url": "/communication/settings"
 					}
 				]
 			},
@@ -132,11 +105,6 @@
 						"type": "custom",
 						"label": "Dynamic links",
 						"url": "/acquisition/dynamic-links"
-					},
-					{
-						"type": "custom",
-						"label": "Settings",
-						"url": "/acquisition/settings"
 					}
 				]
 			},
@@ -155,11 +123,6 @@
 						"type": "custom",
 						"label": "Help center",
 						"url": "/support/help-center"
-					},
-					{
-						"type": "custom",
-						"label": "Support settings",
-						"url": "/support/settings"
 					}
 				]
 			},
@@ -203,23 +166,53 @@
 						"type": "custom",
 						"label": "Remote configuration",
 						"url": "/analytics/remote-config"
-					},
-					{
-						"type": "custom",
-						"label": "Settings",
-						"url": "/analytics/settings"
 					}
 				]
 			},
 			{
 				"type": "custom",
-				"label": "Environment settings",
-				"url": "/core/settings",
-				"cssClasses": "sb-icon-settings sb-nav-local",
+				"label": "Settings",
+				"url": "/auth/settings?lang=en",
+				"cssClasses": "sb-icon-settings",
 				"children": [
 					{
 						"type": "custom",
-						"label": "General",
+						"label": "Authentication",
+						"url": "/auth/settings?lang=en"
+					},
+					{
+						"type": "custom",
+						"label": "Data",
+						"url": "/data/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Monetization",
+						"url": "/monetization/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Communication",
+						"url": "/communication/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Acquisition",
+						"url": "/acquisition/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Support",
+						"url": "/support/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Analytics",
+						"url": "/analytics/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Environment",
 						"url": "/core/settings"
 					},
 					{
@@ -251,14 +244,13 @@
 						"type": "custom",
 						"label": "AI assistant access",
 						"url": "/core/mcp"
+					},
+					{
+						"type": "custom",
+						"label": "Plugins",
+						"url": "/_emdash/admin/plugins-manager"
 					}
 				]
-			},
-			{
-				"type": "custom",
-				"label": "Plugins",
-				"url": "/_emdash/admin/plugins-manager",
-				"cssClasses": "sb-icon-plugins"
 			}
 		]
 	},
@@ -275,21 +267,9 @@
 			},
 			{
 				"type": "custom",
-				"label": "Authentification",
+				"label": "Utilisateurs",
 				"url": "/auth/users",
-				"cssClasses": "sb-icon-users",
-				"children": [
-					{
-						"type": "custom",
-						"label": "Utilisateurs",
-						"url": "/auth/users"
-					},
-					{
-						"type": "custom",
-						"label": "Paramètres",
-						"url": "/auth/settings?lang=fr"
-					}
-				]
+				"cssClasses": "sb-icon-users"
 			},
 			{
 				"type": "custom",
@@ -306,11 +286,6 @@
 						"type": "custom",
 						"label": "Fichiers et médias",
 						"url": "/data/files"
-					},
-					{
-						"type": "custom",
-						"label": "Configuration",
-						"url": "/data/settings"
 					}
 				]
 			},
@@ -329,11 +304,6 @@
 						"type": "custom",
 						"label": "Catalogue",
 						"url": "/monetization/products"
-					},
-					{
-						"type": "custom",
-						"label": "Paramètres",
-						"url": "/monetization/settings"
 					}
 				]
 			},
@@ -367,11 +337,6 @@
 						"type": "custom",
 						"label": "Activité",
 						"url": "/communication/statistics"
-					},
-					{
-						"type": "custom",
-						"label": "Paramètres",
-						"url": "/communication/settings"
 					}
 				]
 			},
@@ -395,11 +360,6 @@
 						"type": "custom",
 						"label": "Liens dynamiques",
 						"url": "/acquisition/dynamic-links"
-					},
-					{
-						"type": "custom",
-						"label": "Paramètres",
-						"url": "/acquisition/settings"
 					}
 				]
 			},
@@ -418,11 +378,6 @@
 						"type": "custom",
 						"label": "Centre d’aide",
 						"url": "/support/help-center"
-					},
-					{
-						"type": "custom",
-						"label": "Paramètres du support",
-						"url": "/support/settings"
 					}
 				]
 			},
@@ -466,23 +421,53 @@
 						"type": "custom",
 						"label": "Configuration distante",
 						"url": "/analytics/remote-config"
-					},
-					{
-						"type": "custom",
-						"label": "Paramètres",
-						"url": "/analytics/settings"
 					}
 				]
 			},
 			{
 				"type": "custom",
-				"label": "Paramètres de l’environnement",
-				"url": "/core/settings",
-				"cssClasses": "sb-icon-settings sb-nav-local",
+				"label": "Paramètres",
+				"url": "/auth/settings?lang=fr",
+				"cssClasses": "sb-icon-settings",
 				"children": [
 					{
 						"type": "custom",
-						"label": "Général",
+						"label": "Authentification",
+						"url": "/auth/settings?lang=fr"
+					},
+					{
+						"type": "custom",
+						"label": "Data",
+						"url": "/data/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Monétisation",
+						"url": "/monetization/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Communication",
+						"url": "/communication/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Acquisition",
+						"url": "/acquisition/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Support",
+						"url": "/support/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Analytics",
+						"url": "/analytics/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Environnement",
 						"url": "/core/settings"
 					},
 					{
@@ -514,14 +499,13 @@
 						"type": "custom",
 						"label": "Accès des assistants IA",
 						"url": "/core/mcp"
+					},
+					{
+						"type": "custom",
+						"label": "Plugins",
+						"url": "/_emdash/admin/plugins-manager"
 					}
 				]
-			},
-			{
-				"type": "custom",
-				"label": "Plugins",
-				"url": "/_emdash/admin/plugins-manager",
-				"cssClasses": "sb-icon-plugins"
 			}
 		]
 	}

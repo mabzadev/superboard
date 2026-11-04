@@ -1,5 +1,6 @@
 export {
 	Activity,
+	ArrowLeft,
 	AudioLines,
 	Blocks,
 	ChartNoAxesCombined,

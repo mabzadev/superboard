@@ -1,3 +1,4 @@
+import { FrontContextProvider } from "@superboard/front-ui/context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -29,6 +30,8 @@ const marketing = vi.hoisted(() => ({
 	replayMarketingDeadLetter: vi.fn(),
 	discardMarketingDeadLetter: vi.fn(),
 	retryDeliveryOutbox: vi.fn(),
+	getMarketingStatistics: vi.fn(),
+	getEmailCampaigns: vi.fn(),
 }));
 vi.mock(
 	"../../../../../../../../packages/plugins/superboard-communication/src/front/marketing/api/marketing/marketingService.js",
@@ -45,8 +48,16 @@ vi.mock("../../../../../../../../packages/supbrd-front-ui/src/shared/lib/Notific
 	showSuccessNotification: vi.fn(),
 }));
 
+vi.mock(
+	"../../../../../../../../packages/plugins/superboard-communication/src/front/marketing/studio/growth-service.js",
+	() => ({ getEmailInsights: vi.fn().mockRejectedValue(new Error("offline")) }),
+);
+
 import { EmailAdministration } from "../../../../../../../../packages/plugins/superboard-communication/src/front/email/components/modules/EmailAdministration.js";
-import { MarketingOperations } from "../../../../../../../../packages/plugins/superboard-communication/src/front/marketing/components/modules/MarketingPages.js";
+import {
+	MarketingOperations,
+	MarketingStatistics,
+} from "../../../../../../../../packages/plugins/superboard-communication/src/front/marketing/components/modules/MarketingPages.js";
 
 describe("Communication delivery operations", () => {
 	beforeEach(() => {
@@ -139,5 +150,46 @@ describe("Communication delivery operations", () => {
 		await waitFor(() =>
 			expect(transactional.retryDeliveryOutbox).toHaveBeenCalledWith("10-test", "failed-1"),
 		);
+	});
+
+	it("names every delivery statistic in French", async () => {
+		marketing.getEmailCampaigns.mockResolvedValue([]);
+		marketing.getMarketingStatistics.mockResolvedValue({
+			totals: { bounces: 3, bounce_rate: 1.5, unsubscribe_rate: 0.5, complaint_rate: 0.1 },
+			series: [
+				{ bucket: "2026-11-01", event_type: "soft_bounce", total: 2 },
+				{ bucket: "2026-11-01", event_type: "delivery_delayed", total: 1 },
+				{ bucket: "2026-11-02", event_type: "rejected", total: 1 },
+			],
+		});
+		render(
+			<FrontContextProvider
+				value={{
+					instanceId: "1",
+					pluginId: "superboard-marketing",
+					path: "/communication/statistics",
+					parameters: {},
+					locale: "fr",
+					operator: null,
+					projectScope: null,
+					activePluginIds: ["superboard-marketing"],
+				}}
+			>
+				<MarketingStatistics />
+			</FrontContextProvider>,
+		);
+
+		for (const label of [
+			"Rebonds",
+			"Taux de rebond",
+			"Taux de désabonnement",
+			"Taux de plainte",
+			"Rebond temporaire",
+			"Livraison retardée",
+			"Rejetés",
+		])
+			expect(await screen.findByText(label)).toBeVisible();
+		for (const label of ["Bounces", "Bounce rate", "Soft bounce", "Rejected"])
+			expect(screen.queryByText(label)).not.toBeInTheDocument();
 	});
 });

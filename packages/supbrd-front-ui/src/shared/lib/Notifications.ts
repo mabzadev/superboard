@@ -1,7 +1,12 @@
 import { toast } from "sonner";
 
+import { componentI18n } from "./component-i18n.js";
+
+const pageI18n = () =>
+	componentI18n(typeof document === "undefined" ? undefined : document.documentElement.lang);
+
 export const showGenericError = (): void => {
-	toast.error("Something went wrong, please try again");
+	toast.error(pageI18n()("notification.genericError"));
 };
 
 export const showSuccessNotification = (message: string): void => {
@@ -9,10 +14,7 @@ export const showSuccessNotification = (message: string): void => {
 };
 
 export const showExportNotification = (): void => {
-	toast.success(
-		"We're preparing your CSV. You'll receive an email with a download link valid for 24 hours.",
-		{ duration: 10000 },
-	);
+	toast.success(pageI18n()("notification.export"), { duration: 10000 });
 };
 
 export const showErrorNotification = (message: string): void => {
@@ -22,7 +24,7 @@ export const showErrorNotification = (message: string): void => {
 export const showErrorNotificationWithLink = (message: string, onSuccess: () => void): void => {
 	toast.error(message, {
 		action: {
-			label: "View",
+			label: pageI18n()("notification.view"),
 			onClick: onSuccess,
 		},
 	});

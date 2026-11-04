@@ -4,6 +4,7 @@ import DataTable from "@superboard/front-ui/common/DataTable.js";
 import type { AccessorKeyColumnDef } from "@tanstack/react-table";
 import { memo } from "react";
 
+import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
 import type { LinkData } from "./linkAnalytics.js";
 import LinksEmptyState from "./LinksEmptyState.js";
 
@@ -28,6 +29,7 @@ const LinksTable = ({
 	hasFilters?: boolean;
 	isArchived?: boolean;
 }) => {
+	const { tr } = useFlowI18n();
 	return (
 		<DataTable
 			columns={columns}
@@ -35,10 +37,10 @@ const LinksTable = ({
 			selectedColumns={selectedColumns}
 			onRowClick={handleEditLink}
 			getRowId={(row) => row.id}
-			getRowAriaLabel={(row) => `Edit link ${row.name ?? ""}`}
+			getRowAriaLabel={(row) => tr("Edit link {name}").replace("{name}", row.name ?? "")}
 			loading={loading}
 			hasFilters={hasFilters}
-			ariaLabel="Links"
+			ariaLabel={tr("Links")}
 			stickyHeader
 			containerClassName="@container relative rounded-md border border-sidebar-border overflow-auto overscroll-none min-h-0 [&>[data-slot=table-container]]:overflow-visible"
 			skeletonCellClassName="p-2"

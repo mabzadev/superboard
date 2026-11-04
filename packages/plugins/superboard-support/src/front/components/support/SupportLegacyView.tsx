@@ -7,9 +7,9 @@ export function SupportLegacyView({ destination }: { destination: string }) {
 	useEffect(() => {
 		const current = new URL(window.location.href);
 		const target = new URL(destination, current.origin);
+		const destinationKeys = new Set(target.searchParams.keys());
 		for (const [key, value] of current.searchParams) {
-			if (key === "lang" || key === "inbox" || key === "portal")
-				target.searchParams.set(key, value);
+			if (!destinationKeys.has(key)) target.searchParams.append(key, value);
 		}
 		window.location.replace(target);
 	}, [destination]);

@@ -56,7 +56,14 @@ import {
 } from "../../api/support/settingsService.js";
 import { useSupportI18n } from "../../i18n.js";
 import { SupportDetail } from "../support/SupportModulePage.js";
-import { AccessNotice, SupportEmpty, SupportMetric, SupportStatus } from "../support/SupportUi.js";
+import {
+	AccessNotice,
+	SupportEmpty,
+	SupportMetric,
+	SupportStatus,
+	supportChannelLabel,
+	supportStatusLabel,
+} from "../support/SupportUi.js";
 import SupportCaptainPage from "./SupportCaptainPage.js";
 import SupportContactsPage from "./SupportContactsPage.js";
 import SupportIntegrationsPage from "./SupportIntegrationsPage.js";
@@ -124,11 +131,11 @@ export default function SupportSettingsPage() {
 			setFeaturesJson(JSON.stringify(loaded.features, null, 2));
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setLoading(false);
 		}
-	}, [projectRef]);
+	}, [projectRef, locale]);
 	const loadOperations = useCallback(async () => {
 		if (!projectRef || !administrator) return;
 		try {
@@ -139,9 +146,9 @@ export default function SupportSettingsPage() {
 			setOperations(health.data);
 			setDeadLetters(letters.data);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [administrator, projectRef]);
+	}, [administrator, projectRef, locale]);
 	const loadNotifications = useCallback(async () => {
 		if (!projectRef) return;
 		try {
@@ -154,11 +161,11 @@ export default function SupportSettingsPage() {
 			setMutedEvents(preferences.data.muted_event_types.join(", "));
 			setNotificationError(null);
 		} catch (cause) {
-			setNotificationError(moduleErrorMessage(cause));
+			setNotificationError(moduleErrorMessage(cause, locale));
 		} finally {
 			setNotificationsLoading(false);
 		}
-	}, [projectRef]);
+	}, [projectRef, locale]);
 	useEffect(() => {
 		if (activeTab !== "general") return;
 		let active = true;
@@ -167,12 +174,12 @@ export default function SupportSettingsPage() {
 				if (active) await loadSettings();
 			})
 			.catch((cause: unknown) => {
-				setError(moduleErrorMessage(cause));
+				setError(moduleErrorMessage(cause, locale));
 			});
 		return () => {
 			active = false;
 		};
-	}, [activeTab, loadSettings]);
+	}, [activeTab, loadSettings, locale]);
 	useEffect(() => {
 		if (activeTab !== "operations") return;
 		let active = true;
@@ -181,12 +188,12 @@ export default function SupportSettingsPage() {
 				if (active) await loadOperations();
 			})
 			.catch((cause: unknown) => {
-				setError(moduleErrorMessage(cause));
+				setError(moduleErrorMessage(cause, locale));
 			});
 		return () => {
 			active = false;
 		};
-	}, [activeTab, loadOperations]);
+	}, [activeTab, loadOperations, locale]);
 	useEffect(() => {
 		if (activeTab !== "notifications") return;
 		let active = true;
@@ -195,12 +202,12 @@ export default function SupportSettingsPage() {
 				if (active) await loadNotifications();
 			})
 			.catch((cause: unknown) => {
-				setNotificationError(moduleErrorMessage(cause));
+				setNotificationError(moduleErrorMessage(cause, locale));
 			});
 		return () => {
 			active = false;
 		};
-	}, [activeTab, loadNotifications]);
+	}, [activeTab, loadNotifications, locale]);
 
 	const save = async () => {
 		if (!projectRef) return;
@@ -223,7 +230,7 @@ export default function SupportSettingsPage() {
 			showSuccessNotification(t("Support settings saved"));
 			await loadSettings();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setLoading(false);
 		}
@@ -235,11 +242,11 @@ export default function SupportSettingsPage() {
 			if (action === "replay") await replaySupportDeadLetter(projectRef, item.id);
 			else await discardSupportDeadLetter(projectRef, item.id);
 			showSuccessNotification(
-				action === "replay" ? "Support job replayed" : "Support job discarded",
+				action === "replay" ? t("Support job replayed") : t("Support job discarded"),
 			);
 			await loadOperations();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -262,7 +269,7 @@ export default function SupportSettingsPage() {
 			showSuccessNotification(t("Notification preferences saved"));
 			await loadNotifications();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setNotificationsLoading(false);
 		}
@@ -288,13 +295,13 @@ export default function SupportSettingsPage() {
 			await loadNotifications();
 			showSuccessNotification(
 				action === "read"
-					? "Notification marked as read"
+					? t("Notification marked as read")
 					: action === "snooze"
-						? "Notification snoozed for one hour"
-						: "Notification removed",
+						? t("Notification snoozed for one hour")
+						: t("Notification removed"),
 			);
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -303,9 +310,9 @@ export default function SupportSettingsPage() {
 		try {
 			await markAllSupportNotificationsRead(projectRef);
 			await loadNotifications();
-			showSuccessNotification("All notifications marked as read");
+			showSuccessNotification(t("All notifications marked as read"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -576,7 +583,7 @@ export default function SupportSettingsPage() {
 																<p className="font-medium">{item.title}</p>
 																<p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
 																<p className="mt-2 text-xs text-muted-foreground">
-																	{new Date(item.created_at).toLocaleString()} ·{" "}
+																	{new Date(item.created_at).toLocaleString(locale)} ·{" "}
 																	{item.notification_type}
 																</p>
 															</div>
@@ -649,7 +656,7 @@ export default function SupportSettingsPage() {
 											icon={<Activity />}
 											title={t("Queues and schedules")}
 											rows={operations?.queues ?? []}
-											label={(row) => String(row.queue_name || "Support queue")}
+											label={(row) => row.queue_name || t("Support queue")}
 										/>
 										<OperationGroup
 											icon={<DatabaseZap />}
@@ -659,14 +666,16 @@ export default function SupportSettingsPage() {
 												...(operations?.imports ?? []),
 												...(operations?.exports ?? []),
 											]}
-											label={(row) => String(row.status || "queued")}
+											label={(row) => t(supportStatusLabel(row.status || "queued"))}
 										/>
 									</div>
 									<OperationGroup
 										icon={<Activity />}
 										title={t("Provider diagnostics")}
 										rows={operations?.providers ?? []}
-										label={(row) => String(row.provider || "Support provider")}
+										label={(row) =>
+											row.provider ? t(supportChannelLabel(row.provider)) : t("Support provider")
+										}
 									/>
 									<Card>
 										<CardHeader>
@@ -688,7 +697,7 @@ export default function SupportSettingsPage() {
 														>
 															<div>
 																<p className="font-medium">
-																	{item.job_type || "Unclassified Support job"}
+																	{item.job_type || t("Unclassified Support job")}
 																</p>
 																<p className="text-xs text-muted-foreground">
 																	{item.source_queue} · {item.attempts} {t("attempts")}

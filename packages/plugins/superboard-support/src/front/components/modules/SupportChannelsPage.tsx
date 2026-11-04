@@ -36,26 +36,9 @@ import {
 	SupportSearchToolbar,
 	SupportSection,
 	SupportStatus,
+	supportChannelLabels as providerLabels,
 	useSupportCollection,
 } from "../support/SupportUi.js";
-
-const providerLabels: Record<string, string> = {
-	widget: "Web widget",
-	api: "Support API",
-	email_google: "Google email",
-	email_microsoft: "Microsoft email",
-	smtp: "SMTP email",
-	whatsapp_cloud: "WhatsApp Cloud",
-	facebook_messenger: "Facebook Messenger",
-	instagram: "Instagram",
-	twilio_sms: "Twilio SMS",
-	twilio_voice: "Twilio Voice",
-	whatsapp_calls: "WhatsApp Calls",
-	telegram: "Telegram",
-	line: "LINE",
-	tiktok: "TikTok",
-	twitter: "X",
-};
 
 const credentialFields: Record<string, string[]> = {
 	widget: ["widget_key", "signing_secret", "allowed_domains"],
@@ -74,6 +57,35 @@ const credentialFields: Record<string, string[]> = {
 	twitter: ["client_id", "client_secret"],
 };
 
+const credentialLabels: Record<string, string> = {
+	widget_key: "Widget key",
+	signing_secret: "Signing secret",
+	allowed_domains: "Allowed domains",
+	client_id: "Client ID",
+	client_secret: "Client secret",
+	host: "Host",
+	port: "Port",
+	username: "Username",
+	password: "Password",
+	from_email: "Sender email",
+	access_token: "Access token",
+	verify_token: "Verification token",
+	app_secret: "App secret",
+	phone_number_id: "Phone number ID",
+	page_access_token: "Page access token",
+	page_id: "Page ID",
+	instagram_id: "Instagram ID",
+	account_sid: "Account SID",
+	auth_token: "Auth token",
+	from_number: "Sender number",
+	status_callback_url: "Status callback URL",
+	bot_token: "Bot token",
+	webhook_secret: "Webhook secret",
+	channel_access_token: "Channel access token",
+	channel_secret: "Channel secret",
+	client_key: "Client key",
+};
+
 const oauthProviders = new Set([
 	"email_google",
 	"email_microsoft",
@@ -84,7 +96,7 @@ const oauthProviders = new Set([
 ]);
 
 export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxId?: string } = {}) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 
 	const publicConfig = usePublicConfig();
 	const { selectedProject, selectedInstance } = useProjectSelection();
@@ -105,6 +117,18 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 	const [credentials, setCredentials] = useState<Record<string, string>>({});
 	const [saving, setSaving] = useState(false);
 
+	useEffect(() => {
+		const current = new URL(window.location.href);
+		const result = current.searchParams.get("support_result");
+		if (!result) return;
+		if (result === "success") showSuccessNotification(t("Support channel authorized"));
+		else showErrorNotification(t("Support channel authorization was not completed"));
+		current.searchParams.delete("support_result");
+		current.searchParams.delete("support_code");
+		current.searchParams.delete("connection");
+		window.history.replaceState(window.history.state, "", current);
+	}, [t]);
+
 	const loadChannels = useCallback(async () => {
 		if (!projectRef) return;
 		try {
@@ -114,9 +138,9 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 			);
 			setChannelError(null);
 		} catch (cause) {
-			setChannelError(moduleErrorMessage(cause));
+			setChannelError(moduleErrorMessage(cause, locale));
 		}
-	}, [projectRef, scopedInboxId]);
+	}, [projectRef, scopedInboxId, locale]);
 	useEffect(() => void loadChannels(), [loadChannels]);
 
 	const fields = useMemo(
@@ -138,23 +162,24 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 			setDisplayName("");
 			setInboxId(scopedInboxId ?? "");
 			await Promise.all([providers.reload(), loadChannels()]);
-			showSuccessNotification("Support channel created");
+			showSuccessNotification(t("Support channel created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
 	};
 
 	const removeProvider = async (endpoint: SupportProviderEndpoint) => {
-		if (!projectRef || !window.confirm(`Delete ${endpoint.display_name}?`)) return;
+		if (!projectRef || !window.confirm(t("Delete {name}?", { name: endpoint.display_name })))
+			return;
 		try {
 			await deleteSupportProvider(projectRef, endpoint.id);
 			if (selectedEndpoint?.id === endpoint.id) setSelectedEndpoint(null);
 			await Promise.all([providers.reload(), loadChannels()]);
-			showSuccessNotification("Support channel deleted");
+			showSuccessNotification(t("Support channel deleted"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -167,9 +192,9 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 			setCredentials({});
 			setSelectedEndpoint(null);
 			await providers.reload();
-			showSuccessNotification("Credentials saved securely");
+			showSuccessNotification(t("Credentials saved securely"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -179,7 +204,7 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 		if (!projectRef || !selectedEndpoint || !oauthProviders.has(selectedEndpoint.provider)) return;
 		setSaving(true);
 		try {
-			if (!publicConfig.apiUrl) throw new Error(publicConfig.endpointError("Support API"));
+			if (!publicConfig.apiUrl) throw new Error(publicConfig.endpointError(t("Support API")));
 			const apiOrigin = publicConfig.apiUrl;
 			const callback = `${apiOrigin}${config.apiPath}/support/providers/${encodeURIComponent(selectedEndpoint.provider)}/oauth/callback`;
 			const returnUrl = new URL("/support/channels", window.location.origin);
@@ -190,7 +215,7 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 			});
 			window.location.assign(result.data.authorization_url);
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 			setSaving(false);
 		}
 	};
@@ -221,8 +246,10 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 												<div>
 													<p className="font-medium">{channel.name}</p>
 													<p className="text-sm text-muted-foreground">
-														{providerLabels[channel.provider || channel.channel_type] ||
-															channel.channel_type}
+														{t(
+															providerLabels[channel.provider || channel.channel_type] ||
+																channel.channel_type,
+														)}
 													</p>
 												</div>
 											</div>
@@ -259,7 +286,7 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 									>
 										{Object.entries(providerLabels).map(([value, label]) => (
 											<option key={value} value={value}>
-												{label}
+												{t(label)}
 											</option>
 										))}
 									</select>
@@ -298,7 +325,7 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 									) ? (
 										<p className="text-xs text-muted-foreground">
 											{t("Create an active {provider} inbox in Workforce first.", {
-												provider: providerLabels[provider] || provider,
+												provider: t(providerLabels[provider] || provider),
 											})}
 										</p>
 									) : null}
@@ -328,7 +355,7 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 											<div>
 												<p className="font-medium">{endpoint.display_name}</p>
 												<p className="text-sm text-muted-foreground">
-													{providerLabels[endpoint.provider] || endpoint.provider}
+													{t(providerLabels[endpoint.provider] || endpoint.provider)}
 												</p>
 											</div>
 											<div className="flex items-center gap-2">
@@ -346,7 +373,7 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 													</Button>
 												) : null}
 												<Button
-													aria-label={`Delete ${endpoint.display_name}`}
+													aria-label={t("Delete {name}", { name: endpoint.display_name })}
 													size="icon"
 													variant="ghost"
 													onClick={() => void removeProvider(endpoint)}
@@ -385,7 +412,7 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 									<div className="grid gap-4 md:grid-cols-2">
 										{fields.map((field) => (
 											<div className="space-y-2" key={field}>
-												<Label>{field.replaceAll("_", " ")}</Label>
+												<Label>{t(credentialLabels[field] ?? field.replaceAll("_", " "))}</Label>
 												<Input
 													autoComplete="new-password"
 													type="password"

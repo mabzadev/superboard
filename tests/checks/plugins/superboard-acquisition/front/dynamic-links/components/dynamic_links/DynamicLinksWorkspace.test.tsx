@@ -1,9 +1,16 @@
 import { FrontContextProvider } from "@superboard/front-ui/context";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen, waitFor } from "../../../../../../packages/supbrd-front-ui/render.js";
+import {
+	render,
+	screen,
+	waitFor,
+	within,
+} from "../../../../../../packages/supbrd-front-ui/render.js";
 
+const project = vi.hoisted(() => ({ id: "10-test" }));
 const mocks = vi.hoisted(() => ({
 	getLinks: vi.fn(),
 	getLinkCampaigns: vi.fn(),
@@ -18,7 +25,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock(
 	"../../../../../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js",
 	() => ({
-		useProjectSelection: () => ({ selectedProject: { id: "10-test" } }),
+		useProjectSelection: () => ({ selectedProject: project }),
 	}),
 );
 
@@ -62,6 +69,29 @@ const link = {
 const search = () => new URLSearchParams(window.location.search);
 const scrollIntoView = vi.fn();
 const settingsHeadings = ["Domain", "Redirect rules", "Social preview", "Tracking"];
+const columnHeaders = (table: HTMLElement) =>
+	within(table)
+		.getAllByRole("columnheader")
+		.map((header) => header.textContent?.trim());
+
+function renderInFrench(ui: ReactElement) {
+	return render(
+		<FrontContextProvider
+			value={{
+				instanceId: "1",
+				pluginId: "superboard-dynamic-links",
+				path: "/acquisition/dynamic-links",
+				parameters: {},
+				locale: "fr",
+				operator: null,
+				projectScope: null,
+				activePluginIds: ["superboard-dynamic-links"],
+			}}
+		>
+			{ui}
+		</FrontContextProvider>,
+	);
+}
 
 describe("DynamicLinksWorkspace", () => {
 	beforeEach(() => {
@@ -276,23 +306,65 @@ describe("DynamicLinksWorkspace", () => {
 		);
 	});
 
+	it("shows the essential link columns by default and keeps the others in the column picker", async () => {
+		render(<DynamicLinksWorkspace />);
+		const table = await screen.findByRole("table", { name: "Links" });
+		await within(table).findByText("Launch link");
+		expect(columnHeaders(table)).toEqual(["", "Title", "Destination", "Views", "Installs", "Date"]);
+		expect(within(table).getByText("/launch")).toBeInTheDocument();
+		expect(within(table).getByText("https://example.test")).toBeInTheDocument();
+		await userEvent.click(screen.getByRole("combobox", { name: "Columns" }));
+		await userEvent.click(screen.getByRole("checkbox", { name: "Opens" }));
+		expect(columnHeaders(table)).toEqual([
+			"",
+			"Title",
+			"Destination",
+			"Views",
+			"Opens",
+			"Installs",
+			"Date",
+		]);
+	});
+
+	it("renders the links and campaigns tables in French", async () => {
+		renderInFrench(<DynamicLinksWorkspace />);
+		const links = await screen.findByRole("table", { name: "Liens" });
+		await within(links).findByText("Launch link");
+		expect(columnHeaders(links)).toEqual([
+			"",
+			"Titre",
+			"Destination",
+			"Vues",
+			"Installations",
+			"Date",
+		]);
+		await userEvent.click(screen.getByRole("combobox", { name: "Colonnes" }));
+		expect(screen.getByRole("checkbox", { name: "Temps passé" })).not.toBeChecked();
+		await userEvent.keyboard("{Escape}");
+		await userEvent.click(screen.getByRole("tab", { name: "Campagnes" }));
+		const campaigns = await screen.findByRole("table", { name: "Campagnes d’acquisition" });
+		expect(columnHeaders(campaigns)).toEqual([
+			"Titre",
+			"Vues",
+			"Ouvertures",
+			"Installations",
+			"Réinstallations",
+			"Réactivations",
+			"Ouvertures de l’application",
+			"Utilisateurs recommandés",
+			"Revenu",
+			"Date",
+		]);
+	});
+
+	it("explains an empty link list in French", async () => {
+		mocks.getLinks.mockResolvedValue([]);
+		renderInFrench(<DynamicLinksWorkspace />);
+		expect(await screen.findByText("Aucun lien pour le moment")).toBeInTheDocument();
+	});
+
 	it("renders the workspace in French", () => {
-		render(
-			<FrontContextProvider
-				value={{
-					instanceId: "1",
-					pluginId: "superboard-dynamic-links",
-					path: "/acquisition/dynamic-links",
-					parameters: {},
-					locale: "fr",
-					operator: null,
-					projectScope: null,
-					activePluginIds: ["superboard-dynamic-links"],
-				}}
-			>
-				<DynamicLinksWorkspace />
-			</FrontContextProvider>,
-		);
+		renderInFrench(<DynamicLinksWorkspace />);
 		expect(screen.getByRole("heading", { level: 1, name: "Liens dynamiques" })).toBeInTheDocument();
 		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
 			"Liens",

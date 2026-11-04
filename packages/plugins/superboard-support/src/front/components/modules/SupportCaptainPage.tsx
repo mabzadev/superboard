@@ -39,8 +39,21 @@ import {
 
 type CaptainView = "assistants" | "scenarios" | "tools" | "tasks";
 
+const optionLabels: Record<string, string> = {
+	suggestion: "Suggestion",
+	draft: "Draft",
+	automatic: "Automatic",
+	suggest_reply: "Suggest a reply",
+	summarize: "Summarize",
+	translate: "Translate",
+	index_document: "Index a document",
+	copilot: "Copilot",
+	handoff: "Human handoff",
+	run_tool: "Run a tool",
+};
+
 export default function SupportCaptainPage() {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 	const [view, setView] = useState<CaptainView>("assistants");
 	const { selectedProject } = useProjectSelection();
 	const projectRef = selectedProject?.id;
@@ -81,8 +94,10 @@ export default function SupportCaptainPage() {
 		if (!projectRef) return;
 		void listSupportAssistantTasks(projectRef, { limit: 20 })
 			.then((result) => setTasks(result.data))
-			.catch((cause) => showErrorNotification(moduleErrorMessage(cause)));
-	}, [projectRef]);
+			.catch((cause: unknown) => {
+				showErrorNotification(moduleErrorMessage(cause, locale));
+			});
+	}, [projectRef, locale]);
 
 	useEffect(() => {
 		if (!projectRef || !tasks.some((item) => item.status === "queued" || item.status === "running"))
@@ -97,10 +112,12 @@ export default function SupportCaptainPage() {
 					const updates = new Map(results.map((result) => [result.data.id, result.data]));
 					setTasks((current) => current.map((item) => updates.get(item.id) ?? item));
 				})
-				.catch((cause) => showErrorNotification(moduleErrorMessage(cause)));
+				.catch((cause: unknown) => {
+					showErrorNotification(moduleErrorMessage(cause, locale));
+				});
 		}, 1500);
 		return () => window.clearInterval(timer);
-	}, [projectRef, tasks]);
+	}, [projectRef, tasks, locale]);
 
 	const createAssistant = async () => {
 		if (!projectRef || !assistant.name.trim() || !assistant.instructions.trim()) return;
@@ -122,9 +139,9 @@ export default function SupportCaptainPage() {
 				mode: "suggestion",
 			}));
 			await assistants.reload();
-			showSuccessNotification("Support assistant created");
+			showSuccessNotification(t("Support assistant created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -149,9 +166,9 @@ export default function SupportCaptainPage() {
 			});
 			setScenario((current) => ({ ...current, name: "", instructions: "" }));
 			await scenarios.reload();
-			showSuccessNotification("Assistant scenario created");
+			showSuccessNotification(t("Assistant scenario created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -185,9 +202,9 @@ export default function SupportCaptainPage() {
 				allowed: false,
 			}));
 			await tools.reload();
-			showSuccessNotification("Assistant tool created");
+			showSuccessNotification(t("Assistant tool created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -195,13 +212,13 @@ export default function SupportCaptainPage() {
 	const queueTask = async () => {
 		if (!projectRef || !task.assistantId) return;
 		if (task.type === "handoff" && !task.conversationId.trim()) {
-			showErrorNotification("Human handoff requires a conversation ID");
+			showErrorNotification(t("Human handoff requires a conversation ID"));
 			return;
 		}
 		let input: Record<string, unknown> = {};
 		if (task.type === "run_tool") {
 			if (!task.toolId) {
-				showErrorNotification("Select an allowlisted tool");
+				showErrorNotification(t("Select an allowlisted tool"));
 				return;
 			}
 			try {
@@ -215,7 +232,7 @@ export default function SupportCaptainPage() {
 				}
 				input = { tool_id: task.toolId, arguments: argumentsValue };
 			} catch {
-				showErrorNotification("Tool arguments must be a JSON object");
+				showErrorNotification(t("Tool arguments must be a JSON object"));
 				return;
 			}
 		}
@@ -239,9 +256,9 @@ export default function SupportCaptainPage() {
 				created.data,
 				...current.filter((item) => item.id !== created.data.id),
 			]);
-			showSuccessNotification(`Task ${result.data.id} queued`);
+			showSuccessNotification(t("Task {id} queued", { id: result.data.id }));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -263,8 +280,10 @@ export default function SupportCaptainPage() {
 
 	return (
 		<ModulePage
-			title="Captain"
-			description="Project-isolated assistants, Copilot scenarios, allowlisted tools and traceable tasks."
+			title={t("Captain")}
+			description={t(
+				"Project-isolated assistants, Copilot scenarios, allowlisted tools and traceable tasks.",
+			)}
 		>
 			{!selectedProject ? (
 				<EmptyProject />
@@ -277,27 +296,28 @@ export default function SupportCaptainPage() {
 							{assistant.mode === "automatic" ? (
 								<Alert>
 									<ShieldCheck />
-									<AlertTitle>Explicit automatic mode</AlertTitle>
+									<AlertTitle>{t("Explicit automatic mode")}</AlertTitle>
 									<AlertDescription>
-										Automatic sending is enabled only for this assistant. Human handoff remains
-										available.
+										{t(
+											"Automatic sending is enabled only for this assistant. Human handoff remains available.",
+										)}
 									</AlertDescription>
 								</Alert>
 							) : null}
 							<Card>
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2 text-base">
-										<Bot /> New assistant
+										<Bot /> {t("New assistant")}
 									</CardTitle>
 								</CardHeader>
 								<CardContent className="grid gap-4 md:grid-cols-2">
-									<Field label="Name">
+									<Field label={t("Name")}>
 										<Input
 											value={assistant.name}
 											onChange={(e) => setAssistant((v) => ({ ...v, name: e.target.value }))}
 										/>
 									</Field>
-									<Field label="Description">
+									<Field label={t("Description")}>
 										<Input
 											value={assistant.description}
 											onChange={(e) =>
@@ -308,7 +328,7 @@ export default function SupportCaptainPage() {
 											}
 										/>
 									</Field>
-									<Field label="Response mode">
+									<Field label={t("Response mode")}>
 										<Select
 											value={assistant.mode}
 											onChange={(mode) => setAssistant((v) => ({ ...v, mode }))}
@@ -320,10 +340,10 @@ export default function SupportCaptainPage() {
 											checked={assistant.handoff}
 											onCheckedChange={(handoff) => setAssistant((v) => ({ ...v, handoff }))}
 										/>
-										<Label>Human handoff</Label>
+										<Label>{t("Human handoff")}</Label>
 									</div>
 									<div className="space-y-2 md:col-span-2">
-										<Label>Instructions</Label>
+										<Label>{t("Instructions")}</Label>
 										<Textarea
 											rows={7}
 											value={assistant.instructions}
@@ -337,18 +357,18 @@ export default function SupportCaptainPage() {
 									</div>
 									<div className="flex justify-end md:col-span-2">
 										<Button disabled={saving} onClick={() => void createAssistant()}>
-											<Plus /> Create assistant
+											<Plus /> {t("Create assistant")}
 										</Button>
 									</div>
 								</CardContent>
 							</Card>
 							<ResourceList
 								loading={assistants.loading}
-								empty="No Support assistants"
+								empty={t("No Support assistants")}
 								items={assistants.items.map((item) => ({
 									id: item.id,
 									title: item.name,
-									detail: `${item.response_mode} · ${item.handoff_enabled ? "human handoff" : "no handoff"}`,
+									detail: `${t(optionLabels[item.response_mode] ?? item.response_mode)} · ${item.handoff_enabled ? t("Human handoff") : t("No handoff")}`,
 									status: item.active ? "active" : "disabled",
 								}))}
 							/>
@@ -360,24 +380,24 @@ export default function SupportCaptainPage() {
 							<SupportError message={scenarios.error} />
 							<Card>
 								<CardHeader>
-									<CardTitle className="text-base">New scenario</CardTitle>
+									<CardTitle className="text-base">{t("New scenario")}</CardTitle>
 								</CardHeader>
 								<CardContent className="grid gap-4 md:grid-cols-2">
-									<Field label="Assistant">
+									<Field label={t("Assistant")}>
 										<AssistantSelect
 											value={scenario.assistantId}
 											onChange={(assistantId) => setScenario((v) => ({ ...v, assistantId }))}
 											items={assistants.items}
 										/>
 									</Field>
-									<Field label="Scenario name">
+									<Field label={t("Scenario name")}>
 										<Input
 											value={scenario.name}
 											onChange={(e) => setScenario((v) => ({ ...v, name: e.target.value }))}
 										/>
 									</Field>
 									<div className="space-y-2 md:col-span-2">
-										<Label>Scenario instructions</Label>
+										<Label>{t("Scenario instructions")}</Label>
 										<Textarea
 											rows={6}
 											value={scenario.instructions}
@@ -391,18 +411,18 @@ export default function SupportCaptainPage() {
 									</div>
 									<div className="flex justify-end md:col-span-2">
 										<Button disabled={saving} onClick={() => void createScenario()}>
-											<Plus /> Create scenario
+											<Plus /> {t("Create scenario")}
 										</Button>
 									</div>
 								</CardContent>
 							</Card>
 							<ResourceList
 								loading={scenarios.loading}
-								empty="No assistant scenarios"
+								empty={t("No assistant scenarios")}
 								items={scenarios.items.map((item) => ({
 									id: item.id,
 									title: item.name,
-									detail: `Assistant ${item.assistant_id}`,
+									detail: t("Assistant {id}", { id: item.assistant_id }),
 									status: item.active ? "active" : "disabled",
 								}))}
 							/>
@@ -414,37 +434,37 @@ export default function SupportCaptainPage() {
 							<SupportError message={tools.error} />
 							<Card>
 								<CardHeader>
-									<CardTitle className="text-base">New allowlisted tool</CardTitle>
+									<CardTitle className="text-base">{t("New allowlisted tool")}</CardTitle>
 								</CardHeader>
 								<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-									<Field label="Assistant">
+									<Field label={t("Assistant")}>
 										<AssistantSelect
 											value={tool.assistantId}
 											onChange={(assistantId) => setTool((v) => ({ ...v, assistantId }))}
 											items={assistants.items}
 										/>
 									</Field>
-									<Field label="Name">
+									<Field label={t("Name")}>
 										<Input
 											value={tool.name}
 											onChange={(e) => setTool((v) => ({ ...v, name: e.target.value }))}
 										/>
 									</Field>
-									<Field label="Method">
+									<Field label={t("Method")}>
 										<Select
 											value={tool.method}
 											onChange={(method) => setTool((v) => ({ ...v, method }))}
 											options={["GET", "POST"]}
 										/>
 									</Field>
-									<Field label="Endpoint">
+									<Field label={t("Endpoint")}>
 										<Input
 											type="url"
 											value={tool.endpoint}
 											onChange={(e) => setTool((v) => ({ ...v, endpoint: e.target.value }))}
 										/>
 									</Field>
-									<Field label="Description">
+									<Field label={t("Description")}>
 										<Input
 											value={tool.description}
 											onChange={(e) => setTool((v) => ({ ...v, description: e.target.value }))}
@@ -455,18 +475,18 @@ export default function SupportCaptainPage() {
 											checked={tool.allowed}
 											onCheckedChange={(allowed) => setTool((v) => ({ ...v, allowed }))}
 										/>
-										<Label>Allow execution</Label>
+										<Label>{t("Allow execution")}</Label>
 									</div>
 									<div className="flex justify-end md:col-span-2 xl:col-span-4">
 										<Button disabled={saving} onClick={() => void createTool()}>
-											<Plus /> Add tool
+											<Plus /> {t("Add tool")}
 										</Button>
 									</div>
 								</CardContent>
 							</Card>
 							<ResourceList
 								loading={tools.loading}
-								empty="No assistant tools"
+								empty={t("No assistant tools")}
 								items={tools.items.map((item) => ({
 									id: item.id,
 									title: item.name,
@@ -482,18 +502,18 @@ export default function SupportCaptainPage() {
 							<Card>
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2 text-base">
-										<Play /> Run an assistant task
+										<Play /> {t("Run an assistant task")}
 									</CardTitle>
 								</CardHeader>
 								<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-									<Field label="Assistant">
+									<Field label={t("Assistant")}>
 										<AssistantSelect
 											value={task.assistantId}
 											onChange={(assistantId) => setTask((v) => ({ ...v, assistantId }))}
 											items={assistants.items}
 										/>
 									</Field>
-									<Field label="Task">
+									<Field label={t("Task")}>
 										<Select
 											value={task.type}
 											onChange={(type) => setTask((v) => ({ ...v, type }))}
@@ -508,7 +528,7 @@ export default function SupportCaptainPage() {
 											]}
 										/>
 									</Field>
-									<Field label="Conversation ID (optional)">
+									<Field label={t("Conversation ID (optional)")}>
 										<Input
 											value={task.conversationId}
 											onChange={(e) => setTask((v) => ({ ...v, conversationId: e.target.value }))}
@@ -516,7 +536,7 @@ export default function SupportCaptainPage() {
 									</Field>
 									{task.type === "run_tool" ? (
 										<>
-											<Field label="Allowlisted tool">
+											<Field label={t("Allowlisted tool")}>
 												<select
 													className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
 													value={task.toolId}
@@ -527,7 +547,7 @@ export default function SupportCaptainPage() {
 														}))
 													}
 												>
-													<option value="">Select tool</option>
+													<option value="">{t("Select tool")}</option>
 													{tools.items
 														.filter(
 															(item) => item.allowed && item.assistant_id === task.assistantId,
@@ -540,7 +560,7 @@ export default function SupportCaptainPage() {
 												</select>
 											</Field>
 											<div className="space-y-2 md:col-span-2 xl:col-span-4">
-												<Label>Tool arguments (JSON object)</Label>
+												<Label>{t("Tool arguments (JSON object)")}</Label>
 												<Textarea
 													rows={5}
 													spellCheck={false}
@@ -557,15 +577,17 @@ export default function SupportCaptainPage() {
 									) : null}
 									<div className="flex items-end">
 										<Button className="w-full" disabled={saving} onClick={() => void queueTask()}>
-											<Play /> Queue task
+											<Play /> {t("Queue task")}
 										</Button>
 									</div>
 								</CardContent>
 							</Card>
 							{tasks.length === 0 ? (
 								<SupportEmpty
-									title="No assistant tasks"
-									description="Run a task to receive a project-isolated result with traceable sources."
+									title={t("No assistant tasks")}
+									description={t(
+										"Run a task to receive a project-isolated result with traceable sources.",
+									)}
 								/>
 							) : (
 								<div className="space-y-3">
@@ -573,14 +595,14 @@ export default function SupportCaptainPage() {
 										<Card key={item.id}>
 											<CardContent className="space-y-2 p-4">
 												<div className="flex items-center justify-between gap-3">
-													<strong>{item.task_type}</strong>
+													<strong>{t(optionLabels[item.task_type] ?? item.task_type)}</strong>
 													<SupportStatus value={item.status} />
 												</div>
 												{item.result?.text ? (
 													<p className="whitespace-pre-wrap text-sm">{item.result.text}</p>
 												) : null}
 												{item.result?.handoff ? (
-													<p className="text-sm">Transferred to a human agent.</p>
+													<p className="text-sm">{t("Transferred to a human agent.")}</p>
 												) : null}
 												{item.result?.tool_id ? (
 													<pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
@@ -589,13 +611,16 @@ export default function SupportCaptainPage() {
 												) : null}
 												{(item.result?.sources ?? []).length ? (
 													<div className="text-xs text-muted-foreground">
-														Sources:{" "}
-														{(item.result.sources ?? []).map((source) => source.title).join(" · ")}
+														{t("Sources: {sources}", {
+															sources: (item.result.sources ?? [])
+																.map((source) => source.title)
+																.join(" · "),
+														})}
 													</div>
 												) : null}
 												{item.error_code ? (
 													<div className="text-sm text-destructive">
-														Task failed: {item.error_code}
+														{t("Task failed: {code}", { code: item.error_code })}
 													</div>
 												) : null}
 											</CardContent>
@@ -621,13 +646,14 @@ function AssistantSelect({
 	onChange: (value: string) => void;
 	items: Named[];
 }) {
+	const { t } = useSupportI18n();
 	return (
 		<select
 			className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
 			value={value}
 			onChange={(e) => onChange(e.target.value)}
 		>
-			<option value="">Select assistant</option>
+			<option value="">{t("Select assistant")}</option>
 			{items.map((item) => (
 				<option key={item.id} value={item.id}>
 					{item.name}
@@ -663,9 +689,10 @@ function ResourceList({
 	items: Array<{ id: string; title: string; detail: string; status: string }>;
 	empty: string;
 }) {
+	const { t } = useSupportI18n();
 	if (loading) return <SupportLoading />;
 	if (!items.length)
-		return <SupportEmpty title={empty} description="Create one with the form above." />;
+		return <SupportEmpty title={empty} description={t("Create one with the form above.")} />;
 	return (
 		<div className="grid gap-3">
 			{items.map((item) => (
@@ -699,15 +726,16 @@ function Select({
 	onChange: (value: string) => void;
 	options: string[];
 }) {
+	const { t } = useSupportI18n();
 	return (
 		<select
-			className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm capitalize"
+			className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
 			value={value}
 			onChange={(e) => onChange(e.target.value)}
 		>
 			{options.map((option) => (
 				<option key={option} value={option}>
-					{option.replaceAll("_", " ")}
+					{t(optionLabels[option] ?? option)}
 				</option>
 			))}
 		</select>

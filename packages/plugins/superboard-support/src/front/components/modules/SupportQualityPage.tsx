@@ -51,11 +51,11 @@ export function SupportQualityPage({
 			setAudit(trail.data || []);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setLoading(false);
 		}
-	}, [selectedProject, inboxId, auditOnly]);
+	}, [selectedProject, inboxId, auditOnly, locale]);
 	useEffect(() => void load(), [load]);
 
 	return (

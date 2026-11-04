@@ -1,4 +1,5 @@
 "use client";
+import { type ComponentMessage, useComponentI18n } from "../../lib/component-i18n.js";
 import { cn } from "../../lib/utils.js";
 import { Button } from "../ui/button.js";
 import { Checkbox } from "../ui/checkbox.js";
@@ -9,6 +10,13 @@ export interface PlatformAdsType {
 	value: string;
 	filterType?: string;
 }
+
+const optionMessages = new Map<string, ComponentMessage>([
+	["Quick Links", "filter.quickLinks"],
+	["Existing users", "filter.existingUsers"],
+	["New users", "filter.newUsers"],
+	["All users", "filter.allUsers"],
+]);
 
 const AdsPlatformSelect = ({
 	platformAdsOptions,
@@ -23,18 +31,27 @@ const AdsPlatformSelect = ({
 	title?: string;
 	selectListTitle?: string;
 }) => {
+	const t = useComponentI18n();
+	const optionLabel = (option: PlatformAdsType) => {
+		if (option.label === "All" && option.filterType === "ads") return t("filter.all.ads");
+		if (option.label === "All" && option.filterType === "platforms")
+			return t("filter.all.platforms");
+		const message = optionMessages.get(option.label);
+		return message ? t(message) : option.label;
+	};
+
 	const getValueLabelFromList = (value: string) => {
 		const foundValue = platformAdsOptions.find((item) => item.value === value);
 
 		if (foundValue) {
 			if (foundValue.label === "All" && foundValue?.filterType === "ads") {
-				return "Types";
+				return t("filter.types");
 			}
 			if (foundValue.label === "All" && foundValue?.filterType === "platforms") {
-				return "Platforms";
+				return t("filter.platforms");
 			}
 
-			return foundValue.label;
+			return optionLabel(foundValue);
 		}
 
 		return title;
@@ -79,7 +96,7 @@ const AdsPlatformSelect = ({
 							onCheckedChange={() => setSelectedAdsPlatforms(option.value)}
 							id={option.value}
 						/>
-						<span>{option.label}</span>
+						<span>{optionLabel(option)}</span>
 					</label>
 				))}
 			</PopoverContent>

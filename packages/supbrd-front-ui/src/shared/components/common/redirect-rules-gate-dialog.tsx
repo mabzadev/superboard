@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { PencilRuler } from "lucide-react";
 
+import { useComponentI18n } from "../../lib/component-i18n.js";
 import { Button } from "../ui/button.js";
 import {
 	Dialog,
@@ -19,6 +20,7 @@ const RedirectRulesGateDialog = ({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) => {
+	const t = useComponentI18n();
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
@@ -32,10 +34,8 @@ const RedirectRulesGateDialog = ({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="sm:max-w-[420px] p-0 gap-0 border-sidebar-border">
 				<DialogHeader className="sr-only">
-					<DialogTitle>Redirect rules required</DialogTitle>
-					<DialogDescription>
-						You need to configure redirect rules before creating links or campaigns.
-					</DialogDescription>
+					<DialogTitle>{t("redirectRules.title")}</DialogTitle>
+					<DialogDescription>{t("redirectRules.description")}</DialogDescription>
 				</DialogHeader>
 
 				<div className="flex flex-col items-center text-center px-8 pt-8 pb-6 gap-4">
@@ -43,10 +43,9 @@ const RedirectRulesGateDialog = ({
 						<PencilRuler className="h-5 w-5 text-muted-foreground" />
 					</div>
 					<div className="flex flex-col gap-1.5">
-						<h3 className="text-base font-semibold tracking-tight">Set up redirect rules first</h3>
+						<h3 className="text-base font-semibold tracking-tight">{t("redirectRules.heading")}</h3>
 						<p className="text-sm text-muted-foreground leading-relaxed">
-							Before creating links, you need to configure how they behave on each platform. This
-							defines where users are sent when they click your links.
+							{t("redirectRules.body")}
 						</p>
 					</div>
 				</div>
@@ -54,10 +53,10 @@ const RedirectRulesGateDialog = ({
 				<div className="flex flex-col gap-2 px-8 pb-8">
 					<Button onClick={handleGoToRules}>
 						<PencilRuler className="h-3.5 w-3.5" />
-						Configure Redirect Rules
+						{t("redirectRules.configure")}
 					</Button>
 					<Button variant="ghost" onClick={() => onOpenChange(false)}>
-						Maybe later
+						{t("redirectRules.later")}
 					</Button>
 				</div>
 			</DialogContent>

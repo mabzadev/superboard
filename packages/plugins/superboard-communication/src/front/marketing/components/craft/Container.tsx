@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@superboard/front-ui/ui/radio-group.
 import clsx from "clsx";
 import { useRef, useState } from "react";
 
+import { useStudioI18n } from "../../studio/i18n.js";
 import { ComponentToolbar } from "./ComponentToolbar.js";
 
 export const ContainerComponent = ({ children }: ContainerCraftProps) => {
@@ -122,6 +123,7 @@ export const ContainerComponent = ({ children }: ContainerCraftProps) => {
 };
 
 export const ContainerSettings = () => {
+	const { t } = useStudioI18n();
 	const {
 		actions: { setProp },
 		props,
@@ -133,7 +135,7 @@ export const ContainerSettings = () => {
 		<div className="flex flex-col gap-3 px-3 py-2">
 			<div className="grid grid-cols-2 gap-3">
 				<div className="flex flex-col gap-1.5">
-					<Label className="text-xs text-muted-foreground">Width</Label>
+					<Label className="text-xs text-muted-foreground">{t("Width")}</Label>
 					<Input
 						className="h-8"
 						value={props.width}
@@ -142,7 +144,7 @@ export const ContainerSettings = () => {
 					/>
 				</div>
 				<div className="flex flex-col gap-1.5">
-					<Label className="text-xs text-muted-foreground">Height</Label>
+					<Label className="text-xs text-muted-foreground">{t("Height")}</Label>
 					<Input
 						className="h-8"
 						value={props.height}
@@ -153,7 +155,7 @@ export const ContainerSettings = () => {
 			</div>
 
 			<div className="flex items-center justify-between">
-				<Label className="text-xs text-muted-foreground">Background</Label>
+				<Label className="text-xs text-muted-foreground">{t("Background")}</Label>
 				<div className="flex items-center gap-1.5">
 					<Input
 						value={props.background}
@@ -177,7 +179,7 @@ export const ContainerSettings = () => {
 			</div>
 
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Border Radius</Label>
+				<Label className="text-xs text-muted-foreground">{t("Border Radius")}</Label>
 				<Input
 					className="h-8"
 					value={props.borderRadius}
@@ -189,7 +191,7 @@ export const ContainerSettings = () => {
 			</div>
 
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Direction</Label>
+				<Label className="text-xs text-muted-foreground">{t("Direction")}</Label>
 				<RadioGroup className="flex gap-4">
 					{[
 						{ value: "flex-col", label: "Vertical", id: "c-dir-col" },
@@ -208,7 +210,7 @@ export const ContainerSettings = () => {
 								checked={props.flexDirectionClass === item.value}
 							/>
 							<Label htmlFor={item.id} className="text-xs">
-								{item.label}
+								{t(item.label)}
 							</Label>
 						</div>
 					))}
@@ -216,7 +218,7 @@ export const ContainerSettings = () => {
 			</div>
 
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Spacing</Label>
+				<Label className="text-xs text-muted-foreground">{t("Spacing")}</Label>
 				<Input
 					className="h-8"
 					placeholder="10px"

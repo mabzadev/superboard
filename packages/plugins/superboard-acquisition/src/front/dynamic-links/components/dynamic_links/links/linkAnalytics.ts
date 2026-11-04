@@ -3,6 +3,7 @@ import type { Link } from "@superboard/front-ui/types";
 import type { DynamicLink } from "../../../api/dynamic-links/dynamicLinksService.js";
 
 export type LinkData = Link & {
+	destination_url: string;
 	total_app_opens: number;
 	total_user_referred: number;
 };
@@ -34,6 +35,7 @@ export function toLinkData(link: DynamicLink): LinkData {
 		id: link.id,
 		name: link.name,
 		path: link.slug,
+		destination_url: link.destination_url,
 		active: link.active,
 		ads_platform: typeof link.utm.source === "string" ? link.utm.source : "quick-link",
 		tags,

@@ -1,6 +1,5 @@
 import { useFrontContext } from "@superboard/front-ui/context";
 import { createFrontI18n } from "@superboard/front-ui/i18n";
-import { Button } from "@superboard/front-ui/kumo";
 import { useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { SectionNavigationProvider } from "@superboard/front-ui/section-navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
@@ -170,19 +169,22 @@ export function AuthenticationTabs({
 			}}
 		>
 			<h1 className="ds-page-title">{i18n._(view)}</h1>
-			<nav aria-label={i18n._(view)} className="flex flex-wrap gap-2">
+			<nav
+				aria-label={i18n._(view)}
+				className="bg-muted text-muted-foreground flex w-fit flex-wrap items-center gap-1 rounded-lg p-[3px]"
+			>
 				{authenticationTabs[view].map((tab) => (
-					<Button
+					<button
 						key={tab}
 						type="button"
-						variant={selected === tab ? "primary" : "secondary"}
 						aria-pressed={selected === tab}
+						className="text-foreground rounded-md px-3 py-1 text-sm font-medium aria-[pressed=true]:bg-background aria-[pressed=true]:shadow-sm"
 						onClick={() => {
 							select(tab);
 						}}
 					>
 						{i18n._(`tab:${tab}`)}
-					</Button>
+					</button>
 				))}
 			</nav>
 			<SectionNavigationProvider value={null}>

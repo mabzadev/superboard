@@ -26,7 +26,7 @@ export function SupportAutomationDetails({
 	inboxId?: string;
 	close: () => void;
 }) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 	const editable = editableAutomationConditions(automation, inboxId);
 	const [draft, setDraft] = useState({ ...automation, condition_mode: editable.mode });
 	const [conditions, setConditions] = useState(JSON.stringify(editable.conditions, null, 2));
@@ -43,12 +43,12 @@ export function SupportAutomationDetails({
 				if (active) setReport(result.data);
 			})
 			.catch((cause: unknown) => {
-				if (active) setError(moduleErrorMessage(cause));
+				if (active) setError(moduleErrorMessage(cause, locale));
 			});
 		return () => {
 			active = false;
 		};
-	}, [project, automation.id]);
+	}, [project, automation.id, locale]);
 	const save = async () => {
 		setSaving(true);
 		try {
@@ -74,7 +74,7 @@ export function SupportAutomationDetails({
 			});
 			close();
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -92,7 +92,7 @@ export function SupportAutomationDetails({
 					onSubmit={(event) => {
 						event.preventDefault();
 						void save().catch((cause: unknown) => {
-							setError(moduleErrorMessage(cause));
+							setError(moduleErrorMessage(cause, locale));
 						});
 					}}
 				>

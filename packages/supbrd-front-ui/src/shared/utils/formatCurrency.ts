@@ -1,6 +1,10 @@
+const countryDollar = /[A-Z]{1,3}\$|\$[A-Z]{1,3}/g;
+
 export function formatCurrencyFromCents(
 	cents: number,
-	locale: string = navigator?.language || "en-US",
+	locale: string = globalThis.document?.documentElement.lang ||
+		globalThis.navigator?.language ||
+		"en-US",
 	currency: string = "USD",
 ): string {
 	const dollars = cents ? cents / 100 : 0;
@@ -13,5 +17,5 @@ export function formatCurrencyFromCents(
 		maximumFractionDigits: 2,
 	}).format(dollars);
 
-	return formatted.replace(/[A-Z]{1,3}\$/g, "$");
+	return formatted.replace(countryDollar, "$");
 }

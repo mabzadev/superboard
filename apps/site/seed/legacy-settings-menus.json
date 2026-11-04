@@ -1,0 +1,528 @@
+[
+	{
+		"name": "superboard-admin",
+		"label": "Front navigation",
+		"locale": "en",
+		"items": [
+			{
+				"type": "custom",
+				"label": "Overview",
+				"url": "/analytics/home",
+				"cssClasses": "sb-icon-home"
+			},
+			{
+				"type": "custom",
+				"label": "Authentication",
+				"url": "/auth/users",
+				"cssClasses": "sb-icon-users",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Users",
+						"url": "/auth/users"
+					},
+					{
+						"type": "custom",
+						"label": "Settings",
+						"url": "/auth/settings?lang=en"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Data",
+				"url": "/data/content",
+				"cssClasses": "sb-icon-data",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Content",
+						"url": "/data/content"
+					},
+					{
+						"type": "custom",
+						"label": "Files and media",
+						"url": "/data/files"
+					},
+					{
+						"type": "custom",
+						"label": "Configuration",
+						"url": "/data/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Monetization",
+				"url": "/monetization/customers",
+				"cssClasses": "sb-icon-sales",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Customers",
+						"url": "/monetization/customers"
+					},
+					{
+						"type": "custom",
+						"label": "Catalog",
+						"url": "/monetization/products"
+					},
+					{
+						"type": "custom",
+						"label": "Settings",
+						"url": "/monetization/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Communication",
+				"url": "/communication/marketing-email",
+				"cssClasses": "sb-icon-communication",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Emails",
+						"url": "/communication/marketing-email"
+					},
+					{
+						"type": "custom",
+						"label": "Automations",
+						"url": "/communication/journeys"
+					},
+					{
+						"type": "custom",
+						"label": "In-app & Push",
+						"url": "/communication/in-app-messages"
+					},
+					{
+						"type": "custom",
+						"label": "Audience",
+						"url": "/communication/audience"
+					},
+					{
+						"type": "custom",
+						"label": "Activity",
+						"url": "/communication/statistics"
+					},
+					{
+						"type": "custom",
+						"label": "Settings",
+						"url": "/communication/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Acquisition",
+				"url": "/acquisition/paywalls",
+				"cssClasses": "sb-icon-automations",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Paywalls",
+						"url": "/acquisition/paywalls"
+					},
+					{
+						"type": "custom",
+						"label": "Onboardings",
+						"url": "/acquisition/onboardings"
+					},
+					{
+						"type": "custom",
+						"label": "Dynamic links",
+						"url": "/acquisition/dynamic-links"
+					},
+					{
+						"type": "custom",
+						"label": "Settings",
+						"url": "/acquisition/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Support",
+				"url": "/support/inbox",
+				"cssClasses": "sb-icon-support",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Inbox",
+						"url": "/support/inbox"
+					},
+					{
+						"type": "custom",
+						"label": "Help center",
+						"url": "/support/help-center"
+					},
+					{
+						"type": "custom",
+						"label": "Support settings",
+						"url": "/support/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Analytics",
+				"url": "/analytics",
+				"cssClasses": "sb-icon-analytics",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Statistics overview",
+						"url": "/analytics"
+					},
+					{
+						"type": "custom",
+						"label": "Audience and usage",
+						"url": "/analytics/users"
+					},
+					{
+						"type": "custom",
+						"label": "Events",
+						"url": "/analytics/events"
+					},
+					{
+						"type": "custom",
+						"label": "Conversion and retention",
+						"url": "/analytics/insights"
+					},
+					{
+						"type": "custom",
+						"label": "Verified revenue",
+						"url": "/analytics/purchases"
+					},
+					{
+						"type": "custom",
+						"label": "Reports and exports",
+						"url": "/analytics/reports"
+					},
+					{
+						"type": "custom",
+						"label": "Remote configuration",
+						"url": "/analytics/remote-config"
+					},
+					{
+						"type": "custom",
+						"label": "Settings",
+						"url": "/analytics/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Environment settings",
+				"url": "/core/settings",
+				"cssClasses": "sb-icon-settings sb-nav-local",
+				"children": [
+					{
+						"type": "custom",
+						"label": "General",
+						"url": "/core/settings"
+					},
+					{
+						"type": "custom",
+						"label": "API keys",
+						"url": "/auth/settings?tab=security&section=keys"
+					},
+					{
+						"type": "custom",
+						"label": "SDK & apps",
+						"url": "/core/libraries"
+					},
+					{
+						"type": "custom",
+						"label": "Service health",
+						"url": "/core/infrastructure"
+					},
+					{
+						"type": "custom",
+						"label": "Audit log",
+						"url": "/core/audit"
+					},
+					{
+						"type": "custom",
+						"label": "API routing",
+						"url": "/core/gateway"
+					},
+					{
+						"type": "custom",
+						"label": "AI assistant access",
+						"url": "/core/mcp"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Plugins",
+				"url": "/_emdash/admin/plugins-manager",
+				"cssClasses": "sb-icon-plugins"
+			}
+		]
+	},
+	{
+		"name": "superboard-admin",
+		"label": "Navigation du front",
+		"locale": "fr",
+		"items": [
+			{
+				"type": "custom",
+				"label": "Vue d’ensemble",
+				"url": "/analytics/home",
+				"cssClasses": "sb-icon-home"
+			},
+			{
+				"type": "custom",
+				"label": "Authentification",
+				"url": "/auth/users",
+				"cssClasses": "sb-icon-users",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Utilisateurs",
+						"url": "/auth/users"
+					},
+					{
+						"type": "custom",
+						"label": "Paramètres",
+						"url": "/auth/settings?lang=fr"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Data",
+				"url": "/data/content",
+				"cssClasses": "sb-icon-data",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Contenus",
+						"url": "/data/content"
+					},
+					{
+						"type": "custom",
+						"label": "Fichiers et médias",
+						"url": "/data/files"
+					},
+					{
+						"type": "custom",
+						"label": "Configuration",
+						"url": "/data/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Monétisation",
+				"url": "/monetization/customers",
+				"cssClasses": "sb-icon-sales",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Clients",
+						"url": "/monetization/customers"
+					},
+					{
+						"type": "custom",
+						"label": "Catalogue",
+						"url": "/monetization/products"
+					},
+					{
+						"type": "custom",
+						"label": "Paramètres",
+						"url": "/monetization/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Communication",
+				"url": "/communication/marketing-email",
+				"cssClasses": "sb-icon-communication",
+				"children": [
+					{
+						"type": "custom",
+						"label": "E-mails",
+						"url": "/communication/marketing-email"
+					},
+					{
+						"type": "custom",
+						"label": "Automatisations",
+						"url": "/communication/journeys"
+					},
+					{
+						"type": "custom",
+						"label": "In-app et push",
+						"url": "/communication/in-app-messages"
+					},
+					{
+						"type": "custom",
+						"label": "Audience",
+						"url": "/communication/audience"
+					},
+					{
+						"type": "custom",
+						"label": "Activité",
+						"url": "/communication/statistics"
+					},
+					{
+						"type": "custom",
+						"label": "Paramètres",
+						"url": "/communication/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Acquisition",
+				"url": "/acquisition/paywalls",
+				"cssClasses": "sb-icon-automations",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Écrans d’abonnement",
+						"url": "/acquisition/paywalls"
+					},
+					{
+						"type": "custom",
+						"label": "Parcours d’accueil",
+						"url": "/acquisition/onboardings"
+					},
+					{
+						"type": "custom",
+						"label": "Liens dynamiques",
+						"url": "/acquisition/dynamic-links"
+					},
+					{
+						"type": "custom",
+						"label": "Paramètres",
+						"url": "/acquisition/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Support",
+				"url": "/support/inbox",
+				"cssClasses": "sb-icon-support",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Inbox",
+						"url": "/support/inbox"
+					},
+					{
+						"type": "custom",
+						"label": "Centre d’aide",
+						"url": "/support/help-center"
+					},
+					{
+						"type": "custom",
+						"label": "Paramètres du support",
+						"url": "/support/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Analytics",
+				"url": "/analytics",
+				"cssClasses": "sb-icon-analytics",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Vue d’ensemble des statistiques",
+						"url": "/analytics"
+					},
+					{
+						"type": "custom",
+						"label": "Audience et utilisation",
+						"url": "/analytics/users"
+					},
+					{
+						"type": "custom",
+						"label": "Événements",
+						"url": "/analytics/events"
+					},
+					{
+						"type": "custom",
+						"label": "Conversions et fidélisation",
+						"url": "/analytics/insights"
+					},
+					{
+						"type": "custom",
+						"label": "Revenus vérifiés",
+						"url": "/analytics/purchases"
+					},
+					{
+						"type": "custom",
+						"label": "Rapports et exports",
+						"url": "/analytics/reports"
+					},
+					{
+						"type": "custom",
+						"label": "Configuration distante",
+						"url": "/analytics/remote-config"
+					},
+					{
+						"type": "custom",
+						"label": "Paramètres",
+						"url": "/analytics/settings"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Paramètres de l’environnement",
+				"url": "/core/settings",
+				"cssClasses": "sb-icon-settings sb-nav-local",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Général",
+						"url": "/core/settings"
+					},
+					{
+						"type": "custom",
+						"label": "Clés API",
+						"url": "/auth/settings?tab=security&section=keys"
+					},
+					{
+						"type": "custom",
+						"label": "SDK et applications",
+						"url": "/core/libraries"
+					},
+					{
+						"type": "custom",
+						"label": "État des services",
+						"url": "/core/infrastructure"
+					},
+					{
+						"type": "custom",
+						"label": "Journal d’audit",
+						"url": "/core/audit"
+					},
+					{
+						"type": "custom",
+						"label": "Routage de l’API",
+						"url": "/core/gateway"
+					},
+					{
+						"type": "custom",
+						"label": "Accès des assistants IA",
+						"url": "/core/mcp"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Plugins",
+				"url": "/_emdash/admin/plugins-manager",
+				"cssClasses": "sb-icon-plugins"
+			}
+		]
+	}
+]

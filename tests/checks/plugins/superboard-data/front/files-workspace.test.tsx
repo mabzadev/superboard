@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import FilesPage from "../../../../../packages/plugins/superboard-data/src/front/files/FilesPage.js";
 import { fireEvent, render, screen, waitFor } from "../../../packages/supbrd-front-ui/render.js";
@@ -8,17 +8,36 @@ vi.mock("../../../../../packages/plugins/superboard-data/src/front/files/transpo
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: project }),
 }));
-afterEach(() => vi.resetAllMocks());
-it("filters the file list and opens the selected file in place of the list", async () => {
-	const items = [
-		{ id: "1", filename: "photo.png", content_type: "image/png", byte_size: 42, deleted_at: null },
-		{ id: "2", filename: "notes.txt", content_type: "text/plain", byte_size: 10, deleted_at: null },
-	];
+beforeEach(() => {
+	window.history.replaceState(null, "", "/data/files");
+});
+afterEach(() => {
+	vi.resetAllMocks();
+	window.history.replaceState(null, "", "/");
+});
+const items = [
+	{ id: "1", filename: "photo.png", content_type: "image/png", byte_size: 42, deleted_at: null },
+	{ id: "2", filename: "notes.txt", content_type: "text/plain", byte_size: 10, deleted_at: null },
+];
+function mockFiles() {
 	api.GET.mockImplementation(async (path: string) => ({
 		data: {
-			data: path.endsWith("/usage") ? { files: 2, bytes: 52 } : { items, next_cursor: null },
+			data: path.endsWith("/usage")
+				? { files: 3, bytes: 1052 }
+				: path.endsWith("/objects/9")
+					? {
+							id: "9",
+							filename: "archive.zip",
+							content_type: "application/zip",
+							byte_size: 1000,
+							deleted_at: null,
+						}
+					: { items, next_cursor: null },
 		},
 	}));
+}
+it("filters the file list and opens the selected file in place of the list", async () => {
+	mockFiles();
 	render(<FilesPage />);
 	expect(await screen.findByRole("button", { name: "notes.txt" })).toBeVisible();
 	fireEvent.change(screen.getByLabelText("Search this page"), { target: { value: "photo" } });
@@ -31,6 +50,61 @@ it("filters the file list and opens the selected file in place of the list", asy
 	expect(screen.queryByRole("heading", { name: "photo.png" })).not.toBeInTheDocument();
 	expect(screen.getByRole("table")).toBeVisible();
 	expect(screen.getByLabelText("Search this page")).toHaveValue("photo");
+	expect(new URLSearchParams(window.location.search).get("file")).toBeNull();
+});
+it("gives the file sheet its own address and leaves it with the browser back button", async () => {
+	window.history.replaceState(null, "", "/data/files?lang=en");
+	mockFiles();
+	render(<FilesPage />);
+	const upload = new File(["a"], "pending.txt");
+	fireEvent.change(screen.getByLabelText("Choose a file"), { target: { files: [upload] } });
+	fireEvent.change(screen.getByLabelText("Search this page"), { target: { value: "photo" } });
+	fireEvent.click(await screen.findByRole("button", { name: "photo.png" }));
+	expect(screen.getByRole("heading", { name: "photo.png" })).toBeVisible();
+	const address = new URLSearchParams(window.location.search);
+	expect(address.get("file")).toBe("1");
+	expect(address.get("lang")).toBe("en");
+	window.history.back();
+	expect(await screen.findByRole("table")).toBeVisible();
+	expect(screen.queryByRole("heading", { name: "photo.png" })).not.toBeInTheDocument();
+	expect(screen.getByLabelText("Search this page")).toHaveValue("photo");
+	expect(screen.getByRole("button", { name: "Upload" })).toBeEnabled();
+});
+it("opens a file sheet directly from its address", async () => {
+	window.history.replaceState(null, "", "/data/files?file=9");
+	mockFiles();
+	render(<FilesPage />);
+	expect(await screen.findByRole("heading", { name: "archive.zip" })).toBeVisible();
+	expect(screen.getByText("application/zip", { selector: "dd" })).toBeVisible();
+	expect(api.GET).toHaveBeenCalledWith("/api/v1/files/projects/test/objects/9");
+	expect(screen.queryByRole("table")).not.toBeInTheDocument();
+	fireEvent.click(screen.getByRole("button", { name: "Back to files" }));
+	expect(await screen.findByRole("table")).toBeVisible();
+	expect(window.location.search).toBe("");
+});
+it("explains that the file of an address cannot be found", async () => {
+	window.history.replaceState(null, "", "/data/files?file=gone");
+	mockFiles();
+	const listing = api.GET.getMockImplementation();
+	api.GET.mockImplementation(async (path: string) => {
+		if (path.endsWith("/objects/gone")) throw new Error("FILE_NOT_FOUND");
+		return listing?.(path);
+	});
+	render(<FilesPage />);
+	expect(await screen.findByRole("alert")).toHaveTextContent(
+		"File not found. It may have been deleted or moved to the trash.",
+	);
+	expect(screen.queryByRole("status")).not.toBeInTheDocument();
+	fireEvent.click(screen.getByRole("button", { name: "Back to files" }));
+	expect(await screen.findByRole("table")).toBeVisible();
+	expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+it("opens a listed file directly from its address without another request", async () => {
+	window.history.replaceState(null, "", "/data/files?file=2");
+	mockFiles();
+	render(<FilesPage />);
+	expect(await screen.findByRole("heading", { name: "notes.txt" })).toBeVisible();
+	expect(api.GET).not.toHaveBeenCalledWith(expect.stringMatching(/\/objects\/2$/));
 });
 it("uploads every selected file and removes successful uploads from the pending queue", async () => {
 	const completed: string[] = [];

@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { useMemo } from "react";
 
+import { useComponentI18n } from "../../lib/component-i18n.js";
 import { cn } from "../../lib/utils.js";
 import { Skeleton } from "../ui/skeleton.js";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table.js";
@@ -49,6 +50,7 @@ const DataTable = <T,>({
 	cellClassName,
 	skeletonCellClassName = "px-5 py-3",
 }: DataTableProps<T>) => {
+	const t = useComponentI18n();
 	const visibleColumns = useMemo(() => {
 		return columns.reduce(
 			(acc, col) => {
@@ -75,7 +77,7 @@ const DataTable = <T,>({
 
 	return (
 		<div
-			className={containerClassName ?? defaultContainerClass}
+			className={cn("@container", containerClassName ?? defaultContainerClass)}
 			aria-live="polite"
 			aria-atomic="true"
 		>
@@ -150,17 +152,19 @@ const DataTable = <T,>({
 						))
 					) : hasFilters ? (
 						<TableRow className="hover:bg-transparent">
-							<TableCell colSpan={columns.length} className="h-32 text-center">
-								<p className="text-sm text-muted-foreground">No results found</p>
-								<p className="text-xs text-muted-foreground/60 mt-1">
-									Try adjusting your search or filters
-								</p>
+							<TableCell colSpan={columns.length} className="p-0 whitespace-normal">
+								<div className="sticky start-0 flex h-32 w-[100cqi] flex-col items-center justify-center px-4 text-center">
+									<p className="text-sm text-muted-foreground">{t("table.noResults")}</p>
+									<p className="text-xs text-muted-foreground/60 mt-1">
+										{t("table.noResultsHint")}
+									</p>
+								</div>
 							</TableCell>
 						</TableRow>
 					) : (
 						<TableRow className="hover:bg-transparent">
 							<TableCell colSpan={columns.length} className="p-0 whitespace-normal">
-								{emptyState}
+								<div className="sticky start-0 w-[100cqi]">{emptyState}</div>
 							</TableCell>
 						</TableRow>
 					)}

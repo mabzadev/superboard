@@ -214,9 +214,15 @@ export function ComponentsPage() {
 											))}
 										</div>
 										<p className="text-xs text-muted-foreground">
-											{Object.keys(definition.css_variables).length} CSS variables ·{" "}
-											{schemaProperties(definition).length} properties ·{" "}
-											{definition.instance_count ?? 0} instances
+											{tr(
+												"{variables} CSS variables · {properties} properties · {instances} instances",
+											)
+												.replace(
+													"{variables}",
+													String(Object.keys(definition.css_variables).length),
+												)
+												.replace("{properties}", String(schemaProperties(definition).length))
+												.replace("{instances}", String(definition.instance_count ?? 0))}
 										</p>
 										<p className="text-xs text-muted-foreground">
 											{t("outdatedInstances")}: {definition.outdated_instances ?? 0}

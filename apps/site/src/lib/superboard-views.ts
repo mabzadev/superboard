@@ -6,7 +6,7 @@ import { ensureNativeFrontMenus } from "./native-front-menu-bootstrap.js";
 import { nativeFrontPluginCatalog } from "./native-front-plugins.js";
 
 const VIEWS_BOOTSTRAP_KEY = Symbol.for("superboard:views-bootstrap");
-const VIEWS_BOOTSTRAP_VERSION = "10.3.0";
+const VIEWS_BOOTSTRAP_VERSION = "10.4.0";
 const seed = readSeedFile(seedJson);
 
 interface ViewsBootstrapState {

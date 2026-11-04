@@ -94,7 +94,9 @@ describe("billing customers page", () => {
 				signature_algorithm: "ES256",
 				signature_key_id: "key-1",
 			},
-			transactions: [{ id: "tx-1", store: "apple", store_transaction_id: "apple-tx-1" }],
+			transactions: [
+				{ id: "tx-1", store: "apple", store_transaction_id: "apple-tx-1", status: "succeeded" },
+			],
 			events: [],
 			paywall_events: [],
 		});
@@ -184,5 +186,9 @@ describe("billing customers page", () => {
 		).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Tous les clients" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Bloquer" })).toBeInTheDocument();
+		const transaction = screen.getByText("apple-tx-1").closest("tr");
+		if (!transaction) throw new Error("Transaction row missing");
+		expect(transaction).toHaveTextContent("Réussi");
+		expect(transaction).not.toHaveTextContent("succeeded");
 	});
 });

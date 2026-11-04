@@ -254,7 +254,7 @@ export function JourneyCanvasEditor({
 							position: { x: node.type === "branch" ? 160 : (index % 2) * 320, y: index * 150 },
 							data: {
 								label: t(nodeLabel(node.type)),
-								summary: nodeSummary(node, templates, connectors, t, eventLabel),
+								summary: journeyNodeSummary(node, templates, connectors, t, eventLabel),
 								kind: node.type,
 							},
 							selected: node.id === selectedId,
@@ -265,6 +265,7 @@ export function JourneyCanvasEditor({
 							target: edge.to,
 							sourceHandle: edge.outcome,
 							label: edge.outcome === "default" ? undefined : t(edge.outcome),
+							ariaLabel: t("Edge from {from} to {to}", { from: edge.from, to: edge.to }),
 							type: "smoothstep",
 						}))}
 						nodeTypes={journeyNodeTypes}
@@ -289,6 +290,18 @@ export function JourneyCanvasEditor({
 						minZoom={0.25}
 						maxZoom={1.5}
 						ariaLabelConfig={{
+							"node.a11yDescription.default": t(
+								"Press enter or space to select a node. Press delete to remove it and escape to cancel.",
+							),
+							"node.a11yDescription.keyboardDisabled": t(
+								"Press enter or space to select a node. You can then use the arrow keys to move the node around. Press delete to remove it and escape to cancel.",
+							),
+							"edge.a11yDescription.default": t(
+								"Press enter or space to select an edge. You can then press delete to remove it or escape to cancel.",
+							),
+							"controls.ariaLabel": t("Control Panel"),
+							"minimap.ariaLabel": t("Mini Map"),
+							"handle.ariaLabel": t("Handle"),
 							"controls.zoomIn.ariaLabel": t("Zoom in"),
 							"controls.zoomOut.ariaLabel": t("Zoom out"),
 							"controls.fitView.ariaLabel": t("Fit view"),
@@ -640,11 +653,11 @@ function layoutNodes(definition: JourneyDefinition): JourneyNode[] {
 	return result;
 }
 
-function nodeSummary(
+export function journeyNodeSummary(
 	node: JourneyNode,
 	templates: EmailTemplate[],
 	connectors: MarketingChannelConnector[],
-	t: (key: string) => string,
+	t: (key: string, values?: Record<string, string | number>) => string,
 	eventLabel: (key: string) => string,
 ) {
 	if (node.type === "email")
@@ -654,17 +667,15 @@ function nodeSummary(
 			connectors.find((item) => item.id === node.connector_id)?.name ?? t("Choose a connector")
 		);
 	if (node.type === "delay")
-		return t("Wait {minutes} minutes").replace(
-			"{minutes}",
-			String(Math.round((node.delay_seconds ?? 60) / 60)),
-		);
+		return t("Wait {minutes} minutes", {
+			minutes: Math.round((node.delay_seconds ?? 60) / 60),
+		});
 	if (node.type === "wait_event")
-		return `${eventLabel(node.event_name ?? "")} · ${t("up to {hours} h").replace(
-			"{hours}",
-			String(Math.round((node.timeout_seconds ?? 86_400) / 3_600)),
-		)}`;
+		return `${eventLabel(node.event_name ?? "")} · ${t("up to {hours} h", {
+			hours: Math.round((node.timeout_seconds ?? 86_400) / 3_600),
+		})}`;
 	if (node.type === "branch")
-		return `${node.condition?.field ?? "field"} ${node.condition?.operator ?? "equals"} ${String(node.condition?.value ?? "")}`;
+		return `${node.condition?.field ?? "field"} ${t(node.condition?.operator ?? "equals")} ${conditionValue(node.condition?.value)}`;
 	if (node.type === "update_attribute")
 		return (
 			Object.entries(node.attributes ?? {})
@@ -672,6 +683,13 @@ function nodeSummary(
 				.join(", ") || t("Configure subscriber data")
 		);
 	return t("Complete this enrollment");
+}
+
+function conditionValue(value: unknown): string {
+	if (Array.isArray(value)) return value.map(conditionValue).join(",");
+	return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+		? String(value)
+		: "";
 }
 
 function nodeLabel(type: JourneyNodeType) {

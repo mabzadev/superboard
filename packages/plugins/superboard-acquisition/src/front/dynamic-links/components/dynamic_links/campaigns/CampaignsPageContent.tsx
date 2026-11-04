@@ -147,8 +147,8 @@ export default function CampaignsPageContent() {
 	const currentPage = Math.min(page, pageCount);
 	const visible = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 	const tableColumns = useMemo(
-		() => createCampaignAnalyticsColumns(sort, setSort),
-		[setSort, sort],
+		() => createCampaignAnalyticsColumns(sort, setSort, tr),
+		[setSort, sort, tr],
 	);
 
 	useEffect(() => {
@@ -238,7 +238,10 @@ export default function CampaignsPageContent() {
 						</div>
 						<div className="flex flex-wrap gap-2">
 							<CustomizeColumns
-								columnOptions={columnOptions}
+								columnOptions={columnOptions.map((option) => ({
+									...option,
+									label: tr(option.label),
+								}))}
 								selectedColumns={selectedColumns}
 								setSelectedColumns={setSelectedColumns}
 							/>

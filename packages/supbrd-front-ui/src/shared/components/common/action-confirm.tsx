@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { useComponentI18n } from "../../lib/component-i18n.js";
 import { Button } from "../ui/button.js";
 import {
 	Dialog,
@@ -26,12 +27,13 @@ const ActionConfirm = ({
 	open,
 	setOpen,
 	onConfirm,
-	title = "Are you absolutely sure?",
-	description = "This action cannot be undone. This will permanently delete the item.",
-	confirmText = "Delete",
-	cancelText = "Cancel",
+	title,
+	description,
+	confirmText,
+	cancelText,
 	showCloseButton = true,
 }: ActionConfirmProps) => {
+	const t = useComponentI18n();
 	const [loading, setLoading] = useState(false);
 
 	const handleConfirm = async () => {
@@ -48,16 +50,16 @@ const ActionConfirm = ({
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent showCloseButton={showCloseButton}>
 				<DialogHeader>
-					<DialogTitle>{title}</DialogTitle>
-					<DialogDescription>{description}</DialogDescription>
+					<DialogTitle>{title ?? t("confirm.title")}</DialogTitle>
+					<DialogDescription>{description ?? t("confirm.description")}</DialogDescription>
 				</DialogHeader>
 
 				<DialogFooter>
 					<Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>
-						{cancelText}
+						{cancelText ?? t("confirm.cancel")}
 					</Button>
 					<Button variant="destructive" onClick={handleConfirm} disabled={loading}>
-						{loading ? "Deleting..." : confirmText}
+						{loading ? t("confirm.deleting") : (confirmText ?? t("confirm.delete"))}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

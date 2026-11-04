@@ -58,6 +58,7 @@ type IntegrationDefinition = {
 		key: string;
 		label: string;
 		placeholder?: string;
+		placeholderValues?: Record<string, string>;
 		required?: boolean;
 	}>;
 	credentialFields: CredentialField[];
@@ -74,7 +75,8 @@ const integrations: Record<IntegrationProvider, IntegrationDefinition> = {
 			{
 				key: "message_template",
 				label: "Message template",
-				placeholder: "New Support conversation {{conversation.display_id}}",
+				placeholder: "New Support conversation {id}",
+				placeholderValues: { id: "{{conversation.display_id}}" },
 			},
 			{
 				key: "thread_reference",
@@ -363,7 +365,7 @@ function WebhookEvents({
 								}
 							/>
 							<Label className="font-normal" htmlFor={id}>
-								{event.label}
+								{t(event.label)}
 							</Label>
 						</div>
 					);
@@ -379,7 +381,7 @@ function WebhookEvents({
 }
 
 export default function SupportIntegrationsPage() {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 
 	const publicConfig = usePublicConfig();
 	const { selectedProject, selectedInstance } = useProjectSelection();
@@ -422,15 +424,15 @@ export default function SupportIntegrationsPage() {
 		const result = current.searchParams.get("support_result");
 		if (!result) return;
 		if (result === "success") {
-			showSuccessNotification("Support integration authorized");
+			showSuccessNotification(t("Support integration authorized"));
 		} else {
-			showErrorNotification("Support integration authorization was not completed");
+			showErrorNotification(t("Support integration authorization was not completed"));
 		}
 		current.searchParams.delete("support_result");
 		current.searchParams.delete("support_code");
 		current.searchParams.delete("integration");
 		window.history.replaceState({}, "", `${current.pathname}${current.search}${current.hash}`);
-	}, []);
+	}, [t]);
 
 	const clearCreateForm = () => {
 		setName("");
@@ -490,7 +492,7 @@ export default function SupportIntegrationsPage() {
 				try {
 					await saveSupportIntegrationCredentials(projectRef, result.data.id, submittedCredentials);
 				} catch (cause) {
-					const detail = moduleErrorMessage(cause);
+					const detail = moduleErrorMessage(cause, locale);
 					setSelectedIntegration({
 						...result.data,
 						status: "configuration_required",
@@ -517,13 +519,15 @@ export default function SupportIntegrationsPage() {
 						publicConfig.apiUrl,
 					);
 					clearCreateForm();
-					showSuccessNotification("Continue to authorize the Support integration");
+					showSuccessNotification(t("Continue to authorize the Support integration"));
 					window.location.assign(authorization);
 					return;
 				} catch (cause) {
-					const detail = moduleErrorMessage(cause);
+					const detail = moduleErrorMessage(cause, locale);
 					setFormError(
-						`The integration client was saved, but authorization could not start. ${detail}`,
+						t("The integration client was saved, but authorization could not start. {detail}", {
+							detail,
+						}),
 					);
 					await resources.reload();
 					showErrorNotification(detail);
@@ -532,9 +536,9 @@ export default function SupportIntegrationsPage() {
 			}
 			clearCreateForm();
 			await resources.reload();
-			showSuccessNotification("Support integration configured");
+			showSuccessNotification(t("Support integration configured"));
 		} catch (cause) {
-			const detail = moduleErrorMessage(cause);
+			const detail = moduleErrorMessage(cause, locale);
 			setFormError(detail);
 			showErrorNotification(detail);
 		} finally {
@@ -589,7 +593,7 @@ export default function SupportIntegrationsPage() {
 					publicConfig.apiUrl,
 				);
 				closeConfiguration();
-				showSuccessNotification("Continue to authorize the Support integration");
+				showSuccessNotification(t("Continue to authorize the Support integration"));
 				window.location.assign(authorization);
 				return;
 			}
@@ -597,11 +601,11 @@ export default function SupportIntegrationsPage() {
 			await resources.reload();
 			showSuccessNotification(
 				selectedDefinition.credentialFields.length > 0
-					? "Integration credentials saved securely"
-					: "Support integration configured",
+					? t("Integration credentials saved securely")
+					: t("Support integration configured"),
 			);
 		} catch (cause) {
-			const detail = moduleErrorMessage(cause);
+			const detail = moduleErrorMessage(cause, locale);
 			setConfigurationError(detail);
 			showErrorNotification(detail);
 		} finally {
@@ -611,14 +615,15 @@ export default function SupportIntegrationsPage() {
 	};
 
 	const remove = async (integration: SupportIntegration) => {
-		if (!projectRef || !window.confirm(`Delete ${integration.display_name}?`)) return;
+		if (!projectRef || !window.confirm(t("Delete {name}?", { name: integration.display_name })))
+			return;
 		try {
 			await deleteSupportIntegration(projectRef, integration.id);
 			if (selectedIntegration?.id === integration.id) closeConfiguration();
 			await resources.reload();
-			showSuccessNotification("Support integration deleted");
+			showSuccessNotification(t("Support integration deleted"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -638,10 +643,10 @@ export default function SupportIntegrationsPage() {
 				integration.provider,
 				publicConfig.apiUrl,
 			);
-			showSuccessNotification("Continue to authorize the Support integration");
+			showSuccessNotification(t("Continue to authorize the Support integration"));
 			window.location.assign(authorization);
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 			setSaving(false);
 		}
 	};
@@ -709,7 +714,7 @@ export default function SupportIntegrationsPage() {
 									>
 										{Object.entries(integrations).map(([value, item]) => (
 											<option key={value} value={value}>
-												{item.label}
+												{t(item.label)}
 											</option>
 										))}
 									</select>
@@ -718,17 +723,17 @@ export default function SupportIntegrationsPage() {
 									<Label htmlFor="support-integration-name">{t("Display name")}</Label>
 									<Input
 										id="support-integration-name"
-										placeholder={`${definition.label} for Support`}
+										placeholder={t("{name} for Support", { name: t(definition.label) })}
 										value={name}
 										onChange={(event) => setName(event.target.value)}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="support-integration-target">{definition.field}</Label>
+									<Label htmlFor="support-integration-target">{t(definition.field)}</Label>
 									<Input
 										aria-invalid={provider === "webhook" && Boolean(target) && !targetIsValid}
 										id="support-integration-target"
-										placeholder={definition.placeholder}
+										placeholder={definition.placeholder && t(definition.placeholder)}
 										type={provider === "webhook" || provider === "api" ? "url" : "text"}
 										value={target}
 										onChange={(event) => setTarget(event.target.value)}
@@ -743,10 +748,12 @@ export default function SupportIntegrationsPage() {
 								</div>
 								{(definition.additionalSettings || []).map((field) => (
 									<div className="space-y-2" key={field.key}>
-										<Label htmlFor={`support-integration-${field.key}`}>{field.label}</Label>
+										<Label htmlFor={`support-integration-${field.key}`}>{t(field.label)}</Label>
 										<Input
 											id={`support-integration-${field.key}`}
-											placeholder={field.placeholder}
+											placeholder={
+												field.placeholder && t(field.placeholder, field.placeholderValues)
+											}
 											value={additionalSettings[field.key] || ""}
 											onChange={(event) =>
 												setAdditionalSettings((current) => ({
@@ -780,7 +787,7 @@ export default function SupportIntegrationsPage() {
 									<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 										{definition.credentialFields.map((field) => (
 											<div className="space-y-2" key={field.key}>
-												<Label htmlFor={`new-integration-${field.key}`}>{field.label}</Label>
+												<Label htmlFor={`new-integration-${field.key}`}>{t(field.label)}</Label>
 												<Input
 													autoComplete="new-password"
 													id={`new-integration-${field.key}`}
@@ -813,7 +820,7 @@ export default function SupportIntegrationsPage() {
 									disabled={saving || !canCreate}
 									onClick={() => void create()}
 								>
-									<Plus /> {saving ? "Creating…" : "Add and configure"}
+									<Plus /> {saving ? t("Creating…") : t("Add and configure")}
 								</Button>
 							</div>
 						</CardContent>
@@ -839,7 +846,7 @@ export default function SupportIntegrationsPage() {
 											<div>
 												<p className="font-medium">{item.display_name}</p>
 												<p className="text-sm text-muted-foreground">
-													{itemDefinition?.label || item.provider}
+													{t(itemDefinition?.label || item.provider)}
 												</p>
 												{item.status === "configuration_required" ? (
 													<p className="mt-1 text-xs text-muted-foreground">
@@ -871,12 +878,12 @@ export default function SupportIntegrationsPage() {
 														<KeyRound />
 														{!itemDefinition?.credentialFields.length ||
 														item.status === "configuration_required"
-															? "Configure"
-															: "Replace credentials"}
+															? t("Configure")
+															: t("Replace credentials")}
 													</Button>
 												) : null}
 												<Button
-													aria-label={`Delete ${item.display_name}`}
+													aria-label={t("Delete {name}", { name: item.display_name })}
 													disabled={saving || configuring}
 													size="icon"
 													variant="ghost"
@@ -922,7 +929,9 @@ export default function SupportIntegrationsPage() {
 									</div>
 								) : null}
 								<div className="space-y-2">
-									<Label htmlFor="configured-integration-target">{selectedDefinition.field}</Label>
+									<Label htmlFor="configured-integration-target">
+										{t(selectedDefinition.field)}
+									</Label>
 									<Input
 										aria-invalid={
 											selectedProvider === "webhook" &&
@@ -930,7 +939,9 @@ export default function SupportIntegrationsPage() {
 											!configurationTargetIsValid
 										}
 										id="configured-integration-target"
-										placeholder={selectedDefinition.placeholder}
+										placeholder={
+											selectedDefinition.placeholder && t(selectedDefinition.placeholder)
+										}
 										type={
 											selectedProvider === "webhook" || selectedProvider === "api" ? "url" : "text"
 										}
@@ -949,11 +960,13 @@ export default function SupportIntegrationsPage() {
 								</div>
 								{(selectedDefinition.additionalSettings || []).map((field) => (
 									<div className="space-y-2" key={field.key}>
-										<Label htmlFor={`configured-integration-${field.key}`}>{field.label}</Label>
+										<Label htmlFor={`configured-integration-${field.key}`}>{t(field.label)}</Label>
 										<Input
 											disabled={configuring}
 											id={`configured-integration-${field.key}`}
-											placeholder={field.placeholder}
+											placeholder={
+												field.placeholder && t(field.placeholder, field.placeholderValues)
+											}
 											value={configurationAdditionalSettings[field.key] || ""}
 											onChange={(event) =>
 												setConfigurationAdditionalSettings((current) => ({
@@ -1011,7 +1024,7 @@ export default function SupportIntegrationsPage() {
 										}
 										onClick={() => void saveConfiguration()}
 									>
-										{configuring ? "Saving…" : "Save securely"}
+										{configuring ? t("Saving…") : t("Save securely")}
 									</Button>
 								</div>
 							</CardContent>

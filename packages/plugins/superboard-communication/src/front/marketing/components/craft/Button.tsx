@@ -12,6 +12,7 @@ import {
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 
+import { useStudioI18n } from "../../studio/i18n.js";
 import { ComponentToolbar } from "./ComponentToolbar.js";
 
 export const ButtonComponent = ({
@@ -115,6 +116,7 @@ export const ButtonComponent = ({
 					}}
 				>
 					<button
+						type="button"
 						style={{
 							width: "100%",
 							background: styleType === "outlined" ? "transparent" : background,
@@ -157,6 +159,7 @@ export const ButtonComponent = ({
 };
 
 export const ButtonSettings = () => {
+	const { t } = useStudioI18n();
 	const {
 		actions: { setProp },
 		props,
@@ -171,7 +174,7 @@ export const ButtonSettings = () => {
 				{ label: "Text Color", prop: "textColor" },
 			].map((item) => (
 				<div key={item.prop} className="flex items-center justify-between">
-					<Label className="text-xs text-muted-foreground">{item.label}</Label>
+					<Label className="text-xs text-muted-foreground">{t(item.label)}</Label>
 					<div className="flex items-center gap-1.5">
 						<Input
 							value={props[item.prop]}
@@ -196,7 +199,7 @@ export const ButtonSettings = () => {
 			))}
 
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Link URL</Label>
+				<Label className="text-xs text-muted-foreground">{t("Link URL")}</Label>
 				<Input
 					className="h-8"
 					value={props.href}
@@ -206,7 +209,7 @@ export const ButtonSettings = () => {
 			</div>
 
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Border Radius</Label>
+				<Label className="text-xs text-muted-foreground">{t("Border Radius")}</Label>
 				<Input
 					className="h-8"
 					value={props.borderRadius}
@@ -218,7 +221,7 @@ export const ButtonSettings = () => {
 			</div>
 
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Style</Label>
+				<Label className="text-xs text-muted-foreground">{t("Style")}</Label>
 				<Select
 					value={props.styleType}
 					onValueChange={(v) => setProp((p: Record<string, string>) => (p.styleType = v))}
@@ -227,8 +230,8 @@ export const ButtonSettings = () => {
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="full">Filled</SelectItem>
-						<SelectItem value="outlined">Outlined</SelectItem>
+						<SelectItem value="full">{t("Filled")}</SelectItem>
+						<SelectItem value="outlined">{t("Outlined")}</SelectItem>
 					</SelectContent>
 				</Select>
 			</div>

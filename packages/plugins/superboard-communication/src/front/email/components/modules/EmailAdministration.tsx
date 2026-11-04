@@ -151,7 +151,7 @@ export function EmailAdministration({
 											<div>
 												<p className="font-medium">{t("Amazon SES managed delivery")}</p>
 												<p className="text-xs text-muted-foreground">
-													{awsRegion || "AWS region"} {t("· STARTTLS · port 587")}
+													{awsRegion || t("AWS region")} {t("· STARTTLS · port 587")}
 												</p>
 											</div>
 										</div>

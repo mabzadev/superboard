@@ -43,8 +43,50 @@ import { SupportAutomationDetails } from "./SupportAutomationDetails.js";
 
 type AutomationKind = "rules" | "assignment" | "sla" | "hours" | "macros" | "responses";
 
+const optionLabels: Record<string, string> = {
+	"conversation.created": "Conversation created",
+	"conversation.updated": "Conversation updated",
+	"message.created": "Message created",
+	"sla.warning": "SLA warning",
+	"sla.breached": "SLA breached",
+	all: "All conditions",
+	any: "Any condition",
+	status: "Status",
+	priority: "Priority",
+	inbox_id: "Inbox",
+	assigned_user_id: "Assigned agent",
+	assigned_team_id: "Assigned team",
+	labels: "Labels",
+	subject: "Subject",
+	external_user_id: "Customer ID",
+	equals: "Equals",
+	not_equals: "Does not equal",
+	contains: "Contains",
+	present: "Is present",
+	not_present: "Is not present",
+	greater_than: "Greater than",
+	set_status: "Set status",
+	set_priority: "Set priority",
+	set_snooze: "Snooze",
+	assign_agent: "Assign an agent",
+	assign_team: "Assign a team",
+	assign_inbox: "Move to an inbox",
+	add_label: "Add a label",
+	remove_label: "Remove a label",
+	send_message: "Send a message",
+	notify_agent: "Notify an agent",
+	trigger_webhook: "Trigger a webhook",
+	trigger_integration: "Trigger an integration",
+	round_robin: "Round robin",
+	balanced: "Balanced",
+	manual: "Manual",
+	oldest: "Oldest",
+	recent: "Recent",
+};
+const optionLabel = (value: string) => optionLabels[value] ?? value.replaceAll("_", " ");
+
 export default function SupportAutomationsPage({ inboxId }: { inboxId?: string } = {}) {
-	const { t } = useSupportI18n();
+	const { t, locale } = useSupportI18n();
 	const [kind, setKind] = useState<AutomationKind>("rules");
 
 	const { selectedProject } = useProjectSelection();
@@ -83,12 +125,12 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 				setOpenedError(null);
 			})
 			.catch((cause: unknown) => {
-				if (active) setOpenedError(moduleErrorMessage(cause));
+				if (active) setOpenedError(moduleErrorMessage(cause, locale));
 			});
 		return () => {
 			active = false;
 		};
-	}, [projectRef, selectedAutomation, inboxId, t]);
+	}, [projectRef, selectedAutomation, inboxId, t, locale]);
 	const setSelectedAutomation = (id: string | null) => {
 		setOpenedAutomation(null);
 		setOpenedError(null);
@@ -125,7 +167,7 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 		timezone: "UTC",
 		start: "09:00",
 		end: "17:00",
-		unavailable: "Our team will reply during business hours.",
+		unavailable: t("Our team will reply during business hours."),
 	});
 	const [macro, setMacro] = useState({
 		name: "",
@@ -162,9 +204,9 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 			setRule((current) => ({ ...current, name: "", actionValue: "" }));
 			await automations.reload();
 			setSelectedAutomation(created.data.id);
-			showSuccessNotification("Automation created");
+			showSuccessNotification(t("Automation created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -185,9 +227,9 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 			});
 			setAssignment((current) => ({ ...current, name: "" }));
 			await assignments.reload();
-			showSuccessNotification("Assignment policy created");
+			showSuccessNotification(t("Assignment policy created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -208,9 +250,9 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 			});
 			setSla((current) => ({ ...current, name: "" }));
 			await slas.reload();
-			showSuccessNotification("SLA policy created");
+			showSuccessNotification(t("SLA policy created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -238,9 +280,9 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 				active: true,
 			});
 			await schedules.reload();
-			showSuccessNotification("Business hours created");
+			showSuccessNotification(t("Business hours created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -258,9 +300,9 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 			});
 			setMacro((current) => ({ ...current, name: "" }));
 			await macros.reload();
-			showSuccessNotification("Macro created");
+			showSuccessNotification(t("Macro created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -279,9 +321,9 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 			});
 			setCannedResponse({ name: "", shortcut: "", content: "" });
 			await cannedResponses.reload();
-			showSuccessNotification("Canned response created");
+			showSuccessNotification(t("Canned response created"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setSaving(false);
 		}
@@ -292,13 +334,13 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 		id: string,
 		reload: () => Promise<void>,
 	) => {
-		if (!projectRef || !window.confirm("Delete this Support policy?")) return;
+		if (!projectRef || !window.confirm(t("Delete this Support policy?"))) return;
 		try {
 			await resource.remove(projectRef, id);
 			await reload();
-			showSuccessNotification("Support policy deleted");
+			showSuccessNotification(t("Support policy deleted"));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 
@@ -347,7 +389,7 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 				close={() => {
 					setSelectedAutomation(null);
 					void automations.reload().catch((cause: unknown) => {
-						setOpenedError(moduleErrorMessage(cause));
+						setOpenedError(moduleErrorMessage(cause, locale));
 					});
 				}}
 			/>
@@ -470,12 +512,14 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 							</Card>
 							<ResourceList
 								loading={automations.loading}
-								emptyTitle="No automation rules"
-								emptyDescription="Create a rule to react to conversation, message or SLA events."
+								emptyTitle={t("No automation rules")}
+								emptyDescription={t(
+									"Create a rule to react to conversation, message or SLA events.",
+								)}
 								items={automations.items.map((item) => ({
 									id: item.id,
 									title: item.name,
-									detail: `${item.event_name} · ${item.condition_mode}`,
+									detail: `${t(optionLabel(item.event_name))} · ${t(optionLabel(item.condition_mode))}`,
 									status: item.active ? "active" : "disabled",
 								}))}
 								onOpen={setSelectedAutomation}
@@ -534,12 +578,14 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 							</Card>
 							<ResourceList
 								loading={assignments.loading}
-								emptyTitle="No assignment policies"
-								emptyDescription="Create a routing policy for manual, round-robin or balanced assignment."
+								emptyTitle={t("No assignment policies")}
+								emptyDescription={t(
+									"Create a routing policy for manual, round-robin or balanced assignment.",
+								)}
 								items={assignments.items.map((item) => ({
 									id: item.id,
 									title: item.name,
-									detail: `${item.policy_type.replaceAll("_", " ")} · ${item.queue_order}`,
+									detail: `${t(optionLabel(item.policy_type))} · ${t(optionLabel(item.queue_order))}`,
 									status: item.active ? "active" : "disabled",
 								}))}
 								onDelete={(id) => void remove(supportAssignmentPolicies, id, assignments.reload)}
@@ -601,12 +647,17 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 							</Card>
 							<ResourceList
 								loading={slas.loading}
-								emptyTitle="No SLA policies"
-								emptyDescription="Define response and resolution targets for your Support team."
+								emptyTitle={t("No SLA policies")}
+								emptyDescription={t(
+									"Define response and resolution targets for your Support team.",
+								)}
 								items={slas.items.map((item) => ({
 									id: item.id,
 									title: item.name,
-									detail: `First response ${item.first_response_minutes} min · Resolution ${item.resolution_minutes} min`,
+									detail: t("First response {first} min · Resolution {resolution} min", {
+										first: item.first_response_minutes,
+										resolution: item.resolution_minutes,
+									}),
 									status: item.active ? "active" : "disabled",
 								}))}
 								onDelete={(id) => void remove(supportSlaPolicies, id, slas.reload)}
@@ -659,12 +710,12 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 							</Card>
 							<ResourceList
 								loading={schedules.loading}
-								emptyTitle="No business hours"
-								emptyDescription="Add business hours before applying time-aware SLA policies."
+								emptyTitle={t("No business hours")}
+								emptyDescription={t("Add business hours before applying time-aware SLA policies.")}
 								items={schedules.items.map((item) => ({
 									id: item.id,
 									title: item.timezone,
-									detail: item.unavailable_message || "No out-of-hours message",
+									detail: item.unavailable_message || t("No out-of-hours message"),
 									status: item.active ? "active" : "disabled",
 								}))}
 								onDelete={(id) => void remove(supportWorkingHours, id, schedules.reload)}
@@ -726,12 +777,14 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 							</Card>
 							<ResourceList
 								loading={macros.loading}
-								emptyTitle="No macros"
-								emptyDescription="Create reusable, validated Support actions for agents."
+								emptyTitle={t("No macros")}
+								emptyDescription={t("Create reusable, validated Support actions for agents.")}
 								items={macros.items.map((item) => ({
 									id: item.id,
 									title: item.name,
-									detail: `${item.actions.length} action${item.actions.length === 1 ? "" : "s"}`,
+									detail: t(item.actions.length === 1 ? "{count} action" : "{count} actions", {
+										count: item.actions.length,
+									}),
 									status: item.active ? "active" : "disabled",
 								}))}
 								onDelete={(id) => void remove(supportMacros, id, macros.reload)}
@@ -790,8 +843,8 @@ export default function SupportAutomationsPage({ inboxId }: { inboxId?: string }
 							</Card>
 							<ResourceList
 								loading={cannedResponses.loading}
-								emptyTitle="No canned responses"
-								emptyDescription="Create reusable replies for the Support Inbox."
+								emptyTitle={t("No canned responses")}
+								emptyDescription={t("Create reusable replies for the Support Inbox.")}
 								items={cannedResponses.items.map((item) => ({
 									id: item.id,
 									title: item.name,
@@ -859,6 +912,7 @@ function ResourceList({
 	onDelete: (id: string) => void;
 	onOpen?: (id: string) => void;
 }) {
+	const { t } = useSupportI18n();
 	if (loading) return <SupportLoading />;
 	if (!items.length) return <SupportEmpty title={emptyTitle} description={emptyDescription} />;
 	return (
@@ -885,7 +939,7 @@ function ResourceList({
 						<div className="flex items-center gap-2">
 							<SupportStatus value={item.status} />
 							<Button
-								aria-label={`Delete ${item.title}`}
+								aria-label={t("Delete {name}", { name: item.title })}
 								size="icon"
 								variant="ghost"
 								onClick={() => onDelete(item.id)}
@@ -911,16 +965,17 @@ function Select({
 	onChange: (value: string) => void;
 	options: string[];
 }) {
+	const { t } = useSupportI18n();
 	return (
 		<select
 			id={id}
-			className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm capitalize"
+			className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
 			value={value}
 			onChange={(event) => onChange(event.target.value)}
 		>
 			{options.map((option) => (
 				<option key={option} value={option}>
-					{option.replaceAll("_", " ")}
+					{t(optionLabel(option))}
 				</option>
 			))}
 		</select>

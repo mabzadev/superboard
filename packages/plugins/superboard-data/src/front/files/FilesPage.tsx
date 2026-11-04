@@ -1,5 +1,7 @@
 import { useFrontContext } from "@superboard/front-ui/context";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
+import { ArrowLeft } from "@superboard/front-ui/icons";
+import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import {
 	Dialog,
@@ -54,6 +56,8 @@ const messages = {
 		type: "File type",
 		allTypes: "All types",
 		back: "Back to files",
+		loading: "Loading…",
+		missing: "File not found. It may have been deleted or moved to the trash.",
 		failed: "The file operation failed",
 	},
 	fr: {
@@ -79,6 +83,8 @@ const messages = {
 		type: "Type de fichier",
 		allTypes: "Tous les types",
 		back: "Retour aux fichiers",
+		loading: "Chargement…",
+		missing: "Fichier introuvable. Il a peut-être été supprimé ou mis à la corbeille.",
 		failed: "L’opération sur le fichier a échoué",
 	},
 };
@@ -87,11 +93,19 @@ export default function FilesPage() {
 	const { locale } = useFrontContext();
 	const t = messages[locale];
 	const { selectedProject } = useProjectSelection();
+	const router = useRouter();
+	const pathname = usePathname();
+	const address = useSearchParams();
+	const fileId = address.get("file") || null;
 	const base = `/api/v1/files/projects/${selectedProject?.id ?? ""}`;
 	const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
 	const [search, setSearch] = useState("");
 	const [contentType, setContentType] = useState("");
-	const [detail, setDetail] = useState<StoredFile | null>(null);
+	const [lookup, setLookup] = useState<{
+		id: string;
+		file: StoredFile | null;
+		error: string | null;
+	} | null>(null);
 	const [items, setItems] = useState<StoredFile[]>([]);
 	const [usage, setUsage] = useState<{ files: number; bytes: number } | null>(null);
 	const [deleted, setDeleted] = useState(false);
@@ -144,6 +158,38 @@ export default function FilesPage() {
 			active = false;
 		};
 	}, [fetchFiles, applyFiles, t]);
+	const listed = fileId === null ? undefined : items.find((item) => item.id === fileId);
+	const lookedUp = lookup?.id === fileId ? lookup : null;
+	const detail = listed ?? lookedUp?.file ?? null;
+	const unlisted = fileId !== null && usage !== null && !listed;
+	useEffect(() => {
+		if (!unlisted || !fileId) return;
+		let active = true;
+		GET(`${base}/objects/${encodeURIComponent(fileId)}`)
+			.then(responseData<StoredFile>)
+			.then((file) => {
+				if (active) setLookup({ id: fileId, file, error: null });
+			})
+			.catch((cause: unknown) => {
+				if (!active) return;
+				const code = cause instanceof Error ? cause.message : null;
+				setLookup({
+					id: fileId,
+					file: null,
+					error: code === "FILE_NOT_FOUND" ? t.missing : (code ?? t.failed),
+				});
+			});
+		return () => {
+			active = false;
+		};
+	}, [base, fileId, unlisted, t]);
+	function showFile(id: string | null) {
+		const next = new URLSearchParams(address);
+		if (id === null) next.delete("file");
+		else next.set("file", id);
+		const query = next.toString();
+		router.push(query ? `${pathname}?${query}` : pathname);
+	}
 	async function execute(action: () => Promise<void>) {
 		if (busy) return;
 		setBusy(true);
@@ -188,33 +234,42 @@ export default function FilesPage() {
 			</Dialog>
 			{error && <p role="alert">{error}</p>}
 			{message && <p role="status">{message}</p>}
-			{detail && (
+			{fileId !== null && (
 				<div className="max-w-3xl space-y-4">
 					<Button
 						variant="ghost"
 						size="sm"
 						onClick={() => {
-							setDetail(null);
+							showFile(null);
 						}}
 					>
+						<ArrowLeft className="rtl:-scale-x-100" />
 						{t.back}
 					</Button>
-					<h2 className="break-all text-xl font-semibold">{detail.filename}</h2>
-					<dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-						<div>
-							<dt className="text-xs text-muted-foreground">{t.type}</dt>
-							<dd className="mt-1 text-sm font-medium">{detail.content_type}</dd>
-						</div>
-						<div>
-							<dt className="text-xs text-muted-foreground">{t.size}</dt>
-							<dd className="mt-1 text-sm font-medium">
-								{detail.byte_size.toLocaleString(locale)}
-							</dd>
-						</div>
-					</dl>
+					{detail ? (
+						<>
+							<h2 className="break-all text-xl font-semibold">{detail.filename}</h2>
+							<dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+								<div>
+									<dt className="text-xs text-muted-foreground">{t.type}</dt>
+									<dd className="mt-1 text-sm font-medium">{detail.content_type}</dd>
+								</div>
+								<div>
+									<dt className="text-xs text-muted-foreground">{t.size}</dt>
+									<dd className="mt-1 text-sm font-medium">
+										{detail.byte_size.toLocaleString(locale)}
+									</dd>
+								</div>
+							</dl>
+						</>
+					) : lookedUp?.error ? (
+						<p role="alert">{lookedUp.error}</p>
+					) : (
+						!error && <p role="status">{t.loading}</p>
+					)}
 				</div>
 			)}
-			<div className="space-y-5" hidden={detail !== null}>
+			<div className="space-y-5" hidden={fileId !== null}>
 				{usage && (
 					<p>
 						{usage.files} · {usage.bytes.toLocaleString(locale)} {t.size.toLowerCase()}
@@ -289,7 +344,6 @@ export default function FilesPage() {
 						variant="outline"
 						onClick={() => {
 							setDeleted(!deleted);
-							setDetail(null);
 							setContentType("");
 							setCursor(null);
 						}}
@@ -332,7 +386,7 @@ export default function FilesPage() {
 										<Button
 											variant="ghost"
 											onClick={() => {
-												setDetail(item);
+												showFile(item.id);
 											}}
 										>
 											{item.filename}

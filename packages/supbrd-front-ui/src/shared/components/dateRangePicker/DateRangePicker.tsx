@@ -2,7 +2,13 @@
 
 import { endOfDay, format, startOfDay, sub } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { fr } from "react-day-picker/locale/fr";
 
+import {
+	type ComponentMessage,
+	useComponentI18n,
+	useComponentLocale,
+} from "../../lib/component-i18n.js";
 import { Button } from "../ui/button.js";
 import { Calendar } from "../ui/calendar.js";
 import { CardFooter } from "../ui/card.js";
@@ -11,22 +17,26 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover.js";
 type Unit = "days" | "weeks" | "months";
 export type Preset = { label: string; value: number; duration: Unit };
 
-const defaultPresets: Preset[] = [
-	{ label: "Today", value: 0, duration: "days" },
-	{ label: "Last week", value: 1, duration: "weeks" },
-	{ label: "Last month", value: 1, duration: "months" },
-	{ label: "Last 3 months", value: 3, duration: "months" },
+const defaultPresets: (Omit<Preset, "label"> & { label: ComponentMessage })[] = [
+	{ label: "date.today", value: 0, duration: "days" },
+	{ label: "date.lastWeek", value: 1, duration: "weeks" },
+	{ label: "date.lastMonth", value: 1, duration: "months" },
+	{ label: "date.last3Months", value: 3, duration: "months" },
 ];
 
 export function DateRangePicker({
 	date,
 	setDate,
-	presets = defaultPresets,
+	presets,
 }: {
 	date: DateRange | undefined;
 	setDate: (date: DateRange | undefined) => void;
 	presets?: Preset[];
 }) {
+	const t = useComponentI18n();
+	const locale = useComponentLocale() === "fr" ? fr : undefined;
+	const shown = presets ?? defaultPresets.map((preset) => ({ ...preset, label: t(preset.label) }));
+	const day = (value: Date) => format(value, "PP", { locale });
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
@@ -37,13 +47,13 @@ export function DateRangePicker({
 					{date?.from ? (
 						date.to ? (
 							<span>
-								{format(date.from, "MMM d, yyyy")} - {format(date.to, "MMM d, yyyy")}
+								{day(date.from)} - {day(date.to)}
 							</span>
 						) : (
-							<span>{format(date.from, "MMM d, yyyy")}</span>
+							<span>{day(date.from)}</span>
 						)
 					) : (
-						<span className="text-muted-foreground">Pick a date range</span>
+						<span className="text-muted-foreground">{t("date.placeholder")}</span>
 					)}
 				</Button>
 			</PopoverTrigger>
@@ -55,9 +65,10 @@ export function DateRangePicker({
 						selected={date}
 						onSelect={setDate}
 						numberOfMonths={2}
+						locale={locale}
 					/>
 					<CardFooter className="flex flex-wrap gap-2 border-t p-4 !pt-4">
-						{presets.map((preset) => (
+						{shown.map((preset) => (
 							<Button
 								key={preset.label}
 								variant="outline"

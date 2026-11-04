@@ -4,6 +4,7 @@ import { afterEach, expect, test } from "vitest";
 import legacyAuthenticationMenus from "../../../../apps/site/seed/legacy-authentication-menus.json";
 import legacyProductMenus from "../../../../apps/site/seed/legacy-product-menus.json";
 import legacySectionMenus from "../../../../apps/site/seed/legacy-section-menus.json";
+import legacySettingsMenus from "../../../../apps/site/seed/legacy-settings-menus.json";
 import legacyMenu from "../../../../apps/site/seed/legacy-superboard-menu.json";
 import seedJson from "../../../../apps/site/seed/seed.json";
 import { CORE_OPERATOR_SURFACES } from "../../../../apps/site/src/lib/core-front-contract.js";
@@ -25,6 +26,24 @@ import baseline from "../../../../scripts/config/superboard-plugin-independence-
 import { setupTestDatabase, teardownTestDatabase } from "../../packages/core/utils/test-db.js";
 
 let db: Awaited<ReturnType<typeof setupTestDatabase>>;
+
+const moduleSettings = [
+	"/data/settings",
+	"/monetization/settings",
+	"/communication/settings",
+	"/acquisition/settings",
+	"/support/settings",
+	"/analytics/settings",
+];
+
+function settingsGroupOf(items: Awaited<ReturnType<MenuRepository["findItems"]>>) {
+	const group = items.find(
+		(item) => item.parentId === null && item.cssClasses === "sb-icon-settings",
+	);
+	if (!group) throw new Error("Settings group is missing");
+	return group;
+}
+
 const declaredViews = nativeFrontPluginCatalog()
 	.filter((plugin) => plugin.plugin_id !== "supbrd-core")
 	.flatMap((plugin) =>
@@ -193,20 +212,14 @@ test("existing product menus use canonical destinations while historical links r
 		const acquisition = after.find((item) => item.label === "Acquisition" && !item.parentId)!;
 		expect(
 			after.filter((item) => item.parentId === acquisition.id).map((item) => item.customUrl),
-		).toEqual([
-			"/acquisition/paywalls",
-			"/acquisition/onboardings",
-			"/acquisition/dynamic-links",
-			"/acquisition/settings",
-		]);
+		).toEqual(["/acquisition/paywalls", "/acquisition/onboardings", "/acquisition/dynamic-links"]);
+		expect(section("/acquisition/settings")).toBe(menu.locale === "fr" ? "Paramètres" : "Settings");
 		expect(section("/monetization/products")).toBe(
 			menu.locale === "fr" ? "Monétisation" : "Monetization",
 		);
 		expect(section("/support/inbox")).toBe("Support");
 		expect(section("/communication/marketing-email")).toBe("Communication");
-		expect(section("/auth/users")).toBe(
-			menu.locale === "fr" ? "Authentification" : "Authentication",
-		);
+		expect(section("/auth/users")).toBe(menu.locale === "fr" ? "Utilisateurs" : "Users");
 		expect(section("/analytics/remote-config")).toBe("Analytics");
 		for (const item of before.filter((entry) => !entry.customUrl?.endsWith("/account"))) {
 			const destination = retiredFrontPageDestination(item.customUrl ?? "") ?? item.customUrl;
@@ -221,21 +234,29 @@ test("existing product menus use canonical destinations while historical links r
 	}
 });
 
-test("authentication navigation exposes only users and settings in both languages", async () => {
+test("authentication navigation exposes users directly and its settings with the other settings", async () => {
 	db = await setupTestDatabase();
 	await applySeed(db, { version: "1", menus: legacyAuthenticationMenus });
 	await ensureNativeFrontMenus(db, seedJson.menus);
 	const repo = new MenuRepository(db);
 	for (const menu of await repo.findByName("superboard-admin")) {
 		const items = await repo.findItems(menu.id);
-		const auth = items.find(
-			(item) => item.label === (menu.locale === "fr" ? "Authentification" : "Authentication"),
-		);
-		expect(auth).toBeDefined();
-		const entries = items.filter((item) => item.parentId === auth?.id);
-		expect(entries.map((item) => item.customUrl)).toEqual([
-			"/auth/users",
-			`/auth/settings?lang=${menu.locale}`,
+		const users = items.find((item) => item.parentId === null && item.customUrl === "/auth/users");
+		expect(users?.label).toBe(menu.locale === "fr" ? "Utilisateurs" : "Users");
+		expect(items.some((item) => item.parentId === users?.id)).toBe(false);
+		const settings = settingsGroupOf(items);
+		expect(
+			items
+				.filter(
+					(item) =>
+						item.customUrl?.startsWith("/auth/") &&
+						item.id !== users?.id &&
+						item.id !== settings.id,
+				)
+				.map((item) => [item.parentId === settings.id, item.customUrl]),
+		).toEqual([
+			[true, `/auth/settings?lang=${menu.locale}`],
+			[true, "/auth/settings?tab=security&section=keys"],
 		]);
 		expect(items.some((item) => item.customUrl === "/auth/customers")).toBe(false);
 		expect(canonicalFrontHref("/auth/customers")).toBe("/auth/users?tab=profiles");
@@ -734,7 +755,10 @@ test("Support navigation groups its operational destinations under one section",
 				.filter((item) => item.parentId === support!.id)
 				.map((item) => item.customUrl)
 				.toSorted((a, b) => (a ?? "").localeCompare(b ?? "")),
-		).toEqual(["/support/help-center", "/support/inbox", "/support/settings"]);
+		).toEqual(["/support/help-center", "/support/inbox"]);
+		expect(items.find((item) => item.customUrl === "/support/settings")?.parentId).toBe(
+			settingsGroupOf(items).id,
+		);
 		await ensureNativeFrontMenus(db, seedJson.menus);
 		expect(
 			(await repository.findItems(menu.id)).filter((item) => item.parentId === support!.id),
@@ -793,8 +817,8 @@ test("menus seeded before the section simplification adopt it while edited menus
 		expect(untouched.filter((item) => item.parentId === null).map((item) => item.label)).toEqual(
 			definition.items.map((item) => item.label),
 		);
-		expect(children(untouched, "/core/settings").map(([, url]) => url)).toEqual(
-			definition.items.at(-2)!.children!.map((item) => item.url),
+		expect(children(untouched, `/auth/settings?lang=${menu.locale}`).map(([, url]) => url)).toEqual(
+			definition.items.at(-1)!.children!.map((item) => item.url),
 		);
 	}
 
@@ -802,14 +826,16 @@ test("menus seeded before the section simplification adopt it while edited menus
 	db = await setupTestDatabase();
 	await applySeed(db, { version: "1", menus: legacySectionMenus });
 	const repository = new MenuRepository(db);
-	for (const menu of await repository.findByName("superboard-admin")) {
-		const fr = menu.locale === "fr";
+	const editedMenus = await repository.findByName("superboard-admin");
+	for (const menu of editedMenus)
 		await repository.createItem(menu.id, menu.locale, {
 			type: "custom",
 			label: "My events",
 			customUrl: "/analytics/events?source=custom",
 		});
-		await ensureNativeFrontMenus(db, seedJson.menus);
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	for (const menu of editedMenus) {
+		const fr = menu.locale === "fr";
 		const items = await repository.findItems(menu.id);
 		const sectionOf = (url: string) => children(items, url).map(([, href]) => href);
 		expect(children(items, "/monetization/customers")).toEqual([
@@ -854,4 +880,91 @@ test("menus seeded before the section simplification adopt it while edited menus
 		await ensureNativeFrontMenus(db, seedJson.menus);
 		expect(await repository.findItems(menu.id)).toEqual(items);
 	}
+});
+
+test("the previous default menu gathers every settings page in one Settings group", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: legacySettingsMenus });
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	const repo = new MenuRepository(db);
+	for (const menu of await repo.findByName("superboard-admin")) {
+		const items = await repo.findItems(menu.id);
+		const fr = menu.locale === "fr";
+		expect(items.filter((item) => item.parentId === null).map((item) => item.label)).toEqual(
+			fr
+				? [
+						"Vue d’ensemble",
+						"Utilisateurs",
+						"Data",
+						"Monétisation",
+						"Communication",
+						"Acquisition",
+						"Support",
+						"Analytics",
+						"Paramètres",
+					]
+				: [
+						"Overview",
+						"Users",
+						"Data",
+						"Monetization",
+						"Communication",
+						"Acquisition",
+						"Support",
+						"Analytics",
+						"Settings",
+					],
+		);
+		const users = items.find((item) => item.parentId === null && item.customUrl === "/auth/users");
+		expect(items.some((item) => item.parentId === users?.id)).toBe(false);
+		const settings = settingsGroupOf(items);
+		const inSettings = items
+			.filter((item) => item.parentId === settings.id)
+			.map((item) => item.customUrl);
+		expect(inSettings).toEqual(
+			expect.arrayContaining([
+				`/auth/settings?lang=${menu.locale}`,
+				...moduleSettings,
+				"/core/settings",
+				"/_emdash/admin/plugins-manager",
+			]),
+		);
+		for (const item of items.filter(
+			(entry) => entry.customUrl?.includes("/settings") && entry.id !== settings.id,
+		))
+			expect([item.customUrl, item.parentId]).toEqual([item.customUrl, settings.id]);
+	}
+});
+
+test("an edited grouped menu keeps its Settings group and its direct Users link", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: seedJson.menus });
+	const repo = new MenuRepository(db);
+	const menu = (await repo.findByName("superboard-admin", { locale: "en" }))[0];
+	if (!menu) throw new Error("Menu is missing");
+	const users = (await repo.findItems(menu.id)).find(
+		(item) => item.parentId === null && item.customUrl === "/auth/users",
+	);
+	if (!users) throw new Error("Users link is missing");
+	await repo.updateItem(menu.id, users.id, { label: "App users" });
+	const supportSettings = (await repo.findItems(menu.id)).find(
+		(item) => item.customUrl === "/support/settings",
+	);
+	if (!supportSettings) throw new Error("Support settings link is missing");
+	await repo.deleteItem(menu.id, supportSettings.id);
+
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	const items = await repo.findItems(menu.id);
+	const settings = settingsGroupOf(items);
+	expect(items.find((item) => item.id === users.id)?.label).toBe("App users");
+	expect(items.some((item) => item.parentId === users.id)).toBe(false);
+	for (const url of [...moduleSettings, "/auth/settings?lang=en"]) {
+		const entry = items.filter((item) => item.customUrl === url && item.id !== settings.id);
+		expect(entry.map((item) => item.customUrl)).toEqual([url]);
+		expect(entry[0]?.parentId).toBe(settings.id);
+	}
+	expect(items.find((item) => item.customUrl === "/support/settings")?.label).toBe("Support");
+
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	expect(await repo.findItems(menu.id)).toEqual(items);
 });

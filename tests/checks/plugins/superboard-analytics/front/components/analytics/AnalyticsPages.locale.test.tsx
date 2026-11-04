@@ -16,6 +16,9 @@ const state = vi.hoisted(() => ({
 	events: vi.fn(),
 	reports: vi.fn(),
 	operations: vi.fn(),
+	purchases: vi.fn(),
+	feedback: vi.fn(),
+	alerts: vi.fn(),
 	success: vi.fn(),
 }));
 
@@ -36,7 +39,9 @@ vi.mock(
 		getAnalyticsEvents: state.events,
 		getAnalyticsEventAnalysis: vi.fn().mockResolvedValue(null),
 		getAnalyticsInstallations: vi.fn().mockResolvedValue({ items: [] }),
-		getAnalyticsPurchases: vi.fn().mockResolvedValue({ items: [] }),
+		getAnalyticsPurchases: state.purchases,
+		getAnalyticsFeedback: state.feedback,
+		getAnalyticsAlerts: state.alerts,
 		getAnalyticsRetention: vi.fn().mockResolvedValue({ cohorts: [] }),
 		getAnalyticsEventDefinitions: vi.fn().mockResolvedValue({ items: [] }),
 		getAnalyticsReports: state.reports,
@@ -87,6 +92,12 @@ describe("Analytics follows the console language", () => {
 		state.events.mockResolvedValue({ items: [] });
 		state.reports.mockResolvedValue({ items: [] });
 		state.operations.mockResolvedValue({ items: [] });
+		state.purchases.mockResolvedValue({ items: [] });
+		state.feedback.mockResolvedValue({
+			items: [],
+			summary: { responses: 0, average_rating: null, positive: 0, negative: 0 },
+		});
+		state.alerts.mockResolvedValue({ items: [], incidents: [] });
 	});
 
 	it("keeps shared module wrappers usable without a console provider", () => {
@@ -223,6 +234,69 @@ describe("Analytics follows the console language", () => {
 		).toBeInTheDocument();
 		expect(screen.getByText("En attente")).toBeInTheDocument();
 		expect(screen.getByText(/Tableau de bord · mis à jour le .*sept\./)).toBeInTheDocument();
+	});
+
+	it("explains the feedback rating scale in French", async () => {
+		render(<Page kind="feedback" locale="fr" />);
+		expect(
+			await screen.findByText(
+				"Les notes de 4 à 5 sont positives ; celles de 1 à 2 demandent votre attention.",
+			),
+		).toBeInTheDocument();
+	});
+
+	it("labels verified purchase types and stores in French", async () => {
+		state.purchases.mockResolvedValue({
+			items: [
+				{
+					id: "purchase-1",
+					event_type: "initial_purchase",
+					store: "manual",
+					environment: "sandbox",
+					product_id: "pro_monthly",
+					amount_micros: 9_990_000,
+					currency: "EUR",
+					store_transaction_id: "transaction-1",
+					occurred_at: "2026-09-08T12:00:00Z",
+				},
+			],
+		});
+		render(<Page kind="purchases" locale="fr" />);
+		expect(await screen.findByText("Premier achat")).toBeInTheDocument();
+		expect(screen.getByText("Manuel · Environnement de test")).toBeInTheDocument();
+	});
+
+	it("labels alert signals and notification states in French", async () => {
+		state.alerts.mockResolvedValue({
+			items: [
+				{
+					id: "alert-1",
+					name: "Seuil des achats",
+					alert_type: "metric_threshold",
+					definition: {},
+					channels: [],
+					enabled: true,
+					cooldown_minutes: 60,
+					created_at: "2026-09-08T12:00:00Z",
+					updated_at: "2026-09-08T12:00:00Z",
+				},
+			],
+			incidents: [
+				{
+					id: "incident-1",
+					alert_id: "alert-1",
+					status: "acknowledged",
+					summary: "Pic détecté",
+					value: {},
+					notification_status: "sent",
+					notifications: [],
+					triggered_at: "2026-09-08T12:00:00Z",
+				},
+			],
+		});
+		render(<Page kind="alerts" locale="fr" />);
+		expect(await screen.findByText("Seuil d’indicateur · délai de 60 min")).toBeInTheDocument();
+		expect(screen.getByText("Envoyée")).toBeInTheDocument();
 	});
 
 	it("saves data collection settings through the French feature view", async () => {

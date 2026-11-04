@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 
 import { formatCurrencyFromCents } from "../../../../../../../packages/supbrd-front-ui/src/shared/utils/formatCurrency.js";
 
@@ -27,5 +27,18 @@ describe("formatCurrencyFromCents", () => {
 		const result = formatCurrencyFromCents(100, "en-US", "USD");
 		expect(result).not.toMatch(/US\$/);
 		expect(result).toContain("$");
+	});
+
+	describe("without an explicit locale", () => {
+		afterEach(() => {
+			document.documentElement.lang = "";
+		});
+
+		it("follows the dashboard language rather than the browser language", () => {
+			document.documentElement.lang = "fr";
+			expect(formatCurrencyFromCents(123456)).toMatch(/^1\s234,56\s\$$/u);
+			document.documentElement.lang = "en";
+			expect(formatCurrencyFromCents(123456)).toBe("$1,234.56");
+		});
 	});
 });

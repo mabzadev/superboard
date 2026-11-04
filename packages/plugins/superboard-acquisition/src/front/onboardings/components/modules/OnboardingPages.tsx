@@ -704,6 +704,7 @@ function OnboardingDeliveryControls({
 	experiences: OnboardingExperience[];
 	onChanged: () => Promise<void>;
 }) {
+	const { tr } = useFlowI18n();
 	const { t } = useExperienceI18n();
 	const published = versions.filter(({ state }) => state === "published");
 	const [placementKey, setPlacementKey] = useState("app_launch");
@@ -734,7 +735,7 @@ function OnboardingDeliveryControls({
 				editingPlacementId,
 			);
 			setEditingPlacementId(undefined);
-			showSuccessNotification(editingPlacementId ? "Placement updated" : "Placement saved");
+			showSuccessNotification(tr(editingPlacementId ? "Placement updated" : "Placement saved"));
 			await onChanged();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -1160,7 +1161,7 @@ export function OnboardingStatisticsPage({
 						{Object.entries(data?.totals ?? {}).map(([key, value]) => (
 							<Card key={key}>
 								<CardHeader>
-									<CardDescription>{key.replaceAll("_", " ")}</CardDescription>
+									<CardDescription>{tr(key.replaceAll("_", " "))}</CardDescription>
 									<CardTitle className="text-3xl">{value.toLocaleString()}</CardTitle>
 								</CardHeader>
 							</Card>
@@ -1225,9 +1226,7 @@ export function OnboardingStatisticsPage({
 									{(data?.series ?? []).map((row, index) => (
 										<TableRow key={`${row.date}:${row.event_type}:${row.step_id ?? ""}:${index}`}>
 											<TableCell>{row.date}</TableCell>
-											<TableCell className="capitalize">
-												{row.event_type.replaceAll("_", " ")}
-											</TableCell>
+											<TableCell>{sentenceCase(tr(row.event_type.replaceAll("_", " ")))}</TableCell>
 											<TableCell>{row.step_id || "—"}</TableCell>
 											<TableCell>{row.platform || "—"}</TableCell>
 											<TableCell>{row.placement || "—"}</TableCell>
@@ -1249,4 +1248,8 @@ export function OnboardingStatisticsPage({
 			)}
 		</ModulePage>
 	);
+}
+
+function sentenceCase(label: string) {
+	return label.charAt(0).toLocaleUpperCase() + label.slice(1);
 }

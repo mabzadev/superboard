@@ -5,6 +5,7 @@ import { Label } from "@superboard/front-ui/ui/label.js";
 import clsx from "clsx";
 import { useRef, useState } from "react";
 
+import { useStudioI18n } from "../../studio/i18n.js";
 import { ComponentToolbar } from "./ComponentToolbar.js";
 
 export const ImageComponent = ({
@@ -90,6 +91,7 @@ export const ImageComponent = ({
 };
 
 export const ImageSettings = () => {
+	const { t } = useStudioI18n();
 	const {
 		actions: { setProp },
 		props,
@@ -100,7 +102,7 @@ export const ImageSettings = () => {
 	return (
 		<div className="flex flex-col gap-3 px-3 py-2">
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Image URL</Label>
+				<Label className="text-xs text-muted-foreground">{t("Image URL")}</Label>
 				<Input
 					className="h-8"
 					value={props.src}
@@ -109,7 +111,7 @@ export const ImageSettings = () => {
 				/>
 			</div>
 			<div className="flex flex-col gap-1.5">
-				<Label className="text-xs text-muted-foreground">Alt Text</Label>
+				<Label className="text-xs text-muted-foreground">{t("Alt Text")}</Label>
 				<Input
 					className="h-8"
 					value={props.alt}
@@ -119,7 +121,7 @@ export const ImageSettings = () => {
 			</div>
 			<div className="grid grid-cols-2 gap-3">
 				<div className="flex flex-col gap-1.5">
-					<Label className="text-xs text-muted-foreground">Max Width</Label>
+					<Label className="text-xs text-muted-foreground">{t("Max Width")}</Label>
 					<Input
 						className="h-8"
 						value={props.maxWidth}
@@ -128,7 +130,7 @@ export const ImageSettings = () => {
 					/>
 				</div>
 				<div className="flex flex-col gap-1.5">
-					<Label className="text-xs text-muted-foreground">Max Height</Label>
+					<Label className="text-xs text-muted-foreground">{t("Max Height")}</Label>
 					<Input
 						className="h-8"
 						value={props.maxHeight}

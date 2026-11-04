@@ -72,17 +72,22 @@ vi.mock(
 
 vi.mock(
 	"../../../../../../../packages/supbrd-front-ui/src/shared/components/modules/ModulePage.js",
-	() => ({
-		ModulePage: ({ title, children }: { title: string; children: React.ReactNode }) => (
-			<main>
-				<h1>{title}</h1>
-				{children}
-			</main>
-		),
-		EmptyProject: () => <p>Select project</p>,
-		moduleErrorMessage: (error: unknown) =>
-			error instanceof Error ? error.message : String(error),
-	}),
+	async (importOriginal) => {
+		const actual =
+			await importOriginal<
+				typeof import("../../../../../../../packages/supbrd-front-ui/src/shared/components/modules/ModulePage.js")
+			>();
+		return {
+			ModulePage: ({ title, children }: { title: string; children: React.ReactNode }) => (
+				<main>
+					<h1>{title}</h1>
+					{children}
+				</main>
+			),
+			EmptyProject: () => <p>Select project</p>,
+			moduleErrorMessage: actual.moduleErrorMessage,
+		};
+	},
 );
 
 vi.mock(
@@ -257,6 +262,18 @@ describe("DashboardPageContent", () => {
 		expect(await screen.findByText("Events: 1234")).toBeInTheDocument();
 		await waitFor(() =>
 			expect(screen.getByText(/purchase analytics: Products unavailable/i)).toBeInTheDocument(),
+		);
+	});
+
+	it("explains a failed module in French", async () => {
+		mocks.accessKey.mockRejectedValue(new Error("The requested resource was not found."));
+		render(<DashboardPageContent />, { wrapper: French });
+
+		expect(await screen.findByText("Événements: 1234")).toBeInTheDocument();
+		await waitFor(() =>
+			expect(
+				screen.getByText(/Clé d’accès : La ressource demandée est introuvable\./),
+			).toBeInTheDocument(),
 		);
 	});
 });

@@ -68,7 +68,7 @@
 	},
 	"scripts": {
 		"typecheck": "tsgo --noEmit",
-		"test": "node --test ../../tests/checks/packages/supbrd-front-ui/i18n.production.test.mjs && vitest run --config vitest.config.ts",
+		"test": "node --test ../../tests/checks/packages/supbrd-front-ui/i18n.production.test.mjs ../../tests/checks/packages/supbrd-front-ui/data-table.layout.test.mjs && vitest run --config vitest.config.ts",
 		"test:coverage": "vitest run --config vitest.config.ts --coverage"
 	},
 	"dependencies": {
