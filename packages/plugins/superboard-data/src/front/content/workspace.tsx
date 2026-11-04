@@ -1,4 +1,5 @@
 import { useFrontContext } from "@superboard/front-ui/context";
+import { ApiError } from "@superboard/front-ui/lib/ApiError.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -58,6 +59,7 @@ const fr = {
 	save: "Enregistrer",
 	create: "Créer le document",
 	back: "Retour aux documents",
+	documentNotFound: "Document introuvable. Il a peut-être été supprimé ou mis à la corbeille.",
 	publish: "Publier",
 	unpublish: "Dépublier",
 	duplicate: "Dupliquer",
@@ -153,6 +155,7 @@ const en: Record<keyof typeof fr, string> = {
 	save: "Save",
 	create: "Create document",
 	back: "Back to documents",
+	documentNotFound: "Document not found. It may have been deleted or moved to the trash.",
 	publish: "Publish",
 	unpublish: "Unpublish",
 	duplicate: "Duplicate",
@@ -241,6 +244,7 @@ export function useResource<T>(path: string | null) {
 		key: string;
 		data: T | null;
 		error: string | null;
+		errorCode: string | null;
 	} | null>(null);
 	const key = `${path ?? ""}:${version}`;
 	const refresh = useCallback(() => {
@@ -252,7 +256,7 @@ export function useResource<T>(path: string | null) {
 		void GET(path)
 			.then(responseData<T>)
 			.then((data) => {
-				if (active) setResult({ key, data, error: null });
+				if (active) setResult({ key, data, error: null, errorCode: null });
 			})
 			.catch((cause: unknown) => {
 				if (active)
@@ -260,6 +264,7 @@ export function useResource<T>(path: string | null) {
 						key,
 						data: null,
 						error: cause instanceof Error ? cause.message : "REQUEST_FAILED",
+						errorCode: cause instanceof ApiError ? (cause.code ?? null) : null,
 					});
 			});
 		return () => {
@@ -269,6 +274,7 @@ export function useResource<T>(path: string | null) {
 	return {
 		data: result?.key === key ? result.data : null,
 		error: result?.key === key ? result.error : null,
+		errorCode: result?.key === key ? result.errorCode : null,
 		refresh,
 	};
 }

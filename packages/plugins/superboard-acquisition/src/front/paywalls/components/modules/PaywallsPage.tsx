@@ -2,7 +2,6 @@
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { createStudioDocument, useExperienceI18n } from "@superboard/front-ui/experience-studio";
 import { Button } from "@superboard/front-ui/kumo";
-import { ApiError } from "@superboard/front-ui/lib/ApiError.js";
 import {
 	showErrorNotification,
 	showSuccessNotification,
@@ -80,8 +79,7 @@ import {
 	type ExperienceDocument,
 } from "../experience-editor/index.js";
 
-const errorMessage = (error: unknown) =>
-	error instanceof ApiError ? error.message : moduleErrorMessage(error);
+const errorMessage = (error: unknown) => moduleErrorMessage(error);
 
 const displayName = (paywall: Paywall) =>
 	paywall.display_name ?? paywall.name ?? paywall.identifier;

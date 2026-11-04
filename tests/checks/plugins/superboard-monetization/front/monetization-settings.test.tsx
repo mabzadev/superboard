@@ -150,6 +150,27 @@ describe("MonetizationSettingsPage", () => {
 		expect(advanced).toContainElement(await screen.findByLabelText("Apple private key"));
 	});
 
+	it("asks for the Stripe secret key and webhook signing secret only in the Stripe section", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => Response.json({ data: { values: {}, secretsSet: {} } })),
+		);
+		render(<MonetizationSettingsPage />);
+
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
+
+		const advanced = (await screen.findByText("Advanced")).closest("details");
+		if (!advanced) throw new Error("Advanced section missing");
+		await within(advanced).findByLabelText("Apple private key");
+		const stripe = (await screen.findByText("Stripe web payments")).closest("section");
+		if (!stripe) throw new Error("Stripe section missing");
+		for (const label of ["Stripe secret key", "Webhook signing secret"]) {
+			const fields = await within(stripe).findAllByLabelText(label);
+			expect(screen.getAllByLabelText(label)).toEqual(fields);
+			expect(fields).toHaveLength(1);
+		}
+	});
+
 	it("opens legacy configuration links on the gateways tab with Advanced expanded", async () => {
 		window.history.replaceState(null, "", "/monetization/settings?tab=configuration");
 		render(<MonetizationSettingsPage />);

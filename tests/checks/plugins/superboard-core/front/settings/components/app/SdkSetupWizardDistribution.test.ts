@@ -23,17 +23,13 @@ describe("SDK setup distribution contract", () => {
 		]);
 	});
 
-	it("configures npm authentication before the web install command", () => {
+	it("guides a local build while the web SDK has no published installation", () => {
 		const blocks = sdkInstallCode("web");
 
-		expect(blocks.map(({ filename }) => filename)).toEqual([".npmrc", "Terminal"]);
-		expect(blocks[0]?.code).toContain("@mabzadev:registry=https://npm.pkg.github.com");
-		expect(blocks[0]?.code).toContain(
-			"//npm.pkg.github.com/:_authToken=${SUPERBOARD_GITHUB_PACKAGES_TOKEN}",
-		);
-		expect(blocks[1]?.code).toBe(
-			`test -n "\${SUPERBOARD_GITHUB_PACKAGES_TOKEN:-}" \\\n  && npm install @mabzadev/superboard-js-sdk@1.0.2`,
-		);
+		expect(blocks.map(({ filename }) => filename)).toEqual(["Terminal"]);
+		expect(blocks[0]?.code).toContain("source not published yet");
+		expect(blocks[0]?.code).toContain("pnpm --dir sdks/web build");
+		expect(blocks[0]?.code).not.toContain("npm install");
 	});
 
 	it("configures Maven credentials before the Android dependency", () => {

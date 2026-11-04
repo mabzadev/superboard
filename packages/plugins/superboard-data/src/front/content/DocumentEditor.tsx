@@ -56,8 +56,10 @@ export function DocumentEditor({
 				{t.back}
 			</Button>
 			{resource.error || fields.error ? (
-				<div role="alert">
-					{resource.error ?? fields.error}
+				<div role="alert" className="flex flex-wrap items-center gap-3">
+					{resource.errorCode === "NOT_FOUND"
+						? t.documentNotFound
+						: (resource.error ?? fields.error)}
 					<Button
 						onClick={() => {
 							resource.refresh();

@@ -1,6 +1,7 @@
 import {
 	Input as KumoInput,
 	InputArea as KumoInputArea,
+	Loader as KumoLoader,
 	Select as KumoSelect,
 	Checkbox as KumoCheckbox,
 	Dialog as KumoDialog,
@@ -11,9 +12,15 @@ import { createElement, forwardRef, type ComponentProps, type ReactNode } from "
 
 import { Button as FrontButton, buttonVariants } from "./shared/components/ui/button.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./shared/components/ui/tooltip.js";
+import { useComponentI18n } from "./shared/lib/component-i18n.js";
 import { cn } from "./shared/lib/utils.js";
 
-export { Loader, Popover } from "@cloudflare/kumo";
+export { Popover } from "@cloudflare/kumo";
+
+export function Loader({ "aria-label": label, ...props }: ComponentProps<typeof KumoLoader>) {
+	const t = useComponentI18n();
+	return <KumoLoader {...props} aria-label={label ?? t("loader.label")} />;
+}
 
 const sizes = { xs: "tiny", sm: "sm", base: "default", lg: "lg" } as const;
 const variants = {

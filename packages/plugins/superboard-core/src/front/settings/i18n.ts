@@ -44,6 +44,7 @@ const messages = {
 		"usage.export": "Export",
 		"usage.last7Days": "Last 7 days",
 		"usage.last30Days": "Last 30 days",
+		"usage.users": "Users",
 		"usage.last3Months": "Last 3 months",
 		"sdk.title": "SDK & apps",
 		"sdk.description":
@@ -98,6 +99,7 @@ const messages = {
 		"usage.export": "Exporter",
 		"usage.last7Days": "7 derniers jours",
 		"usage.last30Days": "30 derniers jours",
+		"usage.users": "Utilisateurs",
 		"usage.last3Months": "3 derniers mois",
 		"sdk.title": "SDK et applications",
 		"sdk.description":

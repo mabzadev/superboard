@@ -6,25 +6,27 @@ import {
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@superboard/front-ui/ui/chart.js";
+import { numberFormatter } from "@superboard/front-ui/utils/numberFormatter.js";
 import { BarChart3 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+
+import { useSettingsI18n } from "../../i18n.js";
 
 const SettingsActiveUsersChart = React.memo(function SettingsActiveUsersChart({
 	data,
 }: {
 	data: Record<string, number> | null;
 }) {
+	const { t } = useSettingsI18n();
 	const [fullData, setFullData] = useState<ChartDataPoint[]>([]);
 
 	const chartConfig = {
 		users: {
-			label: "Users",
+			label: t("usage.users"),
 			color: "var(--chart-users)",
 		},
 	} satisfies ChartConfig;
-
-	const numberFormatter = new Intl.NumberFormat("de-DE");
 
 	useEffect(() => {
 		if (!data) {
@@ -107,7 +109,7 @@ const SettingsActiveUsersChart = React.memo(function SettingsActiveUsersChart({
 						tickLine={false}
 						axisLine={false}
 						dataKey="users"
-						tickFormatter={(value) => numberFormatter.format(value)}
+						tickFormatter={(value: number) => numberFormatter.format(value)}
 					/>
 				</BarChart>
 			</ChartContainer>

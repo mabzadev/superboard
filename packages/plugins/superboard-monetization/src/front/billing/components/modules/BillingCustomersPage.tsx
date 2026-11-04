@@ -640,11 +640,16 @@ function RecordTable({
 					<TableBody>
 						{rows.slice(0, 100).map((row, index) => (
 							<TableRow key={text(row, "id") || `${text(row, columns[0] ?? "id")}:${index}`}>
-								{columns.map((column) => (
-									<TableCell key={column} className="max-w-56 truncate">
-										{translatedColumns.has(column) ? t(display(row[column])) : display(row[column])}
-									</TableCell>
-								))}
+								{columns.map((column) => {
+									const value = translatedColumns.has(column)
+										? t(display(row[column]))
+										: display(row[column]);
+									return (
+										<TableCell key={column} className="max-w-56 truncate" title={value}>
+											{value}
+										</TableCell>
+									);
+								})}
 							</TableRow>
 						))}
 						{rows.length === 0 && (

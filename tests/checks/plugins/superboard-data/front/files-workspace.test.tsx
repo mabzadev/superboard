@@ -24,7 +24,7 @@ function mockFiles() {
 		data: {
 			data: path.endsWith("/usage")
 				? { files: 3, bytes: 1052 }
-				: path.endsWith("/objects/9")
+				: path.split("?")[0]!.endsWith("/objects/9")
 					? {
 							id: "9",
 							filename: "archive.zip",
@@ -76,7 +76,9 @@ it("opens a file sheet directly from its address", async () => {
 	render(<FilesPage />);
 	expect(await screen.findByRole("heading", { name: "archive.zip" })).toBeVisible();
 	expect(screen.getByText("application/zip", { selector: "dd" })).toBeVisible();
-	expect(api.GET).toHaveBeenCalledWith("/api/v1/files/projects/test/objects/9");
+	expect(api.GET).toHaveBeenCalledWith(
+		expect.stringMatching(/^\/api\/v1\/files\/projects\/test\/objects\/9(\?|$)/),
+	);
 	expect(screen.queryByRole("table")).not.toBeInTheDocument();
 	fireEvent.click(screen.getByRole("button", { name: "Back to files" }));
 	expect(await screen.findByRole("table")).toBeVisible();
@@ -87,7 +89,7 @@ it("explains that the file of an address cannot be found", async () => {
 	mockFiles();
 	const listing = api.GET.getMockImplementation();
 	api.GET.mockImplementation(async (path: string) => {
-		if (path.endsWith("/objects/gone")) throw new Error("FILE_NOT_FOUND");
+		if (path.split("?")[0]!.endsWith("/objects/gone")) throw new Error("FILE_NOT_FOUND");
 		return listing?.(path);
 	});
 	render(<FilesPage />);
@@ -104,7 +106,33 @@ it("opens a listed file directly from its address without another request", asyn
 	mockFiles();
 	render(<FilesPage />);
 	expect(await screen.findByRole("heading", { name: "notes.txt" })).toBeVisible();
-	expect(api.GET).not.toHaveBeenCalledWith(expect.stringMatching(/\/objects\/2$/));
+	expect(api.GET).not.toHaveBeenCalledWith(expect.stringMatching(/\/objects\/2(\?|$)/));
+});
+it("opens a trashed file directly from its address", async () => {
+	window.history.replaceState(null, "", "/data/files?file=7");
+	mockFiles();
+	const listing = api.GET.getMockImplementation();
+	api.GET.mockImplementation(async (path: string) => {
+		const [route, query = ""] = path.split("?");
+		if (!route!.endsWith("/objects/7")) return listing?.(path);
+		if (new URLSearchParams(query).get("include_deleted") !== "true")
+			throw new Error("FILE_NOT_FOUND");
+		return {
+			data: {
+				data: {
+					id: "7",
+					filename: "old-contract.pdf",
+					content_type: "application/pdf",
+					byte_size: 12,
+					deleted_at: "2026-11-01T00:00:00.000Z",
+				},
+			},
+		};
+	});
+	render(<FilesPage />);
+	expect(await screen.findByRole("heading", { name: "old-contract.pdf" })).toBeVisible();
+	expect(screen.getByText("application/pdf", { selector: "dd" })).toBeVisible();
+	expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 it("uploads every selected file and removes successful uploads from the pending queue", async () => {
 	const completed: string[] = [];

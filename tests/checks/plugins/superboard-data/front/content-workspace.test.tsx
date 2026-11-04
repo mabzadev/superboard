@@ -1,3 +1,5 @@
+import { FrontContextProvider } from "@superboard/front-ui/context";
+import { ApiError } from "@superboard/front-ui/lib/ApiError.js";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import ContentPage from "../../../../../packages/plugins/superboard-data/src/front/content/ContentPage.js";
@@ -190,6 +192,56 @@ it("opens a document of any collection directly from its address", async () => {
 	fireEvent.click(screen.getByRole("button", { name: "Back to documents" }));
 	expect(await screen.findByLabelText("Collection")).toHaveValue("pages");
 });
+
+it.each([
+	{
+		locale: "en",
+		message: "Document not found. It may have been deleted or moved to the trash.",
+		retry: "Retry",
+		back: "Back to documents",
+	},
+	{
+		locale: "fr",
+		message: "Document introuvable. Il a peut-être été supprimé ou mis à la corbeille.",
+		retry: "Réessayer",
+		back: "Retour aux documents",
+	},
+] as const)(
+	"explains in $locale that the document of an address does not exist",
+	async ({ locale, message, retry, back }) => {
+		window.history.replaceState(null, "", "/data/content?collection=articles&document=missing");
+		mockContent();
+		const content = api.GET.getMockImplementation();
+		api.GET.mockImplementation(async (path: string) => {
+			if (path.startsWith("/_emdash/api/content/articles/missing?"))
+				throw new ApiError("Content item not found: missing", 404, "NOT_FOUND");
+			return content?.(path);
+		});
+		render(
+			<FrontContextProvider
+				value={{
+					instanceId: "1",
+					pluginId: "superboard-content",
+					path: "/data/content",
+					parameters: {},
+					locale,
+					operator: null,
+					projectScope: null,
+					activePluginIds: ["superboard-content"],
+				}}
+			>
+				<ContentPage />
+			</FrontContextProvider>,
+		);
+		const alert = await screen.findByRole("alert");
+		expect(alert).toHaveTextContent(message);
+		expect(alert).not.toHaveTextContent("Content item not found");
+		expect(screen.getByRole("button", { name: retry })).toBeVisible();
+		fireEvent.click(screen.getByRole("button", { name: back }));
+		expect(await screen.findByRole("button", { name: "Hello world" })).toBeVisible();
+		expect(new URLSearchParams(window.location.search).get("document")).toBeNull();
+	},
+);
 
 it("opens the new document form from its address and replaces it with the created document", async () => {
 	const created = { ...article, id: "doc-9", slug: "fresh", data: { title: "Fresh" } };

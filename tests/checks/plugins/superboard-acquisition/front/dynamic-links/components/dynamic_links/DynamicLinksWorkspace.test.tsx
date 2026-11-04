@@ -66,6 +66,23 @@ const link = {
 	total_installs: 2,
 };
 
+const campaignAnalytics = {
+	id: "campaign-1",
+	name: "Summer launch",
+	slug: "summer-launch",
+	status: "active",
+	metadata: {},
+	created_at: "2026-07-20T00:00:00.000Z",
+	total_views: 42,
+	total_opens: 30,
+	total_installs: 20,
+	total_reinstalls: 4,
+	total_reactivations: 3,
+	total_app_opens: 25,
+	total_user_referred: 11,
+	total_revenue: 9900,
+};
+
 const search = () => new URLSearchParams(window.location.search);
 const scrollIntoView = vi.fn();
 const settingsHeadings = ["Domain", "Redirect rules", "Social preview", "Tracking"];
@@ -326,6 +343,45 @@ describe("DynamicLinksWorkspace", () => {
 		]);
 	});
 
+	it("shows the essential campaign columns by default and keeps the others in the column picker", async () => {
+		window.history.replaceState(null, "", "/acquisition/dynamic-links?tab=campaigns");
+		mocks.getLinkCampaignAnalytics.mockResolvedValue([campaignAnalytics]);
+		render(<DynamicLinksWorkspace />);
+		const table = await screen.findByRole("table", { name: "Acquisition campaigns" });
+		await within(table).findByText("Summer launch");
+		expect(columnHeaders(table)).toEqual(["Title", "Views", "Installs", "Revenue", "Date"]);
+		await userEvent.click(screen.getByRole("combobox", { name: "Columns" }));
+		const picker = within(await screen.findByRole("dialog"));
+		expect(
+			picker
+				.getAllByRole("checkbox")
+				.map((option) => [
+					option.closest("label")?.textContent,
+					option.getAttribute("aria-checked"),
+				]),
+		).toEqual([
+			["Views", "true"],
+			["Opens", "false"],
+			["Installs", "true"],
+			["Reinstalls", "false"],
+			["Reactivations", "false"],
+			["App opens", "false"],
+			["Users referred", "false"],
+			["Revenue", "true"],
+			["Date", "true"],
+		]);
+		await userEvent.click(picker.getByRole("checkbox", { name: "Users referred" }));
+		expect(columnHeaders(table)).toEqual([
+			"Title",
+			"Views",
+			"Installs",
+			"Users referred",
+			"Revenue",
+			"Date",
+		]);
+		expect(within(table).getByText("11")).toBeInTheDocument();
+	});
+
 	it("renders the links and campaigns tables in French", async () => {
 		renderInFrench(<DynamicLinksWorkspace />);
 		const links = await screen.findByRole("table", { name: "Liens" });
@@ -343,18 +399,9 @@ describe("DynamicLinksWorkspace", () => {
 		await userEvent.keyboard("{Escape}");
 		await userEvent.click(screen.getByRole("tab", { name: "Campagnes" }));
 		const campaigns = await screen.findByRole("table", { name: "Campagnes d’acquisition" });
-		expect(columnHeaders(campaigns)).toEqual([
-			"Titre",
-			"Vues",
-			"Ouvertures",
-			"Installations",
-			"Réinstallations",
-			"Réactivations",
-			"Ouvertures de l’application",
-			"Utilisateurs recommandés",
-			"Revenu",
-			"Date",
-		]);
+		expect(columnHeaders(campaigns)).toEqual(["Titre", "Vues", "Installations", "Revenu", "Date"]);
+		await userEvent.click(screen.getByRole("combobox", { name: "Colonnes" }));
+		expect(screen.getByRole("checkbox", { name: "Utilisateurs recommandés" })).not.toBeChecked();
 	});
 
 	it("explains an empty link list in French", async () => {

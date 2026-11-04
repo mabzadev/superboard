@@ -5,7 +5,8 @@ import { useMemo, type ReactNode } from "react";
 import { useOptionalFrontContext } from "../../../context.js";
 import { createFrontI18n } from "../../../i18n.js";
 import { SectionNavigation } from "../../../section-navigation.js";
-import { ApiError, getErrorMessage } from "../../lib/ApiError.js";
+import { getApiErrorMessage, getErrorMessage } from "../../lib/ApiError.js";
+import { componentLocale } from "../../lib/component-i18n.js";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert.js";
 
 const french: Record<string, string> = {
@@ -14,6 +15,8 @@ const french: Record<string, string> = {
 	"An unexpected error occurred.": "Une erreur inattendue s’est produite.",
 	"Invalid request. Please check your input.":
 		"Requête invalide. Vérifiez les informations saisies.",
+	"Authentication is required to perform this action.":
+		"Une authentification est nécessaire pour effectuer cette action.",
 	"You don't have permission to perform this action.":
 		"Vous n’avez pas l’autorisation d’effectuer cette action.",
 	"The requested resource was not found.": "La ressource demandée est introuvable.",
@@ -36,15 +39,21 @@ function moduleI18n(locale: string) {
 	});
 }
 
-export function moduleErrorMessage(error: unknown, locale = "en"): string {
+export function moduleErrorMessage(
+	error: unknown,
+	locale: string | undefined = globalThis.document?.documentElement.lang,
+): string {
+	const resolved = componentLocale(locale);
+	const generic = resolved === "fr" ? getApiErrorMessage(error) : undefined;
 	const status = (error as { response?: { status?: unknown } } | null)?.response?.status;
 	const message =
-		error instanceof ApiError || error instanceof Error
+		generic ??
+		(error instanceof Error
 			? error.message
 			: typeof status === "number"
 				? getErrorMessage(status)
-				: "An unexpected error occurred.";
-	return Object.hasOwn(french, message) ? moduleI18n(locale)._(message) : message;
+				: "An unexpected error occurred.");
+	return Object.hasOwn(french, message) ? moduleI18n(resolved)._(message) : message;
 }
 
 export function ModulePage({

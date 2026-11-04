@@ -165,7 +165,7 @@ export default function FilesPage() {
 	useEffect(() => {
 		if (!unlisted || !fileId) return;
 		let active = true;
-		GET(`${base}/objects/${encodeURIComponent(fileId)}`)
+		GET(`${base}/objects/${encodeURIComponent(fileId)}?include_deleted=true`)
 			.then(responseData<StoredFile>)
 			.then((file) => {
 				if (active) setLookup({ id: fileId, file, error: null });

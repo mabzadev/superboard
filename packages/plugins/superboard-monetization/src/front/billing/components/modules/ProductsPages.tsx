@@ -85,6 +85,10 @@ const money = (micros = 0, currency = "USD", locale?: string) =>
 	new Intl.NumberFormat(locale, { style: "currency", currency }).format(micros / 1_000_000);
 const dateTime = (value?: string | null, locale?: string) =>
 	value ? new Date(value).toLocaleString(locale) : "—";
+const shortDate = (value?: string | null, locale?: string) =>
+	value ? new Date(value).toLocaleDateString(locale, { dateStyle: "medium" }) : "—";
+const shortDateTime = (value?: string | null, locale?: string) =>
+	value ? new Date(value).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) : "—";
 const defaultFrom = () => new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10);
 const today = () => new Date().toISOString().slice(0, 10);
 const purchaseStatuses = ["pending", "active", "expired", "cancelled", "refunded", "failed"];
@@ -448,10 +452,8 @@ export function PurchasesPage() {
 								headers={[
 									t("Product"),
 									t("Customer"),
-									t("Store"),
 									t("Status"),
 									t("Purchased"),
-									t("Expires"),
 									t("Amount"),
 									"",
 								]}
@@ -460,28 +462,40 @@ export function PurchasesPage() {
 								{items.map((item) => (
 									<TableRow key={item.id}>
 										<TableCell>
-											<b>{item.product_name || item.product_identifier || item.product_id}</b>
-											<code className="block max-w-40 truncate text-xs text-muted-foreground">
-												{item.external_transaction_id}
-											</code>
-										</TableCell>
-										<TableCell>{item.external_customer_id}</TableCell>
-										<TableCell>
-											{labelFor(storeLabels, item.store)}
+											<Truncated
+												className="font-semibold"
+												value={item.product_name || item.product_identifier || item.product_id}
+											/>
 											<span className="block text-xs text-muted-foreground">
+												{labelFor(storeLabels, item.store)} ·{" "}
 												{labelFor(environmentLabels, item.environment)}
 											</span>
 										</TableCell>
 										<TableCell>
+											<Truncated value={item.external_customer_id} />
+											<code
+												className="block max-w-36 truncate text-xs text-muted-foreground"
+												title={item.external_transaction_id}
+											>
+												{item.external_transaction_id}
+											</code>
+										</TableCell>
+										<TableCell>
 											<StatusBadge status={item.status} />
 										</TableCell>
-										<TableCell>{dateTime(item.purchased_at, locale)}</TableCell>
-										<TableCell>{dateTime(item.expires_at, locale)}</TableCell>
+										<TableCell>
+											{shortDate(item.purchased_at, locale)}
+											{item.expires_at && (
+												<span className="block text-xs text-muted-foreground">
+													{t("Expires {date}", { date: shortDate(item.expires_at, locale) })}
+												</span>
+											)}
+										</TableCell>
 										<TableCell>
 											{money(item.purchased_price_micros, item.currency || "USD", locale)}
 										</TableCell>
 										<TableCell>
-											<div className="flex gap-1">
+											<div className="flex justify-end gap-1">
 												<Button
 													variant="ghost"
 													size="icon"
@@ -516,12 +530,7 @@ export function PurchasesPage() {
 					{purchaseDetail && (
 						<Card>
 							<CardHeader className="flex-row items-start justify-between gap-3">
-								<div>
-									<CardTitle>{t("Purchase detail")}</CardTitle>
-									<CardDescription>
-										{purchaseDetail.external_transaction_id} · {purchaseDetail.external_customer_id}
-									</CardDescription>
-								</div>
+								<CardTitle>{t("Purchase detail")}</CardTitle>
 								<Button
 									variant="ghost"
 									size="icon"
@@ -534,6 +543,33 @@ export function PurchasesPage() {
 								</Button>
 							</CardHeader>
 							<CardContent className="space-y-6">
+								<dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+									<Fact label={t("Product")}>
+										{purchaseDetail.product_name ||
+											purchaseDetail.product_identifier ||
+											purchaseDetail.product_id}
+									</Fact>
+									<Fact label={t("Customer")}>{purchaseDetail.external_customer_id}</Fact>
+									<Fact label={t("Transaction ID")}>{purchaseDetail.external_transaction_id}</Fact>
+									<Fact label={t("Status")}>
+										<StatusBadge status={purchaseDetail.status} />
+									</Fact>
+									<Fact label={t("Store")}>{labelFor(storeLabels, purchaseDetail.store)}</Fact>
+									<Fact label={t("Environment")}>
+										{labelFor(environmentLabels, purchaseDetail.environment)}
+									</Fact>
+									<Fact label={t("Purchased")}>
+										{dateTime(purchaseDetail.purchased_at, locale)}
+									</Fact>
+									<Fact label={t("Expires")}>{dateTime(purchaseDetail.expires_at, locale)}</Fact>
+									<Fact label={t("Amount")}>
+										{money(
+											purchaseDetail.purchased_price_micros,
+											purchaseDetail.currency || "USD",
+											locale,
+										)}
+									</Fact>
+								</dl>
 								<section>
 									<h3 className="mb-2 text-sm font-medium">{t("Granted entitlements")}</h3>
 									<div className="space-y-2">
@@ -593,30 +629,37 @@ export function PurchasesPage() {
 						</CardHeader>
 						<CardContent className="overflow-x-auto">
 							<DataTable
-								headers={[
-									t("Product"),
-									t("Customer"),
-									t("Status"),
-									t("Period end"),
-									t("Renewal"),
-									t("Updated"),
-									"",
-								]}
+								headers={[t("Product"), t("Customer"), t("Status"), t("Period end"), ""]}
 								empty={t("No subscriptions match this customer.")}
 							>
 								{subscriptions.map((item) => (
 									<TableRow key={item.id}>
 										<TableCell>
-											{item.product_name || item.product_identifier || item.product_id}
+											<Truncated
+												value={item.product_name || item.product_identifier || item.product_id}
+											/>
 										</TableCell>
-										<TableCell>{item.external_customer_id}</TableCell>
+										<TableCell>
+											<Truncated value={item.external_customer_id} />
+										</TableCell>
 										<TableCell>
 											<StatusBadge status={item.status} />
+											{item.updated_at && (
+												<span
+													className="mt-1 block text-xs text-muted-foreground"
+													title={dateTime(item.updated_at, locale)}
+												>
+													{t("Updated {date}", { date: shortDate(item.updated_at, locale) })}
+												</span>
+											)}
 										</TableCell>
-										<TableCell>{dateTime(item.current_period_ends_at, locale)}</TableCell>
-										<TableCell>{enabled(item.auto_renew) ? t("Auto-renew") : t("Off")}</TableCell>
-										<TableCell>{dateTime(item.updated_at, locale)}</TableCell>
 										<TableCell>
+											{shortDateTime(item.current_period_ends_at, locale)}
+											<span className="block text-xs text-muted-foreground">
+												{enabled(item.auto_renew) ? t("Auto-renew") : t("Auto-renew off")}
+											</span>
+										</TableCell>
+										<TableCell className="text-end">
 											{item.status === "cancelled" || item.status === "expired" ? (
 												<Button
 													size="sm"
@@ -2107,6 +2150,21 @@ export function EntitlementsPage() {
 	);
 }
 
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+	return (
+		<div className="min-w-0">
+			<dt className="text-xs text-muted-foreground">{label}</dt>
+			<dd className="mt-1 break-all text-sm font-medium">{children}</dd>
+		</div>
+	);
+}
+function Truncated({ value, className = "" }: { value: string; className?: string }) {
+	return (
+		<span className={`block max-w-36 truncate ${className}`} title={value}>
+			{value}
+		</span>
+	);
+}
 function Metric({ label, value }: { label: string; value: string }) {
 	return (
 		<Card>

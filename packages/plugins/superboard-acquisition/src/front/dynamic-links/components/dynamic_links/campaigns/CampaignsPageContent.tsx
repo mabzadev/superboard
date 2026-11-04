@@ -49,7 +49,7 @@ const columnOptions = [
 	{ label: "Date", value: "date" },
 ];
 
-const defaultColumns = ["title", ...columnOptions.map((item) => item.value)];
+const defaultColumns = ["title", "views", "installs", "revenue", "date"];
 
 function campaignMetric(row: CampaignAnalyticsRow, sortKey: string) {
 	const metrics: Record<string, number | string> = {

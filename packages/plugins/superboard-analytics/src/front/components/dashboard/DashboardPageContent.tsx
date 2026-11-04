@@ -11,6 +11,7 @@ import {
 	ModulePage,
 	moduleErrorMessage,
 } from "@superboard/front-ui/modules/ModulePage.js";
+import { useRouter } from "@superboard/front-ui/navigation";
 import Link from "@superboard/front-ui/next-link";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
@@ -31,6 +32,7 @@ import {
 	TableRow,
 } from "@superboard/front-ui/ui/table.js";
 import {
+	Activity,
 	ArrowRight,
 	Check,
 	Circle,
@@ -225,7 +227,7 @@ export default function DashboardPageContent() {
 		const productTotals = snapshot.productStatistics?.totals;
 		const card = (
 			title: string,
-			metric: number | undefined,
+			metric: number | string | undefined,
 			tooltip: string,
 			valueType?: string,
 		): DashBoardCardType => ({
@@ -243,6 +245,14 @@ export default function DashboardPageContent() {
 				analytics?.unique_subjects,
 				"Distinct people seen in the selected period.",
 			),
+			card("Sessions", analytics?.sessions, "Sessions recorded in the selected period."),
+			card(
+				"Average session",
+				typeof analytics?.average_session_duration_seconds === "number"
+					? formatDuration(analytics.average_session_duration_seconds, locale)
+					: undefined,
+				"Across projected sessions in this period",
+			),
 			card(
 				"Installations",
 				analytics?.installations,
@@ -252,6 +262,11 @@ export default function DashboardPageContent() {
 				"Verified purchases",
 				analytics?.successful_purchases,
 				"Successful purchases verified by the server.",
+			),
+			card(
+				"Purchase events",
+				analytics?.purchase_events,
+				"Purchases, renewals, refunds and chargebacks",
 			),
 			...(linksEnabled
 				? [
@@ -275,7 +290,7 @@ export default function DashboardPageContent() {
 					]
 				: []),
 		];
-	}, [snapshot, linksEnabled, productsEnabled, t]);
+	}, [snapshot, linksEnabled, productsEnabled, t, locale]);
 
 	const series = useMemo(
 		() => (snapshot.linkStatistics ? viewsSeries(snapshot.linkStatistics) : []),
@@ -331,13 +346,24 @@ export default function DashboardPageContent() {
 					) : null}
 
 					<QuickStart snapshot={snapshot} integrations={integrations} t={t} />
-					<SectionCards cards={cards} />
+					<div className="space-y-3">
+						<SectionCards cards={cards} />
+						<p className="text-sm text-muted-foreground">
+							{t("Accounting: verified facts only. SDK clients cannot forge financial events.")}
+						</p>
+					</div>
+					<ActivityChart
+						series={snapshot.analytics?.series ?? []}
+						loading={loading}
+						t={t}
+						locale={locale}
+					/>
 
 					{linksEnabled ? (
-						<div className="grid gap-6 2xl:grid-cols-[1fr_1.2fr]">
+						<>
 							<ViewsChart series={series} loading={loading} t={t} locale={locale} />
 							<TopLinks links={topLinks} loading={loading} t={t} locale={locale} />
-						</div>
+						</>
 					) : null}
 				</div>
 			)}
@@ -345,8 +371,32 @@ export default function DashboardPageContent() {
 	);
 }
 
+export function OverviewRedirect() {
+	const { t } = useAnalyticsI18n();
+	const router = useRouter();
+	useEffect(() => {
+		router.replace(`/analytics/home${globalThis.location.search}${globalThis.location.hash}`);
+	}, [router]);
+	return (
+		<p role="status" className="text-sm text-muted-foreground">
+			{t("Opening the overview…")}
+		</p>
+	);
+}
+
 function value<T>(result: PromiseSettledResult<T>): T | undefined {
 	return result.status === "fulfilled" ? result.value : undefined;
+}
+
+function formatDuration(seconds: number, locale: string) {
+	const secondsFormat = new Intl.NumberFormat(locale, {
+		style: "unit",
+		unit: "second",
+		unitDisplay: "narrow",
+	});
+	if (seconds < 60) return secondsFormat.format(seconds);
+	const minutes = Math.floor(seconds / 60);
+	return `${new Intl.NumberFormat(locale, { style: "unit", unit: "minute", unitDisplay: "narrow" }).format(minutes)} ${secondsFormat.format(seconds % 60)}`;
 }
 
 function QuickStart({
@@ -450,6 +500,75 @@ function QuickStart({
 	);
 }
 
+function ActivityChart({
+	series,
+	loading,
+	t,
+	locale,
+}: {
+	series: AnalyticsOverview["series"];
+	loading: boolean;
+	t: Translate;
+	locale: string;
+}) {
+	const day = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>{t("Activity over the selected period")}</CardTitle>
+				<CardDescription>
+					{t("Accepted events after idempotency and project isolation.")}
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				{loading && !series.length ? (
+					<div className="h-72 animate-pulse rounded-lg bg-muted" />
+				) : series.some((point) => point.events > 0) ? (
+					<DailyBars
+						series={series.map((point) => ({ date: point.date, value: point.events }))}
+						title={(point) =>
+							t("Daily events", { date: day.format(new Date(point.date)), count: point.value })
+						}
+					/>
+				) : (
+					<div className="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed text-center">
+						<Activity className="mb-3 size-8 text-muted-foreground" />
+						<p className="text-sm text-muted-foreground">
+							{t("No events in the selected period yet.")}
+						</p>
+					</div>
+				)}
+			</CardContent>
+		</Card>
+	);
+}
+
+function DailyBars({
+	series,
+	title,
+}: {
+	series: DailyViews[];
+	title: (point: DailyViews) => string;
+}) {
+	const maximum = Math.max(1, ...series.map((point) => point.value));
+	return (
+		<div className="flex h-72 items-end gap-1 overflow-x-auto rounded-lg border bg-muted/20 p-4">
+			{series.map((point) => (
+				<div
+					key={point.date}
+					className="group flex h-full min-w-5 flex-1 items-end"
+					title={title(point)}
+				>
+					<div
+						className="w-full rounded-t bg-primary/80 transition-colors group-hover:bg-primary"
+						style={{ height: `${Math.max(2, (point.value / maximum) * 100)}%` }}
+					/>
+				</div>
+			))}
+		</div>
+	);
+}
+
 function ViewsChart({
 	series,
 	loading,
@@ -461,7 +580,6 @@ function ViewsChart({
 	t: Translate;
 	locale: string;
 }) {
-	const maximum = Math.max(1, ...series.map((point) => point.value));
 	return (
 		<Card>
 			<CardHeader>
@@ -472,23 +590,15 @@ function ViewsChart({
 				{loading && !series.length ? (
 					<div className="h-72 animate-pulse rounded-lg bg-muted" />
 				) : series.length ? (
-					<div className="flex h-72 items-end gap-1 overflow-x-auto rounded-lg border bg-muted/20 p-4">
-						{series.map((point) => (
-							<div
-								key={point.date}
-								className="group flex h-full min-w-5 flex-1 items-end"
-								title={t("Daily link views", {
-									date: point.date,
-									count: point.value.toLocaleString(locale),
-								})}
-							>
-								<div
-									className="w-full rounded-t bg-primary/80 transition-colors group-hover:bg-primary"
-									style={{ height: `${Math.max(2, (point.value / maximum) * 100)}%` }}
-								/>
-							</div>
-						))}
-					</div>
+					<DailyBars
+						series={series}
+						title={(point) =>
+							t("Daily link views", {
+								date: point.date,
+								count: point.value.toLocaleString(locale),
+							})
+						}
+					/>
 				) : (
 					<div className="flex h-72 flex-col items-center justify-center rounded-lg border border-dashed text-center">
 						<Link2 className="mb-3 size-8 text-muted-foreground" />

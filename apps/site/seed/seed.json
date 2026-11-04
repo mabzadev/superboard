@@ -215,11 +215,6 @@
 					"children": [
 						{
 							"type": "custom",
-							"label": "Statistics overview",
-							"url": "/analytics"
-						},
-						{
-							"type": "custom",
 							"label": "Audience and usage",
 							"url": "/analytics/users"
 						},
@@ -452,7 +447,7 @@
 					"children": [
 						{
 							"type": "custom",
-							"label": "Inbox",
+							"label": "Boîte de réception",
 							"url": "/support/inbox"
 						},
 						{
@@ -468,11 +463,6 @@
 					"url": "/analytics",
 					"cssClasses": "sb-icon-analytics",
 					"children": [
-						{
-							"type": "custom",
-							"label": "Vue d’ensemble des statistiques",
-							"url": "/analytics"
-						},
 						{
 							"type": "custom",
 							"label": "Audience et utilisation",

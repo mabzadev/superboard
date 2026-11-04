@@ -1,4 +1,4 @@
-import { AnalyticsPage } from "../components/analytics/AnalyticsPages.js";
+import { OverviewRedirect } from "../components/dashboard/DashboardPageContent.js";
 export default function View() {
-	return <AnalyticsPage kind="overview" />;
+	return <OverviewRedirect />;
 }

@@ -128,9 +128,11 @@ describe("DashboardPageContent", () => {
 			events: 1234,
 			unique_subjects: 56,
 			sessions: 78,
+			average_session_duration_seconds: 95,
 			installations: 9,
 			successful_purchases: 3,
-			series: [],
+			purchase_events: 5,
+			series: [{ date: "2026-07-10", events: 1234 }],
 		});
 		mocks.appOverview.mockResolvedValue({
 			project_id: 10,
@@ -193,8 +195,11 @@ describe("DashboardPageContent", () => {
 		expect([...metrics.querySelectorAll("p")].map((card) => card.textContent)).toEqual([
 			"Events: 1234",
 			"Unique people: 56",
+			"Sessions: 78",
+			"Average session: 1m 35s",
 			"Installations: 9",
 			"Verified purchases: 3",
+			"Purchase events: 5",
 			"Link views: 44",
 			"Net revenue: 1000",
 		]);
@@ -220,6 +225,42 @@ describe("DashboardPageContent", () => {
 			to: "2026-08-01",
 			platform: "ios",
 		});
+	});
+
+	it("brings the statistics activity and accounting note into the single overview", async () => {
+		render(<DashboardPageContent />);
+
+		expect(await screen.findByText("Sessions: 78")).toBeInTheDocument();
+		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+		expect(screen.getByText("Activity over the selected period")).toBeInTheDocument();
+		expect(screen.getByTitle("Jul 10, 2026: 1,234 events")).toBeInTheDocument();
+		expect(screen.queryByText("No events in the selected period yet.")).toBeNull();
+		expect(
+			screen.getByText(
+				"Accounting: verified facts only. SDK clients cannot forge financial events.",
+			),
+		).toBeInTheDocument();
+		expect(screen.getAllByRole("button", { name: "Refresh" })).toHaveLength(1);
+	});
+
+	it("explains an empty activity period instead of drawing an empty chart", async () => {
+		mocks.analyticsOverview.mockResolvedValue({
+			events: 0,
+			unique_subjects: 0,
+			sessions: 0,
+			average_session_duration_seconds: 0,
+			installations: 0,
+			successful_purchases: 0,
+			purchase_events: 0,
+			series: [{ date: "2026-07-10", events: 0 }],
+		});
+		render(<DashboardPageContent />, { wrapper: French });
+
+		expect(
+			await screen.findByText("Aucun événement sur la période sélectionnée pour le moment."),
+		).toBeInTheDocument();
+		expect(screen.queryByTitle(/événements?$/)).toBeNull();
+		expect(screen.getByText("Durée moyenne d’une session: 0s")).toBeInTheDocument();
 	});
 
 	it("links the quick start and link analytics to canonical routes", async () => {
@@ -250,6 +291,15 @@ describe("DashboardPageContent", () => {
 		expect(await screen.findByText("Événements: 1234")).toBeInTheDocument();
 		expect(screen.getByRole("heading", { level: 1, name: "Vue d’ensemble" })).toBeInTheDocument();
 		expect(screen.getByText("5 étapes essentielles sur 5 terminées.")).toBeInTheDocument();
+		expect(screen.getByText("Durée moyenne d’une session: 1min 35s")).toBeInTheDocument();
+		expect(screen.getByText("Événements d’achat: 5")).toBeInTheDocument();
+		expect(screen.getByText("Activité sur la période sélectionnée")).toBeInTheDocument();
+		expect(screen.getByTitle("10 juil. 2026 : 1 234 événements")).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				"Comptabilité : données vérifiées uniquement. Les clients SDK ne peuvent pas créer de faux événements financiers.",
+			),
+		).toBeInTheDocument();
 		expect(
 			screen.getByRole("link", { name: /Voir l’analyse des liens dynamiques/ }),
 		).toHaveAttribute("href", "/acquisition/dynamic-links?tab=analytics");

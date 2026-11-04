@@ -123,12 +123,7 @@ try {
 			await expect(advanced).toHaveAttribute("open", "");
 			for (const field of ["apple_issuer_id", "apple_key_id"])
 				await page.locator(`#setting-${field}`).fill(`isolated-${locale}`);
-			const secretFields = [
-				"apple_private_key",
-				"google_service_account_json",
-				"stripe_secret_key",
-				"webhook_signing_secret",
-			];
+			const secretFields = ["apple_private_key", "google_service_account_json"];
 			for (const field of secretFields) {
 				await expect(page.locator(`#setting-${field}`)).toHaveValue("");
 				const key = `superboard-billing__${field}`;

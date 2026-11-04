@@ -35,6 +35,7 @@ const acquisitionMenuPaths = new Set([
 ]);
 
 const mergedDefaultItems = new Map<string, readonly string[]>([
+	["/analytics", ["Statistics overview", "Vue d’ensemble des statistiques"]],
 	["/monetization/products?tab=offerings", ["Offerings", "Offres"]],
 	["/monetization/products?tab=entitlements", ["Entitlements", "Droits d’accès"]],
 	["/analytics/users?tab=installations", ["Installations"]],
@@ -245,8 +246,14 @@ export async function ensureNativeFrontMenus(
 					});
 					continue;
 				}
-				if (item.customUrl === "/support/inbox" && item.label === "Conversations") {
-					await repository.updateItem(menu.id, item.id, { label: "Inbox" });
+				if (
+					item.customUrl === "/support/inbox" &&
+					item.parentId &&
+					(item.label === "Conversations" || (locale === "fr" && item.label === "Inbox"))
+				) {
+					await repository.updateItem(menu.id, item.id, {
+						label: locale === "fr" ? "Boîte de réception" : "Inbox",
+					});
 					continue;
 				}
 				if (item.customUrl === "/support/workforce" && item.label === "Agents and teams") {

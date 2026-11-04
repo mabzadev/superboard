@@ -18,8 +18,28 @@ const api = vi.hoisted(() => ({
 	getProducts: vi.fn(),
 	getProductStatistics: vi.fn(),
 	getSubscriptions: vi.fn(),
+	getPurchase: vi.fn(),
 	createPurchase: vi.fn(),
 }));
+
+const purchase = {
+	id: "purchase-1",
+	external_customer_id: "user-1",
+	product_id: "product-1",
+	product_name: "Pro",
+	store: "manual",
+	environment: "sandbox",
+	external_transaction_id: "tx-manual",
+	status: "pending",
+	purchased_at: "2026-08-07T10:00:00.000Z",
+	purchased_price_micros: 9_990_000,
+	currency: "EUR",
+};
+
+function fact(container: HTMLElement, label: string) {
+	const term = within(container).getByText(label, { selector: "dt" });
+	return term.nextElementSibling?.textContent ?? "";
+}
 
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "10-test", name: "Test" } }),
@@ -44,7 +64,7 @@ vi.mock(
 		getEntitlements: vi.fn(),
 		getOfferings: vi.fn(),
 		getPackages: vi.fn(),
-		getPurchase: vi.fn(),
+		getPurchase: api.getPurchase,
 		updateEntitlement: vi.fn(),
 		updateOffering: vi.fn(),
 		updatePackage: vi.fn(),
@@ -89,21 +109,7 @@ describe("purchases page", () => {
 				status: "active",
 			},
 		]);
-		api.getPurchases.mockResolvedValue([
-			{
-				id: "purchase-1",
-				external_customer_id: "user-1",
-				product_id: "product-1",
-				product_name: "Pro",
-				store: "manual",
-				environment: "sandbox",
-				external_transaction_id: "tx-manual",
-				status: "pending",
-				purchased_at: "2026-08-07T10:00:00.000Z",
-				purchased_price_micros: 9_990_000,
-				currency: "EUR",
-			},
-		]);
+		api.getPurchases.mockResolvedValue([purchase]);
 		api.getSubscriptions.mockResolvedValue([]);
 		api.getProductStatistics.mockResolvedValue({
 			totals: {
@@ -182,6 +188,61 @@ describe("purchases page", () => {
 		await waitFor(() => {
 			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 		});
+	});
+
+	it("keeps every purchase field in the detail opened from the history row", async () => {
+		api.getPurchase.mockResolvedValue({
+			...purchase,
+			expires_at: "2026-09-07T10:00:00.000Z",
+			entitlements: [],
+			refunds: [],
+		});
+		render(<PurchasesPage />);
+		const row = (await screen.findByText("tx-manual")).closest("tr");
+		if (!row) throw new Error("Purchase row missing");
+		expect(within(row).getByRole("button", { name: "Refund" })).toBeEnabled();
+
+		fireEvent.click(within(row).getByRole("button", { name: "View purchase tx-manual" }));
+		const detail = (await screen.findByText("Purchase detail")).closest<HTMLElement>(
+			"[data-slot=card]",
+		);
+		if (!detail) throw new Error("Purchase detail missing");
+		expect(api.getPurchase).toHaveBeenCalledWith("10-test", "purchase-1");
+		expect(fact(detail, "Product")).toBe("Pro");
+		expect(fact(detail, "Customer")).toBe("user-1");
+		expect(fact(detail, "Transaction ID")).toBe("tx-manual");
+		expect(fact(detail, "Store")).toBe("Manual");
+		expect(fact(detail, "Environment")).toBe("Sandbox");
+		expect(fact(detail, "Status")).toBe("Pending");
+		expect(fact(detail, "Amount")).toBe("€9.99");
+		expect(fact(detail, "Purchased")).toMatch(/2026/u);
+		expect(fact(detail, "Expires")).toMatch(/2026/u);
+	});
+
+	it("keeps renewal and last update of each subscription in its row in French", async () => {
+		api.getSubscriptions.mockResolvedValue([
+			{
+				id: "subscription-1",
+				external_customer_id: "user-1",
+				product_id: "product-1",
+				product_name: "Pro",
+				store: "apple",
+				environment: "production",
+				original_transaction_id: "tx-original",
+				status: "cancelled",
+				current_period_started_at: "2026-08-01T10:00:00.000Z",
+				current_period_ends_at: "2026-09-01T10:00:00.000Z",
+				auto_renew: 0,
+				updated_at: "2026-08-02T10:00:00.000Z",
+			},
+		]);
+		render(<PurchasesPage />, { wrapper: French });
+		const row = (await screen.findByRole("button", { name: "Restaurer" })).closest("tr");
+		if (!row) throw new Error("Subscription row missing");
+
+		expect(row).toHaveTextContent("Annulé");
+		expect(row).toHaveTextContent("Renouvellement désactivé");
+		expect(row).toHaveTextContent(/Mis à jour le .*2026/u);
 	});
 
 	it("renders statuses, stores, environments and amounts in French", async () => {

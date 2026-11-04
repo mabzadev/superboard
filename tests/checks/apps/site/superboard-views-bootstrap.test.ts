@@ -968,3 +968,47 @@ test("an edited grouped menu keeps its Settings group and its direct Users link"
 	await ensureNativeFrontMenus(db, seedJson.menus);
 	expect(await repo.findItems(menu.id)).toEqual(items);
 });
+
+test("an edited menu drops the default statistics overview entry and names the French inbox", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: seedJson.menus });
+	const repo = new MenuRepository(db);
+	for (const menu of await repo.findByName("superboard-admin")) {
+		const fr = menu.locale === "fr";
+		const items = await repo.findItems(menu.id);
+		const analytics = items.find(
+			(item) => item.parentId === null && item.customUrl === "/analytics",
+		);
+		if (!analytics) throw new Error("Analytics group is missing");
+		for (const label of [
+			fr ? "Vue d’ensemble des statistiques" : "Statistics overview",
+			"My numbers",
+		])
+			await repo.createItem(menu.id, menu.locale, {
+				type: "custom",
+				label,
+				customUrl: "/analytics",
+				parentId: analytics.id,
+			});
+		const inbox = items.find(
+			(item) => item.parentId !== null && item.customUrl === "/support/inbox",
+		);
+		if (!inbox) throw new Error("Inbox link is missing");
+		await repo.updateItem(menu.id, inbox.id, { label: fr ? "Inbox" : "Conversations" });
+	}
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	for (const menu of await repo.findByName("superboard-admin")) {
+		const fr = menu.locale === "fr";
+		const items = await repo.findItems(menu.id);
+		expect(
+			items
+				.filter((item) => item.parentId !== null && item.customUrl === "/analytics")
+				.map((item) => item.label),
+		).toEqual(["My numbers"]);
+		expect(
+			items.find((item) => item.parentId !== null && item.customUrl === "/support/inbox")?.label,
+		).toBe(fr ? "Boîte de réception" : "Inbox");
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		expect(await repo.findItems(menu.id)).toEqual(items);
+	}
+});

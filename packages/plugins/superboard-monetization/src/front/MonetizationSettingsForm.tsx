@@ -17,8 +17,6 @@ const fields = {
 		["apple_key_id", "Apple key ID"],
 		["apple_private_key", "Apple private key"],
 		["google_service_account_json", "Google service account JSON"],
-		["stripe_secret_key", "Stripe secret key"],
-		["webhook_signing_secret", "Webhook signing secret"],
 	],
 } as const;
 type Values = Record<string, string | boolean | null>;

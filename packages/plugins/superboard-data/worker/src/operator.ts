@@ -323,9 +323,14 @@ operatorFileRoutes.defineRoute({ id: "files:operator:object-restore" }).post(
 );
 operatorFileRoutes.defineRoute({ id: "files:operator:object-read" }).get(
 	operatorPrefix + "/objects/:id",
-	objectAction(async (_state, row) => {
-		return json(row);
-	}),
+	objectAction(
+		async ({ url }, row) => {
+			if (row.deleted_at && url.searchParams.get("include_deleted") !== "true")
+				throw new FileOperationError(404, "FILE_NOT_FOUND");
+			return json(row);
+		},
+		{ includeDeleted: true },
+	),
 );
 operatorFileRoutes.defineRoute({ id: "files:operator:object-download-ticket" }).get(
 	operatorPrefix + "/objects/:id/download-ticket",

@@ -1,14 +1,33 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import {
+	FrontContextProvider,
+	type FrontContextValue,
+} from "../../../../../packages/supbrd-front-ui/src/context.js";
 import {
 	Button,
 	Input,
 	InputArea,
 	LinkButton,
+	Loader,
 	Select,
 } from "../../../../../packages/supbrd-front-ui/src/kumo.js";
+
+function renderIn(locale: "en" | "fr", ui: ReactNode) {
+	const context: FrontContextValue = {
+		instanceId: "1",
+		pluginId: "superboard-marketing",
+		path: "/",
+		parameters: {},
+		locale,
+		operator: null,
+		projectScope: null,
+		activePluginIds: [],
+	};
+	return render(<FrontContextProvider value={context}>{ui}</FrontContextProvider>);
+}
 
 describe("Front controls with the Kumo interface", () => {
 	it("preserves labels, editing and validation descriptions", () => {
@@ -63,5 +82,23 @@ describe("Front controls with the Kumo interface", () => {
 		expect(link).toHaveAttribute("href", "https://example.com/docs");
 		expect(link).toHaveAttribute("target", "_blank");
 		expect(link).toHaveAttribute("rel", "noopener noreferrer");
+	});
+
+	it("announces the loader in the dashboard language", () => {
+		renderIn("fr", <Loader size="sm" />);
+		expect(screen.getByRole("status", { name: "Chargement" })).toBeInTheDocument();
+		expect(screen.queryByRole("status", { name: "Loading" })).not.toBeInTheDocument();
+	});
+
+	it("keeps the English loader label and an explicit label", () => {
+		renderIn(
+			"en",
+			<>
+				<Loader />
+				<Loader aria-label="Saving contacts" />
+			</>,
+		);
+		expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
+		expect(screen.getByRole("status", { name: "Saving contacts" })).toBeInTheDocument();
 	});
 });

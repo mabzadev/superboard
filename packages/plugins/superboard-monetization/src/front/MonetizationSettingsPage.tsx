@@ -279,7 +279,7 @@ function BillingSettings({
 				<details className="rounded border p-4" open={advancedOpen}>
 					<summary className="cursor-pointer font-medium">{t("Advanced")}</summary>
 					<p className="mt-2 text-sm text-muted-foreground">
-						{t("Store credentials and webhook secrets used by the Monetization service.")}
+						{t("Store credentials used by the Monetization service.")}
 					</p>
 					<div className="mt-4">
 						<MonetizationSettingsForm section="billing" />

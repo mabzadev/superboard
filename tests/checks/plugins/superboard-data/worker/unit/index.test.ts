@@ -1,3 +1,4 @@
+import { createProjectContextHeaders } from "@superboard/contracts/project-context";
 import { describe, expect, it } from "vitest";
 
 import app, {
@@ -116,6 +117,66 @@ describe("SuperBoard Files Worker", () => {
 			/^https:\/\/files\.example\.test\/v1\/downloads\/[A-Za-z0-9_.-]+$/u,
 		);
 		expect(new Date(body.download.expires_at).valueOf()).toBeGreaterThan(Date.now());
+	});
+
+	it("reads a trashed operator file only when the request explicitly includes the trash", async () => {
+		const id = "33333333-3333-4333-8333-333333333333";
+		const trashed = {
+			id,
+			project_id: 1,
+			filename: "contract.pdf",
+			content_type: "application/pdf",
+			byte_size: 12,
+			object_key: `operator-files/1/${id}`,
+			etag: "etag",
+			deleted_at: "2026-11-01T00:00:00.000Z",
+		};
+		const db = {
+			prepare: (query: string) => ({
+				bind: (projectId: number, fileId: string) => ({
+					first: async () =>
+						query === "SELECT * FROM operator_files WHERE project_id=? AND id=?" &&
+						projectId === 1 &&
+						fileId === id
+							? trashed
+							: null,
+				}),
+			}),
+		} as unknown as D1Database;
+		const path = `/internal/v1/operator/objects/${id}`;
+		const read = async (search: string, role = "owner") =>
+			app.request(
+				`${path}${search}`,
+				{
+					headers: await createProjectContextHeaders(
+						{
+							module: "files",
+							projectId: 1,
+							instanceId: 1,
+							projectRef: "1-prod",
+							environment: "production",
+							actorId: 0,
+							operatorId: "operator-files",
+							role,
+							method: "GET",
+							pathname: path,
+							requestId: crypto.randomUUID(),
+							issuedAt: Math.floor(Date.now() / 1000),
+						},
+						"internal-files-token",
+					),
+				},
+				environment({ DB: db }),
+			);
+
+		const hidden = await read("");
+		expect(hidden.status).toBe(404);
+		expect(await hidden.json()).toMatchObject({ error: { code: "FILE_NOT_FOUND" } });
+		expect((await read("?include_deleted=false")).status).toBe(404);
+		const included = await read("?include_deleted=true");
+		expect(included.status).toBe(200);
+		expect(await included.json()).toEqual({ data: trashed });
+		expect((await read("?include_deleted=true", "member")).status).toBe(403);
 	});
 
 	it("signs tickets with the active key and verifies an overlap key without exposing owners", async () => {

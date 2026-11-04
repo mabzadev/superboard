@@ -470,6 +470,13 @@ const french: Record<string, string> = {
 	"Application installations recorded by Analytics.":
 		"Installations de l’application enregistrées par les statistiques.",
 	"Successful purchases verified by the server.": "Achats réussis vérifiés par le serveur.",
+	"Sessions recorded in the selected period.": "Sessions enregistrées sur la période sélectionnée.",
+	"Accounting: verified facts only. SDK clients cannot forge financial events.":
+		"Comptabilité : données vérifiées uniquement. Les clients SDK ne peuvent pas créer de faux événements financiers.",
+	"Activity over the selected period": "Activité sur la période sélectionnée",
+	"No events in the selected period yet.":
+		"Aucun événement sur la période sélectionnée pour le moment.",
+	"Opening the overview…": "Ouverture de la vue d’ensemble…",
 	Platforms: "Plateformes",
 	"Refreshing…": "Actualisation…",
 	"Some module data is temporarily unavailable":
@@ -527,6 +534,11 @@ const interpolation: Record<"en" | "fr", Messages> = {
 	en: {
 		"Quick start progress": [["complete"], " of ", ["total"], " project foundations completed."],
 		"Daily link views": [["date"], ": ", ["count"], " views"],
+		"Daily events": [
+			["date"],
+			": ",
+			["count", "plural", { one: ["#", " event"], other: ["#", " events"] }],
+		],
 		"Link views column": ["Views"],
 		"Last seen at": ["Last seen ", ["date"]],
 		"Dimension empty": ["No ", ["dimension"], " data."],
@@ -567,6 +579,11 @@ const interpolation: Record<"en" | "fr", Messages> = {
 	fr: {
 		"Quick start progress": [["complete"], " étapes essentielles sur ", ["total"], " terminées."],
 		"Daily link views": [["date"], " : ", ["count"], " vues"],
+		"Daily events": [
+			["date"],
+			" : ",
+			["count", "plural", { one: ["#", " événement"], other: ["#", " événements"] }],
+		],
 		"Link views column": ["Vues"],
 		"Last seen at": ["Dernière activité le ", ["date"]],
 		"Dimension empty": ["Aucune donnée pour « ", ["dimension"], " »."],

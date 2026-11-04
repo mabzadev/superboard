@@ -20,6 +20,8 @@ import { formatCurrencyFromCents } from "@superboard/front-ui/utils/formatCurren
 import { GripVertical, Info, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 
+import { useAnalyticsI18n } from "../analytics/analytics-i18n.js";
+
 export interface DashBoardCardType {
 	title: string;
 	value: string | number;
@@ -35,9 +37,7 @@ interface SectionCardsProps {
 	onReorder?: (keys: string[]) => void;
 }
 
-const numberFormatter = new Intl.NumberFormat("de-DE");
-
-function formatMainValue(card: DashBoardCardType) {
+function formatMainValue(card: DashBoardCardType, numberFormatter: Intl.NumberFormat) {
 	if (typeof card.value === "string" && !Number.isFinite(Number(card.value))) return card.value;
 	if (card.valueType === "money") {
 		return `${formatCurrencyFromCents(Number(card.value))}`;
@@ -49,6 +49,8 @@ function formatMainValue(card: DashBoardCardType) {
 }
 
 function CardContent({ card }: { card: DashBoardCardType }) {
+	const { locale } = useAnalyticsI18n();
+	const numberFormatter = new Intl.NumberFormat(locale);
 	const change = Number(card.secondaryValue);
 	const isPositive = change > 0;
 	const isNegative = change < 0;
@@ -72,7 +74,7 @@ function CardContent({ card }: { card: DashBoardCardType }) {
 
 			<div className="flex items-end justify-between gap-3">
 				<span className="text-2xl font-semibold tracking-tight tabular-nums text-foreground">
-					{formatMainValue(card)}
+					{formatMainValue(card, numberFormatter)}
 				</span>
 
 				{hasChange && (
@@ -208,7 +210,7 @@ function SortableCardGrid({
 export function SectionCards({ cards, cardKeys, onReorder }: SectionCardsProps) {
 	if (!cardKeys || !onReorder) {
 		return (
-			<div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 				{cards.map((card) => (
 					<StaticCard key={card.title} card={card} />
 				))}

@@ -68,9 +68,11 @@ export function createCampaignAnalyticsColumns(
 			accessorKey: "title",
 			header: () => sortableHeader("Title", "name", sort, setSort, tr),
 			cell: ({ row }) => (
-				<div className="min-w-44">
-					<p className="font-medium">{row.original.name}</p>
-					<p className="text-xs text-muted-foreground">/{row.original.slug}</p>
+				<div className="max-w-[220px]">
+					<p className="truncate font-medium" title={row.original.name}>
+						{row.original.name}
+					</p>
+					<p className="truncate text-xs text-muted-foreground">/{row.original.slug}</p>
 				</div>
 			),
 		},
