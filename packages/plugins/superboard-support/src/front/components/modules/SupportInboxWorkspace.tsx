@@ -162,7 +162,8 @@ function InboxEntities() {
 	);
 }
 
-const sections = {
+const inboxTabs = {
+	conversations: "Conversations",
 	general: "General",
 	channels: "Connections",
 	members: "Members",
@@ -170,6 +171,17 @@ const sections = {
 	proactive: "Proactive Support",
 	reports: "Reports",
 };
+type InboxTab = keyof typeof inboxTabs;
+const isInboxTab = (value: string): value is InboxTab => Object.hasOwn(inboxTabs, value);
+
+function inboxDetailTab(search: string): InboxTab {
+	const params = new URLSearchParams(search);
+	const tab = params.get("tab");
+	if (tab && tab !== "settings" && isInboxTab(tab)) return tab;
+	const section = params.get("section");
+	if (tab === "settings" && section && isInboxTab(section)) return section;
+	return "general";
+}
 
 function InboxDetails({
 	inbox,
@@ -181,71 +193,48 @@ function InboxDetails({
 	update: (item: SupportInbox) => void;
 }) {
 	const { t } = useSupportI18n();
-	const [tab, setTab] = useState(() =>
-		new URLSearchParams(window.location.search).get("tab") === "conversations"
-			? "conversations"
-			: "settings",
-	);
-	const [section, setSection] = useState(() => {
-		const requested = new URLSearchParams(window.location.search).get("section");
-		return requested && Object.hasOwn(sections, requested) ? requested : "general";
-	});
-	const select = (key: string, value: string) => {
-		const url = new URL(window.location.href);
-		url.searchParams.set(key, value);
-		window.history.replaceState(null, "", url);
-		if (key === "tab") setTab(value);
-		else setSection(value);
-	};
+	const [tab, setTab] = useState(() => inboxDetailTab(window.location.search));
 	return (
 		<SupportDetail>
 			<Tabs
 				value={tab}
 				onValueChange={(value) => {
-					select("tab", value);
+					if (!isInboxTab(value)) return;
+					const url = new URL(window.location.href);
+					url.searchParams.set("tab", value);
+					url.searchParams.delete("section");
+					window.history.replaceState(null, "", url);
+					setTab(value);
 				}}
 			>
-				<TabsList aria-label={t("Inbox sections")}>
-					<TabsTrigger value="conversations">{t("Conversations")}</TabsTrigger>
-					<TabsTrigger value="settings">{t("Settings")}</TabsTrigger>
+				<TabsList aria-label={t("Inbox sections")} className="h-auto flex-wrap">
+					{Object.entries(inboxTabs).map(([value, label]) => (
+						<TabsTrigger key={value} value={value}>
+							{t(label)}
+						</TabsTrigger>
+					))}
 				</TabsList>
 				<TabsContent value="conversations">
 					<InboxPage inboxId={inbox.id} />
 				</TabsContent>
-				<TabsContent value="settings">
-					<Tabs
-						value={section}
-						onValueChange={(value) => {
-							select("section", value);
-						}}
-					>
-						<TabsList aria-label={t("Settings sections")} className="h-auto flex-wrap">
-							{Object.entries(sections).map(([value, label]) => (
-								<TabsTrigger key={value} value={value}>
-									{t(label)}
-								</TabsTrigger>
-							))}
-						</TabsList>
-						<TabsContent value="general">
-							<InboxSettings inbox={inbox} project={project} update={update} />
-						</TabsContent>
-						<TabsContent value="members">
-							<SupportInboxMembers project={project} inboxId={inbox.id} />
-						</TabsContent>
-						<TabsContent value="channels">
-							<SupportChannelsPage inboxId={inbox.id} />
-						</TabsContent>
-						<TabsContent value="automations">
-							<SupportAutomationsPage inboxId={inbox.id} />
-						</TabsContent>
-						<TabsContent value="proactive">
-							<SupportProactivePage inboxId={inbox.id} />
-						</TabsContent>
-						<TabsContent value="reports">
-							<SupportReportsPage inboxId={inbox.id} />
-							<SupportQualityPage inboxId={inbox.id} />
-						</TabsContent>
-					</Tabs>
+				<TabsContent value="general">
+					<InboxSettings inbox={inbox} project={project} update={update} />
+				</TabsContent>
+				<TabsContent value="members">
+					<SupportInboxMembers project={project} inboxId={inbox.id} />
+				</TabsContent>
+				<TabsContent value="channels">
+					<SupportChannelsPage inboxId={inbox.id} />
+				</TabsContent>
+				<TabsContent value="automations">
+					<SupportAutomationsPage inboxId={inbox.id} />
+				</TabsContent>
+				<TabsContent value="proactive">
+					<SupportProactivePage inboxId={inbox.id} />
+				</TabsContent>
+				<TabsContent className="space-y-6" value="reports">
+					<SupportReportsPage inboxId={inbox.id} />
+					<SupportQualityPage inboxId={inbox.id} />
 				</TabsContent>
 			</Tabs>
 		</SupportDetail>

@@ -86,7 +86,6 @@ const sourceLabel: Record<UnifiedInboxItem["source_type"], string> = {
 };
 
 export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
-	const Title = inboxId ? "h2" : "h1";
 	const publicConfig = usePublicConfig();
 	const publicApiUrl = publicConfig.apiUrl;
 	const { selectedProject } = useProjectSelection();
@@ -551,16 +550,18 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 	return (
 		<div className="flex min-h-full flex-col overflow-hidden">
 			{!publicApiUrl && <p role="alert">{publicConfig.endpointError("Support API")}</p>}
-			<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-6">
+			<div className={`flex min-h-0 flex-1 flex-col gap-4 overflow-hidden ${inboxId ? "" : "p-6"}`}>
 				<div className="flex flex-wrap items-start justify-between gap-3">
-					<div>
-						<Title className="ds-page-title">
-							<Trans>Inbox</Trans>
-						</Title>
-						<p className="text-sm text-muted-foreground">
-							Real-time customer conversations, assignments, attachments, macros and private notes.
-						</p>
-					</div>
+					{!inboxId && (
+						<div>
+							<h1 className="ds-page-title">{t("Inbox")}</h1>
+							<p className="text-sm text-muted-foreground">
+								{t(
+									"Real-time customer conversations, assignments, attachments, macros and private notes.",
+								)}
+							</p>
+						</div>
+					)}
 					<div className="flex flex-wrap gap-2">
 						<form
 							role="search"
@@ -631,13 +632,15 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 						</AlertDescription>
 					</Alert>
 				))}
-				<div className="grid min-h-0 flex-1 overflow-hidden rounded-xl border bg-card lg:grid-cols-[380px_1fr]">
-					<aside className="min-h-0 overflow-auto border-r">
+				<div
+					className={`grid min-h-0 overflow-hidden rounded-xl border bg-card ${visibleItems.length ? "flex-1 lg:grid-cols-[380px_1fr]" : ""}`}
+				>
+					<aside className={`min-h-0 overflow-auto ${visibleItems.length ? "lg:border-e" : ""}`}>
 						{visibleItems.map((item) => (
 							<button
 								key={item.id}
 								onClick={() => setSelectedId(item.id)}
-								className={`w-full border-b p-4 text-left transition-colors hover:bg-muted ${selected?.id === item.id ? "bg-muted" : ""}`}
+								className={`w-full border-b p-4 text-start transition-colors hover:bg-muted ${selected?.id === item.id ? "bg-muted" : ""}`}
 							>
 								<div className="flex items-center justify-between gap-2">
 									<div className="flex min-w-0 items-center gap-2">
@@ -668,277 +671,282 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 								<Inbox className="h-8 w-8" />
 								{query
 									? t("No conversations match {query}.", { query })
-									: "No Inbox items match these filters."}
+									: t("No Inbox items match these filters.")}
 							</div>
 						)}
 					</aside>
-					<section className="flex min-h-0 flex-col">
-						{selected ? (
-							selected.source_type === "conversation" ? (
-								<>
-									<header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
-										<div className="flex min-w-0 items-center gap-3">
-											<CircleUserRound className="h-8 w-8 shrink-0 text-muted-foreground" />
-											<div className="min-w-0">
-												<div className="flex items-center gap-2">
-													<div className="truncate font-medium">{selected.title}</div>
-													<Badge variant={realtimeStatus === "live" ? "secondary" : "outline"}>
-														{realtimeStatus === "live" ? (
-															<Wifi className="mr-1 h-3 w-3" />
-														) : (
-															<WifiOff className="mr-1 h-3 w-3" />
-														)}
-														{realtimeStatus === "live"
-															? "Live"
-															: realtimeStatus === "idle"
-																? "Offline"
-																: "Connecting"}
-													</Badge>
-												</div>
-												<div className="truncate text-xs text-muted-foreground">
-													Customer {selected.customer_reference || "—"}
-												</div>
-											</div>
-										</div>
-										<div className="flex gap-2">
-											<select
-												aria-label="Priority"
-												className="rounded-md border bg-background px-2 text-sm"
-												value={selected.priority}
-												onChange={(event) =>
-													void update({
-														priority: event.target.value as InboxConversation["priority"],
-													})
-												}
-											>
-												{Object.entries(priorityLabel).map(([value, label]) => (
-													<option key={value} value={value}>
-														{label}
-													</option>
-												))}
-											</select>
-											<select
-												aria-label="Status"
-												className="rounded-md border bg-background px-2 text-sm"
-												value={selected.status}
-												onChange={(event) =>
-													void update({
-														status: event.target.value as InboxConversation["status"],
-													})
-												}
-											>
-												<option value="open">Open</option>
-												<option value="pending">Pending</option>
-												<option value="closed">Closed</option>
-											</select>
-										</div>
-										<div className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-5">
-											<ConfigurationSelect
-												label="Assigned agent"
-												value={String(selected.source.assigned_user_id || "")}
-												options={agents}
-												onChange={(value) => void update({ assigned_user_id: value || null })}
-											/>
-											<ConfigurationSelect
-												label="Assigned team"
-												value={String(selected.source.assigned_team_id || "")}
-												options={teams}
-												onChange={(value) => void update({ assigned_team_id: value || null })}
-											/>
-											<ConfigurationSelect
-												label="Inbox"
-												value={String(selected.source.inbox_id || "")}
-												options={inboxes}
-												onChange={(value) => void update({ inbox_id: value || null })}
-											/>
-											<input
-												key={`${selected.id}:labels:${String(selected.source.labels_json || "")}`}
-												aria-label="Conversation labels"
-												className="rounded-md border bg-background px-3 py-2 text-sm"
-												defaultValue={conversationLabels(selected.source.labels_json).join(", ")}
-												placeholder="Labels, comma separated"
-												onBlur={(event) =>
-													void update({
-														labels: event.target.value
-															.split(",")
-															.map((label) => label.trim())
-															.filter(Boolean),
-													})
-												}
-											/>
-											<input
-												key={`${selected.id}:snooze:${String(selected.source.snoozed_until || "")}`}
-												aria-label="Snooze until"
-												type="datetime-local"
-												className="rounded-md border bg-background px-3 py-2 text-sm"
-												defaultValue={localDateTime(String(selected.source.snoozed_until || ""))}
-												onBlur={(event) =>
-													void update({
-														snoozed_until: event.target.value
-															? new Date(event.target.value).toISOString()
-															: null,
-													})
-												}
-											/>
-										</div>
-										<ConversationAttributes
-											conversationKey={selected.id}
-											value={selected.source.custom_attributes_json}
-											onSave={(customAttributes) => update({ custom_attributes: customAttributes })}
-										/>
-									</header>
-									<div className="flex-1 space-y-3 overflow-auto bg-muted/20 p-5">
-										{messages.map((message) => (
-											<div
-												key={message.id}
-												className={`flex ${message.sender_kind === "agent" ? "justify-end" : "justify-start"}`}
-											>
-												<Card
-													className={`max-w-[78%] px-4 py-3 ${message.visibility === "private" ? "border-amber-400 bg-amber-50 text-amber-950 dark:bg-amber-950 dark:text-amber-50" : message.sender_kind === "agent" ? "bg-primary text-primary-foreground" : ""}`}
-												>
-													<p className="whitespace-pre-wrap text-sm">
-														{message.body ||
-															(message.attachment_name ? "Attachment" : "Empty message")}
-													</p>
-													{message.attachment_name && (
-														<Button
-															type="button"
-															size="sm"
-															variant={
-																message.sender_kind === "agent" && message.visibility !== "private"
-																	? "secondary"
-																	: "outline"
-															}
-															className="mt-2"
-															onClick={() => void downloadAttachment(message)}
-														>
-															<Download className="mr-2 h-4 w-4" />
-															{message.attachment_name}
-														</Button>
-													)}
-													<div
-														className={`mt-1 text-[11px] ${message.sender_kind === "agent" && message.visibility !== "private" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
-													>
-														{message.visibility === "private"
-															? "Private note"
-															: message.sender_kind === "agent"
-																? "Team"
-																: "Customer"}{" "}
-														· {dateTime(message.created_at)}
+					{visibleItems.length > 0 && (
+						<section className="flex min-h-0 flex-col">
+							{selected ? (
+								selected.source_type === "conversation" ? (
+									<>
+										<header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+											<div className="flex min-w-0 items-center gap-3">
+												<CircleUserRound className="h-8 w-8 shrink-0 text-muted-foreground" />
+												<div className="min-w-0">
+													<div className="flex items-center gap-2">
+														<div className="truncate font-medium">{selected.title}</div>
+														<Badge variant={realtimeStatus === "live" ? "secondary" : "outline"}>
+															{realtimeStatus === "live" ? (
+																<Wifi className="mr-1 h-3 w-3" />
+															) : (
+																<WifiOff className="mr-1 h-3 w-3" />
+															)}
+															{realtimeStatus === "live"
+																? "Live"
+																: realtimeStatus === "idle"
+																	? "Offline"
+																	: "Connecting"}
+														</Badge>
 													</div>
-												</Card>
+													<div className="truncate text-xs text-muted-foreground">
+														Customer {selected.customer_reference || "—"}
+													</div>
+												</div>
 											</div>
-										))}
-										{customerTyping && (
-											<div aria-live="polite" className="text-xs text-muted-foreground">
-												Customer is typing…
+											<div className="flex gap-2">
+												<select
+													aria-label="Priority"
+													className="rounded-md border bg-background px-2 text-sm"
+													value={selected.priority}
+													onChange={(event) =>
+														void update({
+															priority: event.target.value as InboxConversation["priority"],
+														})
+													}
+												>
+													{Object.entries(priorityLabel).map(([value, label]) => (
+														<option key={value} value={value}>
+															{label}
+														</option>
+													))}
+												</select>
+												<select
+													aria-label="Status"
+													className="rounded-md border bg-background px-2 text-sm"
+													value={selected.status}
+													onChange={(event) =>
+														void update({
+															status: event.target.value as InboxConversation["status"],
+														})
+													}
+												>
+													<option value="open">Open</option>
+													<option value="pending">Pending</option>
+													<option value="closed">Closed</option>
+												</select>
 											</div>
-										)}
-										<div ref={messagesEnd} />
-									</div>
-									<form
-										className="border-t p-4"
-										onSubmit={(event) => {
-											event.preventDefault();
-											void send();
-										}}
-									>
-										<div className="mb-2 flex flex-wrap gap-2">
-											<select
-												aria-label="Insert canned response"
-												className="rounded-md border bg-background px-2 py-1 text-xs"
-												value=""
-												onChange={(event) => {
-													const response = cannedResponses.find(
-														(item) => item.id === event.target.value,
-													);
-													if (response) updateReply(response.content);
-												}}
-											>
-												<option value="">Insert canned response…</option>
-												{cannedResponses.map((item) => (
-													<option key={item.id} value={item.id}>
-														{item.name}
-													</option>
-												))}
-											</select>
-											<select
-												aria-label="Select macro"
-												className="rounded-md border bg-background px-2 py-1 text-xs"
-												value={selectedMacroId}
-												onChange={(event) => setSelectedMacroId(event.target.value)}
-											>
-												<option value="">Select macro…</option>
-												{macros.map((item) => (
-													<option key={item.value} value={item.value}>
-														{item.label}
-													</option>
-												))}
-											</select>
-											<Button
-												type="button"
-												size="sm"
-												variant="outline"
-												disabled={!selectedMacroId}
-												onClick={() => void executeMacro()}
-											>
-												Apply macro
-											</Button>
-										</div>
-										<div className="flex gap-2">
-											<input
-												ref={fileInput}
-												className="hidden"
-												type="file"
-												onChange={(event) => void attach(event.target.files?.[0])}
-											/>
-											<Button
-												type="button"
-												variant="outline"
-												disabled={uploading || privateNote}
-												aria-label="Attach a file"
-												onClick={() => fileInput.current?.click()}
-											>
-												<Paperclip className="h-4 w-4" />
-											</Button>
-											<textarea
-												className="min-h-12 flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm"
-												maxLength={8000}
-												value={reply}
-												onChange={(event) => updateReply(event.target.value)}
-												placeholder={
-													privateNote
-														? "Write a private note for the team…"
-														: "Reply to the customer…"
+											<div className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-5">
+												<ConfigurationSelect
+													label="Assigned agent"
+													value={String(selected.source.assigned_user_id || "")}
+													options={agents}
+													onChange={(value) => void update({ assigned_user_id: value || null })}
+												/>
+												<ConfigurationSelect
+													label="Assigned team"
+													value={String(selected.source.assigned_team_id || "")}
+													options={teams}
+													onChange={(value) => void update({ assigned_team_id: value || null })}
+												/>
+												<ConfigurationSelect
+													label="Inbox"
+													value={String(selected.source.inbox_id || "")}
+													options={inboxes}
+													onChange={(value) => void update({ inbox_id: value || null })}
+												/>
+												<input
+													key={`${selected.id}:labels:${String(selected.source.labels_json || "")}`}
+													aria-label="Conversation labels"
+													className="rounded-md border bg-background px-3 py-2 text-sm"
+													defaultValue={conversationLabels(selected.source.labels_json).join(", ")}
+													placeholder="Labels, comma separated"
+													onBlur={(event) =>
+														void update({
+															labels: event.target.value
+																.split(",")
+																.map((label) => label.trim())
+																.filter(Boolean),
+														})
+													}
+												/>
+												<input
+													key={`${selected.id}:snooze:${String(selected.source.snoozed_until || "")}`}
+													aria-label="Snooze until"
+													type="datetime-local"
+													className="rounded-md border bg-background px-3 py-2 text-sm"
+													defaultValue={localDateTime(String(selected.source.snoozed_until || ""))}
+													onBlur={(event) =>
+														void update({
+															snoozed_until: event.target.value
+																? new Date(event.target.value).toISOString()
+																: null,
+														})
+													}
+												/>
+											</div>
+											<ConversationAttributes
+												conversationKey={selected.id}
+												value={selected.source.custom_attributes_json}
+												onSave={(customAttributes) =>
+													update({ custom_attributes: customAttributes })
 												}
 											/>
-											<Button type="submit" disabled={!reply.trim() || uploading}>
-												<Send className="mr-2 h-4 w-4" />
-												{privateNote ? "Add note" : "Send"}
-											</Button>
+										</header>
+										<div className="flex-1 space-y-3 overflow-auto bg-muted/20 p-5">
+											{messages.map((message) => (
+												<div
+													key={message.id}
+													className={`flex ${message.sender_kind === "agent" ? "justify-end" : "justify-start"}`}
+												>
+													<Card
+														className={`max-w-[78%] px-4 py-3 ${message.visibility === "private" ? "border-amber-400 bg-amber-50 text-amber-950 dark:bg-amber-950 dark:text-amber-50" : message.sender_kind === "agent" ? "bg-primary text-primary-foreground" : ""}`}
+													>
+														<p className="whitespace-pre-wrap text-sm">
+															{message.body ||
+																(message.attachment_name ? "Attachment" : "Empty message")}
+														</p>
+														{message.attachment_name && (
+															<Button
+																type="button"
+																size="sm"
+																variant={
+																	message.sender_kind === "agent" &&
+																	message.visibility !== "private"
+																		? "secondary"
+																		: "outline"
+																}
+																className="mt-2"
+																onClick={() => void downloadAttachment(message)}
+															>
+																<Download className="mr-2 h-4 w-4" />
+																{message.attachment_name}
+															</Button>
+														)}
+														<div
+															className={`mt-1 text-[11px] ${message.sender_kind === "agent" && message.visibility !== "private" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+														>
+															{message.visibility === "private"
+																? "Private note"
+																: message.sender_kind === "agent"
+																	? "Team"
+																	: "Customer"}{" "}
+															· {dateTime(message.created_at)}
+														</div>
+													</Card>
+												</div>
+											))}
+											{customerTyping && (
+												<div aria-live="polite" className="text-xs text-muted-foreground">
+													Customer is typing…
+												</div>
+											)}
+											<div ref={messagesEnd} />
 										</div>
-										<label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-											<input
-												type="checkbox"
-												checked={privateNote}
-												onChange={(event) => {
-													pendingTextMessage.current = null;
-													setPrivateNote(event.target.checked);
-												}}
-											/>
-											Private note — visible only to agents
-										</label>
-									</form>
-								</>
+										<form
+											className="border-t p-4"
+											onSubmit={(event) => {
+												event.preventDefault();
+												void send();
+											}}
+										>
+											<div className="mb-2 flex flex-wrap gap-2">
+												<select
+													aria-label="Insert canned response"
+													className="rounded-md border bg-background px-2 py-1 text-xs"
+													value=""
+													onChange={(event) => {
+														const response = cannedResponses.find(
+															(item) => item.id === event.target.value,
+														);
+														if (response) updateReply(response.content);
+													}}
+												>
+													<option value="">Insert canned response…</option>
+													{cannedResponses.map((item) => (
+														<option key={item.id} value={item.id}>
+															{item.name}
+														</option>
+													))}
+												</select>
+												<select
+													aria-label="Select macro"
+													className="rounded-md border bg-background px-2 py-1 text-xs"
+													value={selectedMacroId}
+													onChange={(event) => setSelectedMacroId(event.target.value)}
+												>
+													<option value="">Select macro…</option>
+													{macros.map((item) => (
+														<option key={item.value} value={item.value}>
+															{item.label}
+														</option>
+													))}
+												</select>
+												<Button
+													type="button"
+													size="sm"
+													variant="outline"
+													disabled={!selectedMacroId}
+													onClick={() => void executeMacro()}
+												>
+													Apply macro
+												</Button>
+											</div>
+											<div className="flex gap-2">
+												<input
+													ref={fileInput}
+													className="hidden"
+													type="file"
+													onChange={(event) => void attach(event.target.files?.[0])}
+												/>
+												<Button
+													type="button"
+													variant="outline"
+													disabled={uploading || privateNote}
+													aria-label="Attach a file"
+													onClick={() => fileInput.current?.click()}
+												>
+													<Paperclip className="h-4 w-4" />
+												</Button>
+												<textarea
+													className="min-h-12 flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm"
+													maxLength={8000}
+													value={reply}
+													onChange={(event) => updateReply(event.target.value)}
+													placeholder={
+														privateNote
+															? "Write a private note for the team…"
+															: "Reply to the customer…"
+													}
+												/>
+												<Button type="submit" disabled={!reply.trim() || uploading}>
+													<Send className="mr-2 h-4 w-4" />
+													{privateNote ? "Add note" : "Send"}
+												</Button>
+											</div>
+											<label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+												<input
+													type="checkbox"
+													checked={privateNote}
+													onChange={(event) => {
+														pendingTextMessage.current = null;
+														setPrivateNote(event.target.checked);
+													}}
+												/>
+												Private note — visible only to agents
+											</label>
+										</form>
+									</>
+								) : (
+									<SourceDetail item={selected} />
+								)
 							) : (
-								<SourceDetail item={selected} />
-							)
-						) : (
-							<div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-								Select an Inbox item.
-							</div>
-						)}
-					</section>
+								<div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+									{t("Select an Inbox item.")}
+								</div>
+							)}
+						</section>
+					)}
 				</div>
 			</div>
 		</div>
@@ -1161,8 +1169,4 @@ function Detail({ label, value }: { label: string; value: string }) {
 			<div className="mt-1 font-medium capitalize">{value}</div>
 		</div>
 	);
-}
-
-function Trans({ children }: { children: React.ReactNode }) {
-	return <>{children}</>;
 }

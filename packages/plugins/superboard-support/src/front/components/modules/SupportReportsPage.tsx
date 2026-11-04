@@ -9,9 +9,8 @@ import { Button } from "@superboard/front-ui/ui/button.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@superboard/front-ui/ui/card.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { Download, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import {
 	downloadSupportReportExport,
@@ -24,7 +23,18 @@ import {
 } from "../../api/support/reportsService.js";
 import { useSupportI18n } from "../../i18n.js";
 import { SupportModulePage as ModulePage } from "../support/SupportModulePage.js";
-import { SupportEmpty, SupportMetric } from "../support/SupportUi.js";
+import { SupportEmpty, SupportMetric, SupportViewSelect } from "../support/SupportUi.js";
+
+const breakdownOrder = [
+	"inbox",
+	"agent",
+	"team",
+	"label",
+	"channel",
+	"provider",
+	"campaigns",
+] as const;
+type Breakdown = (typeof breakdownOrder)[number];
 
 export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {}) {
 	const { t } = useSupportI18n();
@@ -35,6 +45,7 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 	const [exports, setExports] = useState<SupportReportExport[]>([]);
 	const [from, setFrom] = useState("");
 	const [to, setTo] = useState("");
+	const [breakdown, setBreakdown] = useState<Breakdown>("inbox");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -114,6 +125,34 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 		}
 	};
 
+	const breakdowns: Record<
+		Breakdown,
+		{ label: string; title: string; rows: Array<{ dimension: string; conversations: number }> }
+	> = {
+		inbox: { label: t("By inbox"), title: t("Inbox volume"), rows: report?.dimensions.inbox ?? [] },
+		agent: { label: t("By agent"), title: t("Agent load"), rows: report?.dimensions.agent ?? [] },
+		team: { label: t("By team"), title: t("Team load"), rows: report?.dimensions.team ?? [] },
+		label: { label: t("By label"), title: t("Label volume"), rows: report?.dimensions.label ?? [] },
+		channel: {
+			label: t("By channel"),
+			title: t("Channel volume"),
+			rows: report?.dimensions.channel ?? [],
+		},
+		provider: {
+			label: t("By provider"),
+			title: t("Provider volume"),
+			rows: report?.dimensions.provider ?? [],
+		},
+		campaigns: {
+			label: t("Proactive Support"),
+			title: t("Campaign delivery"),
+			rows: (report?.proactive_support ?? []).map((item) => ({
+				dimension: item.status,
+				conversations: item.count,
+			})),
+		},
+	};
+
 	return (
 		<ModulePage
 			title={t("Reports")}
@@ -175,44 +214,21 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 							}
 						/>
 					</div>
-					<Tabs defaultValue="inbox">
-						<TabsList>
-							<TabsTrigger value="inbox">{t("By inbox")}</TabsTrigger>
-							<TabsTrigger value="agent">{t("By agent")}</TabsTrigger>
-							<TabsTrigger value="team">{t("By team")}</TabsTrigger>
-							<TabsTrigger value="label">{t("By label")}</TabsTrigger>
-							<TabsTrigger value="channel">{t("By channel")}</TabsTrigger>
-							<TabsTrigger value="provider">{t("By provider")}</TabsTrigger>
-							<TabsTrigger value="campaigns">{t("Proactive Support")}</TabsTrigger>
-						</TabsList>
-						<TabsContent value="inbox">
-							<Dimension title={t("Inbox volume")} rows={report?.dimensions.inbox ?? []} />
-						</TabsContent>
-						<TabsContent value="agent">
-							<Dimension title={t("Agent load")} rows={report?.dimensions.agent ?? []} />
-						</TabsContent>
-						<TabsContent value="team">
-							<Dimension title={t("Team load")} rows={report?.dimensions.team ?? []} />
-						</TabsContent>
-						<TabsContent value="label">
-							<Dimension title={t("Label volume")} rows={report?.dimensions.label ?? []} />
-						</TabsContent>
-						<TabsContent value="channel">
-							<Dimension title={t("Channel volume")} rows={report?.dimensions.channel ?? []} />
-						</TabsContent>
-						<TabsContent value="provider">
-							<Dimension title={t("Provider volume")} rows={report?.dimensions.provider ?? []} />
-						</TabsContent>
-						<TabsContent value="campaigns">
-							<Dimension
-								title={t("Campaign delivery")}
-								rows={(report?.proactive_support ?? []).map((item) => ({
-									dimension: item.status,
-									conversations: item.count,
+					<Dimension
+						title={breakdowns[breakdown].title}
+						rows={breakdowns[breakdown].rows}
+						filter={
+							<SupportViewSelect
+								label={t("Breakdown")}
+								value={breakdown}
+								onChange={setBreakdown}
+								options={breakdownOrder.map((value) => ({
+									value,
+									label: breakdowns[value].label,
 								}))}
 							/>
-						</TabsContent>
-					</Tabs>
+						}
+					/>
 					<Card>
 						<CardHeader>
 							<CardTitle className="text-base">{t("Report exports")}</CardTitle>
@@ -256,16 +272,19 @@ export default function SupportReportsPage({ inboxId }: { inboxId?: string } = {
 function Dimension({
 	title,
 	rows,
+	filter,
 }: {
 	title: string;
 	rows: Array<{ dimension: string; conversations: number }>;
+	filter: ReactNode;
 }) {
 	const { t } = useSupportI18n();
 
 	return (
 		<Card>
-			<CardHeader>
+			<CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
 				<CardTitle className="text-base">{title}</CardTitle>
+				{filter}
 			</CardHeader>
 			<CardContent className="space-y-2">
 				{rows.length === 0 ? (

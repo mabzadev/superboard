@@ -1,6 +1,5 @@
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { useState } from "react";
 
 import { DocumentHistory, DocumentTranslations } from "./DocumentRelations.js";
@@ -10,8 +9,10 @@ import {
 	responseData,
 	fieldText,
 	collectionPath,
+	documentTitle,
 	schemaPath,
 	encode,
+	Section,
 	TextField,
 	useDataI18n,
 	useOperation,
@@ -39,14 +40,19 @@ export function DocumentEditor({
 	onSelect(item: Document): void;
 }) {
 	const { t } = useDataI18n();
-	const [tab, setTab] = useState("fields");
 	const resource = useResource<Entry>(
 		id ? `${collectionPath(collection)}/${encode(id)}?locale=${encode(language)}` : null,
 	);
 	const fields = useResource<Page<Field>>(`${schemaPath(collection)}/fields`);
+	const [loaded, setLoaded] = useState<Entry | null>(null);
+	if (resource.data && resource.data !== loaded) setLoaded(resource.data);
+	// Keeps the stacked sections mounted while a refresh refetches, so the page does not jump to the top.
+	const entry = resource.data ?? loaded;
 	return (
-		<div className="space-y-4 pt-4">
-			<Button onClick={onBack}>{t.back}</Button>
+		<div className="max-w-3xl space-y-4 pt-4">
+			<Button variant="ghost" size="sm" onClick={onBack}>
+				{t.back}
+			</Button>
 			{resource.error || fields.error ? (
 				<div role="alert">
 					{resource.error ?? fields.error}
@@ -59,20 +65,18 @@ export function DocumentEditor({
 						{t.retry}
 					</Button>
 				</div>
-			) : (id && !resource.data) || !fields.data ? (
+			) : (id && !entry) || !fields.data ? (
 				<p role="status">{t.loading}</p>
 			) : (
 				<EditorForm
-					key={`${id}:${resource.data?._rev ?? "new"}`}
+					key={`${id}:${entry?._rev ?? "new"}`}
 					collection={collection}
-					entry={resource.data}
+					entry={entry}
 					fields={fields.data.items}
 					language={language}
 					onBack={onBack}
 					onSelect={onSelect}
 					refresh={resource.refresh}
-					tab={tab}
-					setTab={setTab}
 				/>
 			)}
 		</div>
@@ -86,8 +90,6 @@ function EditorForm({
 	onBack,
 	onSelect,
 	refresh,
-	tab,
-	setTab,
 }: {
 	collection: string;
 	entry: Entry | null;
@@ -96,11 +98,11 @@ function EditorForm({
 	onBack(): void;
 	onSelect(item: Document): void;
 	refresh(): void;
-	tab: string;
-	setTab(value: string): void;
 }) {
 	const { t } = useDataI18n();
 	const operation = useOperation();
+	const publishing = useOperation();
+	const busy = operation.busy || publishing.busy;
 	const [slug, setSlug] = useState(entry?.item.slug ?? "");
 	const [values, setValues] = useState<Record<string, unknown>>(entry?.item.data ?? {});
 	const [json, setJson] = useState(JSON.stringify(values, null, 2));
@@ -144,250 +146,232 @@ function EditorForm({
 		refresh();
 	}
 	return (
-		<div className="space-y-4">
-			{operation.feedback}
-			<Tabs value={tab} onValueChange={setTab}>
-				<TabsList aria-label={t.edit}>
-					{(
-						[
-							"fields",
-							...(entry
-								? (["publication", "revisions", "translations", "assignments"] as const)
-								: []),
-						] as const
-					).map((value) => (
-						<TabsTrigger key={value} value={value} disabled={operation.busy}>
-							{t[value]}
-						</TabsTrigger>
-					))}
-				</TabsList>
-				<TabsContent value="fields">
-					<form
-						className="grid max-w-3xl gap-4"
-						onSubmit={(event) => {
-							event.preventDefault();
-							operation.run(save);
+		<article className="grid gap-6">
+			<h2 className="text-xl font-semibold">{entry ? documentTitle(entry.item) : t.new}</h2>
+			<form
+				className="grid gap-4"
+				onSubmit={(event) => {
+					event.preventDefault();
+					operation.run(save);
+				}}
+			>
+				{operation.feedback}
+				<TextField
+					label={t.slug}
+					value={slug}
+					onChange={(value) => {
+						setSlug(value);
+						setDirty(true);
+					}}
+				/>
+				<label className="flex items-center gap-2">
+					<Input
+						className="w-auto"
+						type="checkbox"
+						checked={advanced}
+						onChange={(event) => {
+							if (event.target.checked) {
+								setJson(JSON.stringify(values, null, 2));
+								setAdvanced(true);
+							} else {
+								try {
+									const parsed: unknown = JSON.parse(json);
+									if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+										throw new Error(t.invalid);
+									setValues(Object.fromEntries(Object.entries(parsed)));
+									setAdvanced(false);
+								} catch {
+									operation.run(async () => {
+										throw new Error(t.invalid);
+									});
+								}
+							}
 						}}
-					>
-						<TextField
-							label={t.slug}
-							value={slug}
-							onChange={(value) => {
-								setSlug(value);
+					/>
+					{t.advanced}
+				</label>
+				{advanced ? (
+					<label className="grid gap-2">
+						{t.fields}
+						<textarea
+							className="min-h-64 rounded border p-3 font-mono"
+							value={json}
+							onChange={(event) => {
+								setJson(event.target.value);
 								setDirty(true);
 							}}
 						/>
-						<label className="flex items-center gap-2">
-							<Input
-								className="w-auto"
-								type="checkbox"
-								checked={advanced}
-								onChange={(event) => {
-									if (event.target.checked) {
-										setJson(JSON.stringify(values, null, 2));
-										setAdvanced(true);
-									} else {
-										try {
-											const parsed: unknown = JSON.parse(json);
-											if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-												throw new Error(t.invalid);
-											setValues(Object.fromEntries(Object.entries(parsed)));
-											setAdvanced(false);
-										} catch {
-											operation.run(async () => {
-												throw new Error(t.invalid);
-											});
-										}
-									}
+					</label>
+				) : (
+					fields.map((field) => (
+						<ValueField
+							key={field.slug}
+							field={field}
+							value={values[field.slug]}
+							onChange={(value) => {
+								update(field.slug, value);
+							}}
+						/>
+					))
+				)}
+				<Button type="submit" disabled={busy}>
+					{entry ? t.save : t.create}
+				</Button>
+			</form>
+			{entry && (
+				<>
+					<Section title={t.publication}>
+						{publishing.feedback}
+						{dirty && <p role="status">{t.unsaved}</p>}
+						<p>{entry.item.status === "published" ? t.published : t.draft}</p>
+						<div className="flex flex-wrap gap-2">
+							<Button
+								disabled={busy || dirty}
+								onClick={() => {
+									publishing.run(() => action("publish"));
 								}}
-							/>
-							{t.advanced}
-						</label>
-						{advanced ? (
-							<label className="grid gap-2">
-								{t.fields}
-								<textarea
-									className="min-h-64 rounded border p-3 font-mono"
-									value={json}
-									onChange={(event) => {
-										setJson(event.target.value);
-										setDirty(true);
+							>
+								{t.publish}
+							</Button>
+							<Button
+								disabled={busy || dirty || !entry.item.liveRevisionId}
+								onClick={() => {
+									publishing.run(() => action("unpublish"));
+								}}
+							>
+								{t.unpublish}
+							</Button>
+							<Button
+								disabled={busy || dirty}
+								onClick={() => {
+									publishing.run(async () => {
+										const result = await POST(`${itemPath}/duplicate`, {});
+										onSelect((await responseData<Entry>(result)).item);
+									});
+								}}
+							>
+								{t.duplicate}
+							</Button>
+							<Button
+								disabled={busy || !entry.item.liveRevisionId}
+								onClick={() => {
+									setConfirmation("discard");
+								}}
+							>
+								{t.discard}
+							</Button>
+							<Button
+								disabled={busy}
+								onClick={() => {
+									setConfirmation("remove");
+								}}
+							>
+								{t.remove}
+							</Button>
+						</div>
+						{confirmation && (
+							<div
+								role="alertdialog"
+								aria-label={confirmation === "remove" ? t.remove : t.discard}
+								className="space-y-3 rounded border p-4"
+							>
+								<p>{confirmation === "remove" ? t.confirmRemove : t.confirmDiscard}</p>
+								<Button
+									disabled={busy}
+									onClick={() => {
+										publishing.run(async () => {
+											if (confirmation === "remove") {
+												await DELETE(`${itemPath}?locale=${encode(language)}`);
+												onBack();
+											} else await action("discard-draft");
+											setConfirmation(null);
+										});
 									}}
-								/>
-							</label>
-						) : (
-							fields.map((field) => (
-								<ValueField
-									key={field.slug}
-									field={field}
-									value={values[field.slug]}
-									onChange={(value) => {
-										update(field.slug, value);
+								>
+									{t.confirm}
+								</Button>
+								<Button
+									onClick={() => {
+										setConfirmation(null);
 									}}
-								/>
-							))
+								>
+									{t.cancel}
+								</Button>
+							</div>
 						)}
-						<Button type="submit" disabled={operation.busy}>
-							{entry ? t.save : t.create}
-						</Button>
-					</form>
-				</TabsContent>
-				{entry && (
-					<>
-						<TabsContent value="publication">
-							<div className="space-y-4">
-								{dirty && <p role="status">{t.unsaved}</p>}
-								<p>{entry.item.status === "published" ? t.published : t.draft}</p>
-								<div className="flex flex-wrap gap-2">
-									<Button
-										disabled={operation.busy || dirty}
-										onClick={() => {
-											operation.run(() => action("publish"));
-										}}
-									>
-										{t.publish}
-									</Button>
-									<Button
-										disabled={operation.busy || dirty || !entry.item.liveRevisionId}
-										onClick={() => {
-											operation.run(() => action("unpublish"));
-										}}
-									>
-										{t.unpublish}
-									</Button>
-									<Button
-										disabled={operation.busy || dirty}
-										onClick={() => {
-											operation.run(async () => {
-												const result = await POST(`${itemPath}/duplicate`, {});
-												onSelect((await responseData<Entry>(result)).item);
-											});
-										}}
-									>
-										{t.duplicate}
-									</Button>
-									<Button
-										disabled={operation.busy || !entry.item.liveRevisionId}
-										onClick={() => {
-											setConfirmation("discard");
-										}}
-									>
-										{t.discard}
-									</Button>
-									<Button
-										disabled={operation.busy}
-										onClick={() => {
-											setConfirmation("remove");
-										}}
-									>
-										{t.remove}
-									</Button>
-								</div>
-								{confirmation && (
-									<div
-										role="alertdialog"
-										aria-label={confirmation === "remove" ? t.remove : t.discard}
-										className="space-y-3 rounded border p-4"
-									>
-										<p>{confirmation === "remove" ? t.confirmRemove : t.confirmDiscard}</p>
-										<Button
-											disabled={operation.busy}
-											onClick={() => {
-												operation.run(async () => {
-													if (confirmation === "remove") {
-														await DELETE(`${itemPath}?locale=${encode(language)}`);
-														onBack();
-													} else await action("discard-draft");
-													setConfirmation(null);
-												});
-											}}
-										>
-											{t.confirm}
-										</Button>
-										<Button
-											onClick={() => {
-												setConfirmation(null);
-											}}
-										>
-											{t.cancel}
-										</Button>
-									</div>
-								)}
-								<form
-									className="flex flex-wrap items-end gap-3"
-									onSubmit={(event) => {
-										event.preventDefault();
-										operation.run(async () => {
-											await POST(actionPath("schedule"), {
-												scheduledAt: new Date(scheduledAt).toISOString(),
-											});
+						<form
+							className="flex flex-wrap items-end gap-3"
+							onSubmit={(event) => {
+								event.preventDefault();
+								publishing.run(async () => {
+									await POST(actionPath("schedule"), {
+										scheduledAt: new Date(scheduledAt).toISOString(),
+									});
+									refresh();
+								});
+							}}
+						>
+							<TextField
+								label={t.scheduledAt}
+								type="datetime-local"
+								value={scheduledAt}
+								onChange={setScheduledAt}
+								required
+							/>
+							<Button type="submit" disabled={busy || dirty}>
+								{t.schedule}
+							</Button>
+						</form>
+						{entry.item.scheduledAt && (
+							<div className="flex gap-3">
+								<time dateTime={entry.item.scheduledAt}>{entry.item.scheduledAt}</time>
+								<Button
+									disabled={busy}
+									onClick={() => {
+										publishing.run(async () => {
+											await DELETE(actionPath("schedule"));
 											refresh();
 										});
 									}}
 								>
-									<TextField
-										label={t.scheduledAt}
-										type="datetime-local"
-										value={scheduledAt}
-										onChange={setScheduledAt}
-										required
-									/>
-									<Button type="submit" disabled={operation.busy || dirty}>
-										{t.schedule}
-									</Button>
-								</form>
-								{entry.item.scheduledAt && (
-									<div className="flex gap-3">
-										<time dateTime={entry.item.scheduledAt}>{entry.item.scheduledAt}</time>
-										<Button
-											disabled={operation.busy}
-											onClick={() => {
-												operation.run(async () => {
-													await DELETE(actionPath("schedule"));
-													refresh();
-												});
-											}}
-										>
-											{t.unschedule}
-										</Button>
-									</div>
-								)}
-								<Button
-									disabled={operation.busy || dirty}
-									onClick={() => {
-										operation.run(async () => {
-											const response = await POST(`${itemPath}/preview-url`, {});
-											const url = new URL(
-												(await responseData<{ url: string }>(response)).url,
-												window.location.origin,
-											);
-											if (!["http:", "https:"].includes(url.protocol)) throw new Error(t.failed);
-											setPreview(url.href);
-										});
-									}}
-								>
-									{t.preview}
+									{t.unschedule}
 								</Button>
-								{preview && (
-									<a href={preview} target="_blank" rel="noopener noreferrer">
-										{t.openPreview}
-									</a>
-								)}
 							</div>
-						</TabsContent>
-						<TabsContent value="revisions">
-							<DocumentHistory path={itemPath} onChanged={refresh} />
-						</TabsContent>
-						<TabsContent value="translations">
-							<DocumentTranslations collection={collection} item={entry.item} onSelect={onSelect} />
-						</TabsContent>
-						<TabsContent value="assignments">
-							<DocumentTerms collection={collection} item={entry.item} />
-						</TabsContent>
-					</>
-				)}
-			</Tabs>
-		</div>
+						)}
+						<Button
+							disabled={busy || dirty}
+							onClick={() => {
+								publishing.run(async () => {
+									const response = await POST(`${itemPath}/preview-url`, {});
+									const url = new URL(
+										(await responseData<{ url: string }>(response)).url,
+										window.location.origin,
+									);
+									if (!["http:", "https:"].includes(url.protocol)) throw new Error(t.failed);
+									setPreview(url.href);
+								});
+							}}
+						>
+							{t.preview}
+						</Button>
+						{preview && (
+							<a href={preview} target="_blank" rel="noopener noreferrer">
+								{t.openPreview}
+							</a>
+						)}
+					</Section>
+					<Section title={t.revisions}>
+						<DocumentHistory path={itemPath} onChanged={refresh} />
+					</Section>
+					<Section title={t.translations}>
+						<DocumentTranslations collection={collection} item={entry.item} onSelect={onSelect} />
+					</Section>
+					<Section title={t.assignments}>
+						<DocumentTerms collection={collection} item={entry.item} />
+					</Section>
+				</>
+			)}
+		</article>
 	);
 }
 function ValueField({

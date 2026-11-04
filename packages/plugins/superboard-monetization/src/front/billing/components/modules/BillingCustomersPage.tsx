@@ -10,15 +10,10 @@ import {
 	ModulePage,
 	moduleErrorMessage,
 } from "@superboard/front-ui/modules/ModulePage.js";
+import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@superboard/front-ui/ui/card.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
 import {
@@ -29,8 +24,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@superboard/front-ui/ui/table.js";
-import { Eye, RefreshCw, Search, ShieldBan, ShieldCheck, Trash2, Users } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, RefreshCw, Search, ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { useMonetizationI18n } from "../../../i18n.js";
 import {
@@ -48,23 +43,38 @@ import {
 } from "../../api/billing/billingService.js";
 
 const selectClass = "h-9 w-full rounded-md border bg-background px-3 text-sm";
+const columnLabels: Record<string, string> = {
+	store_product_id: "Store product",
+	store: "Store",
+	status: "Status",
+	expires_at: "Expires",
+	store_transaction_id: "Transaction ID",
+	event_type: "Event",
+	created_at: "Created",
+	paywall_id: "Paywall",
+	placement_identifier: "Placement",
+	occurred_at: "Occurred",
+};
+const contextFields = [
+	["Country", "country"],
+	["Language", "language"],
+	["Platform", "platform"],
+	["App version", "app_version"],
+	["SDK version", "sdk_version"],
+] as const;
 
 export default function BillingCustomersPage() {
-	const { t } = useMonetizationI18n();
+	const { t, locale } = useMonetizationI18n();
 	const { selectedProject } = useProjectSelection();
+	const router = useRouter();
+	const pathname = usePathname();
+	const search = useSearchParams();
+	const selectedCustomerId = search.get("customer");
 	const [query, setQuery] = useState("");
 	const [customers, setCustomers] = useState<BillingCustomerSummary[]>([]);
 	const [overview, setOverview] = useState<BillingOverview | null>(null);
-	const [detail, setDetail] = useState<BillingCustomerDetail | null>(null);
 	const [loading, setLoading] = useState(false);
-	const [detailLoading, setDetailLoading] = useState(false);
-	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [grantId, setGrantId] = useState("");
-	const [grantExpiry, setGrantExpiry] = useState("");
-	const [mergeTarget, setMergeTarget] = useState("");
-	const [mergeConfirmation, setMergeConfirmation] = useState("");
-	const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
 	const load = useCallback(async () => {
 		if (!selectedProject) return;
@@ -78,61 +88,27 @@ export default function BillingCustomersPage() {
 			setOverview(billing);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setLoading(false);
 		}
-	}, [query, selectedProject]);
+	}, [locale, query, selectedProject]);
 
 	useEffect(() => {
-		void load();
-	}, [load]);
+		Promise.resolve()
+			.then(load)
+			.catch((cause: unknown) => {
+				setError(moduleErrorMessage(cause, locale));
+			});
+	}, [load, locale]);
 
-	const openCustomer = useCallback(
-		async (customerId: string) => {
-			if (!selectedProject) return;
-			setDetailLoading(true);
-			try {
-				setDetail(await getBillingCustomer(selectedProject.id, customerId));
-				setGrantId("");
-				setGrantExpiry("");
-				setMergeTarget("");
-				setMergeConfirmation("");
-				setDeleteConfirmation("");
-			} catch (cause) {
-				showErrorNotification(moduleErrorMessage(cause));
-			} finally {
-				setDetailLoading(false);
-			}
-		},
-		[selectedProject],
-	);
-
-	const refreshDetail = async () => {
-		if (detail) await openCustomer(detail.customer.id);
+	const showCustomer = (customerId: string | null) => {
+		const next = new URLSearchParams(search);
+		if (customerId) next.set("customer", customerId);
+		else next.delete("customer");
+		const value = next.toString();
+		router.push(value ? `${pathname}?${value}` : pathname);
 	};
-
-	const mutate = async (operation: () => Promise<unknown>, message: string) => {
-		setBusy(true);
-		try {
-			await operation();
-			showSuccessNotification(message);
-			await Promise.all([load(), refreshDetail()]);
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
-		} finally {
-			setBusy(false);
-		}
-	};
-
-	const activeEntitlements = useMemo(
-		() =>
-			Object.values(detail?.customer_info.entitlements ?? {}).filter(
-				(entitlement) => entitlement.is_active,
-			),
-		[detail],
-	);
-	const paywallEvents = detail?.paywall_events ?? [];
 
 	return (
 		<ModulePage
@@ -144,186 +120,78 @@ export default function BillingCustomersPage() {
 		>
 			{!selectedProject ? (
 				<EmptyProject />
+			) : selectedCustomerId ? (
+				<CustomerDetail
+					key={`${selectedProject.id}:${selectedCustomerId}`}
+					projectId={selectedProject.id}
+					customerId={selectedCustomerId}
+					overview={overview}
+					onBack={() => {
+						showCustomer(null);
+					}}
+					onChange={load}
+				/>
 			) : (
-				<div className="space-y-6">
-					<Card>
-						<CardHeader>
-							<CardTitle>Customer search</CardTitle>
-							<CardDescription>
-								Results are isolated to the selected SuperBoard project.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="flex flex-wrap gap-2">
-							<div className="relative min-w-64 flex-1">
-								<Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-								<Input
-									className="pl-9"
-									value={query}
-									placeholder="App user ID or alias"
-									onChange={(event) => setQuery(event.currentTarget.value)}
-								/>
-							</div>
-							<Button variant="outline" disabled={loading} onClick={() => void load()}>
-								<RefreshCw className={loading ? "animate-spin" : ""} />
-								Refresh
-							</Button>
-						</CardContent>
-					</Card>
-
-					<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(420px,1.15fr)]">
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<Users className="size-5" />
-									Customers
-								</CardTitle>
-								<CardDescription>
-									{customers.length} financial identities in the current page.
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="overflow-x-auto">
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>Identity</TableHead>
-											<TableHead>Subscriptions</TableHead>
-											<TableHead>Transactions</TableHead>
-											<TableHead>Last seen</TableHead>
-											<TableHead />
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{customers.map((customer) => (
-											<TableRow key={customer.id}>
-												<TableCell>
-													<div className="flex items-center gap-2">
-														<code className="max-w-48 truncate text-xs">
-															{customer.primary_app_user_id}
-														</code>
-														{Boolean(customer.blocked) && (
-															<Badge variant="destructive">Blocked</Badge>
-														)}
-														{Boolean(customer.anonymous) && (
-															<Badge variant="outline">Anonymous</Badge>
-														)}
-													</div>
-													<code className="block max-w-48 truncate text-xs text-muted-foreground">
-														{customer.id}
-													</code>
-												</TableCell>
-												<TableCell>
-													{Number(customer.active_subscription_count || 0).toLocaleString()}
-												</TableCell>
-												<TableCell>
-													{Number(customer.transaction_count || 0).toLocaleString()}
-												</TableCell>
-												<TableCell>{date(customer.last_seen_at)}</TableCell>
-												<TableCell>
-													<Button
-														size="icon"
-														variant="ghost"
-														aria-label={`Open ${customer.primary_app_user_id}`}
-														onClick={() => void openCustomer(customer.id)}
-													>
-														<Eye />
-													</Button>
-												</TableCell>
-											</TableRow>
-										))}
-										{!loading && customers.length === 0 && (
-											<TableRow>
-												<TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-													No customer matches this search.
-												</TableCell>
-											</TableRow>
-										)}
-									</TableBody>
-								</Table>
-							</CardContent>
-						</Card>
-
-						<CustomerDetail
-							detail={detail}
-							overview={overview}
-							loading={detailLoading}
-							busy={busy}
-							grantId={grantId}
-							setGrantId={setGrantId}
-							grantExpiry={grantExpiry}
-							setGrantExpiry={setGrantExpiry}
-							mergeTarget={mergeTarget}
-							setMergeTarget={setMergeTarget}
-							mergeConfirmation={mergeConfirmation}
-							setMergeConfirmation={setMergeConfirmation}
-							deleteConfirmation={deleteConfirmation}
-							setDeleteConfirmation={setDeleteConfirmation}
-							activeEntitlements={activeEntitlements}
-							paywallEvents={paywallEvents}
-							onBlock={(blocked) => {
-								if (!detail) return;
-								void mutate(
-									() => setBillingCustomerBlocked(selectedProject.id, detail.customer.id, blocked),
-									blocked ? "Customer blocked" : "Customer unblocked",
-								);
+				<div className="space-y-4">
+					<div className="flex flex-wrap items-center gap-2">
+						<div className="relative min-w-64 flex-1">
+							<Search className="absolute start-3 top-2.5 size-4 text-muted-foreground" />
+							<Input
+								type="search"
+								className="ps-9"
+								value={query}
+								aria-label={t("App user ID or alias")}
+								placeholder={t("App user ID or alias")}
+								onChange={(event) => {
+									setQuery(event.currentTarget.value);
+								}}
+							/>
+						</div>
+						<Button
+							variant="outline"
+							disabled={loading}
+							onClick={() => {
+								void load();
 							}}
-							onGrant={() => {
-								if (!detail || !grantId) return;
-								void mutate(
-									() =>
-										grantBillingEntitlement(
-											selectedProject.id,
-											detail.customer.id,
-											grantId,
-											grantExpiry ? new Date(grantExpiry).toISOString() : null,
-										),
-									"Promotional entitlement granted",
-								);
-							}}
-							onRevoke={(identifier) => {
-								if (!detail) return;
-								const entitlement = overview?.entitlements.find(
-									(candidate) => candidate.identifier === identifier,
-								);
-								if (!entitlement) return;
-								void mutate(
-									() =>
-										revokeBillingEntitlement(
-											selectedProject.id,
-											detail.customer.id,
-											entitlement.id,
-										),
-									"Promotional entitlement revoked",
-								);
-							}}
-							onMerge={() => {
-								if (!detail || mergeConfirmation !== "MERGE") return;
-								setBusy(true);
-								void mergeBillingCustomers(
-									selectedProject.id,
-									detail.customer.id,
-									mergeTarget.trim(),
-								)
-									.then(async () => {
-										showSuccessNotification("Customer identities merged");
-										setDetail(null);
-										await load();
-									})
-									.catch((cause) => showErrorNotification(moduleErrorMessage(cause)))
-									.finally(() => setBusy(false));
-							}}
-							onDelete={() => {
-								if (!detail || deleteConfirmation !== detail.customer.id) return;
-								setBusy(true);
-								void deleteBillingCustomer(selectedProject.id, detail.customer.id)
-									.then(async () => {
-										showSuccessNotification("Billing customer deleted");
-										setDetail(null);
-										await load();
-									})
-									.catch((cause) => showErrorNotification(moduleErrorMessage(cause)))
-									.finally(() => setBusy(false));
-							}}
-						/>
+						>
+							<RefreshCw className={loading ? "animate-spin" : ""} />
+							{t("Refresh")}
+						</Button>
+					</div>
+					<p className="text-sm text-muted-foreground">
+						{customers.length === 1
+							? t("1 customer")
+							: t("{count} customers", { count: customers.length.toLocaleString(locale) })}
+					</p>
+					<div className="overflow-x-auto">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>{t("Identity")}</TableHead>
+									<TableHead>{t("Subscriptions")}</TableHead>
+									<TableHead>{t("Transactions")}</TableHead>
+									<TableHead>{t("Last seen")}</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{customers.map((customer) => (
+									<CustomerRow
+										key={customer.id}
+										customer={customer}
+										onOpen={() => {
+											showCustomer(customer.id);
+										}}
+									/>
+								))}
+								{!loading && customers.length === 0 && (
+									<TableRow>
+										<TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+											{t("No customer matches this search.")}
+										</TableCell>
+									</TableRow>
+								)}
+							</TableBody>
+						</Table>
 					</div>
 				</div>
 			)}
@@ -331,118 +199,191 @@ export default function BillingCustomersPage() {
 	);
 }
 
-type DetailProps = {
-	detail: BillingCustomerDetail | null;
-	overview: BillingOverview | null;
-	loading: boolean;
-	busy: boolean;
-	grantId: string;
-	setGrantId: (value: string) => void;
-	grantExpiry: string;
-	setGrantExpiry: (value: string) => void;
-	mergeTarget: string;
-	setMergeTarget: (value: string) => void;
-	mergeConfirmation: string;
-	setMergeConfirmation: (value: string) => void;
-	deleteConfirmation: string;
-	setDeleteConfirmation: (value: string) => void;
-	activeEntitlements: BillingCustomerDetail["customer_info"]["entitlements"][string][];
-	paywallEvents: Array<Record<string, unknown>>;
-	onBlock: (blocked: boolean) => void;
-	onGrant: () => void;
-	onRevoke: (identifier: string) => void;
-	onMerge: () => void;
-	onDelete: () => void;
-};
+function CustomerRow({
+	customer,
+	onOpen,
+}: {
+	customer: BillingCustomerSummary;
+	onOpen: () => void;
+}) {
+	const { t, locale } = useMonetizationI18n();
+	return (
+		<TableRow className="cursor-pointer" onClick={onOpen}>
+			<TableCell>
+				<div className="flex items-center gap-2">
+					<Button
+						variant="link"
+						className="h-auto max-w-48 justify-start truncate px-0 py-0 font-mono text-xs text-foreground"
+						onClick={(event) => {
+							event.stopPropagation();
+							onOpen();
+						}}
+					>
+						{customer.primary_app_user_id}
+					</Button>
+					{Boolean(customer.blocked) && <Badge variant="destructive">{t("Blocked")}</Badge>}
+					{Boolean(customer.anonymous) && <Badge variant="outline">{t("Anonymous")}</Badge>}
+				</div>
+				<code className="block max-w-48 truncate text-xs text-muted-foreground">{customer.id}</code>
+			</TableCell>
+			<TableCell>
+				{Number(customer.active_subscription_count || 0).toLocaleString(locale)}
+			</TableCell>
+			<TableCell>{Number(customer.transaction_count || 0).toLocaleString(locale)}</TableCell>
+			<TableCell>{date(customer.last_seen_at, locale)}</TableCell>
+		</TableRow>
+	);
+}
 
-function CustomerDetail(props: DetailProps) {
-	if (!props.detail) {
+function CustomerDetail({
+	projectId,
+	customerId,
+	overview,
+	onBack,
+	onChange,
+}: {
+	projectId: string;
+	customerId: string;
+	overview: BillingOverview | null;
+	onBack: () => void;
+	onChange: () => Promise<void>;
+}) {
+	const { t, locale } = useMonetizationI18n();
+	const [detail, setDetail] = useState<BillingCustomerDetail | null>(null);
+	const [failure, setFailure] = useState<string | null>(null);
+	const [busy, setBusy] = useState(false);
+	const [grantId, setGrantId] = useState("");
+	const [grantExpiry, setGrantExpiry] = useState("");
+	const [mergeTarget, setMergeTarget] = useState("");
+	const [mergeConfirmation, setMergeConfirmation] = useState("");
+	const [deleteConfirmation, setDeleteConfirmation] = useState("");
+
+	const refresh = useCallback(async () => {
+		setDetail(await getBillingCustomer(projectId, customerId));
+		setFailure(null);
+	}, [customerId, projectId]);
+
+	useEffect(() => {
+		Promise.resolve()
+			.then(refresh)
+			.catch((cause: unknown) => {
+				setFailure(moduleErrorMessage(cause, locale));
+			});
+	}, [locale, refresh]);
+
+	const mutate = async (operation: () => Promise<unknown>, message: string) => {
+		setBusy(true);
+		try {
+			await operation();
+			showSuccessNotification(message);
+			await Promise.all([onChange(), refresh()]);
+			setGrantId("");
+			setGrantExpiry("");
+			setMergeTarget("");
+			setMergeConfirmation("");
+			setDeleteConfirmation("");
+		} catch (cause) {
+			showErrorNotification(moduleErrorMessage(cause, locale));
+		} finally {
+			setBusy(false);
+		}
+	};
+
+	const leave = async (operation: () => Promise<unknown>, message: string) => {
+		setBusy(true);
+		try {
+			await operation();
+			showSuccessNotification(message);
+			onBack();
+			await onChange();
+		} catch (cause) {
+			showErrorNotification(moduleErrorMessage(cause, locale));
+		} finally {
+			setBusy(false);
+		}
+	};
+
+	const back = (
+		<Button variant="ghost" size="sm" onClick={onBack}>
+			<ChevronLeft className="rtl:-scale-x-100" />
+			{t("All customers")}
+		</Button>
+	);
+
+	if (!detail)
 		return (
-			<Card>
-				<CardContent className="flex min-h-72 items-center justify-center p-8 text-center text-sm text-muted-foreground">
-					{props.loading
-						? "Loading customer…"
-						: "Select a customer to inspect billing, subscriptions, entitlements and paywall events."}
-				</CardContent>
-			</Card>
+			<div className="space-y-6">
+				{back}
+				{failure ? (
+					<Alert variant="destructive">
+						<AlertTitle>{t("Unable to load this customer")}</AlertTitle>
+						<AlertDescription>{failure}</AlertDescription>
+					</Alert>
+				) : (
+					<p role="status" className="text-sm text-muted-foreground">
+						{t("Loading customer…")}
+					</p>
+				)}
+			</div>
 		);
-	}
-	const { customer, customer_info: info } = props.detail;
-	let clientContext: Record<string, unknown> = {};
-	try {
-		const parsed: unknown = JSON.parse(customer.attributes || "{}");
-		if (
-			parsed &&
-			typeof parsed === "object" &&
-			"sdk_context" in parsed &&
-			parsed.sdk_context &&
-			typeof parsed.sdk_context === "object"
-		)
-			clientContext = Object.fromEntries(Object.entries(parsed.sdk_context));
-	} catch {
-		clientContext = {};
-	}
+
+	const { customer, customer_info: info } = detail;
+	const clientContext = sdkContext(customer.attributes);
+	const activeEntitlements = Object.values(info.entitlements).filter(
+		(entitlement) => entitlement.is_active,
+	);
 
 	return (
-		<div className="space-y-4">
-			<Card>
-				<CardHeader>
-					<div className="flex flex-wrap items-start justify-between gap-3">
-						<div>
-							<CardTitle>{customer.primary_app_user_id}</CardTitle>
-							<CardDescription className="font-mono">{customer.id}</CardDescription>
-						</div>
-						<Button
-							variant={customer.blocked ? "outline" : "destructive"}
-							disabled={props.busy}
-							onClick={() => props.onBlock(!Boolean(customer.blocked))}
-						>
-							{customer.blocked ? <ShieldCheck /> : <ShieldBan />}
-							{customer.blocked ? "Unblock" : "Block"}
-						</Button>
+		<div className="max-w-4xl space-y-6">
+			{back}
+			<article className="space-y-6">
+				<header className="flex flex-wrap items-start justify-between gap-3">
+					<div className="min-w-0">
+						<h2 className="flex flex-wrap items-center gap-2 break-all text-xl font-semibold">
+							{customer.primary_app_user_id}
+							{Boolean(customer.blocked) && <Badge variant="destructive">{t("Blocked")}</Badge>}
+							{Boolean(customer.anonymous) && <Badge variant="outline">{t("Anonymous")}</Badge>}
+						</h2>
+						<p className="break-all font-mono text-sm text-muted-foreground">{customer.id}</p>
 					</div>
-				</CardHeader>
-				<CardContent className="grid gap-3 sm:grid-cols-2">
-					{[
-						["Country", "country"],
-						["Language", "language"],
-						["Platform", "platform"],
-						["App version", "app_version"],
-						["SDK version", "sdk_version"],
-					].map(([label, key]) => (
-						<Value
-							key={key}
-							label={label ?? ""}
-							value={
-								typeof clientContext[key ?? ""] === "string"
-									? String(clientContext[key ?? ""])
-									: "—"
-							}
-						/>
-					))}
-					<Value label="First seen" value={date(customer.first_seen_at)} />
-					<Value label="Last seen" value={date(customer.last_seen_at)} />
-					<Value
-						label="Aliases"
-						value={info.aliases.length ? info.aliases.join(", ") : "No aliases"}
-					/>
-					<Value
-						label="CustomerInfo proof"
-						value={`${info.signature_algorithm} · ${info.signature_key_id}`}
-					/>
-				</CardContent>
-			</Card>
+					<Button
+						variant={customer.blocked ? "outline" : "destructive"}
+						disabled={busy}
+						onClick={() => {
+							const blocked = !customer.blocked;
+							void mutate(
+								() => setBillingCustomerBlocked(projectId, customer.id, blocked),
+								t(blocked ? "Customer blocked" : "Customer unblocked"),
+							);
+						}}
+					>
+						{customer.blocked ? <ShieldCheck /> : <ShieldBan />}
+						{t(customer.blocked ? "Unblock" : "Block")}
+					</Button>
+				</header>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Entitlements and subscriptions</CardTitle>
-					<CardDescription>
-						Verified purchase state and explicit promotional overrides.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
+				<dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+					{contextFields.map(([label, key]) => {
+						const value = clientContext[key];
+						return (
+							<Fact key={key} label={t(label)}>
+								{typeof value === "string" ? value : "—"}
+							</Fact>
+						);
+					})}
+					<Fact label={t("First seen")}>{date(customer.first_seen_at, locale)}</Fact>
+					<Fact label={t("Last seen")}>{date(customer.last_seen_at, locale)}</Fact>
+					<Fact label={t("Aliases")}>
+						{info.aliases.length ? info.aliases.join(", ") : t("No aliases")}
+					</Fact>
+					<Fact label={t("CustomerInfo proof")}>
+						{`${info.signature_algorithm} · ${info.signature_key_id}`}
+					</Fact>
+				</dl>
+
+				<Section title={t("Entitlements and subscriptions")}>
 					<div className="space-y-2">
-						{props.activeEntitlements.map((entitlement) => (
+						{activeEntitlements.map((entitlement) => (
 							<div
 								key={entitlement.identifier}
 								className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3"
@@ -450,38 +391,52 @@ function CustomerDetail(props: DetailProps) {
 								<div>
 									<strong>{entitlement.identifier}</strong>
 									<p className="text-xs text-muted-foreground">
-										{entitlement.status} · {entitlement.store || "manual"} ·{" "}
-										{entitlement.expires_at
-											? `expires ${date(entitlement.expires_at)}`
-											: "no expiry"}{" "}
-										· {entitlement.verification || "unknown proof"}
+										{[
+											t(entitlement.status),
+											t(entitlement.store || "manual"),
+											entitlement.expires_at
+												? t("expires {date}", { date: date(entitlement.expires_at, locale) })
+												: t("no expiry"),
+											entitlement.verification || t("unknown proof"),
+										].join(" · ")}
 									</p>
 								</div>
 								{entitlement.verification === "admin" && (
 									<Button
 										size="sm"
 										variant="outline"
-										disabled={props.busy}
-										onClick={() => props.onRevoke(entitlement.identifier)}
+										disabled={busy}
+										onClick={() => {
+											const promotion = overview?.entitlements.find(
+												(candidate) => candidate.identifier === entitlement.identifier,
+											);
+											if (!promotion) return;
+											void mutate(
+												() => revokeBillingEntitlement(projectId, customer.id, promotion.id),
+												t("Promotional entitlement revoked"),
+											);
+										}}
 									>
-										Revoke promotion
+										{t("Revoke promotion")}
 									</Button>
 								)}
 							</div>
 						))}
-						{props.activeEntitlements.length === 0 && (
-							<p className="text-sm text-muted-foreground">No active entitlement.</p>
+						{activeEntitlements.length === 0 && (
+							<p className="text-sm text-muted-foreground">{t("No active entitlement.")}</p>
 						)}
 					</div>
 					<div className="grid gap-2 sm:grid-cols-[1fr_190px_auto]">
 						<select
-							aria-label="Promotional entitlement"
+							aria-label={t("Promotional entitlement")}
 							className={selectClass}
-							value={props.grantId}
-							onChange={(event) => props.setGrantId(event.target.value)}
+							value={grantId}
+							onChange={(event) => {
+								setGrantId(event.target.value);
+							}}
 						>
-							<option value="">Select entitlement</option>
-							{(props.overview?.entitlements ?? [])
+							<option value="">{t("Select entitlement")}</option>
+							{(overview?.entitlements ?? [])
 								.filter((item) => Boolean(item.active))
 								.map((item) => (
 									<option key={item.id} value={item.id}>
@@ -490,127 +445,171 @@ function CustomerDetail(props: DetailProps) {
 								))}
 						</select>
 						<Input
-							aria-label="Promotion expiry"
+							aria-label={t("Promotion expiry")}
 							type="datetime-local"
-							value={props.grantExpiry}
-							onChange={(event) => props.setGrantExpiry(event.currentTarget.value)}
+							value={grantExpiry}
+							onChange={(event) => {
+								setGrantExpiry(event.currentTarget.value);
+							}}
 						/>
-						<Button disabled={props.busy || !props.grantId} onClick={props.onGrant}>
-							Grant promotion
+						<Button
+							disabled={busy || !grantId}
+							onClick={() => {
+								void mutate(
+									() =>
+										grantBillingEntitlement(
+											projectId,
+											customer.id,
+											grantId,
+											grantExpiry ? new Date(grantExpiry).toISOString() : null,
+										),
+									t("Promotional entitlement granted"),
+								);
+							}}
+						>
+							{t("Grant promotion")}
 						</Button>
 					</div>
 					<RecordTable
-						title="Subscriptions"
+						title={t("Subscriptions")}
 						rows={info.subscriptions}
 						columns={["store_product_id", "store", "status", "expires_at"]}
 					/>
 					<div>
-						<h3 className="mb-2 text-sm font-semibold">Virtual balances</h3>
+						<h4 className="mb-2 text-sm font-semibold">{t("Virtual balances")}</h4>
 						<div className="flex flex-wrap gap-2">
 							{Object.entries(info.balances).map(([currency, balance]) => (
 								<Badge key={currency} variant="secondary">
-									{currency}: {Number(balance).toLocaleString()}
+									{currency}: {Number(balance).toLocaleString(locale)}
 								</Badge>
 							))}
 							{Object.keys(info.balances).length === 0 && (
-								<span className="text-sm text-muted-foreground">No virtual balance.</span>
+								<span className="text-sm text-muted-foreground">{t("No virtual balance.")}</span>
 							)}
 						</div>
 					</div>
-				</CardContent>
-			</Card>
+				</Section>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Financial and paywall history</CardTitle>
-					<CardDescription>Read-only operational evidence for this customer.</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-5">
+				<Section title={t("Financial and paywall history")}>
 					<RecordTable
-						title="Transactions"
-						rows={props.detail.transactions}
+						title={t("Transactions")}
+						rows={detail.transactions}
 						columns={["store", "store_transaction_id", "event_type", "status", "created_at"]}
 					/>
 					<RecordTable
-						title="Paywall events"
-						rows={props.paywallEvents}
+						title={t("Paywall events")}
+						rows={detail.paywall_events}
 						columns={["event_type", "paywall_id", "placement_identifier", "occurred_at"]}
 					/>
 					<details>
 						<summary className="cursor-pointer text-sm font-semibold">
-							All billing events ({props.detail.events.length})
+							{t("All billing events ({count})", { count: detail.events.length })}
 						</summary>
 						<div className="mt-3">
 							<RecordTable
-								title=""
-								rows={props.detail.events}
+								rows={detail.events}
 								columns={["event_type", "status", "store", "occurred_at"]}
 							/>
 						</div>
 					</details>
-				</CardContent>
-			</Card>
+				</Section>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Identity operations</CardTitle>
-					<CardDescription>
-						Merge and deletion are audited and require explicit confirmation.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-5">
+				<Section title={t("Identity operations")}>
+					<p className="text-sm text-muted-foreground">
+						{t("Merge and deletion are audited and require explicit confirmation.")}
+					</p>
 					<div className="grid gap-2 sm:grid-cols-2">
 						<div className="space-y-2">
-							<Label>Target customer ID</Label>
+							<Label htmlFor="billing-merge-target">{t("Target customer ID")}</Label>
 							<Input
-								value={props.mergeTarget}
-								onChange={(event) => props.setMergeTarget(event.currentTarget.value)}
+								id="billing-merge-target"
+								value={mergeTarget}
+								onChange={(event) => {
+									setMergeTarget(event.currentTarget.value);
+								}}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Type MERGE</Label>
+							<Label htmlFor="billing-merge-confirmation">{t("Type MERGE")}</Label>
 							<Input
-								value={props.mergeConfirmation}
-								onChange={(event) => props.setMergeConfirmation(event.currentTarget.value)}
+								id="billing-merge-confirmation"
+								value={mergeConfirmation}
+								onChange={(event) => {
+									setMergeConfirmation(event.currentTarget.value);
+								}}
 							/>
 						</div>
 						<Button
 							variant="outline"
 							disabled={
-								props.busy ||
-								!props.mergeTarget.trim() ||
-								props.mergeTarget.trim() === customer.id ||
-								props.mergeConfirmation !== "MERGE"
+								busy ||
+								!mergeTarget.trim() ||
+								mergeTarget.trim() === customer.id ||
+								mergeConfirmation !== "MERGE"
 							}
-							onClick={props.onMerge}
+							onClick={() => {
+								leave(
+									() => mergeBillingCustomers(projectId, customer.id, mergeTarget.trim()),
+									t("Customer identities merged"),
+								).catch(() => undefined);
+							}}
 						>
-							Merge into target
+							{t("Merge into target")}
 						</Button>
 					</div>
 					<div className="rounded-md border border-destructive/40 p-4">
-						<Label>Type the exact customer ID to delete</Label>
+						<Label htmlFor="billing-delete-confirmation">
+							{t("Type the exact customer ID to delete")}
+						</Label>
 						<Input
+							id="billing-delete-confirmation"
 							className="mt-2 font-mono"
-							value={props.deleteConfirmation}
+							value={deleteConfirmation}
 							placeholder={customer.id}
-							onChange={(event) => props.setDeleteConfirmation(event.currentTarget.value)}
+							onChange={(event) => {
+								setDeleteConfirmation(event.currentTarget.value);
+							}}
 						/>
 						<p className="mt-2 text-xs text-muted-foreground">
-							Transactions, subscriptions and events are retained without a customer link; aliases,
-							balances and promotional rights are removed.
+							{t(
+								"Transactions, subscriptions and events are retained without a customer link; aliases, balances and promotional rights are removed.",
+							)}
 						</p>
 						<Button
 							className="mt-3"
 							variant="destructive"
-							disabled={props.busy || props.deleteConfirmation !== customer.id}
-							onClick={props.onDelete}
+							disabled={busy || deleteConfirmation !== customer.id}
+							onClick={() => {
+								leave(
+									() => deleteBillingCustomer(projectId, customer.id),
+									t("Billing customer deleted"),
+								).catch(() => undefined);
+							}}
 						>
 							<Trash2 />
-							Delete billing customer
+							{t("Delete billing customer")}
 						</Button>
 					</div>
-				</CardContent>
-			</Card>
+				</Section>
+			</article>
+		</div>
+	);
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+	return (
+		<section className="space-y-4 border-t pt-5">
+			<h3 className="text-base font-semibold">{title}</h3>
+			{children}
+		</section>
+	);
+}
+
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+	return (
+		<div>
+			<dt className="text-xs text-muted-foreground">{label}</dt>
+			<dd className="mt-1 break-all text-sm font-medium">{children}</dd>
 		</div>
 	);
 }
@@ -620,19 +619,20 @@ function RecordTable({
 	rows,
 	columns,
 }: {
-	title: string;
+	title?: string;
 	rows: Array<Record<string, unknown>>;
 	columns: string[];
 }) {
+	const { t } = useMonetizationI18n();
 	return (
 		<div>
-			{title && <h3 className="mb-2 text-sm font-semibold">{title}</h3>}
+			{title && <h4 className="mb-2 text-sm font-semibold">{title}</h4>}
 			<div className="overflow-x-auto rounded-md border">
 				<Table>
 					<TableHeader>
 						<TableRow>
 							{columns.map((column) => (
-								<TableHead key={column}>{column.replaceAll("_", " ")}</TableHead>
+								<TableHead key={column}>{t(columnLabels[column] ?? column)}</TableHead>
 							))}
 						</TableRow>
 					</TableHeader>
@@ -652,7 +652,7 @@ function RecordTable({
 									colSpan={columns.length}
 									className="py-6 text-center text-muted-foreground"
 								>
-									No record.
+									{t("No record.")}
 								</TableCell>
 							</TableRow>
 						)}
@@ -663,14 +663,21 @@ function RecordTable({
 	);
 }
 
-function Value({ label, value }: { label: string; value: string }) {
-	const { t } = useMonetizationI18n();
-	return (
-		<div className="rounded-md border p-3">
-			<p className="text-xs text-muted-foreground">{t(label)}</p>
-			<p className="mt-1 break-all text-sm font-medium">{value}</p>
-		</div>
-	);
+function sdkContext(attributes?: string | null): Record<string, unknown> {
+	try {
+		const parsed: unknown = JSON.parse(attributes || "{}");
+		if (
+			parsed &&
+			typeof parsed === "object" &&
+			"sdk_context" in parsed &&
+			parsed.sdk_context &&
+			typeof parsed.sdk_context === "object"
+		)
+			return Object.fromEntries(Object.entries(parsed.sdk_context));
+	} catch {
+		return {};
+	}
+	return {};
 }
 
 function text(record: Record<string, unknown>, key: string) {
@@ -684,6 +691,6 @@ function display(value: unknown) {
 	return String(value);
 }
 
-function date(value?: string | null) {
-	return value ? new Date(value).toLocaleString() : "—";
+function date(value: string | null | undefined, locale: string) {
+	return value ? new Date(value).toLocaleString(locale) : "—";
 }

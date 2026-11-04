@@ -43,7 +43,7 @@ import {
 import { EmailInsights } from "../../studio/EmailInsights.js";
 import { useStudioI18n } from "../../studio/i18n.js";
 
-const selectClass = "w-full rounded-md border bg-background px-3 py-2 text-sm";
+const selectClass = "rounded-md border bg-background px-3 py-2 text-sm";
 
 export function MarketingStatistics() {
 	const { t, locale } = useStudioI18n();
@@ -82,9 +82,6 @@ export function MarketingStatistics() {
 	if (!selectedProject) return <EmptyProject />;
 	return (
 		<div className="space-y-6">
-			<p className="text-sm text-kumo-subtle">
-				{t("Delivery, opens, clicks, bounces, complaints, unsubscribes and campaign progression.")}
-			</p>
 			{error && <p role="alert">{error}</p>}
 			<div className="flex flex-wrap gap-2">
 				<Input
@@ -103,7 +100,7 @@ export function MarketingStatistics() {
 				/>
 				<select
 					aria-label={t("Statistics interval")}
-					className={`${selectClass} w-auto`}
+					className={selectClass}
 					value={interval}
 					onChange={(event) => setInterval(event.target.value)}
 				>
@@ -114,7 +111,7 @@ export function MarketingStatistics() {
 				</select>
 				<select
 					aria-label={t("Statistics campaign")}
-					className={`${selectClass} min-w-56 w-auto`}
+					className={`${selectClass} min-w-56`}
 					value={campaignId}
 					onChange={(event) => setCampaignId(event.target.value)}
 				>

@@ -54,14 +54,14 @@ export function DocumentHistory({ path, onChanged }: { path: string; onChanged()
 				{t.compare}
 			</Button>
 			{comparison && (
-				<div className="grid gap-4 lg:grid-cols-2">
+				<div className="grid gap-4">
 					{!comparison.hasChanges && <p>{t.noChanges}</p>}
 					<div>
-						<h3>{t.live}</h3>
+						<h4>{t.live}</h4>
 						<pre className="overflow-auto">{JSON.stringify(comparison.live, null, 2)}</pre>
 					</div>
 					<div>
-						<h3>{t.current}</h3>
+						<h4>{t.current}</h4>
 						<pre className="overflow-auto">{JSON.stringify(comparison.draft, null, 2)}</pre>
 					</div>
 				</div>

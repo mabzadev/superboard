@@ -34,8 +34,8 @@ import {
 	SelectValue,
 } from "@superboard/front-ui/ui/select.js";
 import { Switch } from "@superboard/front-ui/ui/switch.js";
-import { Download, Plus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, Download, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
 	createLink,
@@ -132,7 +132,6 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 	const { itemId, selectItem } = useAcquisitionSelection();
 	const { tr } = useFlowI18n();
 	const embedded = useEmbeddedPage();
-	const [section, setSection] = useState("Details");
 	const { selectedProject } = useProjectSelection();
 	const {
 		page,
@@ -275,7 +274,6 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 			const link = links.find((item) => item.id === row.id);
 			if (!link) return;
 			setForm(toForm(link));
-			setSection("Details");
 			selectItem(link.id);
 		},
 		[links, selectItem],
@@ -316,7 +314,6 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 			} else {
 				const created = await createLink(selectedProject.id, payload());
 				setForm((current) => ({ ...current, id: created.id }));
-				setSection("Details");
 				selectItem(created.id);
 				showSuccessNotification(tr("Link created"));
 			}
@@ -432,194 +429,32 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 			description={
 				campaignId && !itemId
 					? tr("Links grouped in this campaign and their attributed results.")
-					: tr("Create, route and measure links across every platform and acquisition source.")
+					: embedded
+						? ""
+						: tr("Create, route and measure links across every platform and acquisition source.")
 			}
 			error={error ?? (campaignMissing ? tr("Campaign not found") : null)}
 		>
 			{!selectedProject ? (
 				<EmptyProject />
 			) : itemId ? (
-				<div className="space-y-5">
+				<div className="max-w-3xl space-y-6">
 					<Button
-						variant="outline"
+						variant="ghost"
+						size="sm"
 						onClick={() => {
 							if (linkDirty && !window.confirm(tr("Discard unsaved changes?"))) return;
 							selectItem("");
 						}}
 					>
+						<ChevronLeft className="rtl:-scale-x-100" />
 						{tr("Back to list")}
 					</Button>
 					{form.id === itemId ? (
 						<>
-							<nav className="flex flex-wrap gap-2">
-								{["Details", "Destinations", "Social preview", "Tracking", "Results"].map((tab) => (
-									<Button
-										key={tab}
-										variant={section === tab ? "secondary" : "ghost"}
-										onClick={() => {
-											setSection(tab);
-										}}
-									>
-										{tr(tab)}
-									</Button>
-								))}
-							</nav>
-							<div className="grid gap-5 py-2 sm:grid-cols-2">
-								<section hidden={section !== "Details"} className="space-y-3">
-									<h3 className="text-sm font-semibold">{tr("Link details")}</h3>
-									<Field
-										label={tr("Name")}
-										value={form.name}
-										onChange={(name) => {
-											setForm((v) => ({ ...v, name }));
-										}}
-									/>
-									<Field
-										label={tr("Slug")}
-										value={form.slug}
-										onChange={(slug) => {
-											setForm((v) => ({
-												...v,
-												slug: slug.toLowerCase().replace(/[^a-z0-9_-]/g, "-"),
-											}));
-										}}
-									/>
-									<Field
-										label={tr("Default destination")}
-										type="url"
-										value={form.destination}
-										onChange={(destination) => {
-											setForm((v) => ({ ...v, destination }));
-										}}
-									/>
-									<label className="space-y-2 text-sm">
-										<span>{tr("Campaign")}</span>
-										<Select
-											value={form.campaignId || "none"}
-											onValueChange={(campaignId) => {
-												setForm((v) => ({
-													...v,
-													campaignId: campaignId === "none" ? "" : campaignId,
-												}));
-											}}
-										>
-											<SelectTrigger>
-												<SelectValue placeholder={tr("No campaign")} />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="none">{tr("No campaign")}</SelectItem>
-												{campaigns?.map((campaign) => (
-													<SelectItem key={campaign.id} value={campaign.id}>
-														{campaign.name}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</label>
-									<Field
-										label={tr("Tags (comma separated)")}
-										value={form.tags}
-										onChange={(tags) => {
-											setForm((v) => ({ ...v, tags }));
-										}}
-									/>
-									<label className="flex items-center gap-3 text-sm">
-										<Switch
-											aria-label={tr("Active")}
-											checked={form.active}
-											onCheckedChange={(active) => setForm((v) => ({ ...v, active }))}
-										/>{" "}
-										{tr("Active")}
-									</label>
-								</section>
-								<section hidden={section !== "Destinations"} className="space-y-3">
-									<h3 className="text-sm font-semibold">{tr("Platform routing")}</h3>
-									<Field
-										label={tr("iOS destination")}
-										type="url"
-										value={form.ios}
-										onChange={(ios) => {
-											setForm((v) => ({ ...v, ios }));
-										}}
-									/>
-									<Field
-										label={tr("Android destination")}
-										type="url"
-										value={form.android}
-										onChange={(android) => {
-											setForm((v) => ({ ...v, android }));
-										}}
-									/>
-									<Field
-										label={tr("Web destination")}
-										type="url"
-										value={form.web}
-										onChange={(web) => {
-											setForm((v) => ({ ...v, web }));
-										}}
-									/>
-									<Field
-										label={tr("Desktop destination")}
-										type="url"
-										value={form.desktop}
-										onChange={(desktop) => {
-											setForm((v) => ({ ...v, desktop }));
-										}}
-									/>
-								</section>
-								<section hidden={section !== "Social preview"} className="space-y-3">
-									<h3 className="text-sm font-semibold">{tr("Social preview")}</h3>
-									<Field
-										label={tr("Title")}
-										value={form.title}
-										onChange={(title) => {
-											setForm((v) => ({ ...v, title }));
-										}}
-									/>
-									<Field
-										label={tr("Description")}
-										value={form.subtitle}
-										onChange={(subtitle) => {
-											setForm((v) => ({ ...v, subtitle }));
-										}}
-									/>
-									<Field
-										label={tr("Image URL")}
-										type="url"
-										value={form.imageUrl}
-										onChange={(imageUrl) => {
-											setForm((v) => ({ ...v, imageUrl }));
-										}}
-									/>
-								</section>
-								<section hidden={section !== "Tracking"} className="space-y-3">
-									<h3 className="text-sm font-semibold">{tr("UTM tracking")}</h3>
-									<Field
-										label={tr("Source")}
-										value={form.source}
-										onChange={(source) => {
-											setForm((v) => ({ ...v, source }));
-										}}
-									/>
-									<Field
-										label={tr("Medium")}
-										value={form.medium}
-										onChange={(medium) => {
-											setForm((v) => ({ ...v, medium }));
-										}}
-									/>
-									<Field
-										label={tr("Campaign")}
-										value={form.trackingCampaign}
-										onChange={(trackingCampaign) => {
-											setForm((v) => ({ ...v, trackingCampaign }));
-										}}
-									/>
-								</section>
-							</div>
-							{section === "Results" && (
+							{selectedLink ? (
 								<div className="grid gap-3 sm:grid-cols-3">
-									{Object.entries(selectedLink ? toLinkData(selectedLink) : {})
+									{Object.entries(toLinkData(selectedLink))
 										.filter(([key, value]) => key.startsWith("total_") && typeof value === "number")
 										.map(([key, value]) => (
 											<div key={key} className="rounded border p-4">
@@ -628,8 +463,155 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 											</div>
 										))}
 								</div>
-							)}
-							<div className="flex justify-between gap-3">
+							) : null}
+							<DetailSection title={tr("Link details")}>
+								<Field
+									label={tr("Name")}
+									value={form.name}
+									onChange={(name) => {
+										setForm((v) => ({ ...v, name }));
+									}}
+								/>
+								<Field
+									label={tr("Slug")}
+									value={form.slug}
+									onChange={(slug) => {
+										setForm((v) => ({
+											...v,
+											slug: slug.toLowerCase().replace(/[^a-z0-9_-]/g, "-"),
+										}));
+									}}
+								/>
+								<Field
+									label={tr("Default destination")}
+									type="url"
+									value={form.destination}
+									onChange={(destination) => {
+										setForm((v) => ({ ...v, destination }));
+									}}
+								/>
+								<label className="grid gap-2">
+									<span>{tr("Campaign")}</span>
+									<Select
+										value={form.campaignId || "none"}
+										onValueChange={(campaignId) => {
+											setForm((v) => ({
+												...v,
+												campaignId: campaignId === "none" ? "" : campaignId,
+											}));
+										}}
+									>
+										<SelectTrigger className="w-full">
+											<SelectValue placeholder={tr("No campaign")} />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="none">{tr("No campaign")}</SelectItem>
+											{campaigns?.map((campaign) => (
+												<SelectItem key={campaign.id} value={campaign.id}>
+													{campaign.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</label>
+								<Field
+									label={tr("Tags (comma separated)")}
+									value={form.tags}
+									onChange={(tags) => {
+										setForm((v) => ({ ...v, tags }));
+									}}
+								/>
+								<label className="flex items-center gap-3 self-end pb-2 text-sm">
+									<Switch
+										aria-label={tr("Active")}
+										checked={form.active}
+										onCheckedChange={(active) => setForm((v) => ({ ...v, active }))}
+									/>{" "}
+									{tr("Active")}
+								</label>
+							</DetailSection>
+							<DetailSection title={tr("Platform routing")}>
+								<Field
+									label={tr("iOS destination")}
+									type="url"
+									value={form.ios}
+									onChange={(ios) => {
+										setForm((v) => ({ ...v, ios }));
+									}}
+								/>
+								<Field
+									label={tr("Android destination")}
+									type="url"
+									value={form.android}
+									onChange={(android) => {
+										setForm((v) => ({ ...v, android }));
+									}}
+								/>
+								<Field
+									label={tr("Web destination")}
+									type="url"
+									value={form.web}
+									onChange={(web) => {
+										setForm((v) => ({ ...v, web }));
+									}}
+								/>
+								<Field
+									label={tr("Desktop destination")}
+									type="url"
+									value={form.desktop}
+									onChange={(desktop) => {
+										setForm((v) => ({ ...v, desktop }));
+									}}
+								/>
+							</DetailSection>
+							<DetailSection title={tr("Social preview")}>
+								<Field
+									label={tr("Title")}
+									value={form.title}
+									onChange={(title) => {
+										setForm((v) => ({ ...v, title }));
+									}}
+								/>
+								<Field
+									label={tr("Description")}
+									value={form.subtitle}
+									onChange={(subtitle) => {
+										setForm((v) => ({ ...v, subtitle }));
+									}}
+								/>
+								<Field
+									label={tr("Image URL")}
+									type="url"
+									value={form.imageUrl}
+									onChange={(imageUrl) => {
+										setForm((v) => ({ ...v, imageUrl }));
+									}}
+								/>
+							</DetailSection>
+							<DetailSection title={tr("UTM tracking")}>
+								<Field
+									label={tr("Source")}
+									value={form.source}
+									onChange={(source) => {
+										setForm((v) => ({ ...v, source }));
+									}}
+								/>
+								<Field
+									label={tr("Medium")}
+									value={form.medium}
+									onChange={(medium) => {
+										setForm((v) => ({ ...v, medium }));
+									}}
+								/>
+								<Field
+									label={tr("Campaign")}
+									value={form.trackingCampaign}
+									onChange={(trackingCampaign) => {
+										setForm((v) => ({ ...v, trackingCampaign }));
+									}}
+								/>
+							</DetailSection>
+							<div className="flex justify-between gap-3 border-t pt-5">
 								<Button variant="destructive" disabled={saving} onClick={() => void remove()}>
 									{tr("Delete link")}
 								</Button>
@@ -763,6 +745,15 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 				</DialogContent>
 			</Dialog>
 		</ModulePage>
+	);
+}
+
+function DetailSection({ title, children }: { title: string; children: ReactNode }) {
+	return (
+		<section className="space-y-3 border-t pt-5">
+			<h3 className="font-semibold">{title}</h3>
+			<div className="grid gap-4 sm:grid-cols-2">{children}</div>
+		</section>
 	);
 }
 

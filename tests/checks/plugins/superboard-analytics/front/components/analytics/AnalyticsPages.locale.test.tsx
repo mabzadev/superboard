@@ -235,14 +235,26 @@ describe("Analytics follows the console language", () => {
 		);
 	});
 
-	it("groups audience pages behind in-page tabs without a repeated settings link", () => {
+	it("groups audience pages in a single tab row without a repeated settings link", () => {
 		state.project = null;
 		render(<Page kind="views" locale="fr" />);
+		expect(screen.getAllByRole("navigation")).toHaveLength(1);
 		const tabs = screen.getByRole("navigation", { name: "Audience et utilisation" });
-		expect(tabs.querySelectorAll("a")).toHaveLength(5);
+		expect([...tabs.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
+			"Sessions",
+			"Profils utilisateurs",
+			"Installations",
+			"Écrans consultés",
+			"Appareils et pays",
+			"Groupes d’utilisateurs",
+		]);
 		expect(screen.getByRole("link", { name: "Écrans consultés" })).toHaveAttribute(
 			"aria-current",
 			"page",
+		);
+		expect(screen.getByRole("link", { name: "Profils utilisateurs" })).toHaveAttribute(
+			"href",
+			"/analytics/users?tab=profiles&lang=fr",
 		);
 		expect(screen.getByRole("link", { name: "Groupes d’utilisateurs" })).toHaveAttribute(
 			"href",
@@ -265,23 +277,29 @@ describe("Analytics follows the console language", () => {
 		}
 	});
 
-	it("groups alerts, application errors and feedback as a Quality area under reports", () => {
+	it("lists alerts, application errors and feedback in the reports tab row", () => {
 		state.project = null;
 		render(<Page kind="crashes" locale="en" />);
-		expect(screen.getByRole("link", { name: "Reports and exports" })).toHaveAttribute(
-			"href",
-			"/analytics/reports?lang=en",
-		);
-		expect(screen.getByRole("link", { name: "Quality" })).toHaveAttribute("aria-current", "page");
-		const quality = screen.getByRole("navigation", { name: "Quality" });
-		expect([...quality.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
+		expect(screen.getAllByRole("navigation")).toHaveLength(1);
+		const tabs = screen.getByRole("navigation", { name: "Reports and exports" });
+		expect([...tabs.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
+			"Reports and exports",
 			"Alerts",
 			"Application errors",
 			"User feedback",
 		]);
+		expect(screen.getByRole("link", { name: "Reports and exports" })).toHaveAttribute(
+			"href",
+			"/analytics/reports?lang=en",
+		);
+		expect(screen.getByRole("link", { name: "Alerts" })).toHaveAttribute(
+			"href",
+			"/analytics/reports?tab=alerts&lang=en",
+		);
 		expect(screen.getByRole("link", { name: "Application errors" })).toHaveAttribute(
 			"aria-current",
 			"page",
 		);
+		expect(screen.queryByRole("link", { name: "Quality" })).toBeNull();
 	});
 });

@@ -32,7 +32,7 @@ const LinksEmptyState = ({
 		<div
 			role="status"
 			aria-live="polite"
-			className="flex flex-col items-center justify-center py-14 px-4 w-full bg-sidebar"
+			className="sticky start-0 flex w-[100cqi] flex-col items-center justify-center bg-sidebar px-4 py-14"
 		>
 			<div className="flex items-center justify-center h-10 w-10 rounded-lg bg-muted mb-4">
 				{isCampaign ? (

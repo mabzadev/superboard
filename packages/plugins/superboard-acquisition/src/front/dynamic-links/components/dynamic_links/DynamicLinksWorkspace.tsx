@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/ale
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { ArrowLeft, Globe2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 
 import { AcquisitionPage, EmbeddedPage } from "../../../AcquisitionPage.js";
 import { useFlowI18n } from "../../../flows/features/flows/i18n.js";
@@ -34,12 +34,14 @@ const tabLabels: Record<DynamicLinksTab, string> = {
 	analytics: "Analytics",
 	settings: "Settings",
 };
-const sectionLabels: Record<DynamicLinksSettingsSection, string> = {
-	domain: "Domain",
-	routing: "Redirect rules",
-	preview: "Social preview",
-	tracking: "Tracking",
+const settingsContent: Record<DynamicLinksSettingsSection, ComponentType> = {
+	domain: DomainPageContent,
+	routing: RedirectRulesPageContent,
+	preview: SocialPreviewPageContent,
+	tracking: TrackingPageContent,
 };
+
+const settingsSectionId = (section: DynamicLinksSettingsSection) => `dynamic-links-${section}`;
 
 function oneOf<T extends string>(values: readonly T[], value: string | null | undefined) {
 	return values.find((item) => item === value);
@@ -57,7 +59,7 @@ export function dynamicLinksHref(tab: DynamicLinksTab, section?: DynamicLinksSet
 
 export default function DynamicLinksWorkspace({
 	tab: routeTab = "links",
-	section: routeSection = "domain",
+	section: routeSection,
 	campaignId,
 }: {
 	tab?: DynamicLinksTab;
@@ -126,40 +128,28 @@ export default function DynamicLinksWorkspace({
 							}}
 						/>
 					</TabsContent>
-					<TabsContent value="settings" className="pt-2">
-						<Tabs
-							value={section}
-							className="gap-4"
-							onValueChange={(value) => {
-								const next = oneOf(dynamicLinksSettingsSections, value);
-								if (next) open("settings", next);
-							}}
-						>
-							<TabsList aria-label={tr("Settings sections")} className="h-auto flex-wrap">
-								{dynamicLinksSettingsSections.map((value) => (
-									<TabsTrigger key={value} value={value}>
-										{tr(sectionLabels[value])}
-									</TabsTrigger>
-								))}
-							</TabsList>
-							<TabsContent value="domain">
-								<DomainPageContent />
-							</TabsContent>
-							<TabsContent value="routing">
-								<RedirectRulesPageContent />
-							</TabsContent>
-							<TabsContent value="preview">
-								<SocialPreviewPageContent />
-							</TabsContent>
-							<TabsContent value="tracking">
-								<TrackingPageContent />
-							</TabsContent>
-						</Tabs>
+					<TabsContent value="settings" className="space-y-10 pt-2">
+						<SettingsSections section={section} />
 					</TabsContent>
 				</EmbeddedPage>
 			</Tabs>
 		</AcquisitionPage>
 	);
+}
+
+function SettingsSections({ section }: { section?: DynamicLinksSettingsSection }) {
+	useEffect(() => {
+		if (!section) return;
+		document.getElementById(settingsSectionId(section))?.scrollIntoView?.({ block: "start" });
+	}, [section]);
+	return dynamicLinksSettingsSections.map((value) => {
+		const Content = settingsContent[value];
+		return (
+			<div key={value} id={settingsSectionId(value)} className="scroll-mt-6">
+				<Content />
+			</div>
+		);
+	});
 }
 
 function DomainNotice({ onConfigure }: { onConfigure: () => void }) {

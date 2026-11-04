@@ -2,21 +2,11 @@
 
 import { useFrontContext, usePluginEnabled } from "@superboard/front-ui/context";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
-import {
-	EmptyProject,
-	ModulePage,
-	moduleErrorMessage,
-} from "@superboard/front-ui/modules/ModulePage.js";
+import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
+import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@superboard/front-ui/ui/card.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import {
 	Table,
@@ -26,16 +16,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@superboard/front-ui/ui/table.js";
-import {
-	ChevronLeft,
-	ChevronRight,
-	Eye,
-	KeyRound,
-	RefreshCw,
-	Search,
-	ShieldCheck,
-	Users,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, KeyRound, Search, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -54,9 +35,16 @@ import {
 import { useApplicationUsersI18n } from "../../application-users-i18n.js";
 import ApplicationUserActions from "../../ApplicationUserActions.js";
 import ApplicationUserSecurity from "../../ApplicationUserSecurity.js";
-import ApplicationUserSheet from "./ApplicationUserSheet.js";
+import ApplicationUserSheet, {
+	dateOnly,
+	dateTime,
+	SessionState,
+	SheetSection,
+	signInMethods,
+} from "./ApplicationUserSheet.js";
 
 const PAGE_SIZE = 50;
+const SEARCH_DELAY_MS = 300;
 const emptyPage: ApplicationUserPage = {
 	data: [],
 	meta: { total: 0, limit: PAGE_SIZE, offset: 0, has_more: false },
@@ -72,6 +60,10 @@ type CommerceState =
 export default function ApplicationUsersPage() {
 	const { locale } = useFrontContext();
 	const { t } = useApplicationUsersI18n();
+	const router = useRouter();
+	const pathname = usePathname();
+	const search = useSearchParams();
+	const selectedUserId = search.get("user");
 	const [securityRevision, setSecurityRevision] = useState(0);
 	const [actionRevision, setActionRevision] = useState(0);
 	const { selectedInstance, selectedProject } = useProjectSelection();
@@ -83,7 +75,6 @@ export default function ApplicationUsersPage() {
 	const [detail, setDetail] = useState<ApplicationUserDetail | null>(null);
 	const [commerce, setCommerce] = useState<CommerceState>({ status: "idle" });
 	const [loading, setLoading] = useState(false);
-	const [detailLoading, setDetailLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const administrator = new Set(["owner", "admin"]).has(selectedInstance?.role || "");
 
@@ -100,484 +91,369 @@ export default function ApplicationUsersPage() {
 			);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		} finally {
 			setLoading(false);
 		}
-	}, [administrator, offset, query, selectedProject]);
+	}, [administrator, locale, offset, query, selectedProject]);
 
 	useEffect(() => {
 		Promise.resolve()
 			.then(load)
 			.catch((cause: unknown) => {
-				setError(moduleErrorMessage(cause));
+				setError(moduleErrorMessage(cause, locale));
 			});
-	}, [load]);
+	}, [load, locale]);
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setQuery(searchDraft.trim());
+			setOffset(0);
+		}, SEARCH_DELAY_MS);
+		return () => {
+			clearTimeout(timer);
+		};
+	}, [searchDraft]);
 
 	const inspect = useCallback(
 		async (userId: string) => {
 			if (!selectedProject || !administrator) return;
-			setDetailLoading(true);
 			setDetail(null);
-			setCommerce({ status: "loading" });
+			setCommerce({ status: billingEnabled ? "loading" : "idle" });
 			try {
-				const identity = await getApplicationUser(selectedProject.id, userId);
-				setDetail(identity);
-				if (!billingEnabled) {
-					setCommerce({ status: "idle" });
-					return;
-				}
+				setDetail(await getApplicationUser(selectedProject.id, userId));
+				if (!billingEnabled) return;
 				try {
 					const customers = await searchBillingCustomers(selectedProject.id, userId);
 					const customer = commerceCustomerForUser(customers.data, userId);
-					if (!customer) {
-						setCommerce({ status: "none" });
-					} else {
-						setCommerce({
-							status: "available",
-							detail: await getBillingCustomer(selectedProject.id, customer.id),
-						});
-					}
+					setCommerce(
+						customer
+							? {
+									status: "available",
+									detail: await getBillingCustomer(selectedProject.id, customer.id),
+								}
+							: { status: "none" },
+					);
 				} catch (cause) {
-					setCommerce({
-						status: "unavailable",
-						message: moduleErrorMessage(cause),
-					});
+					setCommerce({ status: "unavailable", message: moduleErrorMessage(cause, locale) });
 				}
 			} catch (cause) {
 				setCommerce({ status: "idle" });
-				setError(moduleErrorMessage(cause));
-			} finally {
-				setDetailLoading(false);
+				setError(moduleErrorMessage(cause, locale));
 			}
 		},
-		[administrator, selectedProject, billingEnabled],
+		[administrator, billingEnabled, locale, selectedProject],
 	);
 
-	const submitSearch = () => {
-		setOffset(0);
-		setQuery(searchDraft.trim());
+	useEffect(() => {
+		if (!selectedUserId) return;
+		Promise.resolve()
+			.then(() => inspect(selectedUserId))
+			.catch((cause: unknown) => {
+				setError(moduleErrorMessage(cause, locale));
+			});
+	}, [inspect, locale, selectedUserId]);
+
+	const showUser = (userId: string | null) => {
+		const next = new URLSearchParams(search);
+		if (userId) next.set("user", userId);
+		else next.delete("user");
+		const query = next.toString();
+		router.push(query ? `${pathname}?${query}` : pathname);
 	};
 
+	if (!selectedProject) return <EmptyProject />;
+	if (!administrator)
+		return (
+			<Alert>
+				<ShieldCheck />
+				<AlertTitle>{t("Administrator access required")}</AlertTitle>
+				<AlertDescription>
+					{t(
+						"Application identity and purchase state contains personal data and is available only to project owners and administrators.",
+					)}
+				</AlertDescription>
+			</Alert>
+		);
+
+	const failure = error && (
+		<Alert variant="destructive">
+			<AlertTitle>{t("Unable to load users")}</AlertTitle>
+			<AlertDescription>{error}</AlertDescription>
+		</Alert>
+	);
+
+	if (selectedUserId)
+		return (
+			<div className="max-w-3xl space-y-6">
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => {
+						showUser(null);
+					}}
+				>
+					<ChevronLeft className="rtl:-scale-x-100" />
+					{t("All users")}
+				</Button>
+				{failure}
+				{detail?.id === selectedUserId ? (
+					<ApplicationUserSheet key={`${selectedProject.id}:${detail.id}`} detail={detail}>
+						<SignInMethods detail={detail} />
+						<ApplicationUserSecurity
+							key={`security:${selectedProject.id}:${detail.id}:${securityRevision}`}
+							projectRef={selectedProject.id}
+							userId={detail.id}
+							onChange={async () => {
+								await load();
+								setActionRevision((current) => current + 1);
+								setDetail(await getApplicationUser(selectedProject.id, detail.id));
+							}}
+						/>
+						{billingEnabled && <CommercePanel state={commerce} />}
+						<ApplicationUserActions
+							key={`actions:${selectedProject.id}:${detail.id}:${actionRevision}`}
+							projectRef={selectedProject.id}
+							userId={detail.id}
+							name={detail.name ?? ""}
+							onChange={async () => {
+								await load();
+								setSecurityRevision((current) => current + 1);
+								setDetail(await getApplicationUser(selectedProject.id, detail.id));
+							}}
+						/>
+					</ApplicationUserSheet>
+				) : (
+					!error && (
+						<p role="status" className="text-sm text-muted-foreground">
+							{t("Loading identity and purchase state…")}
+						</p>
+					)
+				)}
+			</div>
+		);
+
+	const total = page.meta.total;
 	return (
-		<ModulePage
-			title={t("Application users")}
-			description={t(
-				"Authentication, linked Google or Apple identities, sessions, subscriptions, entitlements and paywall activity.",
-			)}
-			error={error}
-		>
-			{!selectedProject ? (
-				<EmptyProject />
-			) : !administrator ? (
-				<Alert>
-					<ShieldCheck />
-					<AlertTitle>{t("Administrator access required")}</AlertTitle>
-					<AlertDescription>
-						{t(
-							"Application identity and purchase state contains personal data and is available only to project owners and administrators.",
-						)}
-					</AlertDescription>
-				</Alert>
-			) : (
-				<div className="space-y-6">
-					<Card>
-						<CardHeader>
-							<CardTitle>{t("Account search")}</CardTitle>
-							<CardDescription>
-								{t(
-									"Data comes from the Identity Worker and D1 database configured for this deployment target. Passwords, tokens and provider subject identifiers are never returned.",
-								)}
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="flex flex-wrap gap-2">
-							<div className="relative min-w-64 flex-1">
-								<Search className="absolute start-3 top-2.5 size-4 text-muted-foreground" />
-								<Input
-									className="ps-9"
-									value={searchDraft}
-									placeholder={t("Email, user ID, name or auth provider")}
-									onChange={(event) => {
-										setSearchDraft(event.currentTarget.value);
-									}}
-									onKeyDown={(event) => {
-										if (event.key === "Enter") submitSearch();
-									}}
-								/>
-							</div>
-							<Button disabled={loading} onClick={submitSearch}>
-								{t("Search")}
-							</Button>
-							<Button variant="outline" disabled={loading} onClick={() => void load()}>
-								<RefreshCw className={loading ? "animate-spin" : ""} />
-								{t("Refresh")}
-							</Button>
-						</CardContent>
-					</Card>
-
-					<div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]">
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<Users className="size-5" />
-									{t("Users")}
-								</CardTitle>
-								<CardDescription>
-									{t("{count} active application accounts, including users without a purchase.", {
-										count: page.meta.total.toLocaleString(locale),
-									})}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-4 overflow-x-auto">
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>{t("Account")}</TableHead>
-											<TableHead>{t("Authentication")}</TableHead>
-											<TableHead>{t("Sessions")}</TableHead>
-											<TableHead>{t("Created")}</TableHead>
-											<TableHead />
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{page.data.map((user) => (
-											<UserRow key={user.id} user={user} onInspect={() => void inspect(user.id)} />
-										))}
-										{!loading && page.data.length === 0 && (
-											<TableRow>
-												<TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-													{t("No application user matches this search.")}
-												</TableCell>
-											</TableRow>
-										)}
-									</TableBody>
-								</Table>
-								<div className="flex items-center justify-between gap-3">
-									<span className="text-xs text-muted-foreground">
-										{page.meta.total
-											? t("{start}–{end} of {total}", {
-													start: page.meta.offset + 1,
-													end: Math.min(page.meta.offset + page.data.length, page.meta.total),
-													total: page.meta.total,
-												})
-											: t("0 users")}
-									</span>
-									<div className="flex gap-2">
-										<Button
-											size="sm"
-											variant="outline"
-											aria-label={t("Previous users")}
-											disabled={loading || offset === 0}
-											onClick={() => {
-												setOffset((current) => Math.max(0, current - PAGE_SIZE));
-											}}
-										>
-											<ChevronLeft />
-										</Button>
-										<Button
-											size="sm"
-											variant="outline"
-											aria-label={t("Next users")}
-											disabled={loading || !page.meta.has_more}
-											onClick={() => {
-												setOffset((current) => current + PAGE_SIZE);
-											}}
-										>
-											<ChevronRight />
-										</Button>
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-
-						{detail ? (
-							<ApplicationUserSheet
-								key={`${selectedProject.id}:${detail.id}`}
-								detail={detail}
-								purchases={<CommercePanel state={commerce} />}
-								account={
-									<>
-										<ApplicationUserIdentity detail={detail} />
-										<ApplicationUserActions
-											key={`${selectedProject.id}:${detail.id}:${actionRevision}`}
-											projectRef={selectedProject.id}
-											userId={detail.id}
-											name={detail.name ?? ""}
-											onChange={async () => {
-												await load();
-												setSecurityRevision((current) => current + 1);
-												setDetail(await getApplicationUser(selectedProject.id, detail.id));
-											}}
-										/>
-										<ApplicationUserSecurity
-											key={`${selectedProject.id}:${detail.id}:${securityRevision}`}
-											projectRef={selectedProject.id}
-											userId={detail.id}
-											onChange={async () => {
-												await load();
-												setActionRevision((current) => current + 1);
-												setDetail(await getApplicationUser(selectedProject.id, detail.id));
-											}}
-										/>
-									</>
-								}
+		<div className="space-y-4">
+			{failure}
+			<p className="text-sm text-muted-foreground">
+				{total === 1 ? t("1 user") : t("{count} users", { count: total.toLocaleString(locale) })}
+			</p>
+			<div className="relative">
+				<Search className="absolute start-3 top-2.5 size-4 text-muted-foreground" />
+				<Input
+					type="search"
+					className="ps-9"
+					value={searchDraft}
+					aria-label={t("Search by name, email or ID")}
+					placeholder={t("Search by name, email or ID")}
+					onChange={(event) => {
+						setSearchDraft(event.currentTarget.value);
+					}}
+				/>
+			</div>
+			<div className="overflow-x-auto">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>{t("Person")}</TableHead>
+							<TableHead>{t("Sign-in")}</TableHead>
+							<TableHead>{t("Session")}</TableHead>
+							<TableHead>{t("Signed up")}</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{page.data.map((user) => (
+							<UserRow
+								key={user.id}
+								user={user}
+								onOpen={() => {
+									showUser(user.id);
+								}}
 							/>
-						) : (
-							<Card>
-								<CardContent className="flex min-h-80 items-center justify-center p-8 text-center text-sm text-muted-foreground">
-									{detailLoading
-										? t("Loading identity and purchase state…")
-										: t(
-												"Select a user to inspect authentication, entitlements, subscriptions and paywall activity.",
-											)}
-								</CardContent>
-							</Card>
+						))}
+						{!loading && page.data.length === 0 && (
+							<TableRow>
+								<TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+									{t("No application user matches this search.")}
+								</TableCell>
+							</TableRow>
 						)}
+					</TableBody>
+				</Table>
+			</div>
+			{total > PAGE_SIZE && (
+				<div className="flex items-center justify-between gap-3">
+					<span className="text-xs text-muted-foreground">
+						{t("{start}–{end} of {total}", {
+							start: page.meta.offset + 1,
+							end: Math.min(page.meta.offset + page.data.length, total),
+							total,
+						})}
+					</span>
+					<div className="flex gap-2">
+						<Button
+							size="sm"
+							variant="outline"
+							aria-label={t("Previous users")}
+							disabled={loading || offset === 0}
+							onClick={() => {
+								setOffset((current) => Math.max(0, current - PAGE_SIZE));
+							}}
+						>
+							<ChevronLeft className="rtl:-scale-x-100" />
+						</Button>
+						<Button
+							size="sm"
+							variant="outline"
+							aria-label={t("Next users")}
+							disabled={loading || !page.meta.has_more}
+							onClick={() => {
+								setOffset((current) => current + PAGE_SIZE);
+							}}
+						>
+							<ChevronRight className="rtl:-scale-x-100" />
+						</Button>
 					</div>
 				</div>
-			)}
-		</ModulePage>
-	);
-}
-
-function UserRow({ user, onInspect }: { user: ApplicationUser; onInspect: () => void }) {
-	const { t, locale } = useApplicationUsersI18n();
-	return (
-		<TableRow>
-			<TableCell>
-				<p className="max-w-64 truncate font-medium">
-					{user.name || user.email || t("Anonymous user")}
-				</p>
-				<p className="max-w-64 truncate text-xs text-muted-foreground">{user.email || user.id}</p>
-			</TableCell>
-			<TableCell>
-				<AuthMethodBadges user={user} />
-			</TableCell>
-			<TableCell>
-				{t("{count} active", { count: user.active_session_count.toLocaleString(locale) })}
-			</TableCell>
-			<TableCell>{date(user.created_at, locale)}</TableCell>
-			<TableCell>
-				<Button
-					size="icon"
-					variant="ghost"
-					aria-label={t("Inspect {user}", { user: user.email || user.id })}
-					onClick={onInspect}
-				>
-					<Eye />
-				</Button>
-			</TableCell>
-		</TableRow>
-	);
-}
-
-function AuthMethodBadges({ user }: { user: ApplicationUser }) {
-	const { t } = useApplicationUsersI18n();
-	return (
-		<div className="flex max-w-56 flex-wrap gap-1">
-			{user.auth_methods.map((method) => (
-				<Badge
-					key={
-						method === "password" ? t("Password") : method === "anonymous" ? t("Anonymous") : method
-					}
-					variant="outline"
-					className="capitalize"
-				>
-					{method === "password" ? t("Password") : method === "anonymous" ? t("Anonymous") : method}
-				</Badge>
-			))}
-			{user.anonymous && <Badge variant="secondary">{t("Anonymous")}</Badge>}
-			{user.email && (
-				<Badge variant={user.email_verified ? "secondary" : "destructive"}>
-					{user.email_verified ? t("Email verified") : t("Email unverified")}
-				</Badge>
 			)}
 		</div>
 	);
 }
 
-function ApplicationUserIdentity({ detail }: { detail: ApplicationUserDetail }) {
+function UserRow({ user, onOpen }: { user: ApplicationUser; onOpen: () => void }) {
 	const { t, locale } = useApplicationUsersI18n();
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{t("Identity")}</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-4">
-				<div className="grid gap-3 sm:grid-cols-2">
-					<Value label={t("Email")} value={detail.email || t("Not provided")} />
-					<Value
-						label={t("Email state")}
-						value={
-							detail.email
-								? detail.email_verified
-									? t("Verified")
-									: t("Unverified")
-								: t("Not applicable")
-						}
-					/>
-					<Value label={t("Active sessions")} value={String(detail.sessions.active)} />
-					<Value
-						label={t("Last authentication")}
-						value={date(detail.sessions.last_authenticated_at, locale)}
-					/>
-				</div>
-				<div>
-					<h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-						<KeyRound className="size-4" /> {t("Linked authentication")}
-					</h3>
-					<div className="space-y-2">
-						{detail.identities.map((identity) => (
-							<div
-								key={`${identity.provider}:${identity.linked_at}`}
-								className="rounded-md border p-3 text-sm"
-							>
-								<strong className="capitalize">
-									{identity.provider === "anonymous" ? t("Anonymous") : identity.provider}
-								</strong>
-								<p className="text-xs text-muted-foreground">
-									{t("{email} · linked {date}", {
-										email: identity.provider_email || t("No provider email"),
-										date: date(identity.linked_at, locale),
-									})}
-								</p>
-							</div>
-						))}
-						{detail.password_configured && (
-							<div className="rounded-md border p-3 text-sm">
-								<strong>{t("Password")}</strong>
-								<p className="text-xs text-muted-foreground">
-									{t("Configured; credential material is never exposed.")}
-								</p>
-							</div>
-						)}
-					</div>
-				</div>
-				<p className="text-xs text-muted-foreground">
-					{t("Sessions: {total} total · {active} active · {revoked} revoked · {expired} expired", {
-						total: detail.sessions.total,
-						active: detail.sessions.active,
-						revoked: detail.sessions.revoked,
-						expired: detail.sessions.expired,
-					})}
-				</p>
-			</CardContent>
-		</Card>
+		<TableRow className="cursor-pointer" onClick={onOpen}>
+			<TableCell>
+				<Button
+					variant="link"
+					className="h-auto max-w-64 justify-start truncate px-0 py-0 font-medium text-foreground"
+					onClick={(event) => {
+						event.stopPropagation();
+						onOpen();
+					}}
+				>
+					{user.name || user.email || t("Anonymous user")}
+				</Button>
+				<p className="max-w-64 truncate text-xs text-muted-foreground">{user.email || user.id}</p>
+			</TableCell>
+			<TableCell>{signInMethods(user, t)}</TableCell>
+			<TableCell>
+				<SessionState user={user} />
+			</TableCell>
+			<TableCell>{dateOnly(user.created_at, locale)}</TableCell>
+		</TableRow>
+	);
+}
+
+function SignInMethods({ detail }: { detail: ApplicationUserDetail }) {
+	const { t, locale } = useApplicationUsersI18n();
+	return (
+		<SheetSection title={t("Linked authentication")} icon={<KeyRound className="size-4" />}>
+			<ul className="space-y-2 text-sm">
+				{detail.identities.map((identity) => (
+					<li key={`${identity.provider}:${identity.linked_at}`}>
+						<strong className="capitalize">
+							{identity.provider === "anonymous" ? t("Anonymous") : identity.provider}
+						</strong>
+						<span className="text-muted-foreground">
+							{" · "}
+							{t("{email} · linked {date}", {
+								email: identity.provider_email || t("No provider email"),
+								date: dateOnly(identity.linked_at, locale),
+							})}
+						</span>
+					</li>
+				))}
+				{detail.password_configured && (
+					<li>
+						<strong>{t("Password")}</strong>
+						<span className="text-muted-foreground">
+							{" · "}
+							{t("Configured; credential material is never exposed.")}
+						</span>
+					</li>
+				)}
+				{detail.identities.length === 0 && !detail.password_configured && (
+					<li className="text-muted-foreground">{t("No sign-in method.")}</li>
+				)}
+			</ul>
+		</SheetSection>
 	);
 }
 
 function CommercePanel({ state }: { state: CommerceState }) {
 	const { t, locale } = useApplicationUsersI18n();
-	if (state.status === "idle" || state.status === "loading") {
+	if (state.status === "idle") return null;
+	if (state.status === "loading")
 		return (
-			<Card>
-				<CardContent className="p-6 text-sm text-muted-foreground">
-					{state.status === "loading"
-						? t("Loading subscriptions, entitlements and paywall activity…")
-						: t("Purchase state has not been loaded.")}
-				</CardContent>
-			</Card>
+			<SheetSection title={t("Purchases and paywall")}>
+				<p role="status" className="text-sm text-muted-foreground">
+					{t("Loading subscriptions, entitlements and paywall activity…")}
+				</p>
+			</SheetSection>
 		);
-	}
-	if (state.status === "none") {
+	if (state.status === "none")
 		return (
-			<Card>
-				<CardHeader>
-					<CardTitle>{t("Purchases and paywall")}</CardTitle>
-					<CardDescription>{t("No financial customer exists for this user.")}</CardDescription>
-				</CardHeader>
-				<CardContent className="text-sm text-muted-foreground">
+			<SheetSection title={t("Purchases and paywall")}>
+				<p className="text-sm text-muted-foreground">
 					{t(
 						"This is a valid free account. It remains visible even without a subscription, entitlement or paywall event.",
 					)}
-				</CardContent>
-			</Card>
+				</p>
+			</SheetSection>
 		);
-	}
-	if (state.status === "unavailable") {
+	if (state.status === "unavailable")
 		return (
-			<Alert>
-				<AlertTitle>{t("Purchase state unavailable")}</AlertTitle>
-				<AlertDescription>
+			<SheetSection title={t("Purchases and paywall")}>
+				<p className="text-sm text-muted-foreground">
 					{t("Identity is available. Purchase details are temporarily unavailable: {message}", {
 						message: state.message,
 					})}
-				</AlertDescription>
-			</Alert>
+				</p>
+			</SheetSection>
 		);
-	}
 	const info = state.detail.customer_info;
 	const entitlements = Object.values(info.entitlements);
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{t("Purchases and paywall")}</CardTitle>
-				<CardDescription>
-					{t("Server-verified state from the optional Billing capability.")}
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-4">
-				<div className="grid gap-3 sm:grid-cols-2">
-					<Value
-						label={t("Active subscriptions")}
-						value={String(info.active_subscriptions.length)}
-					/>
-					<Value label={t("Paywall events")} value={String(state.detail.paywall_events.length)} />
-				</div>
-				<div>
-					<h3 className="mb-2 text-sm font-semibold">{t("Entitlements")}</h3>
-					<div className="flex flex-wrap gap-2">
-						{entitlements.map((entitlement) => (
-							<Badge
-								key={entitlement.identifier}
-								variant={entitlement.is_active ? "secondary" : "outline"}
-							>
-								{entitlement.identifier}: {entitlement.status}
-							</Badge>
-						))}
-						{entitlements.length === 0 && (
-							<span className="text-sm text-muted-foreground">{t("No entitlement.")}</span>
-						)}
-					</div>
-				</div>
-				<div>
-					<h3 className="mb-2 text-sm font-semibold">{t("Recent paywall activity")}</h3>
-					<div className="space-y-2">
-						{state.detail.paywall_events.slice(0, 10).map((event, index) => (
-							<div
-								key={displayValue(event.id, String(index))}
-								className="rounded-md border p-3 text-sm"
-							>
-								<strong>{displayValue(event.event_type, t("event"))}</strong>
-								<p className="text-xs text-muted-foreground">
-									{displayValue(event.placement_identifier, t("unknown placement"))} ·{" "}
-									{date(event.occurred_at, locale)}
-								</p>
-							</div>
-						))}
-						{state.detail.paywall_events.length === 0 && (
-							<span className="text-sm text-muted-foreground">{t("No paywall activity.")}</span>
-						)}
-					</div>
-				</div>
-			</CardContent>
-		</Card>
+		<SheetSection title={t("Purchases and paywall")}>
+			<p className="text-sm text-muted-foreground">
+				{t("{subscriptions} active subscriptions · {events} paywall events", {
+					subscriptions: info.active_subscriptions.length,
+					events: state.detail.paywall_events.length,
+				})}
+			</p>
+			<div className="flex flex-wrap gap-2">
+				{entitlements.map((entitlement) => (
+					<Badge
+						key={entitlement.identifier}
+						variant={entitlement.is_active ? "secondary" : "outline"}
+					>
+						{entitlement.identifier}: {entitlement.status}
+					</Badge>
+				))}
+				{entitlements.length === 0 && (
+					<span className="text-sm text-muted-foreground">{t("No entitlement.")}</span>
+				)}
+			</div>
+			{state.detail.paywall_events.length > 0 && (
+				<ul className="space-y-1 text-sm">
+					{state.detail.paywall_events.slice(0, 10).map((event, index) => (
+						<li key={displayValue(event.id, String(index))}>
+							<strong>{displayValue(event.event_type, t("event"))}</strong>
+							<span className="text-muted-foreground">
+								{" · "}
+								{displayValue(event.placement_identifier, t("unknown placement"))} ·{" "}
+								{dateTime(event.occurred_at, locale)}
+							</span>
+						</li>
+					))}
+				</ul>
+			)}
+		</SheetSection>
 	);
-}
-
-function Value({ label, value }: { label: string; value: string }) {
-	return (
-		<div>
-			<p className="text-xs text-muted-foreground">{label}</p>
-			<p className="break-words text-sm font-medium">{value}</p>
-		</div>
-	);
-}
-
-function date(value: unknown, locale: string): string {
-	if (typeof value !== "string" || !value) return locale === "fr" ? "Jamais" : "Never";
-	const parsed = new Date(value);
-	return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString(locale);
 }
 
 export function commerceCustomerForUser(users: BillingCustomerSummary[], userId: string) {

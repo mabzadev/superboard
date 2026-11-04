@@ -101,6 +101,7 @@ export type AnalyticsPageKind =
 	| "overview"
 	| "dashboards"
 	| "users"
+	| "profiles"
 	| "events"
 	| "dimensions"
 	| "views"
@@ -116,82 +117,86 @@ export type AnalyticsPageKind =
 	| "settings";
 
 type AnalyticsTab = { kind: AnalyticsPageKind; label: string };
+type AnalyticsTabGroup = {
+	parent: AnalyticsPageKind;
+	label: string;
+	tabs: readonly AnalyticsTab[];
+};
 
-const audienceTabs: readonly AnalyticsTab[] = [
-	{ kind: "users", label: "Audience and usage" },
-	{ kind: "installations", label: "Installations" },
-	{ kind: "views", label: "Viewed screens" },
-	{ kind: "dimensions", label: "Devices and countries" },
-	{ kind: "cohorts", label: "User groups" },
-];
-const qualityTabs: readonly AnalyticsTab[] = [
-	{ kind: "alerts", label: "Alerts" },
-	{ kind: "crashes", label: "Application errors" },
-	{ kind: "feedback", label: "User feedback" },
-];
-
-function analyticsTabRows(kind: AnalyticsPageKind) {
-	if (audienceTabs.some((tab) => tab.kind === kind))
-		return [{ label: "Audience and usage", tabs: audienceTabs, active: kind }];
-	const quality = qualityTabs.some((tab) => tab.kind === kind);
-	if (kind !== "reports" && !quality) return null;
-	const reports = {
+const tabGroups: readonly AnalyticsTabGroup[] = [
+	{
+		parent: "users",
+		label: "Audience and usage",
+		tabs: [
+			{ kind: "users", label: "Sessions" },
+			{ kind: "profiles", label: "User profiles" },
+			{ kind: "installations", label: "Installations" },
+			{ kind: "views", label: "Viewed screens" },
+			{ kind: "dimensions", label: "Devices and countries" },
+			{ kind: "cohorts", label: "User groups" },
+		],
+	},
+	{
+		parent: "reports",
 		label: "Reports and exports",
 		tabs: [
 			{ kind: "reports", label: "Reports and exports" },
-			{ kind: quality ? kind : "alerts", label: "Quality" },
-		] satisfies AnalyticsTab[],
-		active: kind,
-	};
-	return quality ? [reports, { label: "Quality", tabs: qualityTabs, active: kind }] : [reports];
-}
+			{ kind: "alerts", label: "Alerts" },
+			{ kind: "crashes", label: "Application errors" },
+			{ kind: "feedback", label: "User feedback" },
+		],
+	},
+];
 
-function analyticsTabHref(kind: AnalyticsPageKind, locale: string) {
-	const parent = audienceTabs.some((tab) => tab.kind === kind) ? "users" : "reports";
-	return kind === parent
+const tabGroupOf = (kind: AnalyticsPageKind) =>
+	tabGroups.find((group) => group.tabs.some((tab) => tab.kind === kind));
+
+function analyticsTabHref(group: AnalyticsTabGroup, kind: AnalyticsPageKind, locale: string) {
+	return kind === group.parent
 		? `/analytics/${kind}?lang=${locale}`
-		: `/analytics/${parent}?tab=${kind}&lang=${locale}`;
+		: `/analytics/${group.parent}?tab=${kind}&lang=${locale}`;
 }
 
-function AnalyticsTabRows({ rows }: { rows: NonNullable<ReturnType<typeof analyticsTabRows>> }) {
+function AnalyticsTabRow({
+	group,
+	active,
+}: {
+	group: AnalyticsTabGroup;
+	active: AnalyticsPageKind;
+}) {
 	const { t, locale } = useAnalyticsI18n();
 	return (
-		<div className="space-y-2">
-			{rows.map((row) => (
-				<nav
-					key={row.label}
-					aria-label={t(row.label)}
-					className="bg-muted text-muted-foreground flex w-fit flex-wrap items-center gap-1 rounded-lg p-[3px]"
+		<nav
+			aria-label={t(group.label)}
+			className="bg-muted text-muted-foreground flex w-fit flex-wrap items-center gap-1 rounded-lg p-[3px]"
+		>
+			{group.tabs.map((tab) => (
+				<a
+					key={tab.kind}
+					href={analyticsTabHref(group, tab.kind, locale)}
+					aria-current={tab.kind === active ? "page" : undefined}
+					className="text-foreground rounded-md px-3 py-1 text-sm font-medium aria-[current=page]:bg-background aria-[current=page]:shadow-sm"
 				>
-					{row.tabs.map((tab) => (
-						<a
-							key={tab.label}
-							href={analyticsTabHref(tab.kind, locale)}
-							aria-current={tab.kind === row.active ? "page" : undefined}
-							className="text-foreground rounded-md px-3 py-1 text-sm font-medium aria-[current=page]:bg-background aria-[current=page]:shadow-sm"
-						>
-							{t(tab.label)}
-						</a>
-					))}
-				</nav>
+					{t(tab.label)}
+				</a>
 			))}
-		</div>
+		</nav>
 	);
 }
 
 export function AnalyticsPage({ kind: routeKind }: { kind: AnalyticsPageKind }) {
 	const hostNavigation = SectionNavigation();
 	const requested = useSearchParams().get("tab");
-	const group = routeKind === "users" ? audienceTabs : routeKind === "reports" ? qualityTabs : [];
-	const kind = group.find((tab) => tab.kind === requested)?.kind ?? routeKind;
-	const rows = analyticsTabRows(kind);
-	if (!rows) return <AnalyticsPageContent kind={kind} />;
+	const routeGroup = tabGroups.find((group) => group.parent === routeKind);
+	const kind = routeGroup?.tabs.find((tab) => tab.kind === requested)?.kind ?? routeKind;
+	const group = tabGroupOf(kind);
+	if (!group) return <AnalyticsPageContent kind={kind} />;
 	return (
 		<SectionNavigationProvider
 			value={
 				<>
 					{hostNavigation}
-					<AnalyticsTabRows rows={rows} />
+					<AnalyticsTabRow group={group} active={kind} />
 				</>
 			}
 		>
@@ -203,7 +208,8 @@ export function AnalyticsPage({ kind: routeKind }: { kind: AnalyticsPageKind }) 
 function AnalyticsPageContent({ kind }: { kind: AnalyticsPageKind }) {
 	if (kind === "overview") return <OverviewPage />;
 	if (kind === "dashboards") return <AnalyticsDashboardsPage />;
-	if (kind === "users") return <AnalyticsUsersPage />;
+	if (kind === "users") return <AnalyticsUsersPage section="sessions" />;
+	if (kind === "profiles") return <AnalyticsUsersPage section="profiles" />;
 	if (kind === "events") return <EventsPage />;
 	if (kind === "dimensions") return <AnalyticsDimensionsPage />;
 	if (kind === "views") return <AnalyticsViewsPage />;
@@ -404,80 +410,66 @@ function EventsPage() {
 				<EmptyProject />
 			) : (
 				<div className="space-y-5">
-					<Card>
-						<CardHeader>
-							<CardTitle>{t("Recent events")}</CardTitle>
-							<CardDescription>
-								{t(userId ? "Events recorded for this user." : "Filter by the exact event name.")}
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							{userId ? (
-								<div className="flex flex-wrap items-center gap-2 text-sm">
-									<span className="text-muted-foreground">{t("Filtered by user")}</span>
-									<Badge variant="secondary" className="max-w-full font-mono">
-										<span className="truncate">{userId}</span>
-									</Badge>
-									<Button type="button" variant="ghost" size="sm" onClick={clearUser}>
-										<X className="size-4" />
-										{t("Clear user filter")}
-									</Button>
-								</div>
-							) : null}
-							<form
-								className="flex flex-col gap-2 sm:flex-row"
-								onSubmit={(event) => {
-									event.preventDefault();
-									setProperty("");
-									setAppliedName(eventName.trim());
-								}}
-							>
-								<Input
-									value={eventName}
-									onChange={(event) => setEventName(event.target.value)}
-									placeholder={t("checkout.completed")}
-									aria-label={t("Event name")}
-								/>
-								<Button type="submit">
-									<Filter className="size-4" />
-									{t("Apply filter")}
+					<div className="flex flex-wrap items-center gap-2">
+						<form
+							className="flex min-w-64 flex-1 gap-2"
+							onSubmit={(event) => {
+								event.preventDefault();
+								setProperty("");
+								setAppliedName(eventName.trim());
+							}}
+						>
+							<Input
+								value={eventName}
+								onChange={(event) => setEventName(event.target.value)}
+								placeholder={t("checkout.completed")}
+								aria-label={t("Event name")}
+							/>
+							<Button type="submit">
+								<Filter className="size-4" />
+								{t("Apply filter")}
+							</Button>
+						</form>
+						{userId ? (
+							<div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+								<span className="text-muted-foreground">{t("Filtered by user")}</span>
+								<Badge variant="secondary" className="max-w-full font-mono">
+									<span className="truncate">{userId}</span>
+								</Badge>
+								<Button type="button" variant="ghost" size="sm" onClick={clearUser}>
+									<X className="size-4" />
+									{t("Clear user filter")}
 								</Button>
-							</form>
-							<DataTable
-								columns={[
-									t("Event"),
-									t("Source"),
-									t("Application"),
-									t("Occurred"),
-									t("Properties"),
-								]}
-								empty={t("No events match this period and filter.")}
-							>
-								{events.map((event) => (
-									<FrontTableRow key={event.event_id} className="border-b last:border-0">
-										<Cell>
-											<div className="font-medium">{event.event_name}</div>
-											<div className="max-w-48 truncate font-mono text-xs text-muted-foreground">
-												{event.event_id}
-											</div>
-										</Cell>
-										<Cell>
-											<Badge variant="outline">{t(labelize(event.source))}</Badge>
-										</Cell>
-										<Cell>{event.application_id}</Cell>
-										<Cell>{formatDate(event.occurred_at, locale)}</Cell>
-										<Cell>
-											<code className="block max-w-80 truncate text-xs">
-												{JSON.stringify(event.properties)}
-											</code>
-										</Cell>
-									</FrontTableRow>
-								))}
-							</DataTable>
-						</CardContent>
-					</Card>
+							</div>
+						) : null}
+					</div>
+					<DataTable
+						columns={[t("Event"), t("Source"), t("Application"), t("Occurred"), t("Properties")]}
+						empty={t("No events match this period and filter.")}
+					>
+						{events.map((event) => (
+							<FrontTableRow key={event.event_id} className="border-b last:border-0">
+								<Cell>
+									<div className="font-medium">{event.event_name}</div>
+									<div className="max-w-48 truncate font-mono text-xs text-muted-foreground">
+										{event.event_id}
+									</div>
+								</Cell>
+								<Cell>
+									<Badge variant="outline">{t(labelize(event.source))}</Badge>
+								</Cell>
+								<Cell>{event.application_id}</Cell>
+								<Cell>{formatDate(event.occurred_at, locale)}</Cell>
+								<Cell>
+									<code className="block max-w-80 truncate text-xs">
+										{JSON.stringify(event.properties)}
+									</code>
+								</Cell>
+							</FrontTableRow>
+						))}
+					</DataTable>
 					{analysis && (
-						<div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+						<>
 							<Card>
 								<CardHeader className="flex-row items-start justify-between gap-4">
 									<div>
@@ -537,7 +529,7 @@ function EventsPage() {
 								</CardHeader>
 								<CardContent className="space-y-4">
 									<select
-										className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+										className="w-full rounded-md border bg-background px-3 py-2 text-sm sm:max-w-xs"
 										value={property}
 										onChange={(event) => setProperty(event.target.value)}
 										aria-label={t("Event property")}
@@ -569,7 +561,7 @@ function EventsPage() {
 									</div>
 								</CardContent>
 							</Card>
-						</div>
+						</>
 					)}
 				</div>
 			)}
@@ -754,7 +746,7 @@ function InsightsPage() {
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<div className="grid gap-6 xl:grid-cols-2">
+				<div className="space-y-6">
 					<Card>
 						<CardHeader>
 							<CardTitle>{t("Funnel")}</CardTitle>
@@ -828,7 +820,7 @@ function InsightsPage() {
 							</DataTable>
 						</CardContent>
 					</Card>
-					<Card className="xl:col-span-2">
+					<Card>
 						<CardHeader>
 							<CardTitle>{t("Known event definitions")}</CardTitle>
 							<CardDescription>
@@ -899,7 +891,7 @@ function ReportsPage() {
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<div className="grid gap-6 xl:grid-cols-2">
+				<div className="space-y-6">
 					<Card>
 						<CardHeader>
 							<CardTitle>{t("Saved reports")}</CardTitle>

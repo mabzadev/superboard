@@ -30,7 +30,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@superboard/front-ui/ui/table.js";
-import { Tabs, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { formatCurrencyFromCents } from "@superboard/front-ui/utils/formatCurrency.js";
 import { BarChart3, Link2, Plus, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -296,15 +295,18 @@ export default function DynamicLinksAnalytics({ onCreateLink }: { onCreateLink: 
 							{tr("Compare attributed results by link, campaign, source and platform.")}
 						</CardDescription>
 					</div>
-					<Tabs value={dimension} onValueChange={setDimension}>
-						<TabsList className="h-auto flex-wrap">
+					<Select value={dimension} onValueChange={setDimension}>
+						<SelectTrigger className="w-44 shrink-0" aria-label={tr("Breakdown dimension")}>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
 							{dimensions.map((value) => (
-								<TabsTrigger key={value} value={value}>
+								<SelectItem key={value} value={value}>
 									{tr(dimensionLabels[value])}
-								</TabsTrigger>
+								</SelectItem>
 							))}
-						</TabsList>
-					</Tabs>
+						</SelectContent>
+					</Select>
 				</CardHeader>
 				<CardContent className="space-y-2">
 					<div className="overflow-x-auto rounded-md border">

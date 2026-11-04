@@ -71,14 +71,14 @@ export function FlowsUsersPage() {
 
 	return (
 		<FlowsPage title={t("users")} description={t("usersDescription")}>
-			<div className="flex flex-col gap-3 rounded-[var(--radius)] border bg-card p-3 md:flex-row">
+			<div className="flex flex-col gap-3 md:flex-row">
 				<div className="relative flex-1">
-					<Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+					<Search className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
 						value={search}
 						onChange={(event) => setSearch(event.target.value)}
 						placeholder={tr("Search users by hash, locale, country or platform")}
-						className="pl-9"
+						className="ps-9"
 					/>
 				</div>
 				<Select value={environmentId} onValueChange={setEnvironmentId}>

@@ -1,6 +1,5 @@
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { Button, Checkbox, Input, InputArea, Loader, Select } from "@superboard/front-ui/kumo";
-import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 
@@ -169,7 +168,6 @@ function InAppItems({ project }: { project: string }) {
 					</Button>
 				)}
 			</header>
-			<SectionNavigation />
 			{error && (
 				<div role="alert">
 					{error} <Button onClick={() => void load()}>{t("Retry")}</Button>

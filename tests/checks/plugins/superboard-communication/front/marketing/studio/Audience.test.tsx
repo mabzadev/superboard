@@ -40,6 +40,7 @@ const marketing = vi.hoisted(() => ({
 	updateEmailSubscriber: vi.fn(),
 	deleteEmailSubscriber: vi.fn(),
 	exportEmailSubscribers: vi.fn(),
+	getEmailSubscriber: vi.fn(),
 	getEmailSubscriberExport: vi.fn(async () => ({ events: [] })),
 	suppressEmailSubscriber: vi.fn(),
 	getEmailTemplates: vi.fn(async () => []),
@@ -187,11 +188,11 @@ describe("Audience", () => {
 	});
 
 	it.each([
-		["/communication/audience?q=ada%40example.test", "contacts"],
-		["/communication/marketing-email?tab=contacts&q=ada%40example.test", "emails"],
-	])("opens %s with the linked contact search", async (url, initialTab) => {
+		"/communication/audience?q=ada%40example.test",
+		"/communication/audience?tab=contacts&q=ada%40example.test",
+	])("opens %s with the linked contact search", async (url) => {
 		window.history.replaceState(null, "", url);
-		render(<CommunicationWorkspace initialTab={initialTab} />);
+		render(<CommunicationWorkspace initialTab="contacts" />);
 		expect(await screen.findByText("ada@example.test")).toBeVisible();
 		expect(screen.getByDisplayValue("ada@example.test")).toBeVisible();
 		await waitFor(() =>
@@ -206,11 +207,22 @@ describe("Audience", () => {
 		);
 	});
 
-	it("shows project fields in the contact panel", async () => {
+	it("opens a contact in place of the list and returns to the list", async () => {
 		window.history.replaceState(null, "", "/communication/audience?tab=contacts");
 		render(<CommunicationWorkspace initialTab="contacts" />);
+		expect(
+			screen.queryByText("Select a contact to view preferences and activity."),
+		).not.toBeInTheDocument();
 		fireEvent.click(await screen.findByRole("button", { name: /Ada/ }));
+
+		expect(new URLSearchParams(window.location.search).get("contact")).toBe("contact-1");
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Ada" })).toBeVisible();
 		expect(await screen.findByText("Plan")).toBeVisible();
+		await waitFor(() =>
+			expect(marketing.getEmailSubscriberExport).toHaveBeenCalledWith("10-test", "contact-1"),
+		);
+		expect(marketing.getEmailSubscriber).not.toHaveBeenCalled();
 		fireEvent.click(screen.getByRole("button", { name: "Remove tag VIP" }));
 		await waitFor(() =>
 			expect(audience.assignAudienceTags).toHaveBeenCalledWith("10-test", {
@@ -219,6 +231,58 @@ describe("Audience", () => {
 				tag_ids: ["tag-1"],
 			}),
 		);
+
+		fireEvent.click(screen.getByRole("button", { name: "All contacts" }));
+		expect(await screen.findByRole("table")).toBeInTheDocument();
+		expect(new URLSearchParams(window.location.search).get("contact")).toBeNull();
+		expect(screen.queryByRole("heading", { name: "Ada" })).not.toBeInTheDocument();
+	});
+
+	it("opens a contact directly from its address", async () => {
+		marketing.getEmailSubscriber.mockResolvedValue({
+			...contact,
+			id: "contact-2",
+			email: "grace@example.test",
+			name: "Grace",
+		});
+		window.history.replaceState(null, "", "/communication/audience?tab=contacts&contact=contact-2");
+		render(<CommunicationWorkspace initialTab="contacts" />);
+
+		expect(await screen.findByRole("heading", { name: "Grace" })).toBeVisible();
+		expect(screen.getByDisplayValue("grace@example.test")).toBeVisible();
+		expect(marketing.getEmailSubscriber).toHaveBeenCalledWith("10-test", "contact-2");
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
+	});
+
+	it("adds a contact from a blank sheet shown in place of the list", async () => {
+		marketing.createEmailSubscriber.mockResolvedValue({
+			id: "contact-3",
+			email: "lin@example.test",
+			name: "",
+			status: "enabled",
+			list_ids: [],
+		});
+		window.history.replaceState(null, "", "/communication/audience?tab=contacts");
+		render(<CommunicationWorkspace initialTab="contacts" />);
+		await screen.findByText("ada@example.test");
+		fireEvent.click(screen.getByRole("button", { name: "Add contact" }));
+
+		expect(screen.getByRole("heading", { name: "New contact" })).toBeVisible();
+		expect(new URLSearchParams(window.location.search).get("contact")).toBe("new");
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
+		fireEvent.change(screen.getByLabelText("Email"), { target: { value: "lin@example.test" } });
+		fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+		await waitFor(() =>
+			expect(marketing.createEmailSubscriber).toHaveBeenCalledWith(
+				"10-test",
+				expect.objectContaining({ email: "lin@example.test", double_opt_in: true }),
+			),
+		);
+		await waitFor(() =>
+			expect(new URLSearchParams(window.location.search).get("contact")).toBe("contact-3"),
+		);
+		expect(await screen.findByRole("heading", { name: "lin@example.test" })).toBeVisible();
 	});
 
 	it("maps CSV columns and requires an explicit consent before importing", async () => {

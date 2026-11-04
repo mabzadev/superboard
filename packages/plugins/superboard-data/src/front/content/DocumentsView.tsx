@@ -7,7 +7,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@superboard/front-ui/ui/table.js";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { DocumentEditor } from "./DocumentEditor.js";
 import { POST } from "./transport.js";
@@ -19,11 +19,24 @@ import {
 	useDataI18n,
 	useOperation,
 	useResource,
+	type Collection,
 	type Document,
 	type Page,
 } from "./workspace.js";
 
-export function DocumentsView({ collection, trash }: { collection: string; trash: boolean }) {
+const SEARCH_DELAY_MS = 300;
+
+export function DocumentsView({
+	collections,
+	collection,
+	onCollectionChange,
+	trash,
+}: {
+	collections: Collection[];
+	collection: string;
+	onCollectionChange(value: string): void;
+	trash: boolean;
+}) {
 	const { t, locale } = useDataI18n();
 	const operation = useOperation();
 	const [language, setLanguage] = useState<string>(locale);
@@ -32,6 +45,17 @@ export function DocumentsView({ collection, trash }: { collection: string; trash
 	const [status, setStatus] = useState("");
 	const [cursor, setCursor] = useState("");
 	const [selected, setSelected] = useState<string | null>(null);
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			const next = search.trim();
+			if (next === query) return;
+			setQuery(next);
+			setCursor("");
+		}, SEARCH_DELAY_MS);
+		return () => {
+			clearTimeout(timer);
+		};
+	}, [search, query]);
 	const params = new URLSearchParams({
 		limit: "50",
 		...(cursor ? { cursor } : {}),
@@ -62,57 +86,68 @@ export function DocumentsView({ collection, trash }: { collection: string; trash
 	return (
 		<div className="space-y-4 pt-4">
 			{operation.feedback}
-			{!trash && (
-				<form
-					className="flex flex-wrap items-end gap-3"
-					onSubmit={(event) => {
-						event.preventDefault();
-						setCursor("");
-						setQuery(search.trim());
-					}}
-				>
-					<TextField
-						label={t.language}
-						value={language}
-						onChange={(value) => {
-							setLanguage(value);
-							setCursor("");
-						}}
-					/>
-					<TextField label={t.search} value={search} onChange={setSearch} />
-					<label className="grid gap-2">
-						{t.status}
-						<select
-							value={status}
-							onChange={(event) => {
-								setStatus(event.target.value);
-								setCursor("");
-							}}
-						>
-							{["", "draft", "published", "archived"].map((value) => (
-								<option key={value} value={value}>
-									{value === "draft"
-										? t.draft
-										: value === "published"
-											? t.published
-											: value === "archived"
-												? t.archived
-												: t.all}
-								</option>
-							))}
-						</select>
-					</label>
-					<Button type="submit">{t.search}</Button>
-					<Button
-						onClick={() => {
-							setSelected("");
+			<div className="flex flex-wrap items-end gap-3">
+				<label className="grid gap-2">
+					{t.collection}
+					<select
+						value={collection}
+						onChange={(event) => {
+							onCollectionChange(event.target.value);
 						}}
 					>
-						{t.new}
-					</Button>
-				</form>
-			)}
-			{trash && <p>{t.allLanguages}</p>}
+						{collections.map((row) => (
+							<option key={row.slug} value={row.slug}>
+								{row.label}
+							</option>
+						))}
+					</select>
+				</label>
+				{trash ? (
+					<p className="text-sm text-muted-foreground">{t.allLanguages}</p>
+				) : (
+					<>
+						<TextField
+							label={t.language}
+							value={language}
+							onChange={(value) => {
+								setLanguage(value);
+								setCursor("");
+							}}
+						/>
+						<TextField label={t.search} type="search" value={search} onChange={setSearch} />
+						<label className="grid gap-2">
+							{t.status}
+							<select
+								value={status}
+								onChange={(event) => {
+									setStatus(event.target.value);
+									setCursor("");
+								}}
+							>
+								{["", "draft", "published", "archived"].map((value) => (
+									<option key={value} value={value}>
+										{value === "draft"
+											? t.draft
+											: value === "published"
+												? t.published
+												: value === "archived"
+													? t.archived
+													: t.all}
+									</option>
+								))}
+							</select>
+						</label>
+						<Button
+							className="ms-auto"
+							onClick={() => {
+								setSelected("");
+							}}
+						>
+							{t.new}
+						</Button>
+					</>
+				)}
+			</div>
 			{resource.error ? (
 				<div role="alert">
 					{resource.error}
@@ -128,13 +163,27 @@ export function DocumentsView({ collection, trash }: { collection: string; trash
 								<TableHead>{t.name}</TableHead>
 								<TableHead>{t.language}</TableHead>
 								<TableHead>{t.status}</TableHead>
-								<TableHead>{t.edit}</TableHead>
+								{trash && <TableHead />}
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{resource.data.items.map((item) => (
 								<TableRow key={item.id}>
-									<TableCell>{documentTitle(item)}</TableCell>
+									<TableCell>
+										{trash ? (
+											documentTitle(item)
+										) : (
+											<Button
+												variant="link"
+												className="h-auto px-0 py-0 font-medium text-foreground"
+												onClick={() => {
+													setSelected(item.id);
+												}}
+											>
+												{documentTitle(item)}
+											</Button>
+										)}
+									</TableCell>
 									<TableCell>{item.locale}</TableCell>
 									<TableCell>
 										{item.status === "published"
@@ -143,8 +192,8 @@ export function DocumentsView({ collection, trash }: { collection: string; trash
 												? t.archived
 												: t.draft}
 									</TableCell>
-									<TableCell>
-										{trash ? (
+									{trash && (
+										<TableCell>
 											<Button
 												disabled={operation.busy}
 												onClick={() => {
@@ -159,16 +208,8 @@ export function DocumentsView({ collection, trash }: { collection: string; trash
 											>
 												{t.restore}
 											</Button>
-										) : (
-											<Button
-												onClick={() => {
-													setSelected(item.id);
-												}}
-											>
-												{t.edit}
-											</Button>
-										)}
-									</TableCell>
+										</TableCell>
+									)}
 								</TableRow>
 							))}
 						</TableBody>

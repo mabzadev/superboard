@@ -195,9 +195,7 @@ describe("native Support Grow pages", () => {
 	});
 
 	it("presents an unconfigured provider as a normal SuperBoard state and masks credentials", async () => {
-		const user = userEvent.setup();
 		const { container } = render(<SupportChannelsPage />);
-		await user.click(screen.getByRole("tab", { name: "Connections" }));
 
 		expect(await screen.findByText("Customer Telegram")).toBeInTheDocument();
 		expect(screen.getByText("Not configured")).toBeInTheDocument();
@@ -205,10 +203,18 @@ describe("native Support Grow pages", () => {
 		expect(container.textContent).not.toMatch(/coming soon|migration|legacy/i);
 	});
 
+	it("shows channels and connections as stacked sections without sub-tabs", async () => {
+		render(<SupportChannelsPage />);
+
+		expect(await screen.findByRole("heading", { level: 3, name: "Channels" })).toBeVisible();
+		expect(screen.getByRole("heading", { level: 3, name: "Connections" })).toBeVisible();
+		expect(await screen.findByText("Customer Telegram")).toBeVisible();
+		expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+	});
+
 	it("attaches every new channel connection to a compatible active inbox", async () => {
 		const user = userEvent.setup();
 		render(<SupportChannelsPage />);
-		await user.click(screen.getByRole("tab", { name: "Connections" }));
 		await screen.findByRole("option", { name: "Web support" });
 		await user.type(screen.getByPlaceholderText("Customer care"), "Customer care");
 		await user.selectOptions(screen.getByLabelText("Inbox"), "inbox-1");
@@ -247,7 +253,6 @@ describe("native Support Grow pages", () => {
 
 	it("opens the requested Inbox section from legacy Support links", async () => {
 		window.history.replaceState(null, "", "/support/inbox?section=channels");
-		const user = userEvent.setup();
 		render(<SupportInboxWorkspace />);
 
 		const sections = within(screen.getByRole("tablist", { name: "Inbox sections" }));
@@ -255,8 +260,8 @@ describe("native Support Grow pages", () => {
 			"aria-selected",
 			"true",
 		);
-		await user.click(screen.getByRole("tab", { name: "Connections" }));
 		expect(await screen.findByText("Customer Telegram")).toBeInTheDocument();
+		expect(screen.getAllByRole("tablist")).toHaveLength(1);
 	});
 
 	it("exposes native notification preferences and read-all controls", async () => {

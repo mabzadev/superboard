@@ -9,7 +9,7 @@ vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: project }),
 }));
 afterEach(() => vi.resetAllMocks());
-it("filters the file list and opens metadata for the selected file", async () => {
+it("filters the file list and opens the selected file in place of the list", async () => {
 	const items = [
 		{ id: "1", filename: "photo.png", content_type: "image/png", byte_size: 42, deleted_at: null },
 		{ id: "2", filename: "notes.txt", content_type: "text/plain", byte_size: 10, deleted_at: null },
@@ -24,8 +24,13 @@ it("filters the file list and opens metadata for the selected file", async () =>
 	fireEvent.change(screen.getByLabelText("Search this page"), { target: { value: "photo" } });
 	expect(screen.queryByRole("button", { name: "notes.txt" })).not.toBeInTheDocument();
 	fireEvent.click(screen.getByRole("button", { name: "photo.png" }));
-	expect(screen.getByRole("heading", { name: "Details" })).toBeVisible();
+	expect(screen.getByRole("heading", { name: "photo.png" })).toBeVisible();
 	expect(screen.getByText("42", { selector: "dd" })).toBeVisible();
+	expect(screen.queryByRole("table")).not.toBeInTheDocument();
+	fireEvent.click(screen.getByRole("button", { name: "Back to files" }));
+	expect(screen.queryByRole("heading", { name: "photo.png" })).not.toBeInTheDocument();
+	expect(screen.getByRole("table")).toBeVisible();
+	expect(screen.getByLabelText("Search this page")).toHaveValue("photo");
 });
 it("uploads every selected file and removes successful uploads from the pending queue", async () => {
 	const completed: string[] = [];

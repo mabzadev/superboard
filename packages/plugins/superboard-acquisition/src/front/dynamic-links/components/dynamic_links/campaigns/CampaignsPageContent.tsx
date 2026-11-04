@@ -26,7 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@superboard/front-ui/ui
 import { ChevronDown, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { AcquisitionPage } from "../../../../AcquisitionPage.js";
+import { AcquisitionPage, useEmbeddedPage } from "../../../../AcquisitionPage.js";
 import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
 import {
 	createLinkCampaign,
@@ -70,6 +70,7 @@ function campaignMetric(row: CampaignAnalyticsRow, sortKey: string) {
 export default function CampaignsPageContent() {
 	const router = useRouter();
 	const { tr } = useFlowI18n();
+	const embedded = useEmbeddedPage();
 	const { selectedProject } = useProjectSelection();
 	const {
 		page,
@@ -182,7 +183,7 @@ export default function CampaignsPageContent() {
 
 	return (
 		<AcquisitionPage
-			title={tr("Campaigns")}
+			title={embedded ? "" : tr("Campaigns")}
 			description={tr(
 				"Measure every acquisition campaign from link view to referred customer and revenue.",
 			)}

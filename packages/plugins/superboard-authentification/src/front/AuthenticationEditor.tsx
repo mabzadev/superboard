@@ -75,7 +75,7 @@ const editors: Record<string, Editor> = {
 	},
 	users: {
 		view: "users",
-		tab: "users",
+		tab: "directory",
 		label: "directory",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/users/[authId]/page.js")),

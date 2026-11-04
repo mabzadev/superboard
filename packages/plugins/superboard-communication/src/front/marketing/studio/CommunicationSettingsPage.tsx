@@ -2,7 +2,6 @@ import { useProjectSelection } from "@superboard/front-ui/context/useProjectSele
 import { Button } from "@superboard/front-ui/kumo";
 import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
-import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { useEffect, useState } from "react";
 
@@ -46,7 +45,6 @@ export default function CommunicationSettingsPage({
 					</p>
 				</div>
 			</header>
-			<SectionNavigation />
 			<Tabs
 				value={tab}
 				onValueChange={(value) => {

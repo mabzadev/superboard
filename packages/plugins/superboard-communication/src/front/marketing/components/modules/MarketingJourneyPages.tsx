@@ -719,7 +719,7 @@ function MarketingChannelsEditor() {
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
+				<div className="space-y-6">
 					<Card>
 						<CardHeader>
 							<CardTitle>{editingId ? t("Edit channel") : t("Add a channel")}</CardTitle>

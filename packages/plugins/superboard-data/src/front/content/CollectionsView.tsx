@@ -6,6 +6,7 @@ import { POST, PUT } from "./transport.js";
 import {
 	schemaPath,
 	encode,
+	Section,
 	TextField,
 	useDataI18n,
 	useOperation,
@@ -31,46 +32,49 @@ export function CollectionsView({
 	const [slug, setSlug] = useState("");
 	const [label, setLabel] = useState("");
 	return (
-		<div className="grid gap-6 pt-4 lg:grid-cols-2">
-			<form
-				className="grid content-start gap-3"
-				onSubmit={(event) => {
-					event.preventDefault();
-					operation.run(async () => {
-						await POST("/_emdash/api/schema/collections", { slug, label, labelSingular: label });
-						setSlug("");
-						setLabel("");
-						onSelect(slug);
-						onChanged();
-					});
-				}}
-			>
-				<h2>{t.createCollection}</h2>
-				{operation.feedback}
-				<TextField label={t.collectionName} value={label} onChange={setLabel} required />
-				<TextField label={t.slug} value={slug} onChange={setSlug} required />
-				<Button type="submit" disabled={operation.busy}>
-					{t.createCollection}
-				</Button>
-			</form>
-			<div className="space-y-4">
-				<label className="grid gap-2">
-					{t.collection}
-					<select
-						value={collection}
-						onChange={(event) => {
-							onSelect(event.target.value);
-						}}
-					>
-						{collections.map((item) => (
-							<option key={item.slug} value={item.slug}>
-								{item.label}
-							</option>
-						))}
-					</select>
-				</label>
-				{collection && <CollectionFields key={collection} collection={collection} />}
-			</div>
+		<div className="max-w-3xl space-y-6 pt-4">
+			{collections.length > 0 && (
+				<>
+					<label className="grid max-w-sm gap-2">
+						{t.collection}
+						<select
+							value={collection}
+							onChange={(event) => {
+								onSelect(event.target.value);
+							}}
+						>
+							{collections.map((item) => (
+								<option key={item.slug} value={item.slug}>
+									{item.label}
+								</option>
+							))}
+						</select>
+					</label>
+					{collection && <CollectionFields key={collection} collection={collection} />}
+				</>
+			)}
+			<Section title={t.createCollection} heading="h2">
+				<form
+					className="grid gap-3"
+					onSubmit={(event) => {
+						event.preventDefault();
+						operation.run(async () => {
+							await POST("/_emdash/api/schema/collections", { slug, label, labelSingular: label });
+							setSlug("");
+							setLabel("");
+							onSelect(slug);
+							onChanged();
+						});
+					}}
+				>
+					{operation.feedback}
+					<TextField label={t.collectionName} value={label} onChange={setLabel} required />
+					<TextField label={t.slug} value={slug} onChange={setSlug} required />
+					<Button type="submit" disabled={operation.busy}>
+						{t.createCollection}
+					</Button>
+				</form>
+			</Section>
 		</div>
 	);
 }
@@ -93,8 +97,7 @@ function CollectionFields({ collection }: { collection: string }) {
 		setOptions(field?.validation?.options?.join("\n") ?? "");
 	}
 	return (
-		<div className="space-y-4">
-			<h2>{t.fieldsTitle}</h2>
+		<Section title={t.fieldsTitle} heading="h2">
 			{operation.feedback}
 			{resource.error && <p role="alert">{resource.error}</p>}
 			<ul>
@@ -214,6 +217,6 @@ function CollectionFields({ collection }: { collection: string }) {
 					{selected ? t.save : t.addField}
 				</Button>
 			</form>
-		</div>
+		</Section>
 	);
 }

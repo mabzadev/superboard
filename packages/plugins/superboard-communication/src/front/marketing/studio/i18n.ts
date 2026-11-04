@@ -277,8 +277,6 @@ const french: Record<string, string> = {
 	"Delete step": "Supprimer l’étape",
 	"Delivery outbox": "File d’envoi",
 	"Delivery test recipient (optional)": "Destinataire de test (facultatif)",
-	"Delivery, opens, clicks, bounces, complaints, unsubscribes and campaign progression.":
-		"Suivez les envois, ouvertures, clics, rejets, signalements et désabonnements.",
 	"Does not equal": "Est différent de",
 	"Each save creates an immutable version. Active enrollments keep the version they entered with.":
 		"Chaque enregistrement crée une version. Les parcours en cours conservent leur version initiale.",
@@ -488,8 +486,8 @@ const french: Record<string, string> = {
 	"Time zone": "Fuseau horaire",
 	Unsubscribe: "Désabonner",
 	Activity: "Activité",
-	"Select a contact to view preferences and activity.":
-		"Sélectionnez un contact pour consulter ses préférences et son activité.",
+	"All contacts": "Tous les contacts",
+	"New contact": "Nouveau contact",
 	"Create campaign": "Créer une campagne",
 	Audience: "Audience",
 	Review: "Vérification",
@@ -692,7 +690,7 @@ const french: Record<string, string> = {
 		"DNS de l’expéditeur : {authentication} · SPF {spf} · DKIM {dkim} · DMARC {dmarc}",
 	"{status} · {count} attempts": "{status} · {count} tentatives",
 	"{count} configured": "{count} configurés",
-	"Communication sections": "Sections de la communication",
+	"Loading…": "Chargement…",
 	"In-app & Push": "In-app et push",
 	Suppressions: "Suppressions",
 	Operations: "Opérations",
@@ -756,8 +754,8 @@ const french: Record<string, string> = {
 	"Edit list": "Modifier la liste",
 	"Edit segment": "Modifier le segment",
 	"No lists yet": "Aucune liste pour le moment",
-	"Lists group contacts who chose to hear from you. Create one with the form, then add contacts to it.":
-		"Les listes regroupent les contacts qui ont choisi de vous lire. Créez-en une avec le formulaire, puis ajoutez-y des contacts.",
+	"Lists group contacts who chose to hear from you. Create one, then add contacts to it.":
+		"Les listes regroupent les contacts qui ont choisi de vous lire. Créez-en une, puis ajoutez-y des contacts.",
 	"{count} contacts": "{count} contacts",
 	"No segments yet": "Aucun segment pour le moment",
 	"Segments select contacts by language, attributes or activity. Define the rules with the form.":

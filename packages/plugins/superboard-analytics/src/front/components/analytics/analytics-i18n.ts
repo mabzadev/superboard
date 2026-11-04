@@ -4,7 +4,6 @@ import { createFrontI18n } from "@superboard/front-ui/i18n";
 import { useMemo } from "react";
 
 const french: Record<string, string> = {
-	Incidents: "Incidents",
 	Staging: "Préproduction",
 	Development: "Développement",
 	Unsigned: "Non signé",
@@ -17,7 +16,6 @@ const french: Record<string, string> = {
 	"Avg. time": "Durée moy.",
 	"Awaiting first evaluation": "En attente de la première évaluation",
 	Crash: "Plantage",
-	"Crash details": "Détails du plantage",
 	"Crash reopened": "Plantage rouvert",
 	"Drop percentage": "Pourcentage de baisse",
 	"HMAC signed": "Signature HMAC",
@@ -31,8 +29,6 @@ const french: Record<string, string> = {
 	"Platforms & versions": "Plateformes et versions",
 	"Remote configuration published": "Configuration à distance publiée",
 	"Reopen group": "Rouvrir le groupe",
-	"Select a group to inspect its latest stack traces.":
-		"Sélectionnez un groupe pour consulter ses dernières traces d’erreur.",
 	Submitted: "Envoi",
 	Summary: "Résumé",
 	"The configuration value must be valid JSON.":
@@ -106,13 +102,10 @@ const french: Record<string, string> = {
 	"Event explorer": "Explorateur d’événements",
 	"Inspect the recent, pseudonymized event stream without exposing raw user identifiers.":
 		"Consultez les événements récents pseudonymisés sans exposer les identifiants bruts des utilisateurs.",
-	"Recent events": "Événements récents",
-	"Filter by the exact event name.": "Filtrez avec le nom exact de l’événement.",
 	"Event name": "Nom de l’événement",
 	"Apply filter": "Appliquer le filtre",
 	"Filtered by user": "Filtré par utilisateur",
 	"Clear user filter": "Retirer le filtre utilisateur",
-	"Events recorded for this user.": "Événements enregistrés pour cet utilisateur.",
 	Event: "Événement",
 	Source: "Source",
 	Application: "Application",
@@ -266,15 +259,15 @@ const french: Record<string, string> = {
 	Crashes: "Plantages",
 	"Group recurring errors by deterministic fingerprint, inspect occurrences and manage resolution.":
 		"Regroupez les erreurs récurrentes par empreinte, consultez leurs occurrences et gérez leur résolution.",
-	"Crash groups": "Groupes de plantages",
-	"Fatal and non-fatal SDK reports.": "Rapports d’erreurs fatales et non fatales du SDK.",
 	"Crash status": "État du plantage",
+	"All crash groups": "Tous les groupes de plantages",
+	"Loading crash details…": "Chargement des détails du plantage…",
+	Dimension: "Dimension",
 	All: "Tous",
 	Open: "Ouvert",
 	Resolved: "Résolu",
 	Fatal: "Fatal",
 	"No crash groups match this filter.": "Aucun groupe de plantages ne correspond à ce filtre.",
-	"No crash selected.": "Aucun plantage sélectionné.",
 	Resolve: "Résoudre",
 	"Crash resolved": "Plantage résolu",
 	Feedback: "Avis",
@@ -340,7 +333,6 @@ const french: Record<string, string> = {
 		"Les notifications utilisent le service d’e-mail central AWS SES.",
 	"Create alert": "Créer une alerte",
 	"Alert created": "Alerte créée",
-	"Alert rules": "Règles d’alerte",
 	"Applies to the selected project.": "S’applique au projet sélectionné.",
 	Enabled: "Activé",
 	Disabled: "Désactivé",
@@ -359,7 +351,6 @@ const french: Record<string, string> = {
 	"Devices and countries": "Appareils et pays",
 	"User groups": "Groupes d’utilisateurs",
 	"Reports and exports": "Rapports et exports",
-	Quality: "Qualité",
 	"Application errors": "Erreurs de l’application",
 	"User feedback": "Retours utilisateur",
 	"Manage applications, retention, collection, signed webhooks and timeline annotations.":
@@ -557,6 +548,7 @@ const interpolation: Record<"en" | "fr", Messages> = {
 		"From first step": [["percent"], " from the first step"],
 		"Report updated": [["type"], " · updated ", ["date"]],
 		"Delete item": ["Delete ", ["name"]],
+		"Open incident count": [["count", "number"], " open"],
 	},
 	fr: {
 		"Quick start progress": [["complete"], " étapes essentielles sur ", ["total"], " terminées."],
@@ -601,6 +593,9 @@ const interpolation: Record<"en" | "fr", Messages> = {
 		"From first step": [["percent"], " depuis la première étape"],
 		"Report updated": [["type"], " · mis à jour le ", ["date"]],
 		"Delete item": ["Supprimer ", ["name"]],
+		"Open incident count": [
+			["count", "plural", { one: ["#", " ouvert"], other: ["#", " ouverts"] }],
+		],
 	},
 };
 

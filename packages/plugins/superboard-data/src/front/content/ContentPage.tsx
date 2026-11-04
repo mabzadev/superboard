@@ -85,28 +85,13 @@ export default function ContentPage() {
 								</Button>
 							</div>
 						) : (
-							<>
-								<label className="grid max-w-sm gap-2">
-									{t.collection}
-									<select
-										value={collection}
-										onChange={(event) => {
-											setChosen(event.target.value);
-										}}
-									>
-										{rows.map((row) => (
-											<option key={row.slug} value={row.slug}>
-												{row.label}
-											</option>
-										))}
-									</select>
-								</label>
-								<DocumentsView
-									key={`${collection}:${value}`}
-									collection={collection}
-									trash={value === "trash"}
-								/>
-							</>
+							<DocumentsView
+								key={`${collection}:${value}`}
+								collections={rows}
+								collection={collection}
+								onCollectionChange={setChosen}
+								trash={value === "trash"}
+							/>
 						)}
 					</TabsContent>
 				))}

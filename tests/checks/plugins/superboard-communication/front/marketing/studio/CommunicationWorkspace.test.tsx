@@ -167,7 +167,7 @@ describe("Communication workspace", () => {
 		);
 	});
 
-	it("switches sections in place from the workspace navigation", async () => {
+	it("shows a single row of tabs without repeating the sidebar sections", async () => {
 		window.history.replaceState(null, "", "/communication/settings?tab=configuration");
 		render(<CommunicationWorkspace initialTab="senders" />);
 		expect(await screen.findByRole("tab", { name: "Senders & domains" })).toHaveAttribute(
@@ -175,16 +175,19 @@ describe("Communication workspace", () => {
 			"true",
 		);
 		expect(screen.queryByRole("tab", { name: "Configuration" })).not.toBeInTheDocument();
+		expect(screen.getAllByRole("tablist")).toHaveLength(1);
+		expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Audience" })).not.toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Open in Plugins" })).toHaveAttribute(
 			"href",
 			expect.stringMatching(/^\/_emdash\/admin\/plugins-manager\/[^/]+\/configuration$/),
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: "Audience" }));
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Sending preferences" }), { button: 0 });
 
-		expect(await screen.findByRole("heading", { name: "Audience" })).toBeVisible();
+		expect(await screen.findByDisplayValue("en, fr")).toBeVisible();
 		expect(window.location.pathname).toBe("/communication/settings");
-		expect(new URLSearchParams(window.location.search).get("tab")).toBe("contacts");
+		expect(new URLSearchParams(window.location.search).get("tab")).toBe("preferences");
 	});
 
 	it("lists every email type behind one filter and guides a missing sender", async () => {
@@ -219,7 +222,7 @@ describe("Communication workspace", () => {
 	});
 
 	it("lets operators lift manual suppressions only", async () => {
-		window.history.replaceState(null, "", "/communication/settings?tab=suppressions");
+		window.history.replaceState(null, "", "/communication/audience?tab=suppressions");
 		marketing.getEmailSuppressions.mockResolvedValue([
 			{
 				id: "s1",
@@ -238,7 +241,7 @@ describe("Communication workspace", () => {
 		]);
 		marketing.deleteEmailSuppression.mockResolvedValue({ deleted: true });
 		marketing.createEmailSuppression.mockResolvedValue({});
-		render(<CommunicationWorkspace initialTab="senders" />);
+		render(<CommunicationWorkspace initialTab="contacts" />);
 
 		const unblock = await screen.findByRole("button", { name: "Unblock blocked@example.test" });
 		expect(
@@ -259,7 +262,7 @@ describe("Communication workspace", () => {
 	});
 
 	it("keeps list visibility and opt-in mode editable", async () => {
-		window.history.replaceState(null, "", "/communication/settings?tab=lists");
+		window.history.replaceState(null, "", "/communication/audience?tab=lists");
 		marketing.getSubscriberLists.mockResolvedValue([
 			{
 				id: "list-1",
@@ -270,11 +273,13 @@ describe("Communication workspace", () => {
 			},
 		]);
 		marketing.updateSubscriberList.mockResolvedValue({});
-		render(<CommunicationWorkspace initialTab="senders" />);
+		render(<CommunicationWorkspace initialTab="contacts" />);
 
 		expect(await screen.findByText("Double opt-in")).toBeVisible();
 		expect(screen.getByText("Public")).toBeVisible();
 		fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("List name")).toHaveValue("News");
 		fireEvent.click(screen.getByRole("button", { name: "Save" }));
 		await waitFor(() =>
 			expect(marketing.updateSubscriberList).toHaveBeenCalledWith("10-test", "list-1", {
@@ -284,6 +289,7 @@ describe("Communication workspace", () => {
 				optin_mode: "double",
 			}),
 		);
+		expect(await screen.findByRole("table")).toBeInTheDocument();
 	});
 
 	it("renders settings tabs in French", async () => {
@@ -307,7 +313,7 @@ describe("Communication workspace", () => {
 
 		expect(await screen.findByRole("tab", { name: "Expéditeurs et domaines" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Préférences d’envoi" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Automatisations" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Automatisations" })).not.toBeInTheDocument();
 	});
 });
 

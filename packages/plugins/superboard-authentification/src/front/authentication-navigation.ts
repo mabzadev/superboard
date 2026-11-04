@@ -3,7 +3,7 @@ import { canonicalFrontHref } from "@superboard/contracts/front-paths";
 export type AuthenticationView = "users" | "settings";
 
 export const authenticationTabs = {
-	users: ["users", "devices", "referrals", "activity"],
+	users: ["users", "directory", "devices", "referrals", "activity"],
 	settings: ["sign-in", "access", "fields", "appearance"],
 } as const satisfies Record<AuthenticationView, readonly string[]>;
 
@@ -13,7 +13,7 @@ type Target = readonly [AuthenticationView, string, string?];
 
 const legacyTabs: Readonly<Record<string, Target>> = {
 	accounts: ["users", "users"],
-	directory: ["users", "users", "directory"],
+	directory: ["users", "directory"],
 	profiles: ["users", "devices"],
 	logs: ["users", "activity"],
 	login: ["settings", "sign-in"],
@@ -49,7 +49,10 @@ export function authenticationTarget(
 			? legacyTabs[raw]
 			: [view, authenticationTabs[view][0]];
 	if (params.get("editor") === "banners") target = ["settings", "appearance"];
-	return { view: target[0], tab: target[1], section: params.get("section") || target[2] || null };
+	const section = params.get("section") || target[2] || null;
+	if (target[0] === "users" && target[1] === "users" && section === "directory")
+		return { view: "users", tab: "directory", section: null };
+	return { view: target[0], tab: target[1], section };
 }
 
 export function authenticationHref(href: string): string {
@@ -67,5 +70,6 @@ export function authenticationHref(href: string): string {
 	url.pathname = `/auth/${target.view}`;
 	url.searchParams.set("tab", target.tab);
 	if (target.section) url.searchParams.set("section", target.section);
+	else url.searchParams.delete("section");
 	return `${url.pathname}${url.search}${url.hash}`;
 }

@@ -11,7 +11,6 @@ import { Button } from "@superboard/front-ui/ui/button.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@superboard/front-ui/ui/card.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { Cable, KeyRound, Link2, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -35,6 +34,7 @@ import {
 	SupportLoadMore,
 	SupportLoading,
 	SupportSearchToolbar,
+	SupportSection,
 	SupportStatus,
 	useSupportCollection,
 } from "../support/SupportUi.js";
@@ -204,19 +204,15 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<Tabs defaultValue={scopedInboxId ? "providers" : "channels"}>
-					<TabsList>
-						<TabsTrigger value="channels">{t("Channels")}</TabsTrigger>
-						<TabsTrigger value="providers">{t("Connections")}</TabsTrigger>
-					</TabsList>
-					<TabsContent className="space-y-4" value="channels">
+				<div className="space-y-6">
+					<SupportSection title={t("Channels")}>
 						{channels.length === 0 ? (
 							<SupportEmpty
 								title={t("No connected inboxes")}
 								description={t("Create an inbox from Workforce, then attach a connection here.")}
 							/>
 						) : (
-							<div className="grid gap-3 lg:grid-cols-2">
+							<div className="grid gap-3">
 								{channels.map((channel) => (
 									<Card key={channel.id}>
 										<CardContent className="flex items-center justify-between gap-4 p-4">
@@ -236,8 +232,8 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 								))}
 							</div>
 						)}
-					</TabsContent>
-					<TabsContent className="space-y-4" value="providers">
+					</SupportSection>
+					<SupportSection title={t("Connections")}>
 						<SupportSearchToolbar
 							query={providers.query}
 							setQuery={providers.setQuery}
@@ -434,8 +430,8 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 								</CardContent>
 							</Card>
 						) : null}
-					</TabsContent>
-				</Tabs>
+					</SupportSection>
+				</div>
 			)}
 		</ModulePage>
 	);

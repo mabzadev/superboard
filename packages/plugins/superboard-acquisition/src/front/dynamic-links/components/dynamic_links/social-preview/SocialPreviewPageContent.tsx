@@ -19,7 +19,13 @@ import {
 } from "@superboard/front-ui/ui/card.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
-import { Tabs, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@superboard/front-ui/ui/select.js";
 import { ImageIcon, Save, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -43,6 +49,12 @@ const emptyForm: PreviewForm = {
 	image_url: "",
 	site_name: "",
 };
+
+const previewPlatforms = [
+	["facebook", "Facebook"],
+	["x", "X"],
+	["linkedin", "LinkedIn"],
+] as const;
 
 export default function SocialPreviewPageContent() {
 	const { tr } = useFlowI18n();
@@ -86,7 +98,7 @@ export default function SocialPreviewPageContent() {
 		try {
 			await saveSocialPreview(selectedProject.id, form);
 			setInitial(form);
-			showSuccessNotification("Social preview saved");
+			showSuccessNotification(tr("Social preview saved"));
 		} catch (cause) {
 			showErrorNotification(moduleErrorMessage(cause));
 		} finally {
@@ -109,7 +121,9 @@ export default function SocialPreviewPageContent() {
 				<div className="space-y-4">
 					{dirty ? (
 						<div className="sticky top-0 z-10 flex items-center justify-between rounded-lg border bg-background/90 p-3 shadow-sm backdrop-blur">
-							<span className="text-sm text-muted-foreground">Unsaved social preview changes</span>
+							<span className="text-sm text-muted-foreground">
+								{tr("Unsaved social preview changes")}
+							</span>
 							<div className="flex gap-2">
 								<Button
 									variant="outline"
@@ -118,11 +132,11 @@ export default function SocialPreviewPageContent() {
 										setImageFailed(false);
 									}}
 								>
-									<Undo2 className="size-4" /> Discard
+									<Undo2 className="size-4" /> {tr("Discard")}
 								</Button>
 								<Button disabled={saving || !form.title.trim()} onClick={() => void save()}>
 									<Save className="size-4" />
-									{saving ? "Saving…" : "Save changes"}
+									{tr(saving ? "Saving…" : "Save changes")}
 								</Button>
 							</div>
 						</div>
@@ -130,19 +144,19 @@ export default function SocialPreviewPageContent() {
 					<div className="grid gap-6 xl:grid-cols-[420px_1fr]">
 						<Card className="h-fit">
 							<CardHeader>
-								<CardTitle>Default metadata</CardTitle>
+								<CardTitle>{tr("Default metadata")}</CardTitle>
 								<CardDescription>
-									Individual links may override these project defaults.
+									{tr("Individual links may override these project defaults.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-4">
 								<Field
-									label="Title"
+									label={tr("Title")}
 									value={form.title}
 									onChange={(title) => setForm((value) => ({ ...value, title }))}
 								/>
 								<div className="space-y-2">
-									<Label>Description</Label>
+									<Label>{tr("Description")}</Label>
 									<textarea
 										rows={4}
 										className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -154,12 +168,12 @@ export default function SocialPreviewPageContent() {
 									/>
 								</div>
 								<Field
-									label="Site name or domain"
+									label={tr("Site name or domain")}
 									value={form.site_name}
 									onChange={(site_name) => setForm((value) => ({ ...value, site_name }))}
 								/>
 								<Field
-									label="Image URL"
+									label={tr("Image URL")}
 									type="url"
 									value={form.image_url}
 									onChange={(image_url) => {
@@ -168,15 +182,16 @@ export default function SocialPreviewPageContent() {
 									}}
 								/>
 								<p className="text-xs text-muted-foreground">
-									Recommended ratio 1.91:1, at least 1200 × 630 pixels. The URL must be publicly
-									accessible over HTTPS.
+									{tr(
+										"Recommended ratio 1.91:1, at least 1200 × 630 pixels. The URL must be publicly accessible over HTTPS.",
+									)}
 								</p>
 								<Button
 									className="w-full"
 									disabled={!dirty || saving || !form.title.trim()}
 									onClick={() => void save()}
 								>
-									<Save className="size-4" /> Save preview
+									<Save className="size-4" /> {tr("Save preview")}
 								</Button>
 							</CardContent>
 						</Card>
@@ -184,18 +199,23 @@ export default function SocialPreviewPageContent() {
 						<Card>
 							<CardHeader className="flex-row items-start justify-between gap-3">
 								<div>
-									<CardTitle>Live preview</CardTitle>
+									<CardTitle>{tr("Live preview")}</CardTitle>
 									<CardDescription>
-										Platform rendering is approximate and updates as you type.
+										{tr("Platform rendering is approximate and updates as you type.")}
 									</CardDescription>
 								</div>
-								<Tabs value={platform} onValueChange={setPlatform}>
-									<TabsList>
-										<TabsTrigger value="facebook">Facebook</TabsTrigger>
-										<TabsTrigger value="x">X</TabsTrigger>
-										<TabsTrigger value="linkedin">LinkedIn</TabsTrigger>
-									</TabsList>
-								</Tabs>
+								<Select value={platform} onValueChange={setPlatform}>
+									<SelectTrigger className="w-36 shrink-0" aria-label={tr("Preview platform")}>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{previewPlatforms.map(([value, label]) => (
+											<SelectItem key={value} value={value}>
+												{label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</CardHeader>
 							<CardContent className="flex min-h-[500px] items-center justify-center bg-muted/20 p-6">
 								<div
@@ -211,7 +231,7 @@ export default function SocialPreviewPageContent() {
 												fill
 												sizes="(max-width: 768px) 100vw, 640px"
 												src={form.image_url}
-												alt="Social preview"
+												alt={tr("Social preview")}
 												className="object-cover"
 												onError={() => setImageFailed(true)}
 											/>
@@ -228,12 +248,14 @@ export default function SocialPreviewPageContent() {
 											</p>
 										) : null}
 										<h3 className="font-semibold leading-snug">
-											{form.title || "Your link preview title"}
+											{form.title || tr("Your link preview title")}
 										</h3>
 										{platform !== "linkedin" ? (
 											<p className="text-sm text-muted-foreground">
 												{form.description ||
-													"Add a concise description that explains where the shared link leads."}
+													tr(
+														"Add a concise description that explains where the shared link leads.",
+													)}
 											</p>
 										) : null}
 									</div>

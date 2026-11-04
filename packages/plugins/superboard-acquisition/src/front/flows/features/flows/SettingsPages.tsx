@@ -283,47 +283,48 @@ export function LocalizationContent({ projectRef }: { projectRef: string }) {
 		}
 	};
 	return (
-		<div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-			<Card className="self-start">
-				<CardHeader>
-					<CardTitle>{tr("Language groups")}</CardTitle>
-				</CardHeader>
-				<CardContent className="grid gap-1">
-					{groups.map((group) => (
-						<Button
-							key={group.id}
-							variant={selectedId === group.id ? "secondary" : "ghost"}
-							className="justify-start"
-							onClick={() => {
-								setSelectedId(group.id);
-								setName(group.name);
-								setDefaultLocale(group.default_locale);
-								setLocales(group.locales.join(", "));
-								setFallbacks(
-									Object.entries(group.fallbacks)
-										.map(([from, to]) => `${from}:${to}`)
-										.join(", "),
-								);
-							}}
-						>
-							{group.name}
-						</Button>
-					))}
-					<Button
-						variant="outline"
-						className="mt-2"
-						onClick={() => {
-							setSelectedId(null);
-							setName(tr("New group"));
-							setDefaultLocale("en");
-							setLocales("en, fr");
-							setFallbacks("fr:en");
-						}}
-					>
-						<Plus /> {tr("New group")}
-					</Button>
-				</CardContent>
-			</Card>
+		<div className="space-y-4">
+			<div className="flex flex-wrap items-center gap-2">
+				<Select
+					value={selectedId ?? ""}
+					onValueChange={(id) => {
+						const group = groups.find((item) => item.id === id);
+						if (!group) return;
+						setSelectedId(group.id);
+						setName(group.name);
+						setDefaultLocale(group.default_locale);
+						setLocales(group.locales.join(", "));
+						setFallbacks(
+							Object.entries(group.fallbacks)
+								.map(([from, to]) => `${from}:${to}`)
+								.join(", "),
+						);
+					}}
+				>
+					<SelectTrigger className="w-64" aria-label={tr("Language groups")}>
+						<SelectValue placeholder={tr("New group")} />
+					</SelectTrigger>
+					<SelectContent>
+						{groups.map((group) => (
+							<SelectItem key={group.id} value={group.id}>
+								{group.name}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<Button
+					variant="outline"
+					onClick={() => {
+						setSelectedId(null);
+						setName(tr("New group"));
+						setDefaultLocale("en");
+						setLocales("en, fr");
+						setFallbacks("fr:en");
+					}}
+				>
+					<Plus /> {tr("New group")}
+				</Button>
+			</div>
 			<Card>
 				<CardHeader>
 					<CardTitle>{name || tr("Language group")}</CardTitle>
@@ -420,6 +421,7 @@ export function SdkContent({ projectRef }: { projectRef: string }) {
 	const { t, tr } = useFlowI18n();
 	const [environments, setEnvironments] = useState<FlowEnvironment[]>([]);
 	const [environmentKey, setEnvironmentKey] = useState("");
+	const [platform, setPlatform] = useState<FlowSdkSnippetPlatform>("javascript");
 	useEffect(() => {
 		if (!projectRef) return;
 		void flowsApi
@@ -432,7 +434,7 @@ export function SdkContent({ projectRef }: { projectRef: string }) {
 				showErrorNotification(message(cause, t("apiFailure")));
 			});
 	}, [projectRef, t]);
-	const tabs = useMemo(
+	const platforms = useMemo(
 		() =>
 			[
 				{
@@ -458,6 +460,7 @@ export function SdkContent({ projectRef }: { projectRef: string }) {
 			] as const,
 		[],
 	);
+	const selectedPlatform = platforms.find((item) => item.id === platform) ?? platforms[0];
 	return (
 		<div className="space-y-4">
 			<Card>
@@ -469,7 +472,7 @@ export function SdkContent({ projectRef }: { projectRef: string }) {
 						)}
 					</CardDescription>
 				</CardHeader>
-				<CardContent className="grid gap-4 md:grid-cols-2">
+				<CardContent className="grid gap-4 md:grid-cols-3">
 					<label className="grid gap-2">
 						<Label>{tr("Project identifier")}</Label>
 						<CopyField value={projectRef} />
@@ -489,32 +492,40 @@ export function SdkContent({ projectRef }: { projectRef: string }) {
 							</SelectContent>
 						</Select>
 					</label>
+					<label className="grid gap-2">
+						<Label>{t("platform")}</Label>
+						<Select
+							value={platform}
+							onValueChange={(value) => {
+								const next = platforms.find((item) => item.id === value);
+								if (next) setPlatform(next.id);
+							}}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{platforms.map((item) => (
+									<SelectItem key={item.id} value={item.id}>
+										{item.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</label>
 				</CardContent>
 			</Card>
-			<Tabs defaultValue="javascript">
-				<TabsList className="flex h-auto flex-wrap">
-					{tabs.map((tab) => (
-						<TabsTrigger key={tab.id} value={tab.id}>
-							{tab.label}
-						</TabsTrigger>
-					))}
-				</TabsList>
-				{tabs.map((tab) => (
-					<TabsContent value={tab.id} key={tab.id}>
-						{!environmentKey ? (
-							<p role="alert">{tr("Select an available environment to view SDK examples.")}</p>
-						) : publicConfig.apiUrl ? (
-							<SdkCodePanel
-								title={tab.label}
-								install={tr(tab.install)}
-								code={flowSdkSnippet(tab.id, projectRef, environmentKey, publicConfig.apiUrl)}
-							/>
-						) : (
-							<p role="alert">{publicConfig.endpointError("API")}</p>
-						)}
-					</TabsContent>
-				))}
-			</Tabs>
+			{!environmentKey ? (
+				<p role="alert">{tr("Select an available environment to view SDK examples.")}</p>
+			) : publicConfig.apiUrl ? (
+				<SdkCodePanel
+					title={selectedPlatform.label}
+					install={tr(selectedPlatform.install)}
+					code={flowSdkSnippet(platform, projectRef, environmentKey, publicConfig.apiUrl)}
+				/>
+			) : (
+				<p role="alert">{publicConfig.endpointError("API")}</p>
+			)}
 			<Card>
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">

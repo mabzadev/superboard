@@ -69,6 +69,7 @@ vi.mock("../../../../../../../packages/supbrd-front-ui/src/shared/lib/Notificati
 	showSuccessNotification: vi.fn(),
 }));
 
+import InboxPage from "../../../../../../../packages/plugins/superboard-support/src/front/components/modules/SupportInboxPage.js";
 import SupportInboxWorkspace from "../../../../../../../packages/plugins/superboard-support/src/front/components/modules/SupportInboxWorkspace.js";
 
 describe("Support Inbox customer search", () => {
@@ -106,5 +107,28 @@ describe("Support Inbox customer search", () => {
 		const list = await screen.findByRole("complementary");
 		await waitFor(() => expect(within(list).getByText("Billing question")).toBeInTheDocument());
 		expect(within(list).queryByText("Login issue")).not.toBeInTheDocument();
+	});
+
+	it("shows the conversation next to the list and no empty column when nothing matches", async () => {
+		window.history.replaceState(null, "", "/support/inbox?q=user-1");
+		const { unmount } = render(<SupportInboxWorkspace />);
+		await waitFor(() => expect(screen.getByLabelText("Status")).toHaveValue("open"));
+		unmount();
+
+		services.getSupportContacts.mockResolvedValue({ data: [] });
+		window.history.replaceState(null, "", "/support/inbox?q=nobody%40example.test");
+		render(<SupportInboxWorkspace />);
+		expect(
+			await screen.findByText("No conversations match nobody@example.test."),
+		).toBeInTheDocument();
+		expect(screen.queryByText("Select an Inbox item.")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
+	});
+
+	it("does not repeat the Inbox title inside an inbox", async () => {
+		window.history.replaceState(null, "", "/support/inbox?inbox=inbox-1&tab=conversations");
+		render(<InboxPage inboxId="inbox-1" />);
+		expect(await screen.findByRole("searchbox", { name: "Search conversations" })).toBeVisible();
+		expect(screen.queryByRole("heading", { name: "Inbox" })).not.toBeInTheDocument();
 	});
 });

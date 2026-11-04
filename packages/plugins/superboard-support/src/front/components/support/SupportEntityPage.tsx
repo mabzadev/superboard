@@ -173,10 +173,10 @@ export function SupportEntityPage<T extends { id: string; name: string }>({
 			{collection.loading ? (
 				<SupportLoading />
 			) : (
-				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+				<div className="grid gap-2">
 					{collection.items.map((row) => (
 						<a
-							className="rounded-md border p-5 font-medium hover:bg-muted"
+							className="rounded-md border p-4 font-medium hover:bg-muted"
 							key={row.id}
 							href={supportEntityUrl(path, parameter, row.id, locale)}
 						>

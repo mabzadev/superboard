@@ -10,6 +10,7 @@ import {
 	ModulePage,
 	moduleErrorMessage,
 } from "@superboard/front-ui/modules/ModulePage.js";
+import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
@@ -26,7 +27,9 @@ import { Label } from "@superboard/front-ui/ui/label.js";
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue,
 } from "@superboard/front-ui/ui/select.js";
@@ -46,12 +49,11 @@ import {
 	AppWindow,
 	BellRing,
 	CheckCircle2,
+	ChevronLeft,
 	Clock3,
 	Gauge,
 	Globe2,
 	LayoutDashboard,
-	MapPin,
-	MonitorSmartphone,
 	Plus,
 	RefreshCw,
 	Save,
@@ -59,7 +61,6 @@ import {
 	Star,
 	Trash2,
 	Webhook,
-	Wifi,
 	XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -367,7 +368,7 @@ export function AnalyticsDashboardsPage() {
 	);
 }
 
-export function AnalyticsUsersPage() {
+export function AnalyticsUsersPage({ section }: { section: "sessions" | "profiles" }) {
 	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const range = useMemo(() => range30Days(), []);
@@ -376,17 +377,22 @@ export function AnalyticsUsersPage() {
 	const [error, setError] = useState<string | null>(null);
 	useEffect(() => {
 		if (!selectedProject) return;
-		void Promise.all([
-			getAnalyticsSessions(selectedProject.id, range),
-			getAnalyticsProfiles(selectedProject.id),
-		])
-			.then(([sessionData, profileData]) => {
-				setSessions(sessionData.items);
-				setProfiles(profileData.items);
+		const request =
+			section === "profiles"
+				? getAnalyticsProfiles(selectedProject.id).then((result) => {
+						setProfiles(result.items);
+					})
+				: getAnalyticsSessions(selectedProject.id, range).then((result) => {
+						setSessions(result.items);
+					});
+		void request
+			.then(() => {
 				setError(null);
 			})
-			.catch((cause: unknown) => setError(moduleErrorMessage(cause, locale)));
-	}, [range, selectedProject, locale]);
+			.catch((cause: unknown) => {
+				setError(moduleErrorMessage(cause, locale));
+			});
+	}, [range, section, selectedProject, locale]);
 	return (
 		<ModulePage
 			title={t("Users & sessions")}
@@ -397,76 +403,67 @@ export function AnalyticsUsersPage() {
 		>
 			{!selectedProject ? (
 				<EmptyProject />
+			) : section === "sessions" ? (
+				<Card>
+					<CardHeader>
+						<CardTitle>{t("Recent sessions")}</CardTitle>
+						<CardDescription>
+							{t("Session duration and event depth over the last 30 days.")}
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<FeatureTable
+							columns={[
+								t("Started"),
+								t("Application"),
+								t("Platform"),
+								t("Events"),
+								t("Duration"),
+								t("Profile"),
+							]}
+							empty={t("No sessions in this period.")}
+						>
+							{sessions.map((session) => (
+								<FrontTableRow key={session.id} className="border-b last:border-0">
+									<Cell>{date(session.started_at, locale)}</Cell>
+									<Cell>{session.application_id}</Cell>
+									<Cell>{session.platform || "—"}</Cell>
+									<Cell>{numberFormat(session.event_count, locale)}</Cell>
+									<Cell>{duration(session.duration_seconds, locale)}</Cell>
+									<Cell mono>{shortId(session.profile_id)}</Cell>
+								</FrontTableRow>
+							))}
+						</FeatureTable>
+					</CardContent>
+				</Card>
 			) : (
-				<Tabs defaultValue="sessions" className="space-y-4">
-					<TabsList>
-						<TabsTrigger value="sessions">{t("Sessions")}</TabsTrigger>
-						<TabsTrigger value="profiles">{t("User profiles")}</TabsTrigger>
-					</TabsList>
-					<TabsContent value="sessions">
-						<Card>
-							<CardHeader>
-								<CardTitle>{t("Recent sessions")}</CardTitle>
-								<CardDescription>
-									{t("Session duration and event depth over the last 30 days.")}
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<FeatureTable
-									columns={[
-										t("Started"),
-										t("Application"),
-										t("Platform"),
-										t("Events"),
-										t("Duration"),
-										t("Profile"),
-									]}
-									empty={t("No sessions in this period.")}
-								>
-									{sessions.map((session) => (
-										<FrontTableRow key={session.id} className="border-b last:border-0">
-											<Cell>{date(session.started_at, locale)}</Cell>
-											<Cell>{session.application_id}</Cell>
-											<Cell>{session.platform || "—"}</Cell>
-											<Cell>{numberFormat(session.event_count, locale)}</Cell>
-											<Cell>{duration(session.duration_seconds, locale)}</Cell>
-											<Cell mono>{shortId(session.profile_id)}</Cell>
-										</FrontTableRow>
-									))}
-								</FeatureTable>
-							</CardContent>
-						</Card>
-					</TabsContent>
-					<TabsContent value="profiles">
-						<Card>
-							<CardHeader>
-								<CardTitle>{t("Pseudonymized profiles")}</CardTitle>
-								<CardDescription>
-									{t("Identity aliases are hashed before they reach Analytics.")}
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<FeatureTable
-									columns={[t("Last seen"), t("Application"), t("Profile"), t("Properties")]}
-									empty={t("No profiles have been resolved yet.")}
-								>
-									{profiles.map((profile) => (
-										<FrontTableRow key={profile.id} className="border-b last:border-0">
-											<Cell>{date(profile.last_seen_at, locale)}</Cell>
-											<Cell>{profile.application_id}</Cell>
-											<Cell mono>{shortId(profile.id)}</Cell>
-											<Cell>
-												<code className="block max-w-80 truncate text-xs">
-													{JSON.stringify(profile.properties)}
-												</code>
-											</Cell>
-										</FrontTableRow>
-									))}
-								</FeatureTable>
-							</CardContent>
-						</Card>
-					</TabsContent>
-				</Tabs>
+				<Card>
+					<CardHeader>
+						<CardTitle>{t("Pseudonymized profiles")}</CardTitle>
+						<CardDescription>
+							{t("Identity aliases are hashed before they reach Analytics.")}
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<FeatureTable
+							columns={[t("Last seen"), t("Application"), t("Profile"), t("Properties")]}
+							empty={t("No profiles have been resolved yet.")}
+						>
+							{profiles.map((profile) => (
+								<FrontTableRow key={profile.id} className="border-b last:border-0">
+									<Cell>{date(profile.last_seen_at, locale)}</Cell>
+									<Cell>{profile.application_id}</Cell>
+									<Cell mono>{shortId(profile.id)}</Cell>
+									<Cell>
+										<code className="block max-w-80 truncate text-xs">
+											{JSON.stringify(profile.properties)}
+										</code>
+									</Cell>
+								</FrontTableRow>
+							))}
+						</FeatureTable>
+					</CardContent>
+				</Card>
 			)}
 		</ModulePage>
 	);
@@ -558,6 +555,7 @@ export function AnalyticsDimensionsPage() {
 	const { selectedProject } = useProjectSelection();
 	const range = useMemo(() => range30Days(), []);
 	const [dimensions, setDimensions] = useState<Record<string, AnalyticsDimensionValue[]>>({});
+	const [dimension, setDimension] = useState("platform");
 	const [error, setError] = useState<string | null>(null);
 	useEffect(() => {
 		if (!selectedProject) return;
@@ -571,25 +569,23 @@ export function AnalyticsDimensionsPage() {
 	const groups = [
 		{
 			title: t("Platforms & versions"),
-			icon: MonitorSmartphone,
 			keys: ["platform", "app_version", "os_version", "device", "device_type"],
 		},
 		{
 			title: t("Web technology"),
-			icon: Globe2,
 			keys: ["browser", "browser_version", "screen_resolution"],
 		},
 		{
 			title: t("Locations"),
-			icon: MapPin,
 			keys: ["country_code", "city", "carrier"],
 		},
 		{
 			title: t("Acquisition & connection"),
-			icon: Wifi,
 			keys: ["connection_type", "campaign", "acquisition_source"],
 		},
 	];
+	const values = dimensions[dimension] ?? [];
+	const maximum = Number(values[0]?.events ?? 1);
 	return (
 		<ModulePage
 			title={t("Technology & location")}
@@ -601,64 +597,60 @@ export function AnalyticsDimensionsPage() {
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<div className="grid gap-5 xl:grid-cols-2">
-					{groups.map(({ title, icon: Icon, keys }) => (
-						<Card key={title}>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<Icon className="size-5 text-primary" /> {title}
-								</CardTitle>
-								<CardDescription>{t("Top values over the last 30 days.")}</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<Tabs defaultValue={keys[0]}>
-									<TabsList className="h-auto flex-wrap">
+				<div className="space-y-4">
+					<div className="flex flex-wrap items-center gap-3">
+						<Select value={dimension} onValueChange={setDimension}>
+							<SelectTrigger className="w-64" aria-label={t("Dimension")}>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{groups.map(({ title, keys }) => (
+									<SelectGroup key={title}>
+										<SelectLabel>{title}</SelectLabel>
 										{keys.map((key) => (
-											<TabsTrigger key={key} value={key}>
+											<SelectItem key={key} value={key}>
 												{t(labelize(key))}
-											</TabsTrigger>
+											</SelectItem>
 										))}
-									</TabsList>
-									{keys.map((key) => (
-										<TabsContent key={key} value={key} className="space-y-2 pt-2">
-											{(dimensions[key] ?? []).slice(0, 10).map((item, index) => {
-												const maximum = Number(dimensions[key]?.[0]?.events ?? 1);
-												return (
-													<div key={item.value} className="space-y-1.5">
-														<div className="flex items-center justify-between gap-3 text-sm">
-															<span className="truncate">
-																<span className="me-2 text-xs text-muted-foreground">
-																	{index + 1}
-																</span>
-																{item.value}
-															</span>
-															<span className="shrink-0 tabular-nums text-muted-foreground">
-																{t("User count", { count: item.users })} ·{" "}
-																{t("Event count", { count: item.events })}
-															</span>
-														</div>
-														<div className="h-1.5 overflow-hidden rounded-full bg-muted">
-															<div
-																className="h-full rounded-full bg-primary"
-																style={{
-																	width: `${Math.max(2, (Number(item.events) / maximum) * 100)}%`,
-																}}
-															/>
-														</div>
-													</div>
-												);
-											})}
-											{!dimensions[key]?.length && (
-												<EmptyState compact>
-													{t("Dimension empty", { dimension: t(labelize(key)) })}
-												</EmptyState>
-											)}
-										</TabsContent>
-									))}
-								</Tabs>
-							</CardContent>
-						</Card>
-					))}
+									</SelectGroup>
+								))}
+							</SelectContent>
+						</Select>
+						<p className="text-sm text-muted-foreground">
+							{t("Top values over the last 30 days.")}
+						</p>
+					</div>
+					<Card>
+						<CardContent className="space-y-2 pt-6">
+							{values.slice(0, 10).map((item, index) => (
+								<div key={item.value} className="space-y-1.5">
+									<div className="flex items-center justify-between gap-3 text-sm">
+										<span className="truncate">
+											<span className="me-2 text-xs text-muted-foreground">{index + 1}</span>
+											{item.value}
+										</span>
+										<span className="shrink-0 tabular-nums text-muted-foreground">
+											{t("User count", { count: item.users })} ·{" "}
+											{t("Event count", { count: item.events })}
+										</span>
+									</div>
+									<div className="h-1.5 overflow-hidden rounded-full bg-muted">
+										<div
+											className="h-full rounded-full bg-primary"
+											style={{
+												width: `${Math.max(2, (Number(item.events) / maximum) * 100)}%`,
+											}}
+										/>
+									</div>
+								</div>
+							))}
+							{!values.length && (
+								<EmptyState compact>
+									{t("Dimension empty", { dimension: t(labelize(dimension)) })}
+								</EmptyState>
+							)}
+						</CardContent>
+					</Card>
 				</div>
 			)}
 		</ModulePage>
@@ -668,8 +660,13 @@ export function AnalyticsDimensionsPage() {
 export function AnalyticsCrashesPage() {
 	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
+	const router = useRouter();
+	const pathname = usePathname();
+	const search = useSearchParams();
+	const fingerprint = search.get("crash");
 	const [items, setItems] = useState<AnalyticsCrash[]>([]);
 	const [selected, setSelected] = useState<AnalyticsCrash | null>(null);
+	const [failure, setFailure] = useState<{ fingerprint: string; message: string } | null>(null);
 	const [status, setStatus] = useState("open");
 	const [error, setError] = useState<string | null>(null);
 	const load = useCallback(async () => {
@@ -685,141 +682,153 @@ export function AnalyticsCrashesPage() {
 		}
 	}, [selectedProject, status, locale]);
 	useEffect(() => void load(), [load]);
-	const open = async (item: AnalyticsCrash) => {
+	useEffect(() => {
+		if (!selectedProject || !fingerprint) return;
+		void getAnalyticsCrash(selectedProject.id, fingerprint)
+			.then(setSelected)
+			.catch((cause: unknown) => {
+				setFailure({ fingerprint, message: moduleErrorMessage(cause, locale) });
+			});
+	}, [fingerprint, selectedProject, locale]);
+	const showCrash = (value: string | null) => {
+		const next = new URLSearchParams(search);
+		if (value) next.set("crash", value);
+		else next.delete("crash");
+		const query = next.toString();
+		router.push(query ? `${pathname}?${query}` : pathname);
+	};
+	const resolve = async (crash: AnalyticsCrash) => {
 		if (!selectedProject) return;
 		try {
-			setSelected(await getAnalyticsCrash(selectedProject.id, item.fingerprint));
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause, locale));
-		}
-	};
-	const resolve = async (resolved: boolean) => {
-		if (!selectedProject || !selected) return;
-		try {
-			await updateAnalyticsCrash(selectedProject.id, selected.fingerprint, {
-				resolved,
+			await updateAnalyticsCrash(selectedProject.id, crash.fingerprint, {
+				resolved: !crash.resolved,
 			});
-			showSuccessNotification(resolved ? t("Crash resolved") : t("Crash reopened"));
+			showSuccessNotification(crash.resolved ? t("Crash reopened") : t("Crash resolved"));
 			setSelected(null);
+			showCrash(null);
 			await load();
 		} catch (cause) {
 			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
+	const crash = selected?.fingerprint === fingerprint ? selected : null;
+	const crashError = failure?.fingerprint === fingerprint ? failure.message : null;
 	return (
 		<ModulePage
 			title={t("Crashes")}
 			description={t(
 				"Group recurring errors by deterministic fingerprint, inspect occurrences and manage resolution.",
 			)}
-			error={error}
+			error={error ?? crashError}
 		>
 			{!selectedProject ? (
 				<EmptyProject />
-			) : (
-				<div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-					<Card>
-						<CardHeader className="flex-row items-center justify-between gap-4">
-							<div>
-								<CardTitle>{t("Crash groups")}</CardTitle>
-								<CardDescription>{t("Fatal and non-fatal SDK reports.")}</CardDescription>
-							</div>
-							<Select value={status} onValueChange={setStatus}>
-								<SelectTrigger className="w-36" aria-label={t("Crash status")}>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="open">{t("Open")}</SelectItem>
-									<SelectItem value="resolved">{t("Resolved")}</SelectItem>
-									<SelectItem value="all">{t("All")}</SelectItem>
-								</SelectContent>
-							</Select>
-						</CardHeader>
-						<CardContent>
-							<FeatureTable
-								columns={[t("Crash"), t("Impact"), t("Version"), t("Last seen"), t("Status")]}
-								empty={t("No crash groups match this filter.")}
-							>
-								{items.map((item) => (
-									<FrontTableRow
-										key={`${item.application_id}:${item.fingerprint}`}
-										className="cursor-pointer border-b hover:bg-muted/40 last:border-0"
-										onClick={() => void open(item)}
-									>
-										<Cell>
-											<div className="flex items-center gap-2 font-medium">
-												{item.fatal && <AlertTriangle className="size-4 text-destructive" />}
-												{item.title}
-											</div>
-											<div className="font-mono text-xs text-muted-foreground">
-												{shortId(item.fingerprint)}
-											</div>
-										</Cell>
-										<Cell>
-											{t("Occurrences count", { count: item.occurrence_count })} ·{" "}
-											{t("User count", { count: item.affected_profiles })}
-										</Cell>
-										<Cell>{item.last_app_version || "—"}</Cell>
-										<Cell>{date(item.last_seen_at, locale)}</Cell>
-										<Cell>
-											<StatusBadge ok={item.resolved} okText={t("Resolved")} badText={t("Open")} />
-										</Cell>
-									</FrontTableRow>
-								))}
-							</FeatureTable>
-						</CardContent>
-					</Card>
-					<Card className="h-fit xl:sticky xl:top-5">
-						<CardHeader>
-							<CardTitle className="text-base">{selected?.title || t("Crash details")}</CardTitle>
-							<CardDescription>
-								{selected
-									? t("Occurrences since", {
-											count: selected.occurrence_count,
-											date: date(selected.first_seen_at, locale),
-										})
-									: t("Select a group to inspect its latest stack traces.")}
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							{selected ? (
-								<>
-									<div className="flex flex-wrap gap-2">
-										<Badge variant="outline">
-											{selected.last_platform || t("unknown platform")}
-										</Badge>
-										<Badge variant="outline">
-											{selected.last_app_version || t("unknown version")}
-										</Badge>
-										{selected.fatal && <Badge variant="destructive">{t("Fatal")}</Badge>}
-									</div>
-									{(selected.occurrences ?? []).slice(0, 5).map((occurrence) => (
-										<div key={occurrence.id} className="rounded-lg border p-3">
-											<div className="text-xs text-muted-foreground">
-												{date(occurrence.occurred_at, locale)}
-											</div>
-											<div className="mt-1 text-sm">{occurrence.message || selected.title}</div>
-											{occurrence.stack && (
-												<pre className="mt-2 max-h-32 overflow-auto rounded bg-muted p-2 text-xs">
-													{occurrence.stack}
-												</pre>
-											)}
+			) : fingerprint ? (
+				<div className="max-w-3xl space-y-4">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => {
+							showCrash(null);
+						}}
+					>
+						<ChevronLeft className="size-4 rtl:-scale-x-100" />
+						{t("All crash groups")}
+					</Button>
+					{crash ? (
+						<Card>
+							<CardHeader>
+								<CardTitle>{crash.title}</CardTitle>
+								<CardDescription>
+									{t("Occurrences since", {
+										count: crash.occurrence_count,
+										date: date(crash.first_seen_at, locale),
+									})}
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="space-y-4">
+								<div className="flex flex-wrap gap-2">
+									<Badge variant="outline">{crash.last_platform || t("unknown platform")}</Badge>
+									<Badge variant="outline">{crash.last_app_version || t("unknown version")}</Badge>
+									{crash.fatal && <Badge variant="destructive">{t("Fatal")}</Badge>}
+								</div>
+								{(crash.occurrences ?? []).slice(0, 5).map((occurrence) => (
+									<div key={occurrence.id} className="rounded-lg border p-3">
+										<div className="text-xs text-muted-foreground">
+											{date(occurrence.occurred_at, locale)}
 										</div>
-									))}
-									<Button className="w-full" onClick={() => void resolve(!selected.resolved)}>
-										{selected.resolved ? (
-											<RefreshCw className="size-4" />
-										) : (
-											<CheckCircle2 className="size-4" />
+										<div className="mt-1 text-sm">{occurrence.message || crash.title}</div>
+										{occurrence.stack && (
+											<pre className="mt-2 max-h-64 overflow-auto rounded bg-muted p-2 text-xs">
+												{occurrence.stack}
+											</pre>
 										)}
-										{selected.resolved ? t("Reopen group") : t("Mark as resolved")}
-									</Button>
-								</>
-							) : (
-								<EmptyState compact>{t("No crash selected.")}</EmptyState>
-							)}
-						</CardContent>
-					</Card>
+									</div>
+								))}
+								<Button onClick={() => void resolve(crash)}>
+									{crash.resolved ? (
+										<RefreshCw className="size-4" />
+									) : (
+										<CheckCircle2 className="size-4" />
+									)}
+									{crash.resolved ? t("Reopen group") : t("Mark as resolved")}
+								</Button>
+							</CardContent>
+						</Card>
+					) : (
+						!error &&
+						!crashError && (
+							<p role="status" className="text-sm text-muted-foreground">
+								{t("Loading crash details…")}
+							</p>
+						)
+					)}
+				</div>
+			) : (
+				<div className="space-y-4">
+					<Select value={status} onValueChange={setStatus}>
+						<SelectTrigger className="w-36" aria-label={t("Crash status")}>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="open">{t("Open")}</SelectItem>
+							<SelectItem value="resolved">{t("Resolved")}</SelectItem>
+							<SelectItem value="all">{t("All")}</SelectItem>
+						</SelectContent>
+					</Select>
+					<FeatureTable
+						columns={[t("Crash"), t("Impact"), t("Version"), t("Last seen"), t("Status")]}
+						empty={t("No crash groups match this filter.")}
+					>
+						{items.map((item) => (
+							<FrontTableRow
+								key={`${item.application_id}:${item.fingerprint}`}
+								className="cursor-pointer border-b hover:bg-muted/40 last:border-0"
+								onClick={() => {
+									showCrash(item.fingerprint);
+								}}
+							>
+								<Cell>
+									<div className="flex items-center gap-2 font-medium">
+										{item.fatal && <AlertTriangle className="size-4 text-destructive" />}
+										{item.title}
+									</div>
+									<div className="font-mono text-xs text-muted-foreground">
+										{shortId(item.fingerprint)}
+									</div>
+								</Cell>
+								<Cell>
+									{t("Occurrences count", { count: item.occurrence_count })} ·{" "}
+									{t("User count", { count: item.affected_profiles })}
+								</Cell>
+								<Cell>{item.last_app_version || "—"}</Cell>
+								<Cell>{date(item.last_seen_at, locale)}</Cell>
+								<Cell>
+									<StatusBadge ok={item.resolved} okText={t("Resolved")} badText={t("Open")} />
+								</Cell>
+							</FrontTableRow>
+						))}
+					</FeatureTable>
 				</div>
 			)}
 		</ModulePage>
@@ -948,8 +957,8 @@ export function AnalyticsCohortsPage() {
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-					<Card className="h-fit">
+				<div className="space-y-5">
+					<Card className="max-w-2xl">
 						<CardHeader>
 							<CardTitle className="text-base">{t("New behavioral cohort")}</CardTitle>
 							<CardDescription>
@@ -1142,109 +1151,99 @@ export function AnalyticsRemoteConfigPage() {
 							)}
 						</AlertDescription>
 					</Alert>
-					<div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
-						<Card className="h-fit">
-							<CardHeader>
-								<CardTitle className="text-base">{t("Publish parameter")}</CardTitle>
-								<CardDescription>
-									{t("Environment:")}
-									<Badge variant="outline">{t(labelize(environment))}</Badge>
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-4">
-								<Field label={t("Parameter key")}>
-									<Input
-										value={key}
-										onChange={(event) => setKey(event.target.value)}
-										placeholder={t("checkout_banner")}
-									/>
-								</Field>
-								<Field label={t("JSON value")}>
-									<textarea
-										className="min-h-36 w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
-										value={value}
-										onChange={(event) => setValue(event.target.value)}
-									/>
-								</Field>
-								<Field
-									label={t("Rollout percentage", {
-										percent: new Intl.NumberFormat(locale, { style: "percent" }).format(
-											Number(rollout) / 100,
-										),
-									})}
-								>
-									<Input
-										type="range"
-										min={0}
-										max={100}
-										value={rollout}
-										onChange={(event) => setRollout(event.target.value)}
-									/>
-								</Field>
-								<Button
-									className="w-full"
-									disabled={busy || !key.trim()}
-									onClick={() => void save()}
-								>
-									<Save className="size-4" />
-									{t("Publish")}
-								</Button>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle>{t("Parameters")}</CardTitle>
-								<CardDescription>
-									{t("Each update increments an immutable client-visible version.")}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-3">
-								{items.map((item) => (
-									<div key={item.id} className="rounded-xl border p-4">
-										<div className="flex items-start justify-between gap-4">
-											<div>
-												<div className="flex flex-wrap items-center gap-2">
-													<code className="font-semibold">{item.config_key}</code>
-													<Badge variant="outline">v{item.version}</Badge>
-													<Badge variant="secondary">{t(labelize(item.environment))}</Badge>
-													<StatusBadge
-														ok={item.enabled}
-														okText={t("Live")}
-														badText={t("Disabled")}
-													/>
-												</div>
-												<pre className="mt-3 max-h-36 overflow-auto rounded-lg bg-muted/60 p-3 text-xs">
-													{JSON.stringify(item.value, null, 2)}
-												</pre>
+					<Card className="max-w-2xl">
+						<CardHeader>
+							<CardTitle className="text-base">{t("Publish parameter")}</CardTitle>
+							<CardDescription>
+								{t("Environment:")}
+								<Badge variant="outline">{t(labelize(environment))}</Badge>
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<Field label={t("Parameter key")}>
+								<Input
+									value={key}
+									onChange={(event) => setKey(event.target.value)}
+									placeholder={t("checkout_banner")}
+								/>
+							</Field>
+							<Field label={t("JSON value")}>
+								<textarea
+									className="min-h-36 w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
+									value={value}
+									onChange={(event) => setValue(event.target.value)}
+								/>
+							</Field>
+							<Field
+								label={t("Rollout percentage", {
+									percent: new Intl.NumberFormat(locale, { style: "percent" }).format(
+										Number(rollout) / 100,
+									),
+								})}
+							>
+								<Input
+									type="range"
+									min={0}
+									max={100}
+									value={rollout}
+									onChange={(event) => setRollout(event.target.value)}
+								/>
+							</Field>
+							<Button className="w-full" disabled={busy || !key.trim()} onClick={() => void save()}>
+								<Save className="size-4" />
+								{t("Publish")}
+							</Button>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader>
+							<CardTitle>{t("Parameters")}</CardTitle>
+							<CardDescription>
+								{t("Each update increments an immutable client-visible version.")}
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-3">
+							{items.map((item) => (
+								<div key={item.id} className="rounded-xl border p-4">
+									<div className="flex items-start justify-between gap-4">
+										<div>
+											<div className="flex flex-wrap items-center gap-2">
+												<code className="font-semibold">{item.config_key}</code>
+												<Badge variant="outline">v{item.version}</Badge>
+												<Badge variant="secondary">{t(labelize(item.environment))}</Badge>
+												<StatusBadge ok={item.enabled} okText={t("Live")} badText={t("Disabled")} />
 											</div>
-											<Button
-												variant="ghost"
-												size="icon"
-												aria-label={t("Delete item", { name: item.config_key })}
-												onClick={() =>
-													void deleteAnalyticsRemoteConfig(
-														selectedProject.id,
-														item.config_key,
-														item.environment,
-													)
-														.then(load)
-														.then(() => showSuccessNotification(t("Parameter deleted")))
-														.catch((cause: unknown) =>
-															showErrorNotification(moduleErrorMessage(cause, locale)),
-														)
-												}
-											>
-												<Trash2 className="size-4" />
-											</Button>
+											<pre className="mt-3 max-h-36 overflow-auto rounded-lg bg-muted/60 p-3 text-xs">
+												{JSON.stringify(item.value, null, 2)}
+											</pre>
 										</div>
+										<Button
+											variant="ghost"
+											size="icon"
+											aria-label={t("Delete item", { name: item.config_key })}
+											onClick={() =>
+												void deleteAnalyticsRemoteConfig(
+													selectedProject.id,
+													item.config_key,
+													item.environment,
+												)
+													.then(load)
+													.then(() => showSuccessNotification(t("Parameter deleted")))
+													.catch((cause: unknown) =>
+														showErrorNotification(moduleErrorMessage(cause, locale)),
+													)
+											}
+										>
+											<Trash2 className="size-4" />
+										</Button>
 									</div>
-								))}
-								{!items.length && (
-									<EmptyState compact>{t("No remote parameters published.")}</EmptyState>
-								)}
-							</CardContent>
-						</Card>
-					</div>
+								</div>
+							))}
+							{!items.length && (
+								<EmptyState compact>{t("No remote parameters published.")}</EmptyState>
+							)}
+						</CardContent>
+					</Card>
 				</div>
 			)}
 		</ModulePage>
@@ -1307,231 +1306,217 @@ export function AnalyticsAlertsPage() {
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<Tabs defaultValue="rules" className="space-y-4">
-					<TabsList>
-						<TabsTrigger value="rules">{t("Alert rules")}</TabsTrigger>
-						<TabsTrigger value="incidents">
-							Incidents{" "}
-							<Badge className="ml-2" variant="secondary">
-								{incidents.filter((item) => item.status !== "resolved").length}
-							</Badge>
-						</TabsTrigger>
-					</TabsList>
-					<TabsContent value="rules" className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-						<Card className="h-fit">
-							<CardHeader>
-								<CardTitle className="text-base">{t("New alert")}</CardTitle>
-								<CardDescription>
-									{t("Evaluated every minute by the Analytics Worker.")}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-4">
-								<Field label={t("Rule name")}>
-									<Input
-										value={name}
-										onChange={(event) => setName(event.target.value)}
-										placeholder={t("Crash spike")}
-									/>
-								</Field>
-								<Field label={t("Signal")}>
-									<Select
-										value={type}
-										onValueChange={(value) => setType(value as AnalyticsAlert["alert_type"])}
-									>
-										<SelectTrigger>
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="crash_spike">{t("Crash spike")}</SelectItem>
-											<SelectItem value="no_data">{t("No incoming data")}</SelectItem>
-											<SelectItem value="purchase_drop">{t("Verified purchase drop")}</SelectItem>
-											<SelectItem value="installation_drop">{t("Installation drop")}</SelectItem>
-										</SelectContent>
-									</Select>
-								</Field>
-								<Field
-									label={
-										type === "no_data"
-											? t("No-data minutes")
-											: type.endsWith("_drop")
-												? t("Drop percentage")
-												: t("Threshold")
-									}
+				<div className="space-y-5">
+					<Card className="max-w-2xl">
+						<CardHeader>
+							<CardTitle className="text-base">{t("New alert")}</CardTitle>
+							<CardDescription>
+								{t("Evaluated every minute by the Analytics Worker.")}
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<Field label={t("Rule name")}>
+								<Input
+									value={name}
+									onChange={(event) => setName(event.target.value)}
+									placeholder={t("Crash spike")}
+								/>
+							</Field>
+							<Field label={t("Signal")}>
+								<Select
+									value={type}
+									onValueChange={(value) => setType(value as AnalyticsAlert["alert_type"])}
 								>
-									<Input
-										type="number"
-										min={0}
-										value={threshold}
-										onChange={(event) => setThreshold(event.target.value)}
-									/>
-								</Field>
-								<Field label={t("AWS SES recipient (optional)")}>
-									<Input
-										type="email"
-										value={email}
-										onChange={(event) => setEmail(event.target.value)}
-										placeholder={t("team@example.com")}
-									/>
-								</Field>
-								<Button
-									className="w-full"
-									disabled={busy || !name.trim()}
-									onClick={() =>
-										void run(async () => {
-											await createAnalyticsAlert(selectedProject.id, {
-												name: name.trim(),
-												alert_type: type,
-												definition: definition(),
-												channels: email.trim() ? [{ type: "email", to: email.trim() }] : [],
-												enabled: true,
-												cooldown_minutes: 60,
-											});
-											setName("");
-										}, t("Alert created"))
-									}
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="crash_spike">{t("Crash spike")}</SelectItem>
+										<SelectItem value="no_data">{t("No incoming data")}</SelectItem>
+										<SelectItem value="purchase_drop">{t("Verified purchase drop")}</SelectItem>
+										<SelectItem value="installation_drop">{t("Installation drop")}</SelectItem>
+									</SelectContent>
+								</Select>
+							</Field>
+							<Field
+								label={
+									type === "no_data"
+										? t("No-data minutes")
+										: type.endsWith("_drop")
+											? t("Drop percentage")
+											: t("Threshold")
+								}
+							>
+								<Input
+									type="number"
+									min={0}
+									value={threshold}
+									onChange={(event) => setThreshold(event.target.value)}
+								/>
+							</Field>
+							<Field label={t("AWS SES recipient (optional)")}>
+								<Input
+									type="email"
+									value={email}
+									onChange={(event) => setEmail(event.target.value)}
+									placeholder={t("team@example.com")}
+								/>
+							</Field>
+							<Button
+								className="w-full"
+								disabled={busy || !name.trim()}
+								onClick={() =>
+									void run(async () => {
+										await createAnalyticsAlert(selectedProject.id, {
+											name: name.trim(),
+											alert_type: type,
+											definition: definition(),
+											channels: email.trim() ? [{ type: "email", to: email.trim() }] : [],
+											enabled: true,
+											cooldown_minutes: 60,
+										});
+										setName("");
+									}, t("Alert created"))
+								}
+							>
+								<BellRing className="size-4" />
+								{t("Create alert")}
+							</Button>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader>
+							<CardTitle>{t("Active rules")}</CardTitle>
+							<CardDescription>
+								{t("Notifications use the central AWS SES Email Worker.")}
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-3">
+							{items.map((item) => (
+								<div
+									key={item.id}
+									className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
 								>
-									<BellRing className="size-4" />
-									{t("Create alert")}
-								</Button>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle>{t("Active rules")}</CardTitle>
-								<CardDescription>
-									{t("Notifications use the central AWS SES Email Worker.")}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-3">
-								{items.map((item) => (
-									<div
-										key={item.id}
-										className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
-									>
-										<div>
-											<div className="flex items-center gap-2">
-												<span className="font-medium">{item.name}</span>
-												<StatusBadge
-													ok={item.enabled}
-													okText={t("Enabled")}
-													badText={t("Paused")}
-												/>
-											</div>
-											<p className="mt-1 text-sm text-muted-foreground">
-												{t("Alert cooldown", {
-													type: t(labelize(item.alert_type)),
-													minutes: item.cooldown_minutes,
-												})}
-											</p>
-											<p className="mt-1 text-xs text-muted-foreground">
-												{item.last_evaluated_at
-													? t("Evaluated at", { date: date(item.last_evaluated_at, locale) })
-													: t("Awaiting first evaluation")}
-											</p>
+									<div>
+										<div className="flex items-center gap-2">
+											<span className="font-medium">{item.name}</span>
+											<StatusBadge ok={item.enabled} okText={t("Enabled")} badText={t("Paused")} />
 										</div>
-										<Button
-											variant="ghost"
-											size="icon"
-											aria-label={t("Delete item", { name: item.name })}
-											disabled={busy}
-											onClick={() =>
-												void run(
-													() => deleteAnalyticsAlert(selectedProject.id, item.id),
-													t("Alert deleted"),
-												)
-											}
-										>
-											<Trash2 className="size-4" />
-										</Button>
+										<p className="mt-1 text-sm text-muted-foreground">
+											{t("Alert cooldown", {
+												type: t(labelize(item.alert_type)),
+												minutes: item.cooldown_minutes,
+											})}
+										</p>
+										<p className="mt-1 text-xs text-muted-foreground">
+											{item.last_evaluated_at
+												? t("Evaluated at", { date: date(item.last_evaluated_at, locale) })
+												: t("Awaiting first evaluation")}
+										</p>
 									</div>
+									<Button
+										variant="ghost"
+										size="icon"
+										aria-label={t("Delete item", { name: item.name })}
+										disabled={busy}
+										onClick={() =>
+											void run(
+												() => deleteAnalyticsAlert(selectedProject.id, item.id),
+												t("Alert deleted"),
+											)
+										}
+									>
+										<Trash2 className="size-4" />
+									</Button>
+								</div>
+							))}
+							{!items.length && <EmptyState compact>{t("No alert rules configured.")}</EmptyState>}
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								{t("Incident history")}
+								<Badge variant="secondary">
+									{t("Open incident count", {
+										count: incidents.filter((item) => item.status !== "resolved").length,
+									})}
+								</Badge>
+							</CardTitle>
+							<CardDescription>
+								{t("Acknowledge active incidents and resolve them after investigation.")}
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<FeatureTable
+								columns={[
+									t("Triggered"),
+									t("Summary"),
+									t("Status"),
+									t("Notification"),
+									t("Actions"),
+								]}
+								empty={t("No incidents have been triggered.")}
+							>
+								{incidents.map((incident) => (
+									<FrontTableRow key={incident.id} className="border-b last:border-0">
+										<Cell>{date(incident.triggered_at, locale)}</Cell>
+										<Cell strong>{incident.summary}</Cell>
+										<Cell>
+											<Badge variant={incident.status === "open" ? "destructive" : "outline"}>
+												{t(labelize(incident.status))}
+											</Badge>
+										</Cell>
+										<Cell>
+											<Badge variant="secondary">{t(labelize(incident.notification_status))}</Badge>
+										</Cell>
+										<Cell>
+											<div className="flex gap-2">
+												{incident.status === "open" && (
+													<Button
+														size="sm"
+														variant="outline"
+														onClick={() =>
+															void run(
+																() =>
+																	updateAnalyticsAlertIncident(
+																		selectedProject.id,
+																		incident.id,
+																		"acknowledge",
+																	),
+																t("Incident acknowledged"),
+															)
+														}
+													>
+														{t("Acknowledge")}
+													</Button>
+												)}
+												{incident.status !== "resolved" && (
+													<Button
+														size="sm"
+														onClick={() =>
+															void run(
+																() =>
+																	updateAnalyticsAlertIncident(
+																		selectedProject.id,
+																		incident.id,
+																		"resolve",
+																	),
+																t("Incident resolved"),
+															)
+														}
+													>
+														{t("Resolve")}
+													</Button>
+												)}
+											</div>
+										</Cell>
+									</FrontTableRow>
 								))}
-								{!items.length && (
-									<EmptyState compact>{t("No alert rules configured.")}</EmptyState>
-								)}
-							</CardContent>
-						</Card>
-					</TabsContent>
-					<TabsContent value="incidents">
-						<Card>
-							<CardHeader>
-								<CardTitle>{t("Incident history")}</CardTitle>
-								<CardDescription>
-									{t("Acknowledge active incidents and resolve them after investigation.")}
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<FeatureTable
-									columns={[
-										t("Triggered"),
-										t("Summary"),
-										t("Status"),
-										t("Notification"),
-										t("Actions"),
-									]}
-									empty={t("No incidents have been triggered.")}
-								>
-									{incidents.map((incident) => (
-										<FrontTableRow key={incident.id} className="border-b last:border-0">
-											<Cell>{date(incident.triggered_at, locale)}</Cell>
-											<Cell strong>{incident.summary}</Cell>
-											<Cell>
-												<Badge variant={incident.status === "open" ? "destructive" : "outline"}>
-													{t(labelize(incident.status))}
-												</Badge>
-											</Cell>
-											<Cell>
-												<Badge variant="secondary">
-													{t(labelize(incident.notification_status))}
-												</Badge>
-											</Cell>
-											<Cell>
-												<div className="flex gap-2">
-													{incident.status === "open" && (
-														<Button
-															size="sm"
-															variant="outline"
-															onClick={() =>
-																void run(
-																	() =>
-																		updateAnalyticsAlertIncident(
-																			selectedProject.id,
-																			incident.id,
-																			"acknowledge",
-																		),
-																	t("Incident acknowledged"),
-																)
-															}
-														>
-															{t("Acknowledge")}
-														</Button>
-													)}
-													{incident.status !== "resolved" && (
-														<Button
-															size="sm"
-															onClick={() =>
-																void run(
-																	() =>
-																		updateAnalyticsAlertIncident(
-																			selectedProject.id,
-																			incident.id,
-																			"resolve",
-																		),
-																	t("Incident resolved"),
-																)
-															}
-														>
-															{t("Resolve")}
-														</Button>
-													)}
-												</div>
-											</Cell>
-										</FrontTableRow>
-									))}
-								</FeatureTable>
-							</CardContent>
-						</Card>
-					</TabsContent>
-				</Tabs>
+							</FeatureTable>
+						</CardContent>
+					</Card>
+				</div>
 			)}
 		</ModulePage>
 	);
@@ -1740,8 +1725,8 @@ export function AnalyticsSettingsPage() {
 								</Card>
 							)}
 						</TabsContent>
-						<TabsContent value="hooks" className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
-							<Card className="h-fit">
+						<TabsContent value="hooks" className="space-y-5">
+							<Card className="max-w-2xl">
 								<CardHeader>
 									<CardTitle className="text-base">{t("Signed webhook")}</CardTitle>
 									<CardDescription>
@@ -1862,11 +1847,8 @@ export function AnalyticsSettingsPage() {
 								</CardContent>
 							</Card>
 						</TabsContent>
-						<TabsContent
-							value="annotations"
-							className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]"
-						>
-							<Card className="h-fit">
+						<TabsContent value="annotations" className="space-y-5">
+							<Card className="max-w-2xl">
 								<CardHeader>
 									<CardTitle className="text-base">{t("Add annotation")}</CardTitle>
 									<CardDescription>

@@ -43,6 +43,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
 	AcquisitionPage as ModulePage,
+	EmbeddedPage,
 	useAcquisitionSelection,
 	useItemExitGuard,
 } from "../../../AcquisitionPage.js";
@@ -655,7 +656,9 @@ export function PaywallsPage() {
 							</Card>
 
 							{studioTab === "Results" && (
-								<PaywallStatisticsPage key={selected.id} itemVersions={versions} />
+								<EmbeddedPage>
+									<PaywallStatisticsPage key={selected.id} itemVersions={versions} />
+								</EmbeddedPage>
 							)}
 							{selected && studioTab === "Delivery" && (
 								<PaywallDeliveryControls
@@ -1187,7 +1190,7 @@ export function PaywallStatisticsPage({ itemVersions }: { itemVersions?: Paywall
 	const summary = summaryOrder.map((label) => [label, Number(data?.totals[label] ?? 0)] as const);
 	return (
 		<ModulePage
-			title={t("Paywall statistics")}
+			title={itemVersions ? "" : t("Paywall statistics")}
 			description={t("Conversion, revenue and event performance for the last 30 days.")}
 			error={error}
 		>

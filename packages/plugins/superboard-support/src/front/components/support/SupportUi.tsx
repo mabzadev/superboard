@@ -17,6 +17,7 @@ import { RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import type { SupportCursorPage, SupportCursorQuery } from "../../api/support/nativeClient.js";
+import { useSupportI18n } from "../../i18n.js";
 
 export function useSupportCollection<T>(
 	projectRef: string | undefined,
@@ -103,6 +104,7 @@ export function SupportSearchToolbar({
 	onRefresh,
 	loading,
 	action,
+	filters,
 }: {
 	query: string;
 	setQuery: (value: string) => void;
@@ -110,15 +112,18 @@ export function SupportSearchToolbar({
 	onRefresh: () => void;
 	loading?: boolean;
 	action?: ReactNode;
+	filters?: ReactNode;
 }) {
+	const { t } = useSupportI18n();
 	return (
 		<div className="flex flex-wrap items-center gap-2">
+			{filters}
 			<div className="relative min-w-[240px] flex-1">
-				<Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+				<Search className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
 				<Input
-					aria-label="Search"
-					className="pl-9"
-					placeholder="Search"
+					aria-label={t("Search")}
+					className="ps-9"
+					placeholder={t("Search")}
 					value={query}
 					onChange={(event) => setQuery(event.target.value)}
 					onKeyDown={(event) => {
@@ -127,13 +132,63 @@ export function SupportSearchToolbar({
 				/>
 			</div>
 			<Button variant="outline" onClick={onSearch}>
-				Search
+				{t("Search")}
 			</Button>
-			<Button aria-label="Refresh" variant="outline" disabled={loading} onClick={onRefresh}>
+			<Button aria-label={t("Refresh")} variant="outline" disabled={loading} onClick={onRefresh}>
 				<RefreshCw className={loading ? "animate-spin" : ""} />
 			</Button>
 			{action}
 		</div>
+	);
+}
+
+export function SupportViewSelect<T extends string>({
+	label,
+	value,
+	options,
+	onChange,
+}: {
+	label: string;
+	value: T;
+	options: ReadonlyArray<{ value: T; label: string }>;
+	onChange: (value: T) => void;
+}) {
+	return (
+		<select
+			aria-label={label}
+			className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+			value={value}
+			onChange={(event) => {
+				const next = options.find((option) => option.value === event.target.value);
+				if (next) onChange(next.value);
+			}}
+		>
+			{options.map((option) => (
+				<option key={option.value} value={option.value}>
+					{option.label}
+				</option>
+			))}
+		</select>
+	);
+}
+
+export function SupportSection({
+	title,
+	icon,
+	children,
+}: {
+	title: string;
+	icon?: ReactNode;
+	children: ReactNode;
+}) {
+	return (
+		<section className="grid gap-3 border-t pt-5">
+			<h3 className="flex items-center gap-2 text-base font-semibold">
+				{icon}
+				{title}
+			</h3>
+			{children}
+		</section>
 	);
 }
 

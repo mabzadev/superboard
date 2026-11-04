@@ -43,6 +43,7 @@ import ApplicationUsersPage, {
 describe("application user back office", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		window.history.replaceState({}, "", "/auth/users");
 		mocks.useProjectSelection.mockReturnValue({
 			selectedInstance: { id: "10", role: "owner" },
 			selectedProject: { id: "10-test", name: "Test" },
@@ -145,43 +146,58 @@ describe("application user back office", () => {
 		});
 	});
 
-	it("shows free and paying users with authentication and commerce state", async () => {
+	it("lists users in a single table with their sign-in method, session and sign-up date", async () => {
 		render(<ApplicationUsersPage />);
-		expect(await screen.findByText("Example User")).toBeInTheDocument();
-		expect(screen.getByText("Email verified")).toBeInTheDocument();
-		expect(screen.getByText("2 active")).toBeInTheDocument();
+		const row = (await screen.findByRole("button", { name: "Example User" })).closest("tr")!;
+		expect(row).toHaveTextContent("user@example.test");
+		expect(row).toHaveTextContent("Password, Apple, Google");
+		expect(row).toHaveTextContent("2 active");
+		expect(row).toHaveTextContent(new Date("2026-08-01T10:00:00.000Z").toLocaleDateString("en"));
+		expect(screen.getByText("1 user")).toBeInTheDocument();
+		expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+		expect(mocks.getApplicationUser).not.toHaveBeenCalled();
+	});
 
-		fireEvent.click(screen.getByRole("button", { name: "Inspect user@example.test" }));
+	it("opens the user sheet in place of the list and returns to the list", async () => {
+		render(<ApplicationUsersPage />);
+		fireEvent.click(await screen.findByRole("button", { name: "Example User" }));
 
 		expect(await screen.findByText("Linked authentication")).toBeInTheDocument();
+		expect(window.location.search).toBe("?user=application-user-1");
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
 		expect(
 			screen.getByText("relay@privaterelay.appleid.com", { exact: false }),
 		).toBeInTheDocument();
-		await waitFor(() =>
-			expect(mocks.searchBillingCustomers).toHaveBeenCalledWith("10-test", "application-user-1"),
-		);
-
-		fireEvent.click(screen.getByRole("tab", { name: "Purchases & entitlements" }));
 		expect(await screen.findByText("premium: active")).toBeInTheDocument();
 		expect(screen.getByText("purchase")).toBeInTheDocument();
+		expect(mocks.searchBillingCustomers).toHaveBeenCalledWith("10-test", "application-user-1");
+		expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole("button", { name: "All users" }));
+		expect(await screen.findByRole("table")).toBeInTheDocument();
+		expect(window.location.search).toBe("");
+	});
+
+	it("opens a user sheet directly from its address", async () => {
+		window.history.replaceState({}, "", "/auth/users?tab=users&user=application-user-1");
+		render(<ApplicationUsersPage />);
+		expect(await screen.findByText("Linked authentication")).toBeInTheDocument();
+		expect(mocks.getApplicationUser).toHaveBeenCalledWith("10-test", "application-user-1");
 	});
 
 	it("links the dimensions owned by other plugins from the user sheet", async () => {
 		render(<ApplicationUsersPage />);
-		fireEvent.click(await screen.findByRole("button", { name: "Inspect user@example.test" }));
+		fireEvent.click(await screen.findByRole("button", { name: "Example User" }));
 		await screen.findByText("Linked authentication");
 
-		fireEvent.click(screen.getByRole("tab", { name: "Messages" }));
 		expect(screen.getByRole("link", { name: "View in Communication › Audience" })).toHaveAttribute(
 			"href",
 			"/communication/marketing-email?tab=contacts&q=user%40example.test",
 		);
-		fireEvent.click(screen.getByRole("tab", { name: "Support" }));
 		expect(screen.getByRole("link", { name: "View in Support" })).toHaveAttribute(
 			"href",
 			"/support/inbox?q=user%40example.test",
 		);
-		fireEvent.click(screen.getByRole("tab", { name: "Events" }));
 		expect(screen.getByRole("link", { name: "View events" })).toHaveAttribute(
 			"href",
 			"/analytics/events?user=application-user-1",

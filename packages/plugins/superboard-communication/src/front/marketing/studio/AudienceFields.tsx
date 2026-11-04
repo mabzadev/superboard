@@ -108,9 +108,9 @@ export function AudienceFields({ project }: { project: string }) {
 		.filter(Boolean);
 	if (loading) return <Loader />;
 	return (
-		<div className="grid gap-6 xl:grid-cols-2">
+		<div className="space-y-8">
 			{error && (
-				<p role="alert" className="text-kumo-danger xl:col-span-2">
+				<p role="alert" className="text-kumo-danger">
 					{error}
 				</p>
 			)}

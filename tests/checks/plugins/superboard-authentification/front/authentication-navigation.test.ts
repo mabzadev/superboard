@@ -36,6 +36,7 @@ describe("authentication tabs", () => {
 		["profiles", "devices"],
 		["devices", "devices"],
 		["referrals", "referrals"],
+		["directory", "directory"],
 	])("opens former users tab %s in %s", (tab, expected) => {
 		expect(target("users", `tab=${tab}`)).toMatchObject({ view: "users", tab: expected });
 	});
@@ -57,7 +58,16 @@ describe("authentication tabs", () => {
 			tab: "sign-in",
 			section: "sso",
 		});
-		expect(target("users", "tab=accounts&section=directory").section).toBe("directory");
+		expect(target("users", "tab=accounts&section=directory")).toEqual({
+			view: "users",
+			tab: "directory",
+			section: null,
+		});
+		expect(target("users", "tab=users&section=directory")).toEqual({
+			view: "users",
+			tab: "directory",
+			section: null,
+		});
 		expect(target("settings", "tab=constructor")).toEqual({
 			view: "settings",
 			tab: "sign-in",
@@ -73,6 +83,9 @@ describe("authentication tabs", () => {
 			"/auth/settings?lang=fr&tab=access&editor=roles&id=new&section=roles",
 		);
 		expect(authenticationHref("/auth/account")).toBe("/auth/settings?tab=sign-in&editor=account");
+		expect(authenticationHref("/auth/directory/users/auth-7?lang=fr")).toBe(
+			"/auth/users?lang=fr&tab=directory&editor=users&id=auth-7",
+		);
 		expect(authenticationHref("/analytics/events?user=1")).toBe("/analytics/events?user=1");
 	});
 });

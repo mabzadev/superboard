@@ -9,7 +9,6 @@ import { Button } from "@superboard/front-ui/ui/button.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@superboard/front-ui/ui/card.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { Textarea } from "@superboard/front-ui/ui/textarea.js";
 import { BookOpen, Globe2, Languages, Plus, Send } from "lucide-react";
 import { useState } from "react";
@@ -35,7 +34,12 @@ import {
 	useSupportCollection,
 } from "../support/SupportUi.js";
 
-export default function SupportHelpCenterPage({ portalId }: { portalId?: string } = {}) {
+export type HelpCenterSection = "articles" | "structure" | "portals" | "translations";
+
+export default function SupportHelpCenterPage({
+	portalId,
+	section = "articles",
+}: { portalId?: string; section?: HelpCenterSection } = {}) {
 	const { t } = useSupportI18n();
 
 	const { selectedProject } = useProjectSelection();
@@ -184,146 +188,23 @@ export default function SupportHelpCenterPage({ portalId }: { portalId?: string 
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<Tabs defaultValue="articles">
-					<TabsList className="flex h-auto flex-wrap justify-start">
-						<TabsTrigger value="articles">{t("Articles")}</TabsTrigger>
-						<TabsTrigger value="structure">{t("Structure")}</TabsTrigger>
-						{!portalId && <TabsTrigger value="portals">{t("Portals")}</TabsTrigger>}
-						<TabsTrigger value="translations">{t("Translations")}</TabsTrigger>
-					</TabsList>
-					<TabsContent className="space-y-4" value="articles">
-						<Toolbar collection={articles} />
-						<SupportError message={articles.error} />
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<BookOpen /> {t("New article")}
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-								{!portalId && (
-									<Field label={t("Portal")}>
-										<ResourceSelect
-											value={article.portalId}
-											onChange={(portalId) => setArticle((v) => ({ ...v, portalId }))}
-											items={portals.items}
-											placeholder={t("Select portal")}
-										/>
-									</Field>
-								)}
-								<Field label={t("Category")}>
-									<ResourceSelect
-										value={article.categoryId}
-										onChange={(categoryId) => setArticle((v) => ({ ...v, categoryId }))}
-										items={categories.items}
-										placeholder={t("No category")}
-									/>
-								</Field>
-								<Field label={t("Folder")}>
-									<ResourceSelect
-										value={article.folderId}
-										onChange={(folderId) => setArticle((v) => ({ ...v, folderId }))}
-										items={folders.items}
-										placeholder={t("No folder")}
-									/>
-								</Field>
-								<Field label={t("Slug")}>
-									<Input
-										placeholder={t("automatic-from-title")}
-										value={article.slug}
-										onChange={(e) => setArticle((v) => ({ ...v, slug: e.target.value }))}
-									/>
-								</Field>
-								<Field label={t("Title")}>
-									<Input
-										value={article.title}
-										onChange={(e) => setArticle((v) => ({ ...v, title: e.target.value }))}
-									/>
-								</Field>
-								<Field label={t("Excerpt")}>
-									<Input
-										value={article.excerpt}
-										onChange={(e) => setArticle((v) => ({ ...v, excerpt: e.target.value }))}
-									/>
-								</Field>
-								<div className="space-y-2 md:col-span-2 xl:col-span-4">
-									<Label htmlFor="support-article-content">{t("Article content")}</Label>
-									<Textarea
-										id="support-article-content"
-										rows={9}
-										value={article.content}
-										onChange={(e) => setArticle((v) => ({ ...v, content: e.target.value }))}
-									/>
-								</div>
-								<div className="flex justify-end md:col-span-2 xl:col-span-4">
-									<Button disabled={saving} onClick={() => void create("article")}>
-										<Plus /> {t("Save draft")}
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-						<ArticleList loading={articles.loading} items={articles.items} onPublish={publish} />
-						<SupportLoadMore
-							visible={articles.hasMore}
-							loading={articles.loadingMore}
-							onClick={articles.loadMore}
-						/>
-					</TabsContent>
-					<TabsContent className="space-y-6" value="structure">
-						<div className="grid gap-6 xl:grid-cols-2">
+				<>
+					{section === "articles" && (
+						<div className="space-y-4">
+							<Toolbar collection={articles} />
+							<SupportError message={articles.error} />
 							<Card>
 								<CardHeader>
-									<CardTitle className="text-base">{t("New category")}</CardTitle>
+									<CardTitle className="flex items-center gap-2 text-base">
+										<BookOpen /> {t("New article")}
+									</CardTitle>
 								</CardHeader>
-								<CardContent className="space-y-4">
+								<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 									{!portalId && (
 										<Field label={t("Portal")}>
 											<ResourceSelect
-												value={category.portalId}
-												onChange={(portalId) => setCategory((v) => ({ ...v, portalId }))}
-												items={portals.items}
-												placeholder={t("Select portal")}
-											/>
-										</Field>
-									)}
-									<Field label={t("Name")}>
-										<Input
-											value={category.name}
-											onChange={(e) => setCategory((v) => ({ ...v, name: e.target.value }))}
-										/>
-									</Field>
-									<Field label={t("Slug")}>
-										<Input
-											value={category.slug}
-											onChange={(e) => setCategory((v) => ({ ...v, slug: e.target.value }))}
-										/>
-									</Field>
-									<Field label={t("Description")}>
-										<Input
-											value={category.description}
-											onChange={(e) =>
-												setCategory((v) => ({
-													...v,
-													description: e.target.value,
-												}))
-											}
-										/>
-									</Field>
-									<Button disabled={saving} onClick={() => void create("category")}>
-										<Plus /> {t("Add category")}
-									</Button>
-								</CardContent>
-							</Card>
-							<Card>
-								<CardHeader>
-									<CardTitle className="text-base">{t("New folder")}</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									{!portalId && (
-										<Field label={t("Portal")}>
-											<ResourceSelect
-												value={folder.portalId}
-												onChange={(portalId) => setFolder((v) => ({ ...v, portalId }))}
+												value={article.portalId}
+												onChange={(portalId) => setArticle((v) => ({ ...v, portalId }))}
 												items={portals.items}
 												placeholder={t("Select portal")}
 											/>
@@ -331,178 +212,305 @@ export default function SupportHelpCenterPage({ portalId }: { portalId?: string 
 									)}
 									<Field label={t("Category")}>
 										<ResourceSelect
-											value={folder.categoryId}
-											onChange={(categoryId) => setFolder((v) => ({ ...v, categoryId }))}
+											value={article.categoryId}
+											onChange={(categoryId) => setArticle((v) => ({ ...v, categoryId }))}
 											items={categories.items}
-											placeholder={t("Select category")}
+											placeholder={t("No category")}
 										/>
 									</Field>
-									<Field label={t("Name")}>
-										<Input
-											value={folder.name}
-											onChange={(e) => setFolder((v) => ({ ...v, name: e.target.value }))}
+									<Field label={t("Folder")}>
+										<ResourceSelect
+											value={article.folderId}
+											onChange={(folderId) => setArticle((v) => ({ ...v, folderId }))}
+											items={folders.items}
+											placeholder={t("No folder")}
 										/>
 									</Field>
 									<Field label={t("Slug")}>
 										<Input
-											value={folder.slug}
-											onChange={(e) => setFolder((v) => ({ ...v, slug: e.target.value }))}
+											placeholder={t("automatic-from-title")}
+											value={article.slug}
+											onChange={(e) => setArticle((v) => ({ ...v, slug: e.target.value }))}
 										/>
 									</Field>
-									<Button disabled={saving} onClick={() => void create("folder")}>
-										<Plus /> {t("Add folder")}
-									</Button>
+									<Field label={t("Title")}>
+										<Input
+											value={article.title}
+											onChange={(e) => setArticle((v) => ({ ...v, title: e.target.value }))}
+										/>
+									</Field>
+									<Field label={t("Excerpt")}>
+										<Input
+											value={article.excerpt}
+											onChange={(e) => setArticle((v) => ({ ...v, excerpt: e.target.value }))}
+										/>
+									</Field>
+									<div className="space-y-2 md:col-span-2 xl:col-span-4">
+										<Label htmlFor="support-article-content">{t("Article content")}</Label>
+										<Textarea
+											id="support-article-content"
+											rows={9}
+											value={article.content}
+											onChange={(e) => setArticle((v) => ({ ...v, content: e.target.value }))}
+										/>
+									</div>
+									<div className="flex justify-end md:col-span-2 xl:col-span-4">
+										<Button disabled={saving} onClick={() => void create("article")}>
+											<Plus /> {t("Save draft")}
+										</Button>
+									</div>
 								</CardContent>
 							</Card>
+							<ArticleList loading={articles.loading} items={articles.items} onPublish={publish} />
+							<SupportLoadMore
+								visible={articles.hasMore}
+								loading={articles.loadingMore}
+								onClick={articles.loadMore}
+							/>
 						</div>
-						<div className="grid gap-3 lg:grid-cols-2">
-							{categories.items.map((item) => (
-								<Card key={item.id}>
-									<CardContent className="flex justify-between p-4">
-										<div>
-											<p className="font-medium">{item.name}</p>
-											<p className="text-sm text-muted-foreground">/{item.slug}</p>
-										</div>
-										<SupportStatus value={item.status} />
+					)}
+					{section === "structure" && (
+						<div className="space-y-6">
+							<div className="space-y-6">
+								<Card>
+									<CardHeader>
+										<CardTitle className="text-base">{t("New category")}</CardTitle>
+									</CardHeader>
+									<CardContent className="space-y-4">
+										{!portalId && (
+											<Field label={t("Portal")}>
+												<ResourceSelect
+													value={category.portalId}
+													onChange={(portalId) => setCategory((v) => ({ ...v, portalId }))}
+													items={portals.items}
+													placeholder={t("Select portal")}
+												/>
+											</Field>
+										)}
+										<Field label={t("Name")}>
+											<Input
+												value={category.name}
+												onChange={(e) => setCategory((v) => ({ ...v, name: e.target.value }))}
+											/>
+										</Field>
+										<Field label={t("Slug")}>
+											<Input
+												value={category.slug}
+												onChange={(e) => setCategory((v) => ({ ...v, slug: e.target.value }))}
+											/>
+										</Field>
+										<Field label={t("Description")}>
+											<Input
+												value={category.description}
+												onChange={(e) =>
+													setCategory((v) => ({
+														...v,
+														description: e.target.value,
+													}))
+												}
+											/>
+										</Field>
+										<Button disabled={saving} onClick={() => void create("category")}>
+											<Plus /> {t("Add category")}
+										</Button>
 									</CardContent>
 								</Card>
-							))}
-						</div>
-					</TabsContent>
-					<TabsContent className="space-y-4" value="portals">
-						<Toolbar collection={portals} />
-						<SupportError message={portals.error} />
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<Globe2 /> {t("New portal")}
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-								<Field label={t("Name")}>
-									<Input
-										value={portal.name}
-										onChange={(e) => setPortal((v) => ({ ...v, name: e.target.value }))}
-									/>
-								</Field>
-								<Field label={t("Slug")}>
-									<Input
-										placeholder={t("automatic-from-name")}
-										value={portal.slug}
-										onChange={(e) => setPortal((v) => ({ ...v, slug: e.target.value }))}
-									/>
-								</Field>
-								<Field label={t("Default locale")}>
-									<Input
-										value={portal.locale}
-										onChange={(e) => setPortal((v) => ({ ...v, locale: e.target.value }))}
-									/>
-								</Field>
-								<Field label={t("Custom domain")}>
-									<Input
-										placeholder={t("help.example.com")}
-										value={portal.domain}
-										onChange={(e) => setPortal((v) => ({ ...v, domain: e.target.value }))}
-									/>
-								</Field>
-								<div className="flex justify-end md:col-span-2 xl:col-span-4">
-									<Button disabled={saving} onClick={() => void create("portal")}>
-										<Plus /> {t("Create portal")}
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-						{portals.loading ? (
-							<SupportLoading />
-						) : portals.items.length === 0 ? (
-							<SupportEmpty
-								title={t("No Help Center portals")}
-								description={t("Create a branded portal for public Support documentation.")}
-							/>
-						) : (
-							<div className="grid gap-3 lg:grid-cols-2">
-								{portals.items.map((item) => (
+								<Card>
+									<CardHeader>
+										<CardTitle className="text-base">{t("New folder")}</CardTitle>
+									</CardHeader>
+									<CardContent className="space-y-4">
+										{!portalId && (
+											<Field label={t("Portal")}>
+												<ResourceSelect
+													value={folder.portalId}
+													onChange={(portalId) => setFolder((v) => ({ ...v, portalId }))}
+													items={portals.items}
+													placeholder={t("Select portal")}
+												/>
+											</Field>
+										)}
+										<Field label={t("Category")}>
+											<ResourceSelect
+												value={folder.categoryId}
+												onChange={(categoryId) => setFolder((v) => ({ ...v, categoryId }))}
+												items={categories.items}
+												placeholder={t("Select category")}
+											/>
+										</Field>
+										<Field label={t("Name")}>
+											<Input
+												value={folder.name}
+												onChange={(e) => setFolder((v) => ({ ...v, name: e.target.value }))}
+											/>
+										</Field>
+										<Field label={t("Slug")}>
+											<Input
+												value={folder.slug}
+												onChange={(e) => setFolder((v) => ({ ...v, slug: e.target.value }))}
+											/>
+										</Field>
+										<Button disabled={saving} onClick={() => void create("folder")}>
+											<Plus /> {t("Add folder")}
+										</Button>
+									</CardContent>
+								</Card>
+							</div>
+							<div className="grid gap-3">
+								{categories.items.map((item) => (
 									<Card key={item.id}>
-										<CardContent className="flex items-center justify-between p-4">
+										<CardContent className="flex justify-between p-4">
 											<div>
 												<p className="font-medium">{item.name}</p>
-												<p className="text-sm text-muted-foreground">
-													/{item.slug} · {item.locale}
-												</p>
+												<p className="text-sm text-muted-foreground">/{item.slug}</p>
 											</div>
 											<SupportStatus value={item.status} />
 										</CardContent>
 									</Card>
 								))}
 							</div>
-						)}
-					</TabsContent>
-					<TabsContent className="space-y-4" value="translations">
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<Languages /> {t("New translation")}
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="grid gap-4 md:grid-cols-2">
-								<Field label={t("Article")}>
-									<ResourceSelect
-										value={translation.articleId}
-										onChange={(articleId) => setTranslation((v) => ({ ...v, articleId }))}
-										items={articles.items}
-										placeholder={t("Select article")}
-										titleKey="title"
-									/>
-								</Field>
-								<Field label={t("Locale")}>
-									<Input
-										value={translation.locale}
-										onChange={(e) => setTranslation((v) => ({ ...v, locale: e.target.value }))}
-									/>
-								</Field>
-								<Field label={t("Translated title")}>
-									<Input
-										value={translation.title}
-										onChange={(e) => setTranslation((v) => ({ ...v, title: e.target.value }))}
-									/>
-								</Field>
-								<div className="space-y-2 md:col-span-2">
-									<Label>{t("Translated content")}</Label>
-									<Textarea
-										rows={8}
-										value={translation.content}
-										onChange={(e) => setTranslation((v) => ({ ...v, content: e.target.value }))}
-									/>
+						</div>
+					)}
+					{section === "portals" && (
+						<div className="space-y-4">
+							<Toolbar collection={portals} />
+							<SupportError message={portals.error} />
+							<Card>
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2 text-base">
+										<Globe2 /> {t("New portal")}
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+									<Field label={t("Name")}>
+										<Input
+											value={portal.name}
+											onChange={(e) => setPortal((v) => ({ ...v, name: e.target.value }))}
+										/>
+									</Field>
+									<Field label={t("Slug")}>
+										<Input
+											placeholder={t("automatic-from-name")}
+											value={portal.slug}
+											onChange={(e) => setPortal((v) => ({ ...v, slug: e.target.value }))}
+										/>
+									</Field>
+									<Field label={t("Default locale")}>
+										<Input
+											value={portal.locale}
+											onChange={(e) => setPortal((v) => ({ ...v, locale: e.target.value }))}
+										/>
+									</Field>
+									<Field label={t("Custom domain")}>
+										<Input
+											placeholder={t("help.example.com")}
+											value={portal.domain}
+											onChange={(e) => setPortal((v) => ({ ...v, domain: e.target.value }))}
+										/>
+									</Field>
+									<div className="flex justify-end md:col-span-2 xl:col-span-4">
+										<Button disabled={saving} onClick={() => void create("portal")}>
+											<Plus /> {t("Create portal")}
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+							{portals.loading ? (
+								<SupportLoading />
+							) : portals.items.length === 0 ? (
+								<SupportEmpty
+									title={t("No Help Center portals")}
+									description={t("Create a branded portal for public Support documentation.")}
+								/>
+							) : (
+								<div className="grid gap-3">
+									{portals.items.map((item) => (
+										<Card key={item.id}>
+											<CardContent className="flex items-center justify-between p-4">
+												<div>
+													<p className="font-medium">{item.name}</p>
+													<p className="text-sm text-muted-foreground">
+														/{item.slug} · {item.locale}
+													</p>
+												</div>
+												<SupportStatus value={item.status} />
+											</CardContent>
+										</Card>
+									))}
 								</div>
-								<div className="flex justify-end md:col-span-2">
-									<Button disabled={saving} onClick={() => void create("translation")}>
-										<Plus /> {t("Save translation")}
-									</Button>
+							)}
+						</div>
+					)}
+					{section === "translations" && (
+						<div className="space-y-4">
+							<Card>
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2 text-base">
+										<Languages /> {t("New translation")}
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="grid gap-4 md:grid-cols-2">
+									<Field label={t("Article")}>
+										<ResourceSelect
+											value={translation.articleId}
+											onChange={(articleId) => setTranslation((v) => ({ ...v, articleId }))}
+											items={articles.items}
+											placeholder={t("Select article")}
+											titleKey="title"
+										/>
+									</Field>
+									<Field label={t("Locale")}>
+										<Input
+											value={translation.locale}
+											onChange={(e) => setTranslation((v) => ({ ...v, locale: e.target.value }))}
+										/>
+									</Field>
+									<Field label={t("Translated title")}>
+										<Input
+											value={translation.title}
+											onChange={(e) => setTranslation((v) => ({ ...v, title: e.target.value }))}
+										/>
+									</Field>
+									<div className="space-y-2 md:col-span-2">
+										<Label>{t("Translated content")}</Label>
+										<Textarea
+											rows={8}
+											value={translation.content}
+											onChange={(e) => setTranslation((v) => ({ ...v, content: e.target.value }))}
+										/>
+									</div>
+									<div className="flex justify-end md:col-span-2">
+										<Button disabled={saving} onClick={() => void create("translation")}>
+											<Plus /> {t("Save translation")}
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+							{translations.items.length === 0 ? (
+								<SupportEmpty
+									title={t("No article translations")}
+									description={t("Add localized versions after creating an article.")}
+								/>
+							) : (
+								<div className="grid gap-3">
+									{translations.items.map((item) => (
+										<Card key={String(item.id)}>
+											<CardContent className="flex justify-between p-4">
+												<div>
+													<p className="font-medium">{String(item.title || "Translation")}</p>
+													<p className="text-sm text-muted-foreground">
+														{typeof item.locale === "string" ? item.locale : ""}
+													</p>
+												</div>
+												<SupportStatus value={String(item.status || "draft")} />
+											</CardContent>
+										</Card>
+									))}
 								</div>
-							</CardContent>
-						</Card>
-						{translations.items.length === 0 ? (
-							<SupportEmpty
-								title={t("No article translations")}
-								description={t("Add localized versions after creating an article.")}
-							/>
-						) : (
-							<div className="grid gap-3 lg:grid-cols-2">
-								{translations.items.map((item) => (
-									<Card key={String(item.id)}>
-										<CardContent className="flex justify-between p-4">
-											<div>
-												<p className="font-medium">{String(item.title || "Translation")}</p>
-												<p className="text-sm text-muted-foreground">{String(item.locale || "")}</p>
-											</div>
-											<SupportStatus value={String(item.status || "draft")} />
-										</CardContent>
-									</Card>
-								))}
-							</div>
-						)}
-					</TabsContent>
-				</Tabs>
+							)}
+						</div>
+					)}
+				</>
 			)}
 		</ModulePage>
 	);

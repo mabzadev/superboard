@@ -92,7 +92,7 @@ export function EmailDeveloperSettings({ project }: { project: string }) {
 	const date = (value: string) => new Date(value).toLocaleString(locale);
 	const label = (value: string) => t(EMAIL_VALUE_LABELS[value] ?? value);
 	return (
-		<div className="grid gap-6 xl:grid-cols-2">
+		<div className="space-y-6">
 			<Card>
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">

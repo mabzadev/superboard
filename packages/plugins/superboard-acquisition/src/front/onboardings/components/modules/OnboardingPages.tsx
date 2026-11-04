@@ -42,6 +42,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
 	AcquisitionPage as ModulePage,
+	EmbeddedPage,
 	useAcquisitionSelection,
 	useItemExitGuard,
 } from "../../../AcquisitionPage.js";
@@ -651,7 +652,9 @@ export function OnboardingsPage() {
 								</CardContent>
 							</Card>
 							{studioTab === "Results" && (
-								<OnboardingStatisticsPage key={selected.id} itemVersions={versions} />
+								<EmbeddedPage>
+									<OnboardingStatisticsPage key={selected.id} itemVersions={versions} />
+								</EmbeddedPage>
 							)}
 							{selected && studioTab === "Delivery" && (
 								<OnboardingDeliveryControls
@@ -1125,7 +1128,7 @@ export function OnboardingStatisticsPage({
 	}, [selectedProject, filters, itemVersions, resultVersion]);
 	return (
 		<ModulePage
-			title={t("Onboarding statistics")}
+			title={itemVersions ? "" : t("Onboarding statistics")}
 			description={t("Completion and drop-off across published onboarding flows.")}
 			error={error}
 		>

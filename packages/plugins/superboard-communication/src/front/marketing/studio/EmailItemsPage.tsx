@@ -7,7 +7,6 @@ import { useProjectSelection } from "@superboard/front-ui/context/useProjectSele
 import { Button, Dialog, Input, Loader, Select } from "@superboard/front-ui/kumo";
 import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import { useRouter, useSearchParams } from "@superboard/front-ui/navigation";
-import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import { EmptyState } from "@superboard/front-ui/ui/widgets.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -231,7 +230,6 @@ function EmailItems({ project, defaultFilter }: { project: string; defaultFilter
 					</Button>
 				)}
 			</header>
-			<SectionNavigation />
 			{error && (
 				<div role="alert">
 					{error} <Button onClick={() => void load()}>{t("Retry")}</Button>

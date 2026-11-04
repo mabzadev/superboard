@@ -1,7 +1,6 @@
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { Button, Dialog, Input, Loader, Select } from "@superboard/front-ui/kumo";
 import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
-import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import {
 	Table as FrontTable,
 	TableHeader as FrontTableHeader,
@@ -82,7 +81,6 @@ export function AudiencePage({ tab, fallback }: { tab: string; fallback: string 
 					</p>
 				</div>
 			</header>
-			<SectionNavigation />
 			{project && (
 				<Tabs
 					value={tab}
@@ -226,161 +224,172 @@ function AudienceLists({ project }: { project: string }) {
 	const { items, loading, busy, error, run } = useCollection<SubscriberList>(
 		useCallback(() => getSubscriberLists(project), [project]),
 	);
-	const [form, setForm] = useState<ListForm>(emptyList);
+	const [form, setForm] = useState<ListForm | null>(null);
 	const [deleting, setDeleting] = useState<SubscriberList | null>(null);
 	if (loading) return <Loader />;
 	return (
-		<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-			<div className="space-y-3">
-				{error && (
-					<p role="alert" className="text-kumo-danger">
-						{error}
-					</p>
-				)}
-				{items.length ? (
-					<div className="overflow-auto rounded-lg border border-kumo-line">
-						<FrontTable className="w-full text-start text-sm">
-							<FrontTableHeader className="bg-kumo-tint">
-								<FrontTableRow>
-									{["List", "Visibility", "Opt-in", "Contacts", "Actions"].map((label) => (
-										<FrontTableHead key={label} className="p-4 text-start font-medium">
-											{t(label)}
-										</FrontTableHead>
-									))}
-								</FrontTableRow>
-							</FrontTableHeader>
-							<FrontTableBody>
-								{items.map((list) => (
-									<FrontTableRow key={list.id} className="border-t border-kumo-line">
-										<FrontTableCell className="p-4">
-											<p className="font-medium">{list.name}</p>
-											{list.description && (
-												<p className="mt-1 text-xs text-kumo-subtle">{list.description}</p>
-											)}
-										</FrontTableCell>
-										<FrontTableCell>
-											{t(list.visibility === "public" ? "Public" : "Private")}
-										</FrontTableCell>
-										<FrontTableCell>
-											{t(list.optin_mode === "double" ? "Double opt-in" : "Single opt-in")}
-										</FrontTableCell>
-										<FrontTableCell>{list.subscriber_count ?? 0}</FrontTableCell>
-										<FrontTableCell className="p-3">
-											<div className="flex gap-2">
-												<Button
-													size="sm"
-													onClick={() => {
-														setForm({
-															id: list.id,
-															name: list.name,
-															description: list.description ?? "",
-															visibility: list.visibility,
-															optin_mode: list.optin_mode,
-														});
-													}}
-												>
-													{t("Edit")}
-												</Button>
-												<Button
-													size="sm"
-													variant="ghost"
-													onClick={() => {
-														setDeleting(list);
-													}}
-												>
-													{t("Delete")}
-												</Button>
-											</div>
-										</FrontTableCell>
-									</FrontTableRow>
-								))}
-							</FrontTableBody>
-						</FrontTable>
-					</div>
-				) : (
-					<EmptyState
-						title={t("No lists yet")}
-						description={t(
-							"Lists group contacts who chose to hear from you. Create one with the form, then add contacts to it.",
-						)}
+		<div className="space-y-4">
+			{error && (
+				<p role="alert" className="text-kumo-danger">
+					{error}
+				</p>
+			)}
+			{form ? (
+				<form
+					className="max-w-2xl space-y-3"
+					onSubmit={(event) => {
+						event.preventDefault();
+						const payload = {
+							name: form.name.trim(),
+							description: form.description.trim() || null,
+							visibility: form.visibility,
+							optin_mode: form.optin_mode,
+						};
+						void run(() =>
+							form.id
+								? updateSubscriberList(project, form.id, payload)
+								: createSubscriberList(project, payload),
+						)
+							.then((saved) => {
+								if (saved) setForm(null);
+							})
+							.catch(() => undefined);
+					}}
+				>
+					<h2 className="font-semibold">{t(form.id ? "Edit list" : "Create list")}</h2>
+					<Input
+						label={t("List name")}
+						value={form.name}
+						required
+						onChange={(event) => {
+							setForm({ ...form, name: event.target.value });
+						}}
 					/>
-				)}
-			</div>
-			<form
-				className="space-y-3 rounded-lg border border-kumo-line bg-kumo-base p-5"
-				onSubmit={(event) => {
-					event.preventDefault();
-					const payload = {
-						name: form.name.trim(),
-						description: form.description.trim() || null,
-						visibility: form.visibility,
-						optin_mode: form.optin_mode,
-					};
-					void run(() =>
-						form.id
-							? updateSubscriberList(project, form.id, payload)
-							: createSubscriberList(project, payload),
-					)
-						.then((saved) => {
-							if (saved) setForm(emptyList);
-						})
-						.catch(() => undefined);
-				}}
-			>
-				<h2 className="font-semibold">{t(form.id ? "Edit list" : "Create list")}</h2>
-				<Input
-					label={t("List name")}
-					value={form.name}
-					required
-					onChange={(event) => {
-						setForm({ ...form, name: event.target.value });
-					}}
-				/>
-				<Input
-					label={t("Description")}
-					value={form.description}
-					onChange={(event) => {
-						setForm({ ...form, description: event.target.value });
-					}}
-				/>
-				<Select
-					label={t("Visibility")}
-					value={form.visibility}
-					onValueChange={(value) => {
-						if (value) setForm({ ...form, visibility: value });
-					}}
-					items={{
-						private: t("Private: managed by your team"),
-						public: t("Public: contacts can choose it in their preferences"),
-					}}
-				/>
-				<Select
-					label={t("Opt-in")}
-					value={form.optin_mode}
-					onValueChange={(value) => {
-						if (value) setForm({ ...form, optin_mode: value });
-					}}
-					items={{
-						single: t("Single opt-in"),
-						double: t("Double opt-in: contacts confirm by email"),
-					}}
-				/>
-				<div className="flex gap-2">
-					<Button type="submit" variant="primary" disabled={busy || !form.name.trim()}>
-						{t(form.id ? "Save" : "Create list")}
-					</Button>
-					{form.id && (
+					<Input
+						label={t("Description")}
+						value={form.description}
+						onChange={(event) => {
+							setForm({ ...form, description: event.target.value });
+						}}
+					/>
+					<Select
+						label={t("Visibility")}
+						value={form.visibility}
+						onValueChange={(value) => {
+							if (value) setForm({ ...form, visibility: value });
+						}}
+						items={{
+							private: t("Private: managed by your team"),
+							public: t("Public: contacts can choose it in their preferences"),
+						}}
+					/>
+					<Select
+						label={t("Opt-in")}
+						value={form.optin_mode}
+						onValueChange={(value) => {
+							if (value) setForm({ ...form, optin_mode: value });
+						}}
+						items={{
+							single: t("Single opt-in"),
+							double: t("Double opt-in: contacts confirm by email"),
+						}}
+					/>
+					<div className="flex gap-2">
+						<Button type="submit" variant="primary" disabled={busy || !form.name.trim()}>
+							{t(form.id ? "Save" : "Create list")}
+						</Button>
 						<Button
 							onClick={() => {
-								setForm(emptyList);
+								setForm(null);
 							}}
 						>
 							{t("Cancel")}
 						</Button>
+					</div>
+				</form>
+			) : (
+				<>
+					<div className="flex justify-end">
+						<Button
+							variant="primary"
+							onClick={() => {
+								setForm(emptyList);
+							}}
+						>
+							{t("Create list")}
+						</Button>
+					</div>
+					{items.length ? (
+						<div className="overflow-auto rounded-lg border border-kumo-line">
+							<FrontTable className="w-full text-start text-sm">
+								<FrontTableHeader className="bg-kumo-tint">
+									<FrontTableRow>
+										{["List", "Visibility", "Opt-in", "Contacts", "Actions"].map((label) => (
+											<FrontTableHead key={label} className="p-4 text-start font-medium">
+												{t(label)}
+											</FrontTableHead>
+										))}
+									</FrontTableRow>
+								</FrontTableHeader>
+								<FrontTableBody>
+									{items.map((list) => (
+										<FrontTableRow key={list.id} className="border-t border-kumo-line">
+											<FrontTableCell className="p-4">
+												<p className="font-medium">{list.name}</p>
+												{list.description && (
+													<p className="mt-1 text-xs text-kumo-subtle">{list.description}</p>
+												)}
+											</FrontTableCell>
+											<FrontTableCell>
+												{t(list.visibility === "public" ? "Public" : "Private")}
+											</FrontTableCell>
+											<FrontTableCell>
+												{t(list.optin_mode === "double" ? "Double opt-in" : "Single opt-in")}
+											</FrontTableCell>
+											<FrontTableCell>{list.subscriber_count ?? 0}</FrontTableCell>
+											<FrontTableCell className="p-3">
+												<div className="flex gap-2">
+													<Button
+														size="sm"
+														onClick={() => {
+															setForm({
+																id: list.id,
+																name: list.name,
+																description: list.description ?? "",
+																visibility: list.visibility,
+																optin_mode: list.optin_mode,
+															});
+														}}
+													>
+														{t("Edit")}
+													</Button>
+													<Button
+														size="sm"
+														variant="ghost"
+														onClick={() => {
+															setDeleting(list);
+														}}
+													>
+														{t("Delete")}
+													</Button>
+												</div>
+											</FrontTableCell>
+										</FrontTableRow>
+									))}
+								</FrontTableBody>
+							</FrontTable>
+						</div>
+					) : (
+						<EmptyState
+							title={t("No lists yet")}
+							description={t(
+								"Lists group contacts who chose to hear from you. Create one, then add contacts to it.",
+							)}
+						/>
 					)}
-				</div>
-			</form>
-			<DoubleOptInEmail project={project} />
+					<DoubleOptInEmail project={project} />
+				</>
+			)}
 			<ConfirmDelete
 				name={deleting?.name ?? null}
 				busy={busy}
@@ -410,6 +419,7 @@ function AudienceSegments({ project }: { project: string }) {
 	const { items, loading, busy, error, run } = useCollection<SubscriberSegment>(
 		useCallback(() => getSubscriberSegments(project), [project]),
 	);
+	const [formOpen, setFormOpen] = useState(false);
 	const [editing, setEditing] = useState<string>();
 	const [name, setName] = useState("");
 	const [rules, setRules] = useState<Record<string, unknown>>(defaultRules);
@@ -447,112 +457,119 @@ function AudienceSegments({ project }: { project: string }) {
 			active = false;
 		};
 	}, [project]);
+	const closeForm = () => {
+		setFormOpen(false);
+		setEditing(undefined);
+		setName("");
+		setRules(defaultRules);
+	};
 	if (loading) return <Loader />;
 	return (
-		<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-			<div className="space-y-3">
-				{error && (
-					<p role="alert" className="text-kumo-danger">
-						{error}
-					</p>
-				)}
-				{items.length ? (
-					items.map((item) => (
-						<div
-							key={item.id}
-							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-kumo-line p-4"
-						>
-							<div>
-								<p className="font-medium">{item.name}</p>
-								<p className="text-xs text-kumo-subtle">
-									{t("{count} contacts", { count: item.subscriber_count ?? 0 })}
-								</p>
-							</div>
-							<div className="flex gap-2">
-								<Button
-									size="sm"
-									onClick={() => {
-										setEditing(item.id);
-										setName(item.name);
-										setRules(structuredClone(item.rules));
-									}}
-								>
-									{t("Edit")}
-								</Button>
-								<Button
-									size="sm"
-									disabled={busy}
-									onClick={() => void run(() => refreshSubscriberSegment(project, item.id))}
-								>
-									{t("Refresh")}
-								</Button>
-								<Button
-									size="sm"
-									variant="ghost"
-									onClick={() => {
-										setDeleting(item);
-									}}
-								>
-									{t("Delete")}
-								</Button>
-							</div>
-						</div>
-					))
-				) : (
-					<EmptyState
-						title={t("No segments yet")}
-						description={t(
-							"Segments select contacts by profile, tags, lists or email activity. They update automatically before every send.",
-						)}
-					/>
-				)}
-			</div>
-			<form
-				className="space-y-3 rounded-lg border border-kumo-line bg-kumo-base p-5"
-				onSubmit={(event) => {
-					event.preventDefault();
-					const payload = { name: name.trim(), rules };
-					void run(() =>
-						editing
-							? updateSubscriberSegment(project, editing, payload)
-							: createSubscriberSegment(project, payload),
-					)
-						.then((saved) => {
-							if (!saved) return;
-							setEditing(undefined);
-							setName("");
-							setRules(defaultRules);
-						})
-						.catch(() => undefined);
-				}}
-			>
-				<h2 className="font-semibold">{t(editing ? "Edit segment" : "Create segment")}</h2>
-				<Input
-					label={t("Segment name")}
-					value={name}
-					required
-					onChange={(event) => {
-						setName(event.target.value);
+		<div className="space-y-4">
+			{error && (
+				<p role="alert" className="text-kumo-danger">
+					{error}
+				</p>
+			)}
+			{formOpen ? (
+				<form
+					className="max-w-3xl space-y-3"
+					onSubmit={(event) => {
+						event.preventDefault();
+						const payload = { name: name.trim(), rules };
+						void run(() =>
+							editing
+								? updateSubscriberSegment(project, editing, payload)
+								: createSubscriberSegment(project, payload),
+						)
+							.then((saved) => {
+								if (saved) closeForm();
+							})
+							.catch(() => undefined);
 					}}
-				/>
-				<AudienceRules value={rules} onChange={setRules} project={project} {...options} />
-				<div className="flex gap-2">
-					<Button type="submit" variant="primary" disabled={busy || !name.trim()}>
-						{t(editing ? "Save" : "Create segment")}
-					</Button>
-					{editing && (
+				>
+					<h2 className="font-semibold">{t(editing ? "Edit segment" : "Create segment")}</h2>
+					<Input
+						label={t("Segment name")}
+						value={name}
+						required
+						onChange={(event) => {
+							setName(event.target.value);
+						}}
+					/>
+					<AudienceRules value={rules} onChange={setRules} project={project} {...options} />
+					<div className="flex gap-2">
+						<Button type="submit" variant="primary" disabled={busy || !name.trim()}>
+							{t(editing ? "Save" : "Create segment")}
+						</Button>
+						<Button onClick={closeForm}>{t("Cancel")}</Button>
+					</div>
+				</form>
+			) : (
+				<>
+					<div className="flex justify-end">
 						<Button
+							variant="primary"
 							onClick={() => {
-								setEditing(undefined);
-								setName("");
-								setRules(defaultRules);
+								setFormOpen(true);
 							}}
 						>
-							{t("Cancel")}
+							{t("Create segment")}
 						</Button>
+					</div>
+					{items.length ? (
+						items.map((item) => (
+							<div
+								key={item.id}
+								className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-kumo-line p-4"
+							>
+								<div>
+									<p className="font-medium">{item.name}</p>
+									<p className="text-xs text-kumo-subtle">
+										{t("{count} contacts", { count: item.subscriber_count ?? 0 })}
+									</p>
+								</div>
+								<div className="flex gap-2">
+									<Button
+										size="sm"
+										onClick={() => {
+											setEditing(item.id);
+											setName(item.name);
+											setRules(structuredClone(item.rules));
+											setFormOpen(true);
+										}}
+									>
+										{t("Edit")}
+									</Button>
+									<Button
+										size="sm"
+										disabled={busy}
+										onClick={() => void run(() => refreshSubscriberSegment(project, item.id))}
+									>
+										{t("Refresh")}
+									</Button>
+									<Button
+										size="sm"
+										variant="ghost"
+										onClick={() => {
+											setDeleting(item);
+										}}
+									>
+										{t("Delete")}
+									</Button>
+								</div>
+							</div>
+						))
+					) : (
+						<EmptyState
+							title={t("No segments yet")}
+							description={t(
+								"Segments select contacts by profile, tags, lists or email activity. They update automatically before every send.",
+							)}
+						/>
 					)}
-				</div>
-			</form>
+				</>
+			)}
 			<ConfirmDelete
 				name={deleting?.name ?? null}
 				busy={busy}

@@ -40,7 +40,7 @@ const LinksTable = ({
 			hasFilters={hasFilters}
 			ariaLabel="Links"
 			stickyHeader
-			containerClassName="relative rounded-md border border-sidebar-border overflow-auto overscroll-none min-h-0 scrollbar-hide [&>[data-slot=table-container]]:overflow-visible"
+			containerClassName="@container relative rounded-md border border-sidebar-border overflow-auto overscroll-none min-h-0 [&>[data-slot=table-container]]:overflow-visible"
 			skeletonCellClassName="p-2"
 			headerClassName={(id) => {
 				if (id === "ads_platform") return "w-[50px] max-w-[50px]";

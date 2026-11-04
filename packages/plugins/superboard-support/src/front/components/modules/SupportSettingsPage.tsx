@@ -338,6 +338,7 @@ export default function SupportSettingsPage() {
 					setActiveTab(value);
 					const url = new URL(window.location.href);
 					url.searchParams.set("tab", value);
+					url.searchParams.delete("contact");
 					window.history.replaceState(null, "", url);
 				}}
 			>
@@ -492,7 +493,7 @@ export default function SupportSettingsPage() {
 									)}
 								</AccessNotice>
 							) : (
-								<div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+								<div className="space-y-6">
 									<Card>
 										<CardHeader>
 											<CardTitle className="flex items-center gap-2 text-base">
@@ -536,13 +537,14 @@ export default function SupportSettingsPage() {
 													"Use comma-separated native Support event names. Muted events remain visible in audit history.",
 												)}
 											</p>
-											<Button
-												className="w-full"
-												disabled={notificationsLoading}
-												onClick={() => void saveNotificationPreferences()}
-											>
-												<Save /> {t("Save preferences")}
-											</Button>
+											<div className="flex justify-end">
+												<Button
+													disabled={notificationsLoading}
+													onClick={() => void saveNotificationPreferences()}
+												>
+													<Save /> {t("Save preferences")}
+												</Button>
+											</div>
 										</CardContent>
 									</Card>
 									<Card>
@@ -642,7 +644,7 @@ export default function SupportSettingsPage() {
 											value={total(operations?.knowledge)}
 										/>
 									</div>
-									<div className="grid gap-6 xl:grid-cols-2">
+									<div className="space-y-6">
 										<OperationGroup
 											icon={<Activity />}
 											title={t("Queues and schedules")}

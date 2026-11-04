@@ -1,6 +1,6 @@
 import { Button, Checkbox, Dialog, Input, Loader, Select } from "@superboard/front-ui/kumo";
 import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
-import { useSearchParams } from "@superboard/front-ui/navigation";
+import { useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import {
 	Table as FrontTable,
 	TableHeader as FrontTableHeader,
@@ -9,7 +9,8 @@ import {
 	TableHead as FrontTableHead,
 	TableCell as FrontTableCell,
 } from "@superboard/front-ui/ui/table.js";
-import { useCallback, useEffect, useState } from "react";
+import { ChevronLeft } from "lucide-react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import {
 	createEmailSubscriber,
@@ -17,6 +18,7 @@ import {
 	deleteEmailSubscriber,
 	updateEmailSubscriber,
 	getSubscriberLists,
+	getEmailSubscriber,
 	getEmailSubscriberExport,
 	suppressEmailSubscriber,
 	type SubscriberList,
@@ -43,6 +45,8 @@ const languageAttributes = [
 	["time_zone", "Time zone"],
 ] as const;
 
+const NEW_CONTACT = "new";
+
 export function EmailContacts({
 	project,
 	locales = ["fr", "en"],
@@ -51,12 +55,14 @@ export function EmailContacts({
 	locales?: string[];
 }) {
 	const { t, locale } = useStudioI18n();
-	const languageNames = new Intl.DisplayNames([locale], { type: "language" });
 	const [contacts, setContacts] = useState<AudienceContact[]>([]);
 	const [lists, setLists] = useState<SubscriberList[]>([]);
 	const [tags, setTags] = useState<AudienceTag[]>([]);
 	const [fields, setFields] = useState<AudienceField[]>([]);
-	const linkedQuery = useSearchParams().get("q") ?? "";
+	const params = useSearchParams();
+	const router = useRouter();
+	const linkedQuery = params.get("q") ?? "";
+	const contactId = params.get("contact") ?? "";
 	const [query, setQuery] = useState(linkedQuery);
 	const [appliedLinkedQuery, setAppliedLinkedQuery] = useState(linkedQuery);
 	if (linkedQuery !== appliedLinkedQuery) {
@@ -81,6 +87,61 @@ export function EmailContacts({
 		name: string;
 		action: () => Promise<unknown>;
 	} | null>(null);
+	const [shownContact, setShownContact] = useState<string | null>(null);
+	if (contactId !== shownContact) {
+		setShownContact(contactId);
+		setActivity(null);
+		setPendingTags([]);
+		setDetailTag("");
+		if (contactId === NEW_CONTACT) {
+			setSelected({ email: "", name: "", attributes: {}, list_ids: [], tag_ids: [] });
+			setDoubleOptIn(lists.some((list) => list.optin_mode === "double"));
+		} else {
+			setSelected((current) =>
+				contactId && current?.id === contactId
+					? current
+					: (contacts.find((contact) => contact.id === contactId) ?? null),
+			);
+		}
+	}
+	const missingContact = Boolean(contactId) && contactId !== NEW_CONTACT && !selected;
+	useEffect(() => {
+		if (!missingContact) return;
+		let active = true;
+		getEmailSubscriber(project, contactId).then(
+			(contact) => {
+				if (active) setSelected(contact);
+			},
+			() => {
+				if (active) setError(t("Loading failed"));
+			},
+		);
+		return () => {
+			active = false;
+		};
+	}, [contactId, missingContact, project, t]);
+	useEffect(() => {
+		if (!contactId || contactId === NEW_CONTACT) return;
+		let active = true;
+		getEmailSubscriberExport(project, contactId).then(
+			(result) => {
+				if (active) setActivity(result);
+			},
+			() => {
+				if (active) setError(t("Loading failed"));
+			},
+		);
+		return () => {
+			active = false;
+		};
+	}, [contactId, project, t]);
+	const showContact = (id: string, replace = false) => {
+		const url = new URL(window.location.href);
+		if (id) url.searchParams.set("contact", id);
+		else url.searchParams.delete("contact");
+		if (replace) router.replace(url.pathname + url.search);
+		else router.push(url.pathname + url.search);
+	};
 	const page = useCallback(
 		(offset: number) =>
 			getContactPage(project, {
@@ -184,228 +245,440 @@ export function EmailContacts({
 		}).catch(() => undefined);
 	};
 	return (
-		<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-			<section className="space-y-4">
-				<datalist id="audience-tag-names">
-					{tags.map((tag) => (
-						<option key={tag.id} value={tag.name} />
-					))}
-				</datalist>
-				<div className="flex flex-wrap justify-between gap-3">
-					<div className="flex flex-wrap gap-2">
-						<Input
-							placeholder={t("Search contacts")}
-							aria-label={t("Search contacts")}
-							value={query}
-							onChange={(event) => setQuery(event.target.value)}
-						/>
-						<Select
-							aria-label={t("Lists")}
-							value={filter}
-							onValueChange={(value) => value && setFilter(value)}
-							items={{
-								all: t("All lists"),
-								...Object.fromEntries(lists.map((list) => [list.id, list.name])),
-							}}
-						/>
-						{tags.length > 0 && (
+		<div className="space-y-4">
+			<datalist id="audience-tag-names">
+				{tags.map((tag) => (
+					<option key={tag.id} value={tag.name} />
+				))}
+			</datalist>
+			{contactId ? (
+				<section className="max-w-3xl space-y-6">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => {
+							showContact("");
+						}}
+					>
+						<ChevronLeft className="rtl:-scale-x-100" />
+						{t("All contacts")}
+					</Button>
+					{error && (
+						<p role="alert" className="text-kumo-danger">
+							{error}
+						</p>
+					)}
+					{selected ? (
+						<>
+							<header>
+								<h2 className="text-lg font-semibold">
+									{selected.id ? selected.name || selected.email : t("New contact")}
+								</h2>
+								{selected.id && (
+									<p className="text-sm text-kumo-subtle">
+										{selected.email} · {t(selected.consent_status ?? selected.status ?? "")}
+									</p>
+								)}
+							</header>
+							<div className="grid gap-4 sm:grid-cols-2">
+								<Input
+									label={t("Name")}
+									value={selected.name ?? ""}
+									onChange={(event) => setSelected({ ...selected, name: event.target.value })}
+								/>
+								<Input
+									type="email"
+									label={t("Email")}
+									value={selected.email ?? ""}
+									onChange={(event) => setSelected({ ...selected, email: event.target.value })}
+								/>
+							</div>
+							<ContactSection title={t("Tags")}>
+								<TagChips
+									names={
+										selected.id
+											? (selected.tag_ids ?? []).map((id) => tagNames.get(id) ?? "")
+											: pendingTags
+									}
+									onRemove={(name) => {
+										changeContactTag("remove", name, tags.find((tag) => tag.name === name)?.id);
+									}}
+									removeLabel={(name) => t("Remove tag {tag}", { tag: name })}
+								/>
+								<form
+									className="flex items-end gap-2"
+									onSubmit={(event) => {
+										event.preventDefault();
+										const name = detailTag.trim();
+										if (!name) return;
+										changeContactTag(
+											"add",
+											name,
+											tags.find((tag) => tag.name.toLowerCase() === name.toLowerCase())?.id,
+										);
+										setDetailTag("");
+									}}
+								>
+									<Input
+										aria-label={t("Add a tag")}
+										placeholder={t("Add a tag")}
+										list="audience-tag-names"
+										value={detailTag}
+										onChange={(event) => {
+											setDetailTag(event.target.value);
+										}}
+									/>
+									<Button type="submit" size="sm" disabled={busy || !detailTag.trim()}>
+										{t("Add")}
+									</Button>
+								</form>
+							</ContactSection>
+							{fields.length > 0 && (
+								<ContactSection title={t("Fields")}>
+									<div className="grid gap-4 sm:grid-cols-2">
+										{fields.map((field) => (
+											<CustomFieldInput
+												key={field.id}
+												field={field}
+												value={attributes[field.key]}
+												onChange={(value) => {
+													updateAttribute(field.key, value);
+												}}
+											/>
+										))}
+									</div>
+								</ContactSection>
+							)}
+							<ContactSection title={t("Languages and time zone")}>
+								<LanguageFields
+									attributes={attributes}
+									locales={locales}
+									onChange={updateAttribute}
+								/>
+							</ContactSection>
+							{lists.length > 0 && (
+								<ContactSection title={t("Lists")}>
+									{lists.map((list) => (
+										<Checkbox
+											key={list.id}
+											label={list.name}
+											checked={selected.list_ids?.includes(list.id) ?? false}
+											onCheckedChange={(value) =>
+												setSelected({
+													...selected,
+													list_ids: value
+														? [...(selected.list_ids ?? []), list.id]
+														: selected.list_ids?.filter((id) => id !== list.id),
+												})
+											}
+										/>
+									))}
+								</ContactSection>
+							)}
+							{!selected.id && (
+								<Checkbox
+									label={t("Ask for confirmation by email (double opt-in)")}
+									checked={doubleOptIn}
+									onCheckedChange={(value) => {
+										setDoubleOptIn(value);
+									}}
+								/>
+							)}
+							<div className="flex flex-wrap gap-2 border-t border-kumo-line pt-5">
+								<Button
+									variant="primary"
+									disabled={busy || !selected.email}
+									onClick={() =>
+										void run(async () => {
+											const payload = {
+												email: selected.email,
+												name: selected.name,
+												attributes: selected.attributes,
+												list_ids: selected.list_ids,
+												...(selected.id ? {} : { double_opt_in: doubleOptIn }),
+											};
+											const result = selected.id
+												? await updateEmailSubscriber(project, selected.id, payload)
+												: await createEmailSubscriber(project, payload);
+											if (!selected.id && pendingTags.length && result.id)
+												await assignAudienceTags(project, {
+													subscriber_ids: [result.id],
+													tag_names: pendingTags,
+													action: "add",
+												});
+											setPendingTags([]);
+											setSelected({
+												...result,
+												tag_ids: (result as AudienceContact).tag_ids ?? [],
+											});
+											if (!selected.id && result.id) showContact(result.id, true);
+										})
+									}
+								>
+									{t("Save")}
+								</Button>
+								{selected.id && (
+									<Button
+										variant="secondary-destructive"
+										disabled={busy}
+										onClick={() =>
+											void run(async () => {
+												setSelected(
+													await suppressEmailSubscriber(project, selected.id!, "unsubscribe"),
+												);
+											})
+										}
+									>
+										{t("Unsubscribe")}
+									</Button>
+								)}
+								{selected.id && (
+									<Button
+										variant="secondary-destructive"
+										disabled={busy}
+										onClick={() =>
+											setConfirmation({
+												name: selected.email ?? "",
+												action: async () => {
+													await deleteEmailSubscriber(project, selected.id!);
+													showContact("");
+												},
+											})
+										}
+									>
+										{t("Delete contact")}
+									</Button>
+								)}
+							</div>
+							{activity && (
+								<ContactSection title={t("Activity")}>
+									{activity.events.slice(0, 20).map((event, index) => (
+										<div
+											key={String(event.id ?? index)}
+											className="rounded-lg bg-kumo-tint p-3 text-xs"
+										>
+											<p>{t(String(event.event_type ?? event.type ?? "Event"))}</p>
+											<p className="mt-1 text-kumo-subtle">
+												{String(event.occurred_at ?? event.created_at ?? "")}
+											</p>
+										</div>
+									))}
+								</ContactSection>
+							)}
+						</>
+					) : (
+						!error && <Loader />
+					)}
+				</section>
+			) : (
+				<section className="space-y-4">
+					<div className="flex flex-wrap justify-between gap-3">
+						<div className="flex flex-wrap gap-2">
+							<Input
+								placeholder={t("Search contacts")}
+								aria-label={t("Search contacts")}
+								value={query}
+								onChange={(event) => setQuery(event.target.value)}
+							/>
 							<Select
-								aria-label={t("Tags")}
-								value={tagFilter}
-								onValueChange={(value) => {
-									if (value) setTagFilter(value);
-								}}
+								aria-label={t("Lists")}
+								value={filter}
+								onValueChange={(value) => value && setFilter(value)}
 								items={{
-									all: t("All tags"),
-									...Object.fromEntries(tags.map((tag) => [tag.id, tag.name])),
+									all: t("All lists"),
+									...Object.fromEntries(lists.map((list) => [list.id, list.name])),
 								}}
 							/>
-						)}
+							{tags.length > 0 && (
+								<Select
+									aria-label={t("Tags")}
+									value={tagFilter}
+									onValueChange={(value) => {
+										if (value) setTagFilter(value);
+									}}
+									items={{
+										all: t("All tags"),
+										...Object.fromEntries(tags.map((tag) => [tag.id, tag.name])),
+									}}
+								/>
+							)}
+						</div>
+						<div className="flex flex-wrap gap-2">
+							<Button
+								onClick={() => {
+									setImporting(true);
+								}}
+							>
+								{t("Import CSV")}
+							</Button>
+							<Button
+								onClick={async () => {
+									try {
+										const blob = await exportEmailSubscribers(project);
+										const url = URL.createObjectURL(blob);
+										const link = document.createElement("a");
+										link.href = url;
+										link.download = "contacts.csv";
+										link.click();
+										setTimeout(() => URL.revokeObjectURL(url), 1000);
+									} catch {
+										setError(t("Loading failed"));
+									}
+								}}
+							>
+								{t("Export CSV")}
+							</Button>
+							<Button
+								variant="primary"
+								onClick={() => {
+									showContact(NEW_CONTACT);
+								}}
+							>
+								{t("Add contact")}
+							</Button>
+						</div>
 					</div>
-					<div className="flex flex-wrap gap-2">
+					{checked.length > 0 && (
+						<div className="flex flex-wrap items-end gap-2 rounded-lg border border-kumo-line bg-kumo-tint p-3">
+							<p className="me-auto self-center text-sm font-medium">
+								{t("{count} selected", { count: checked.length })}
+							</p>
+							<Input
+								aria-label={t("Tag name")}
+								placeholder={t("Tag name")}
+								list="audience-tag-names"
+								value={bulkTag}
+								onChange={(event) => {
+									setBulkTag(event.target.value);
+								}}
+							/>
+							<Button
+								disabled={busy || !bulkTag.trim()}
+								onClick={() => {
+									bulk("add");
+								}}
+							>
+								{t("Add tag")}
+							</Button>
+							<Button
+								disabled={busy || !bulkTag.trim()}
+								onClick={() => {
+									bulk("remove");
+								}}
+							>
+								{t("Remove tag")}
+							</Button>
+							<Button
+								variant="ghost"
+								onClick={() => {
+									setChecked([]);
+								}}
+							>
+								{t("Clear selection")}
+							</Button>
+						</div>
+					)}
+					{error && (
+						<p role="alert" className="text-kumo-danger">
+							{error}
+						</p>
+					)}
+					{loading ? (
+						<Loader />
+					) : (
+						<div className="overflow-auto rounded-lg border border-kumo-line">
+							<FrontTable className="w-full text-start text-sm">
+								<FrontTableHeader className="bg-kumo-tint">
+									<FrontTableRow>
+										<FrontTableHead className="w-10 p-4">
+											<Checkbox
+												aria-label={t("Select all contacts")}
+												checked={allChecked}
+												onCheckedChange={(value) => {
+													setChecked(value ? visible.map((contact) => contact.id) : []);
+												}}
+											/>
+										</FrontTableHead>
+										{["Contact", "Language", "Status", "Lists", "Tags"].map((label) => (
+											<FrontTableHead key={label} className="p-4 text-start font-medium">
+												{t(label)}
+											</FrontTableHead>
+										))}
+									</FrontTableRow>
+								</FrontTableHeader>
+								<FrontTableBody>
+									{visible.map((contact) => (
+										<FrontTableRow key={contact.id} className="border-t border-kumo-line">
+											<FrontTableCell className="p-4">
+												<Checkbox
+													aria-label={t("Select {email}", { email: contact.email })}
+													checked={checked.includes(contact.id)}
+													onCheckedChange={(value) => {
+														setChecked((values) =>
+															value
+																? [...values, contact.id]
+																: values.filter((id) => id !== contact.id),
+														);
+													}}
+												/>
+											</FrontTableCell>
+											<FrontTableCell className="p-3">
+												<Button
+													variant="ghost"
+													className="h-auto flex-col items-start"
+													onClick={() => {
+														showContact(contact.id);
+													}}
+												>
+													<span>{contact.name || contact.email}</span>
+													<span className="mt-1 text-xs text-kumo-subtle">{contact.email}</span>
+												</Button>
+											</FrontTableCell>
+											<FrontTableCell>
+												{typeof contact.attributes?.locale === "string"
+													? contact.attributes.locale
+													: "—"}
+											</FrontTableCell>
+											<FrontTableCell>{t(contact.consent_status ?? contact.status)}</FrontTableCell>
+											<FrontTableCell>{contact.list_ids?.length ?? 0}</FrontTableCell>
+											<FrontTableCell className="p-3">
+												<TagChips
+													names={(contact.tag_ids ?? []).map((id) => tagNames.get(id) ?? "")}
+												/>
+											</FrontTableCell>
+										</FrontTableRow>
+									))}
+								</FrontTableBody>
+							</FrontTable>
+							{!visible.length && (
+								<p className="p-6 text-kumo-subtle">
+									{t(
+										query || filter !== "all" || tagFilter !== "all"
+											? "No matching contacts"
+											: "No contacts yet. Add a contact, import a CSV file or let your application create them.",
+									)}
+								</p>
+							)}
+						</div>
+					)}
+					{hasMore && (
 						<Button
-							onClick={() => {
-								setImporting(true);
-							}}
-						>
-							{t("Import CSV")}
-						</Button>
-						<Button
+							disabled={busy}
 							onClick={async () => {
 								try {
-									const blob = await exportEmailSubscribers(project);
-									const url = URL.createObjectURL(blob);
-									const link = document.createElement("a");
-									link.href = url;
-									link.download = "contacts.csv";
-									link.click();
-									setTimeout(() => URL.revokeObjectURL(url), 1000);
+									const next = await page(contacts.length);
+									setContacts((values) => [...values, ...next]);
+									setHasMore(next.length === 50);
 								} catch {
 									setError(t("Loading failed"));
 								}
 							}}
 						>
-							{t("Export CSV")}
+							{t("Load more")}
 						</Button>
-						<Button
-							variant="primary"
-							onClick={() => {
-								setSelected({ email: "", name: "", attributes: {}, list_ids: [], tag_ids: [] });
-								setPendingTags([]);
-								setActivity(null);
-								setDoubleOptIn(lists.some((list) => list.optin_mode === "double"));
-							}}
-						>
-							{t("Add contact")}
-						</Button>
-					</div>
-				</div>
-				{checked.length > 0 && (
-					<div className="flex flex-wrap items-end gap-2 rounded-lg border border-kumo-line bg-kumo-tint p-3">
-						<p className="me-auto self-center text-sm font-medium">
-							{t("{count} selected", { count: checked.length })}
-						</p>
-						<Input
-							aria-label={t("Tag name")}
-							placeholder={t("Tag name")}
-							list="audience-tag-names"
-							value={bulkTag}
-							onChange={(event) => {
-								setBulkTag(event.target.value);
-							}}
-						/>
-						<Button
-							disabled={busy || !bulkTag.trim()}
-							onClick={() => {
-								bulk("add");
-							}}
-						>
-							{t("Add tag")}
-						</Button>
-						<Button
-							disabled={busy || !bulkTag.trim()}
-							onClick={() => {
-								bulk("remove");
-							}}
-						>
-							{t("Remove tag")}
-						</Button>
-						<Button
-							variant="ghost"
-							onClick={() => {
-								setChecked([]);
-							}}
-						>
-							{t("Clear selection")}
-						</Button>
-					</div>
-				)}
-				{error && (
-					<p role="alert" className="text-kumo-danger">
-						{error}
-					</p>
-				)}
-				{loading ? (
-					<Loader />
-				) : (
-					<div className="overflow-auto rounded-lg border border-kumo-line">
-						<FrontTable className="w-full text-start text-sm">
-							<FrontTableHeader className="bg-kumo-tint">
-								<FrontTableRow>
-									<FrontTableHead className="w-10 p-4">
-										<Checkbox
-											aria-label={t("Select all contacts")}
-											checked={allChecked}
-											onCheckedChange={(value) => {
-												setChecked(value ? visible.map((contact) => contact.id) : []);
-											}}
-										/>
-									</FrontTableHead>
-									{["Contact", "Language", "Status", "Lists", "Tags"].map((label) => (
-										<FrontTableHead key={label} className="p-4 text-start font-medium">
-											{t(label)}
-										</FrontTableHead>
-									))}
-								</FrontTableRow>
-							</FrontTableHeader>
-							<FrontTableBody>
-								{visible.map((contact) => (
-									<FrontTableRow key={contact.id} className="border-t border-kumo-line">
-										<FrontTableCell className="p-4">
-											<Checkbox
-												aria-label={t("Select {email}", { email: contact.email })}
-												checked={checked.includes(contact.id)}
-												onCheckedChange={(value) => {
-													setChecked((values) =>
-														value
-															? [...values, contact.id]
-															: values.filter((id) => id !== contact.id),
-													);
-												}}
-											/>
-										</FrontTableCell>
-										<FrontTableCell className="p-3">
-											<Button
-												variant="ghost"
-												className="h-auto flex-col items-start"
-												onClick={async () => {
-													setSelected(contact);
-													setActivity(null);
-													try {
-														setActivity(await getEmailSubscriberExport(project, contact.id));
-													} catch {
-														setError(t("Loading failed"));
-													}
-												}}
-											>
-												<span>{contact.name || contact.email}</span>
-												<span className="mt-1 text-xs text-kumo-subtle">{contact.email}</span>
-											</Button>
-										</FrontTableCell>
-										<FrontTableCell>
-											{typeof contact.attributes?.locale === "string"
-												? contact.attributes.locale
-												: "—"}
-										</FrontTableCell>
-										<FrontTableCell>{t(contact.consent_status ?? contact.status)}</FrontTableCell>
-										<FrontTableCell>{contact.list_ids?.length ?? 0}</FrontTableCell>
-										<FrontTableCell className="p-3">
-											<TagChips
-												names={(contact.tag_ids ?? []).map((id) => tagNames.get(id) ?? "")}
-											/>
-										</FrontTableCell>
-									</FrontTableRow>
-								))}
-							</FrontTableBody>
-						</FrontTable>
-						{!visible.length && (
-							<p className="p-6 text-kumo-subtle">
-								{t(
-									query || filter !== "all" || tagFilter !== "all"
-										? "No matching contacts"
-										: "No contacts yet. Add a contact, import a CSV file or let your application create them.",
-								)}
-							</p>
-						)}
-					</div>
-				)}
-				{hasMore && (
-					<Button
-						disabled={busy}
-						onClick={async () => {
-							try {
-								const next = await page(contacts.length);
-								setContacts((values) => [...values, ...next]);
-								setHasMore(next.length === 50);
-							} catch {
-								setError(t("Loading failed"));
-							}
-						}}
-					>
-						{t("Load more")}
-					</Button>
-				)}
-			</section>
+					)}
+				</section>
+			)}
 			<ContactImport
 				project={project}
 				open={importing}
@@ -454,224 +727,72 @@ export function EmailContacts({
 					</div>
 				</Dialog>
 			</Dialog.Root>
-			<aside className="space-y-4 rounded-lg border border-kumo-line bg-kumo-base p-5">
-				{selected ? (
-					<>
-						<h2 className="text-lg font-semibold">{selected.name || t("Contact")}</h2>
-						<Input
-							label={t("Name")}
-							value={selected.name ?? ""}
-							onChange={(event) => setSelected({ ...selected, name: event.target.value })}
-						/>
-						<Input
-							type="email"
-							label={t("Email")}
-							value={selected.email ?? ""}
-							onChange={(event) => setSelected({ ...selected, email: event.target.value })}
-						/>
-						<div className="space-y-2">
-							<p className="text-sm font-medium">{t("Tags")}</p>
-							<TagChips
-								names={
-									selected.id
-										? (selected.tag_ids ?? []).map((id) => tagNames.get(id) ?? "")
-										: pendingTags
-								}
-								onRemove={(name) => {
-									changeContactTag("remove", name, tags.find((tag) => tag.name === name)?.id);
-								}}
-								removeLabel={(name) => t("Remove tag {tag}", { tag: name })}
-							/>
-							<form
-								className="flex items-end gap-2"
-								onSubmit={(event) => {
-									event.preventDefault();
-									const name = detailTag.trim();
-									if (!name) return;
-									changeContactTag(
-										"add",
-										name,
-										tags.find((tag) => tag.name.toLowerCase() === name.toLowerCase())?.id,
-									);
-									setDetailTag("");
-								}}
-							>
-								<Input
-									aria-label={t("Add a tag")}
-									placeholder={t("Add a tag")}
-									list="audience-tag-names"
-									value={detailTag}
-									onChange={(event) => {
-										setDetailTag(event.target.value);
-									}}
-								/>
-								<Button type="submit" size="sm" disabled={busy || !detailTag.trim()}>
-									{t("Add")}
-								</Button>
-							</form>
-						</div>
-						{fields.map((field) => (
-							<CustomFieldInput
-								key={field.id}
-								field={field}
-								value={attributes[field.key]}
-								onChange={(value) => {
-									updateAttribute(field.key, value);
-								}}
-							/>
-						))}
-						<details>
-							<summary className="cursor-pointer text-sm font-medium">
-								{t("Languages and time zone")}
-							</summary>
-							<div className="mt-3 space-y-3">
-								{languageAttributes.map(([key, label]) =>
-									key === "time_zone" ? (
-										<Input
-											key={key}
-											label={t(label)}
-											value={String(attributes[key] ?? "")}
-											onChange={(event) => {
-												updateAttribute(key, event.target.value);
-											}}
-										/>
-									) : (
-										<Select
-											key={key}
-											label={t(label)}
-											value={String(attributes[key] ?? "")}
-											onValueChange={(value) => {
-												updateAttribute(key, value ?? "");
-											}}
-											items={Object.fromEntries(
-												[...new Set(["", ...locales, String(attributes[key] ?? "")])].map(
-													(language) => {
-														let name = language;
-														try {
-															name = language
-																? (languageNames.of(language) ?? language)
-																: t("Use account language");
-														} catch {
-															name = language;
-														}
-														return [language, name];
-													},
-												),
-											)}
-										/>
-									),
-								)}
-							</div>
-						</details>
-						{lists.map((list) => (
-							<Checkbox
-								key={list.id}
-								label={list.name}
-								checked={selected.list_ids?.includes(list.id) ?? false}
-								onCheckedChange={(value) =>
-									setSelected({
-										...selected,
-										list_ids: value
-											? [...(selected.list_ids ?? []), list.id]
-											: selected.list_ids?.filter((id) => id !== list.id),
-									})
-								}
-							/>
-						))}
-						{!selected.id && (
-							<Checkbox
-								label={t("Ask for confirmation by email (double opt-in)")}
-								checked={doubleOptIn}
-								onCheckedChange={(value) => {
-									setDoubleOptIn(value);
-								}}
-							/>
-						)}
-						<Button
-							variant="primary"
-							disabled={busy || !selected.email}
-							onClick={() =>
-								void run(async () => {
-									const payload = {
-										email: selected.email,
-										name: selected.name,
-										attributes: selected.attributes,
-										list_ids: selected.list_ids,
-										...(selected.id ? {} : { double_opt_in: doubleOptIn }),
-									};
-									const result = selected.id
-										? await updateEmailSubscriber(project, selected.id, payload)
-										: await createEmailSubscriber(project, payload);
-									if (!selected.id && pendingTags.length && result.id)
-										await assignAudienceTags(project, {
-											subscriber_ids: [result.id],
-											tag_names: pendingTags,
-											action: "add",
-										});
-									setPendingTags([]);
-									setSelected({ ...result, tag_ids: (result as AudienceContact).tag_ids ?? [] });
-								})
-							}
-						>
-							{t("Save")}
-						</Button>
-						{selected.id && (
-							<Button
-								variant="secondary-destructive"
-								disabled={busy}
-								onClick={() =>
-									void run(async () => {
-										setSelected(
-											await suppressEmailSubscriber(project, selected.id!, "unsubscribe"),
-										);
-									})
-								}
-							>
-								{t("Unsubscribe")}
-							</Button>
-						)}
-						{selected.id && (
-							<Button
-								variant="secondary-destructive"
-								disabled={busy}
-								onClick={() =>
-									setConfirmation({
-										name: selected.email ?? "",
-										action: async () => {
-											await deleteEmailSubscriber(project, selected.id!);
-											setSelected(null);
-											setActivity(null);
-										},
-									})
-								}
-							>
-								{t("Delete contact")}
-							</Button>
-						)}
-						{activity && (
-							<div className="space-y-3 border-t border-kumo-line pt-4">
-								<h3 className="font-semibold">{t("Activity")}</h3>
-								{activity.events.slice(0, 20).map((event, index) => (
-									<div
-										key={String(event.id ?? index)}
-										className="rounded-lg bg-kumo-tint p-3 text-xs"
-									>
-										<p>{t(String(event.event_type ?? event.type ?? "Event"))}</p>
-										<p className="mt-1 text-kumo-subtle">
-											{String(event.occurred_at ?? event.created_at ?? "")}
-										</p>
-									</div>
-								))}
-							</div>
-						)}
-					</>
-				) : (
-					<p className="text-sm text-kumo-subtle">
-						{t("Select a contact to view preferences and activity.")}
-					</p>
-				)}
-			</aside>
 		</div>
+	);
+}
+
+function LanguageFields({
+	attributes,
+	locales,
+	onChange,
+}: {
+	attributes: Record<string, unknown>;
+	locales: string[];
+	onChange: (key: string, value: string) => void;
+}) {
+	const { t, locale } = useStudioI18n();
+	const languageNames = new Intl.DisplayNames([locale], { type: "language" });
+	const textAttribute = (key: string) => {
+		const value = attributes[key];
+		return typeof value === "string" ? value : "";
+	};
+	const languageName = (language: string) => {
+		if (!language) return t("Use account language");
+		try {
+			return languageNames.of(language) ?? language;
+		} catch {
+			return language;
+		}
+	};
+	return (
+		<div className="grid gap-4 sm:grid-cols-2">
+			{languageAttributes.map(([key, label]) =>
+				key === "time_zone" ? (
+					<Input
+						key={key}
+						label={t(label)}
+						value={textAttribute(key)}
+						onChange={(event) => {
+							onChange(key, event.target.value);
+						}}
+					/>
+				) : (
+					<Select
+						key={key}
+						label={t(label)}
+						value={textAttribute(key)}
+						onValueChange={(value) => {
+							onChange(key, value ?? "");
+						}}
+						items={Object.fromEntries(
+							[...new Set(["", ...locales, textAttribute(key)])].map((language) => [
+								language,
+								languageName(language),
+							]),
+						)}
+					/>
+				),
+			)}
+		</div>
+	);
+}
+
+function ContactSection({ title, children }: { title: string; children: ReactNode }) {
+	return (
+		<section className="space-y-3 border-t border-kumo-line pt-5">
+			<h3 className="font-semibold">{title}</h3>
+			{children}
+		</section>
 	);
 }
 

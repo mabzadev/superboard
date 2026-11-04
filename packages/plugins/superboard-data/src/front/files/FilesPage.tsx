@@ -53,7 +53,6 @@ const messages = {
 		search: "Search this page",
 		type: "File type",
 		allTypes: "All types",
-		details: "Details",
 		back: "Back to files",
 		failed: "The file operation failed",
 	},
@@ -79,7 +78,6 @@ const messages = {
 		search: "Rechercher dans cette page",
 		type: "Type de fichier",
 		allTypes: "Tous les types",
-		details: "Détails",
 		back: "Retour aux fichiers",
 		failed: "L’opération sur le fichier a échoué",
 	},
@@ -190,229 +188,235 @@ export default function FilesPage() {
 			</Dialog>
 			{error && <p role="alert">{error}</p>}
 			{message && <p role="status">{message}</p>}
-			{usage && (
-				<p>
-					{usage.files} · {usage.bytes.toLocaleString(locale)} {t.size.toLowerCase()}
-				</p>
-			)}
-			<form
-				className="flex flex-wrap items-end gap-3"
-				onSubmit={(event) => {
-					event.preventDefault();
-					run(async () => {
-						if (!filesToUpload.length) return;
-						for (const file of filesToUpload) {
-							setProgress(0);
-							const ticket = await responseData<{ id: string; upload_url: string }>(
-								await POST(`${base}/upload-tickets`, {
-									filename: file.name,
-									content_type: file.type || "application/octet-stream",
-									byte_size: file.size,
-								}),
-							);
-							await PUT(ticket.upload_url, file, { onProgress: setProgress });
-							await POST(`${base}/upload-tickets/${encodeURIComponent(ticket.id)}/complete`, {});
-							setFilesToUpload((current) => current.filter((candidate) => candidate !== file));
-							await load();
-						}
-						setMessage(t.saved);
-					});
-				}}
-			>
-				<label>
-					{t.choose}
-					<Input
-						type="file"
-						disabled={busy}
-						multiple
-						onChange={(event) => {
-							setFilesToUpload(Array.from(event.target.files ?? []));
-						}}
-					/>
-				</label>
-				<Button type="submit" disabled={busy || !filesToUpload.length || !selectedProject}>
-					{busy ? `${t.uploading} ${progress}%` : t.upload}
-				</Button>
-			</form>
-			<div className="flex gap-3">
-				<Button
-					variant="outline"
-					onClick={() => {
-						setDeleted(!deleted);
-						setDetail(null);
-						setContentType("");
-						setCursor(null);
-					}}
-				>
-					{deleted ? t.active : t.trash}
-				</Button>
-				<Button
-					variant="outline"
-					disabled={busy}
-					onClick={() => {
-						run(async () => {
-							const result = await POST(`${base}/collect-garbage`, {});
-							setMessage(String((await responseData<{ collected: number }>(result)).collected));
-						});
-					}}
-				>
-					{t.clean}
-				</Button>
-			</div>
-			<div className="flex flex-wrap gap-3">
-				<label>
-					{t.search}
-					<Input
-						value={search}
-						onChange={(event) => {
-							setSearch(event.target.value);
-						}}
-					/>
-				</label>
-				<label>
-					{t.type}
-					<select
-						value={contentType}
-						onChange={(event) => {
-							setContentType(event.target.value);
-						}}
-					>
-						<option value="">{t.allTypes}</option>
-						{[...new Set(items.map((item) => item.content_type))].map((type) => (
-							<option key={type} value={type}>
-								{type}
-							</option>
-						))}
-					</select>
-				</label>
-			</div>
 			{detail && (
-				<div className="space-y-3 rounded border p-4">
-					<h2>{t.details}</h2>
-					<dl>
-						<dt>{t.name}</dt>
-						<dd>{detail.filename}</dd>
-						<dt>{t.type}</dt>
-						<dd>{detail.content_type}</dd>
-						<dt>{t.size}</dt>
-						<dd>{detail.byte_size}</dd>
-					</dl>
+				<div className="max-w-3xl space-y-4">
 					<Button
+						variant="ghost"
+						size="sm"
 						onClick={() => {
 							setDetail(null);
 						}}
 					>
 						{t.back}
 					</Button>
+					<h2 className="break-all text-xl font-semibold">{detail.filename}</h2>
+					<dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+						<div>
+							<dt className="text-xs text-muted-foreground">{t.type}</dt>
+							<dd className="mt-1 text-sm font-medium">{detail.content_type}</dd>
+						</div>
+						<div>
+							<dt className="text-xs text-muted-foreground">{t.size}</dt>
+							<dd className="mt-1 text-sm font-medium">
+								{detail.byte_size.toLocaleString(locale)}
+							</dd>
+						</div>
+					</dl>
 				</div>
 			)}
-			<FrontTable>
-				<FrontTableHeader>
-					<FrontTableRow>
-						<FrontTableHead>{t.name}</FrontTableHead>
-						<FrontTableHead>{t.size}</FrontTableHead>
-						<FrontTableHead></FrontTableHead>
-					</FrontTableRow>
-				</FrontTableHeader>
-				<FrontTableBody>
-					{items
-						.filter(
-							(item) =>
-								item.filename
-									.toLocaleLowerCase(locale)
-									.includes(search.toLocaleLowerCase(locale)) &&
-								(!contentType || item.content_type === contentType),
-						)
-						.map((item) => (
-							<FrontTableRow key={item.id}>
-								<FrontTableCell>
-									<Button
-										variant="ghost"
-										onClick={() => {
-											setDetail(item);
-										}}
-									>
-										{item.filename}
-									</Button>
-								</FrontTableCell>
-								<FrontTableCell>{item.byte_size.toLocaleString(locale)}</FrontTableCell>
-								<FrontTableCell className="flex gap-2">
-									{item.deleted_at ? (
-										<Button
-											disabled={busy}
-											onClick={() => {
-												run(async () => {
-													await POST(`${base}/objects/${item.id}/restore`, {});
-												});
-											}}
-										>
-											{t.restore}
-										</Button>
-									) : (
-										<>
-											<Button
-												disabled={busy}
-												onClick={() => {
-													run(async () => {
-														const ticket = await responseData<{ download_url: string }>(
-															await GET(`${base}/objects/${item.id}/download-ticket`),
-														);
-														const response = await GET(ticket.download_url, {
-															responseType: "blob",
-														});
-														const blob: unknown = response.data;
-														if (!(blob instanceof Blob)) throw new Error(t.failed);
-														const url = URL.createObjectURL(blob);
-														const link = document.createElement("a");
-														link.href = url;
-														link.download = item.filename;
-														link.click();
-														setTimeout(() => {
-															URL.revokeObjectURL(url);
-														}, 1000);
-													});
-												}}
-											>
-												{t.download}
-											</Button>
-											<Button
-												variant="outline"
-												disabled={busy}
-												onClick={() => {
-													run(async () => {
-														await DELETE(`${base}/objects/${item.id}`);
-													});
-												}}
-											>
-												{t.remove}
-											</Button>
-										</>
-									)}
-								</FrontTableCell>
-							</FrontTableRow>
-						))}
-				</FrontTableBody>
-			</FrontTable>
-			{!items.length && <p>{t.empty}</p>}
-			<div className="flex gap-3">
-				{cursor && (
+			<div className="space-y-5" hidden={detail !== null}>
+				{usage && (
+					<p>
+						{usage.files} · {usage.bytes.toLocaleString(locale)} {t.size.toLowerCase()}
+					</p>
+				)}
+				<form
+					className="flex flex-wrap items-end gap-3"
+					onSubmit={(event) => {
+						event.preventDefault();
+						run(async () => {
+							if (!filesToUpload.length) return;
+							for (const file of filesToUpload) {
+								setProgress(0);
+								const ticket = await responseData<{ id: string; upload_url: string }>(
+									await POST(`${base}/upload-tickets`, {
+										filename: file.name,
+										content_type: file.type || "application/octet-stream",
+										byte_size: file.size,
+									}),
+								);
+								await PUT(ticket.upload_url, file, { onProgress: setProgress });
+								await POST(`${base}/upload-tickets/${encodeURIComponent(ticket.id)}/complete`, {});
+								setFilesToUpload((current) => current.filter((candidate) => candidate !== file));
+								await load();
+							}
+							setMessage(t.saved);
+						});
+					}}
+				>
+					<label>
+						{t.choose}
+						<Input
+							type="file"
+							disabled={busy}
+							multiple
+							onChange={(event) => {
+								setFilesToUpload(Array.from(event.target.files ?? []));
+							}}
+						/>
+					</label>
+					<Button type="submit" disabled={busy || !filesToUpload.length || !selectedProject}>
+						{busy ? `${t.uploading} ${progress}%` : t.upload}
+					</Button>
+				</form>
+				<div className="flex flex-wrap items-end gap-3">
+					<label>
+						{t.search}
+						<Input
+							value={search}
+							onChange={(event) => {
+								setSearch(event.target.value);
+							}}
+						/>
+					</label>
+					<label>
+						{t.type}
+						<select
+							value={contentType}
+							onChange={(event) => {
+								setContentType(event.target.value);
+							}}
+						>
+							<option value="">{t.allTypes}</option>
+							{[...new Set(items.map((item) => item.content_type))].map((type) => (
+								<option key={type} value={type}>
+									{type}
+								</option>
+							))}
+						</select>
+					</label>
 					<Button
+						variant="outline"
 						onClick={() => {
+							setDeleted(!deleted);
+							setDetail(null);
+							setContentType("");
 							setCursor(null);
 						}}
 					>
-						{t.first}
+						{deleted ? t.active : t.trash}
 					</Button>
-				)}
-				{next && (
 					<Button
+						variant="outline"
+						disabled={busy}
 						onClick={() => {
-							setCursor(next);
+							run(async () => {
+								const result = await POST(`${base}/collect-garbage`, {});
+								setMessage(String((await responseData<{ collected: number }>(result)).collected));
+							});
 						}}
 					>
-						{t.next}
+						{t.clean}
 					</Button>
-				)}
+				</div>
+				<FrontTable>
+					<FrontTableHeader>
+						<FrontTableRow>
+							<FrontTableHead>{t.name}</FrontTableHead>
+							<FrontTableHead>{t.size}</FrontTableHead>
+							<FrontTableHead></FrontTableHead>
+						</FrontTableRow>
+					</FrontTableHeader>
+					<FrontTableBody>
+						{items
+							.filter(
+								(item) =>
+									item.filename
+										.toLocaleLowerCase(locale)
+										.includes(search.toLocaleLowerCase(locale)) &&
+									(!contentType || item.content_type === contentType),
+							)
+							.map((item) => (
+								<FrontTableRow key={item.id}>
+									<FrontTableCell>
+										<Button
+											variant="ghost"
+											onClick={() => {
+												setDetail(item);
+											}}
+										>
+											{item.filename}
+										</Button>
+									</FrontTableCell>
+									<FrontTableCell>{item.byte_size.toLocaleString(locale)}</FrontTableCell>
+									<FrontTableCell className="flex gap-2">
+										{item.deleted_at ? (
+											<Button
+												disabled={busy}
+												onClick={() => {
+													run(async () => {
+														await POST(`${base}/objects/${item.id}/restore`, {});
+													});
+												}}
+											>
+												{t.restore}
+											</Button>
+										) : (
+											<>
+												<Button
+													disabled={busy}
+													onClick={() => {
+														run(async () => {
+															const ticket = await responseData<{ download_url: string }>(
+																await GET(`${base}/objects/${item.id}/download-ticket`),
+															);
+															const response = await GET(ticket.download_url, {
+																responseType: "blob",
+															});
+															const blob: unknown = response.data;
+															if (!(blob instanceof Blob)) throw new Error(t.failed);
+															const url = URL.createObjectURL(blob);
+															const link = document.createElement("a");
+															link.href = url;
+															link.download = item.filename;
+															link.click();
+															setTimeout(() => {
+																URL.revokeObjectURL(url);
+															}, 1000);
+														});
+													}}
+												>
+													{t.download}
+												</Button>
+												<Button
+													variant="outline"
+													disabled={busy}
+													onClick={() => {
+														run(async () => {
+															await DELETE(`${base}/objects/${item.id}`);
+														});
+													}}
+												>
+													{t.remove}
+												</Button>
+											</>
+										)}
+									</FrontTableCell>
+								</FrontTableRow>
+							))}
+					</FrontTableBody>
+				</FrontTable>
+				{!items.length && <p>{t.empty}</p>}
+				<div className="flex gap-3">
+					{cursor && (
+						<Button
+							onClick={() => {
+								setCursor(null);
+							}}
+						>
+							{t.first}
+						</Button>
+					)}
+					{next && (
+						<Button
+							onClick={() => {
+								setCursor(next);
+							}}
+						>
+							{t.next}
+						</Button>
+					)}
+				</div>
 			</div>
 		</section>
 	);

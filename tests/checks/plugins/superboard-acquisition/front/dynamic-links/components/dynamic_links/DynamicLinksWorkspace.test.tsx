@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
 	getLinkStatistics: vi.fn(),
 	getLinkCampaignAnalytics: vi.fn(),
 	getTracking: vi.fn(),
+	getRedirectRules: vi.fn(),
+	getSocialPreview: vi.fn(),
 }));
 
 vi.mock(
@@ -58,6 +60,8 @@ const link = {
 };
 
 const search = () => new URLSearchParams(window.location.search);
+const scrollIntoView = vi.fn();
+const settingsHeadings = ["Domain", "Redirect rules", "Social preview", "Tracking"];
 
 describe("DynamicLinksWorkspace", () => {
 	beforeEach(() => {
@@ -73,6 +77,15 @@ describe("DynamicLinksWorkspace", () => {
 			provider: "superboard",
 			configuration: {},
 		});
+		mocks.getRedirectRules.mockResolvedValue([]);
+		mocks.getSocialPreview.mockResolvedValue(null);
+		Object.defineProperties(Element.prototype, {
+			hasPointerCapture: { configurable: true, value: () => false },
+			setPointerCapture: { configurable: true, value: () => undefined },
+			releasePointerCapture: { configurable: true, value: () => undefined },
+			scrollIntoView: { configurable: true, value: scrollIntoView },
+		});
+		scrollIntoView.mockClear();
 	});
 
 	it("keeps the page identity and offers the four workspace tabs", async () => {
@@ -106,7 +119,8 @@ describe("DynamicLinksWorkspace", () => {
 		expect(search().get("tab")).toBe("settings");
 		expect(search().get("section")).toBe("domain");
 		expect(screen.getByRole("tab", { name: "Settings" })).toHaveAttribute("aria-selected", "true");
-		expect(screen.getByRole("tab", { name: "Domain" })).toHaveAttribute("aria-selected", "true");
+		const domain = screen.getByRole("heading", { level: 2, name: "Domain" });
+		expect(scrollIntoView.mock.contexts).toContainEqual(domain.closest("[id]"));
 	});
 
 	it("hides the domain notice once a branded domain is verified", async () => {
@@ -119,14 +133,85 @@ describe("DynamicLinksWorkspace", () => {
 		expect(screen.queryByText("No branded domain yet")).not.toBeInTheDocument();
 	});
 
+	it("stacks every settings section under the single settings tab", async () => {
+		window.history.replaceState(null, "", "/acquisition/dynamic-links?tab=settings");
+		render(<DynamicLinksWorkspace />);
+		expect(screen.getAllByRole("tablist")).toHaveLength(1);
+		expect(
+			screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent),
+		).toEqual(settingsHeadings);
+		expect(
+			await screen.findByRole("button", { name: "Save tracking settings" }),
+		).toBeInTheDocument();
+		expect(await screen.findByRole("button", { name: "Save preview" })).toBeInTheDocument();
+		expect(scrollIntoView).not.toHaveBeenCalled();
+	});
+
 	it("opens legacy settings routes on the matching settings section", async () => {
 		render(<DynamicLinksWorkspace tab="settings" section="tracking" />);
 		expect(screen.getByRole("tab", { name: "Settings" })).toHaveAttribute("aria-selected", "true");
-		expect(screen.getByRole("tab", { name: "Tracking" })).toHaveAttribute("aria-selected", "true");
+		expect(screen.getAllByRole("tablist")).toHaveLength(1);
 		expect(
 			await screen.findByRole("button", { name: "Save tracking settings" }),
 		).toBeInTheDocument();
 		expect(screen.getAllByRole("switch")).toHaveLength(1);
+		const tracking = screen.getByRole("heading", { level: 2, name: "Tracking" });
+		expect(scrollIntoView.mock.contexts).toEqual([tracking.closest("[id]")]);
+	});
+
+	it("scrolls legacy section bookmarks to the matching settings section", () => {
+		window.history.replaceState(
+			null,
+			"",
+			"/acquisition/dynamic-links?tab=settings&section=preview",
+		);
+		render(<DynamicLinksWorkspace />);
+		const preview = screen.getByRole("heading", { level: 2, name: "Social preview" });
+		expect(scrollIntoView.mock.contexts).toEqual([preview.closest("[id]")]);
+	});
+
+	it("shows a domain in place of the domain list and returns to it", async () => {
+		mocks.getDomains.mockResolvedValue([
+			{
+				id: "domain-1",
+				hostname: "go.example.test",
+				status: "pending",
+				verification_token: "token-1",
+				is_default: 1,
+			},
+		]);
+		window.history.replaceState(null, "", "/acquisition/dynamic-links?tab=settings");
+		render(<DynamicLinksWorkspace />);
+		await userEvent.click(await screen.findByRole("button", { name: /go\.example\.test/ }));
+		expect(search().get("domain")).toBe("domain-1");
+		expect(screen.getByRole("heading", { level: 3, name: "go.example.test" })).toBeInTheDocument();
+		expect(screen.getByText("token-1")).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Add domain" })).not.toBeInTheDocument();
+		await userEvent.click(screen.getByRole("button", { name: "All domains" }));
+		expect(search().has("domain")).toBe(false);
+		expect(screen.getByRole("button", { name: "Add domain" })).toBeInTheDocument();
+		expect(screen.queryByText("token-1")).not.toBeInTheDocument();
+	});
+
+	it("stacks a link's details in sections instead of internal tabs", async () => {
+		window.history.replaceState(null, "", "/acquisition/dynamic-links?item=link-1");
+		render(<DynamicLinksWorkspace />);
+		expect(
+			await screen.findByRole("heading", { level: 2, name: "Launch link" }),
+		).toBeInTheDocument();
+		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+		expect(
+			screen.getAllByText(
+				"Create, route and measure links across every platform and acquisition source.",
+			),
+		).toHaveLength(1);
+		expect(
+			screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent),
+		).toEqual(["Link details", "Platform routing", "Social preview", "UTM tracking"]);
+		expect(screen.getByDisplayValue("tiktok")).toBeVisible();
+		expect(screen.queryByRole("button", { name: "Destinations" })).not.toBeInTheDocument();
+		await userEvent.click(screen.getByRole("button", { name: "Back to list" }));
+		expect(search().has("item")).toBe(false);
 	});
 
 	it("measures links by source and platform in the analytics tab", async () => {
@@ -146,9 +231,13 @@ describe("DynamicLinksWorkspace", () => {
 			expect.objectContaining({ interval: "day" }),
 		);
 		expect(await screen.findByText("Launch link")).toBeInTheDocument();
-		await userEvent.click(screen.getByRole("tab", { name: "By source" }));
+		expect(screen.getAllByRole("tablist")).toHaveLength(1);
+		await userEvent.click(screen.getByRole("combobox", { name: "Breakdown dimension" }));
+		await userEvent.click(await screen.findByRole("option", { name: "By source" }));
 		expect(await screen.findByText("tiktok")).toBeInTheDocument();
-		await userEvent.click(screen.getByRole("tab", { name: "By platform" }));
+		expect(search().get("by")).toBe("source");
+		await userEvent.click(screen.getByRole("combobox", { name: "Breakdown dimension" }));
+		await userEvent.click(await screen.findByRole("option", { name: "By platform" }));
 		expect(await screen.findByText("iOS")).toBeInTheDocument();
 	});
 

@@ -1,6 +1,5 @@
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
-import { Button, Input } from "@superboard/front-ui/kumo";
-import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
+import { Button, Input, Select } from "@superboard/front-ui/kumo";
 import {
 	Table as FrontTable,
 	TableHeader as FrontTableHeader,
@@ -10,7 +9,7 @@ import {
 	TableCell as FrontTableCell,
 } from "@superboard/front-ui/ui/table.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { EmailAdministration } from "../../email/components/modules/EmailAdministration.js";
 import { EmailMessages } from "../../email/EmailMessages.js";
@@ -36,7 +35,6 @@ export function ActivityPage({ tab, fallback }: { tab: string; fallback: string 
 					</p>
 				</div>
 			</header>
-			<SectionNavigation />
 			{project && (
 				<Tabs
 					value={tab}
@@ -73,39 +71,28 @@ export function ActivityPage({ tab, fallback }: { tab: string; fallback: string 
 
 function MessageLog({ project }: { project: string }) {
 	const { t } = useStudioI18n();
-	const [source, setSource] = useState<"marketing" | "transactional">("marketing");
-	return (
-		<section className="space-y-4">
-			<div className="flex gap-2" role="group" aria-label={t("Message source")}>
-				<Button
-					variant={source === "marketing" ? "secondary" : "ghost"}
-					aria-pressed={source === "marketing"}
-					onClick={() => {
-						setSource("marketing");
-					}}
-				>
-					{t("Campaigns and journeys")}
-				</Button>
-				<Button
-					variant={source === "transactional" ? "secondary" : "ghost"}
-					aria-pressed={source === "transactional"}
-					onClick={() => {
-						setSource("transactional");
-					}}
-				>
-					{t("System and transactional emails")}
-				</Button>
-			</div>
-			{source === "transactional" ? (
-				<EmailMessages project={project} />
-			) : (
-				<MarketingDeliveries project={project} />
-			)}
-		</section>
+	const [source, setSource] = useState("marketing");
+	const filter = (
+		<Select
+			label={t("Message source")}
+			value={source}
+			onValueChange={(value) => {
+				if (value) setSource(value);
+			}}
+			items={{
+				marketing: t("Campaigns and journeys"),
+				transactional: t("System and transactional emails"),
+			}}
+		/>
+	);
+	return source === "transactional" ? (
+		<EmailMessages project={project} filter={filter} />
+	) : (
+		<MarketingDeliveries project={project} filter={filter} />
 	);
 }
 
-function MarketingDeliveries({ project }: { project: string }) {
+function MarketingDeliveries({ project, filter }: { project: string; filter: ReactNode }) {
 	const { t } = useStudioI18n();
 	const [values, setValues] = useState<StudioDelivery[]>([]);
 	const [query, setQuery] = useState("");
@@ -134,14 +121,17 @@ function MarketingDeliveries({ project }: { project: string }) {
 	}, [project, query, t]);
 	return (
 		<section className="space-y-4">
-			<Input
-				aria-label={t("Recipient")}
-				placeholder={t("Search by recipient")}
-				value={query}
-				onChange={(event) => {
-					setQuery(event.target.value);
-				}}
-			/>
+			<div className="flex flex-wrap items-end gap-3">
+				{filter}
+				<Input
+					label={t("Recipient")}
+					placeholder={t("Search by recipient")}
+					value={query}
+					onChange={(event) => {
+						setQuery(event.target.value);
+					}}
+				/>
+			</div>
 			{error && <p role="alert">{error}</p>}
 			<div className="overflow-auto rounded-lg border border-kumo-line">
 				<FrontTable className="w-full text-start text-sm">

@@ -1,6 +1,7 @@
 import { Button, Checkbox, Input, InputArea, Loader, Select } from "@superboard/front-ui/kumo";
 import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import { EmptyState } from "@superboard/front-ui/ui/widgets.js";
+import { ChevronLeft } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { getSubscriberLists, type SubscriberList } from "../api/marketing/marketingService.js";
@@ -126,89 +127,86 @@ export function AudienceForms({ project }: { project: string }) {
 		...fields.map((field) => ({ key: field.key, label: field.label })),
 	];
 	return (
-		<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-			<section className="space-y-3">
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					<p className="text-sm text-kumo-subtle">
-						{t(
-							"Collect subscribers from your website with an embedded form or a popup. Submissions are protected against bots and repeated attempts.",
-						)}
-					</p>
-					<Button
-						variant="primary"
-						onClick={() => {
-							setEmbed(null);
-							setDraft(emptyDraft(locale));
-						}}
-					>
-						{t("Create form")}
-					</Button>
-				</div>
-				{error && (
-					<p role="alert" className="text-kumo-danger">
-						{error}
-					</p>
-				)}
-				{forms.length ? (
-					<ul className="divide-y divide-kumo-line rounded-lg border border-kumo-line">
-						{forms.map((form) => (
-							<li key={form.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-								<div>
-									<p className="font-medium">{form.name}</p>
-									<p className="text-xs text-kumo-subtle">
-										{t(form.status === "active" ? "Active" : "Disabled")} ·{" "}
-										{t(form.settings.popup.enabled ? "Popup" : "Embedded form")} ·{" "}
-										{t("{count} submissions", { count: form.submission_count })}
-									</p>
-								</div>
-								<div className="flex flex-wrap gap-2">
-									<Button size="sm" onClick={() => void showEmbed(form)}>
-										{t("Get code")}
-									</Button>
-									<Button
-										size="sm"
-										onClick={() => {
-											setEmbed(null);
-											setDraft({
-												...form.settings,
-												id: form.id,
-												name: form.name,
-												status: form.status,
-											});
-										}}
-									>
-										{t("Edit")}
-									</Button>
-									<Button
-										size="sm"
-										variant="ghost"
-										disabled={busy}
-										aria-label={t("Delete {name}", { name: form.name })}
-										onClick={() =>
-											void run(async () => {
-												await deleteSignupForm(project, form.id);
-												if (embed?.form.id === form.id) setEmbed(null);
-											})
-										}
-									>
-										{t("Delete")}
-									</Button>
-								</div>
-							</li>
-						))}
-					</ul>
-				) : (
-					<EmptyState
-						title={t("No signup forms yet")}
-						description={t(
-							"Create a form, choose the lists it subscribes to and paste the code on your website.",
-						)}
-					/>
-				)}
-			</section>
+		<div className="space-y-4">
+			{error && (
+				<p role="alert" className="text-kumo-danger">
+					{error}
+				</p>
+			)}
+			{!draft && !embed && (
+				<section className="space-y-3">
+					<div className="flex flex-wrap items-center justify-between gap-3">
+						<p className="text-sm text-kumo-subtle">
+							{t(
+								"Collect subscribers from your website with an embedded form or a popup. Submissions are protected against bots and repeated attempts.",
+							)}
+						</p>
+						<Button
+							variant="primary"
+							onClick={() => {
+								setEmbed(null);
+								setDraft(emptyDraft(locale));
+							}}
+						>
+							{t("Create form")}
+						</Button>
+					</div>
+					{forms.length ? (
+						<ul className="divide-y divide-kumo-line rounded-lg border border-kumo-line">
+							{forms.map((form) => (
+								<li key={form.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+									<div>
+										<p className="font-medium">{form.name}</p>
+										<p className="text-xs text-kumo-subtle">
+											{t(form.status === "active" ? "Active" : "Disabled")} ·{" "}
+											{t(form.settings.popup.enabled ? "Popup" : "Embedded form")} ·{" "}
+											{t("{count} submissions", { count: form.submission_count })}
+										</p>
+									</div>
+									<div className="flex flex-wrap gap-2">
+										<Button size="sm" onClick={() => void showEmbed(form)}>
+											{t("Get code")}
+										</Button>
+										<Button
+											size="sm"
+											onClick={() => {
+												setEmbed(null);
+												setDraft({
+													...form.settings,
+													id: form.id,
+													name: form.name,
+													status: form.status,
+												});
+											}}
+										>
+											{t("Edit")}
+										</Button>
+										<Button
+											size="sm"
+											variant="ghost"
+											disabled={busy}
+											aria-label={t("Delete {name}", { name: form.name })}
+											onClick={() => void run(() => deleteSignupForm(project, form.id))}
+										>
+											{t("Delete")}
+										</Button>
+									</div>
+								</li>
+							))}
+						</ul>
+					) : (
+						<EmptyState
+							title={t("No signup forms yet")}
+							description={t(
+								"Create a form, choose the lists it subscribes to and paste the code on your website.",
+							)}
+						/>
+					)}
+				</section>
+			)}
 			{draft && (
 				<form
-					className="space-y-3 rounded-lg border border-kumo-line bg-kumo-base p-5"
+					className="max-w-2xl space-y-3"
 					onSubmit={(event) => {
 						event.preventDefault();
 						const { id, ...values } = draft;
@@ -403,7 +401,17 @@ export function AudienceForms({ project }: { project: string }) {
 				</form>
 			)}
 			{embed && !draft && (
-				<section className="space-y-4 rounded-lg border border-kumo-line bg-kumo-base p-5">
+				<section className="max-w-2xl space-y-4">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => {
+							setEmbed(null);
+						}}
+					>
+						<ChevronLeft className="rtl:-scale-x-100" />
+						{t("Back to list")}
+					</Button>
 					<h2 className="font-semibold">
 						{t("Add “{name}” to your website", { name: embed.form.name })}
 					</h2>

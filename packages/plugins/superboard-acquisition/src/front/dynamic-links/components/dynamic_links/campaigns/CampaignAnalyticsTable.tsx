@@ -37,7 +37,7 @@ export function CampaignAnalyticsTable({
 			hasFilters={hasFilters}
 			ariaLabel="Acquisition campaigns"
 			stickyHeader
-			containerClassName="relative min-h-0 overflow-auto overscroll-none rounded-md border border-sidebar-border [&>[data-slot=table-container]]:overflow-visible"
+			containerClassName="@container relative min-h-0 overflow-auto overscroll-none rounded-md border border-sidebar-border [&>[data-slot=table-container]]:overflow-visible"
 			emptyState={
 				<CampaignsEmptyState isArchived={isArchived} onCreateCampaign={onCreateCampaign} />
 			}

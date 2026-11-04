@@ -41,6 +41,12 @@ import {
 describe("AcquisitionSettingsPage", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		Object.defineProperties(Element.prototype, {
+			hasPointerCapture: { configurable: true, value: () => false },
+			setPointerCapture: { configurable: true, value: () => undefined },
+			releasePointerCapture: { configurable: true, value: () => undefined },
+			scrollIntoView: { configurable: true, value: () => undefined },
+		});
 		window.history.replaceState(null, "", "/acquisition/settings");
 		mockFlowsApi.listEnvironments.mockResolvedValue([
 			{
@@ -136,8 +142,50 @@ describe("AcquisitionSettingsPage", () => {
 		await userEvent.click(locTab);
 
 		await waitFor(() => {
-			expect(screen.getByText("Language groups")).toBeInTheDocument();
+			expect(screen.getByRole("combobox", { name: "Language groups" })).toBeInTheDocument();
 		});
+	});
+
+	it("chooses the SDK platform with a field instead of a second row of tabs", async () => {
+		const user = userEvent.setup();
+		render(<AcquisitionSettingsPage defaultTab="sdk" />);
+		expect(
+			await screen.findByText("npm install @superboard/flows-js @superboard/flows-js-components"),
+		).toBeInTheDocument();
+		expect(screen.getAllByRole("tablist")).toHaveLength(1);
+		await user.click(screen.getByRole("combobox", { name: /^Platform/ }));
+		await user.click(await screen.findByRole("option", { name: "Flutter" }));
+		expect(await screen.findByText("flutter pub add superboard_flows")).toBeInTheDocument();
+		expect(
+			screen.queryByText("npm install @superboard/flows-js @superboard/flows-js-components"),
+		).not.toBeInTheDocument();
+	});
+
+	it("switches language groups from the toolbar without a side list", async () => {
+		const user = userEvent.setup();
+		mockFlowsApi.listLocalization.mockResolvedValue([
+			{
+				id: "loc-1",
+				name: "Global",
+				default_locale: "en",
+				locales: ["en", "fr"],
+				fallbacks: { fr: "en" },
+			},
+			{
+				id: "loc-2",
+				name: "Iberia",
+				default_locale: "es",
+				locales: ["es", "pt"],
+				fallbacks: { pt: "es" },
+			},
+		]);
+		render(<AcquisitionSettingsPage defaultTab="localization" />);
+		expect(await screen.findByDisplayValue("Global")).toBeInTheDocument();
+		await user.click(screen.getByRole("combobox", { name: "Language groups" }));
+		await user.click(await screen.findByRole("option", { name: "Iberia" }));
+		expect(screen.getByDisplayValue("Iberia")).toBeInTheDocument();
+		expect(screen.getByDisplayValue("es, pt")).toBeInTheDocument();
+		expect(screen.getByDisplayValue("pt:es")).toBeInTheDocument();
 	});
 
 	it("renders settings in French", async () => {

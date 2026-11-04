@@ -12,10 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@superboard/front-ui/u
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
 import { Switch } from "@superboard/front-ui/ui/switch.js";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { Textarea } from "@superboard/front-ui/ui/textarea.js";
 import { Bot, Play, Plus, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import {
 	createSupportAssistantTask,
@@ -26,6 +25,7 @@ import {
 	supportAssistants,
 	type SupportAssistantTask,
 } from "../../api/support/captainService.js";
+import { useSupportI18n } from "../../i18n.js";
 import { SupportModulePage as ModulePage } from "../support/SupportModulePage.js";
 import {
 	SupportEmpty,
@@ -33,10 +33,15 @@ import {
 	SupportLoading,
 	SupportSearchToolbar,
 	SupportStatus,
+	SupportViewSelect,
 	useSupportCollection,
 } from "../support/SupportUi.js";
 
+type CaptainView = "assistants" | "scenarios" | "tools" | "tasks";
+
 export default function SupportCaptainPage() {
+	const { t } = useSupportI18n();
+	const [view, setView] = useState<CaptainView>("assistants");
 	const { selectedProject } = useProjectSelection();
 	const projectRef = selectedProject?.id;
 	const assistants = useSupportCollection(projectRef, supportAssistants.list);
@@ -242,6 +247,20 @@ export default function SupportCaptainPage() {
 		}
 	};
 
+	const viewSelect = (
+		<SupportViewSelect
+			label={t("Show")}
+			value={view}
+			onChange={setView}
+			options={[
+				{ value: "assistants", label: t("Assistants") },
+				{ value: "scenarios", label: t("Scenarios") },
+				{ value: "tools", label: t("Tools") },
+				{ value: "tasks", label: t("Tasks") },
+			]}
+		/>
+	);
+
 	return (
 		<ModulePage
 			title="Captain"
@@ -250,338 +269,343 @@ export default function SupportCaptainPage() {
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<Tabs defaultValue="assistants">
-					<TabsList className="flex h-auto flex-wrap justify-start">
-						<TabsTrigger value="assistants">Assistants</TabsTrigger>
-						<TabsTrigger value="scenarios">Scenarios</TabsTrigger>
-						<TabsTrigger value="tools">Tools</TabsTrigger>
-						<TabsTrigger value="tasks">Tasks</TabsTrigger>
-					</TabsList>
-					<TabsContent className="space-y-4" value="assistants">
-						<Toolbar collection={assistants} />
-						<SupportError message={assistants.error} />
-						{assistant.mode === "automatic" ? (
-							<Alert>
-								<ShieldCheck />
-								<AlertTitle>Explicit automatic mode</AlertTitle>
-								<AlertDescription>
-									Automatic sending is enabled only for this assistant. Human handoff remains
-									available.
-								</AlertDescription>
-							</Alert>
-						) : null}
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<Bot /> New assistant
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="grid gap-4 md:grid-cols-2">
-								<Field label="Name">
-									<Input
-										value={assistant.name}
-										onChange={(e) => setAssistant((v) => ({ ...v, name: e.target.value }))}
-									/>
-								</Field>
-								<Field label="Description">
-									<Input
-										value={assistant.description}
-										onChange={(e) =>
-											setAssistant((v) => ({
-												...v,
-												description: e.target.value,
-											}))
-										}
-									/>
-								</Field>
-								<Field label="Response mode">
-									<Select
-										value={assistant.mode}
-										onChange={(mode) => setAssistant((v) => ({ ...v, mode }))}
-										options={["suggestion", "draft", "automatic"]}
-									/>
-								</Field>
-								<div className="flex items-center gap-3 pt-7">
-									<Switch
-										checked={assistant.handoff}
-										onCheckedChange={(handoff) => setAssistant((v) => ({ ...v, handoff }))}
-									/>
-									<Label>Human handoff</Label>
-								</div>
-								<div className="space-y-2 md:col-span-2">
-									<Label>Instructions</Label>
-									<Textarea
-										rows={7}
-										value={assistant.instructions}
-										onChange={(e) =>
-											setAssistant((v) => ({
-												...v,
-												instructions: e.target.value,
-											}))
-										}
-									/>
-								</div>
-								<div className="flex justify-end md:col-span-2">
-									<Button disabled={saving} onClick={() => void createAssistant()}>
-										<Plus /> Create assistant
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-						<ResourceList
-							loading={assistants.loading}
-							empty="No Support assistants"
-							items={assistants.items.map((item) => ({
-								id: item.id,
-								title: item.name,
-								detail: `${item.response_mode} · ${item.handoff_enabled ? "human handoff" : "no handoff"}`,
-								status: item.active ? "active" : "disabled",
-							}))}
-						/>
-					</TabsContent>
-					<TabsContent className="space-y-4" value="scenarios">
-						<Toolbar collection={scenarios} />
-						<SupportError message={scenarios.error} />
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-base">New scenario</CardTitle>
-							</CardHeader>
-							<CardContent className="grid gap-4 md:grid-cols-2">
-								<Field label="Assistant">
-									<AssistantSelect
-										value={scenario.assistantId}
-										onChange={(assistantId) => setScenario((v) => ({ ...v, assistantId }))}
-										items={assistants.items}
-									/>
-								</Field>
-								<Field label="Scenario name">
-									<Input
-										value={scenario.name}
-										onChange={(e) => setScenario((v) => ({ ...v, name: e.target.value }))}
-									/>
-								</Field>
-								<div className="space-y-2 md:col-span-2">
-									<Label>Scenario instructions</Label>
-									<Textarea
-										rows={6}
-										value={scenario.instructions}
-										onChange={(e) =>
-											setScenario((v) => ({
-												...v,
-												instructions: e.target.value,
-											}))
-										}
-									/>
-								</div>
-								<div className="flex justify-end md:col-span-2">
-									<Button disabled={saving} onClick={() => void createScenario()}>
-										<Plus /> Create scenario
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-						<ResourceList
-							loading={scenarios.loading}
-							empty="No assistant scenarios"
-							items={scenarios.items.map((item) => ({
-								id: item.id,
-								title: item.name,
-								detail: `Assistant ${item.assistant_id}`,
-								status: item.active ? "active" : "disabled",
-							}))}
-						/>
-					</TabsContent>
-					<TabsContent className="space-y-4" value="tools">
-						<Toolbar collection={tools} />
-						<SupportError message={tools.error} />
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-base">New allowlisted tool</CardTitle>
-							</CardHeader>
-							<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-								<Field label="Assistant">
-									<AssistantSelect
-										value={tool.assistantId}
-										onChange={(assistantId) => setTool((v) => ({ ...v, assistantId }))}
-										items={assistants.items}
-									/>
-								</Field>
-								<Field label="Name">
-									<Input
-										value={tool.name}
-										onChange={(e) => setTool((v) => ({ ...v, name: e.target.value }))}
-									/>
-								</Field>
-								<Field label="Method">
-									<Select
-										value={tool.method}
-										onChange={(method) => setTool((v) => ({ ...v, method }))}
-										options={["GET", "POST"]}
-									/>
-								</Field>
-								<Field label="Endpoint">
-									<Input
-										type="url"
-										value={tool.endpoint}
-										onChange={(e) => setTool((v) => ({ ...v, endpoint: e.target.value }))}
-									/>
-								</Field>
-								<Field label="Description">
-									<Input
-										value={tool.description}
-										onChange={(e) => setTool((v) => ({ ...v, description: e.target.value }))}
-									/>
-								</Field>
-								<div className="flex items-center gap-3 pt-7">
-									<Switch
-										checked={tool.allowed}
-										onCheckedChange={(allowed) => setTool((v) => ({ ...v, allowed }))}
-									/>
-									<Label>Allow execution</Label>
-								</div>
-								<div className="flex justify-end md:col-span-2 xl:col-span-4">
-									<Button disabled={saving} onClick={() => void createTool()}>
-										<Plus /> Add tool
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-						<ResourceList
-							loading={tools.loading}
-							empty="No assistant tools"
-							items={tools.items.map((item) => ({
-								id: item.id,
-								title: item.name,
-								detail: `${item.method} ${item.endpoint_url}`,
-								status: item.allowed ? "active" : "disabled",
-							}))}
-						/>
-					</TabsContent>
-					<TabsContent className="space-y-4" value="tasks">
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<Play /> Run an assistant task
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-								<Field label="Assistant">
-									<AssistantSelect
-										value={task.assistantId}
-										onChange={(assistantId) => setTask((v) => ({ ...v, assistantId }))}
-										items={assistants.items}
-									/>
-								</Field>
-								<Field label="Task">
-									<Select
-										value={task.type}
-										onChange={(type) => setTask((v) => ({ ...v, type }))}
-										options={[
-											"suggest_reply",
-											"summarize",
-											"translate",
-											"index_document",
-											"copilot",
-											"handoff",
-											"run_tool",
-										]}
-									/>
-								</Field>
-								<Field label="Conversation ID (optional)">
-									<Input
-										value={task.conversationId}
-										onChange={(e) => setTask((v) => ({ ...v, conversationId: e.target.value }))}
-									/>
-								</Field>
-								{task.type === "run_tool" ? (
-									<>
-										<Field label="Allowlisted tool">
-											<select
-												className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-												value={task.toolId}
-												onChange={(event) =>
-													setTask((value) => ({
-														...value,
-														toolId: event.target.value,
-													}))
-												}
-											>
-												<option value="">Select tool</option>
-												{tools.items
-													.filter((item) => item.allowed && item.assistant_id === task.assistantId)
-													.map((item) => (
-														<option key={item.id} value={item.id}>
-															{item.name}
-														</option>
-													))}
-											</select>
-										</Field>
-										<div className="space-y-2 md:col-span-2 xl:col-span-4">
-											<Label>Tool arguments (JSON object)</Label>
-											<Textarea
-												rows={5}
-												spellCheck={false}
-												value={task.argumentsJson}
-												onChange={(event) =>
-													setTask((value) => ({
-														...value,
-														argumentsJson: event.target.value,
-													}))
-												}
-											/>
-										</div>
-									</>
-								) : null}
-								<div className="flex items-end">
-									<Button className="w-full" disabled={saving} onClick={() => void queueTask()}>
-										<Play /> Queue task
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-						{tasks.length === 0 ? (
-							<SupportEmpty
-								title="No assistant tasks"
-								description="Run a task to receive a project-isolated result with traceable sources."
+				<div className="space-y-4">
+					{view === "assistants" && (
+						<div className="space-y-4">
+							<Toolbar collection={assistants} filters={viewSelect} />
+							<SupportError message={assistants.error} />
+							{assistant.mode === "automatic" ? (
+								<Alert>
+									<ShieldCheck />
+									<AlertTitle>Explicit automatic mode</AlertTitle>
+									<AlertDescription>
+										Automatic sending is enabled only for this assistant. Human handoff remains
+										available.
+									</AlertDescription>
+								</Alert>
+							) : null}
+							<Card>
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2 text-base">
+										<Bot /> New assistant
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="grid gap-4 md:grid-cols-2">
+									<Field label="Name">
+										<Input
+											value={assistant.name}
+											onChange={(e) => setAssistant((v) => ({ ...v, name: e.target.value }))}
+										/>
+									</Field>
+									<Field label="Description">
+										<Input
+											value={assistant.description}
+											onChange={(e) =>
+												setAssistant((v) => ({
+													...v,
+													description: e.target.value,
+												}))
+											}
+										/>
+									</Field>
+									<Field label="Response mode">
+										<Select
+											value={assistant.mode}
+											onChange={(mode) => setAssistant((v) => ({ ...v, mode }))}
+											options={["suggestion", "draft", "automatic"]}
+										/>
+									</Field>
+									<div className="flex items-center gap-3 pt-7">
+										<Switch
+											checked={assistant.handoff}
+											onCheckedChange={(handoff) => setAssistant((v) => ({ ...v, handoff }))}
+										/>
+										<Label>Human handoff</Label>
+									</div>
+									<div className="space-y-2 md:col-span-2">
+										<Label>Instructions</Label>
+										<Textarea
+											rows={7}
+											value={assistant.instructions}
+											onChange={(e) =>
+												setAssistant((v) => ({
+													...v,
+													instructions: e.target.value,
+												}))
+											}
+										/>
+									</div>
+									<div className="flex justify-end md:col-span-2">
+										<Button disabled={saving} onClick={() => void createAssistant()}>
+											<Plus /> Create assistant
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+							<ResourceList
+								loading={assistants.loading}
+								empty="No Support assistants"
+								items={assistants.items.map((item) => ({
+									id: item.id,
+									title: item.name,
+									detail: `${item.response_mode} · ${item.handoff_enabled ? "human handoff" : "no handoff"}`,
+									status: item.active ? "active" : "disabled",
+								}))}
 							/>
-						) : (
-							<div className="space-y-3">
-								{tasks.map((item) => (
-									<Card key={item.id}>
-										<CardContent className="space-y-2 p-4">
-											<div className="flex items-center justify-between gap-3">
-												<strong>{item.task_type}</strong>
-												<SupportStatus value={item.status} />
+						</div>
+					)}
+					{view === "scenarios" && (
+						<div className="space-y-4">
+							<Toolbar collection={scenarios} filters={viewSelect} />
+							<SupportError message={scenarios.error} />
+							<Card>
+								<CardHeader>
+									<CardTitle className="text-base">New scenario</CardTitle>
+								</CardHeader>
+								<CardContent className="grid gap-4 md:grid-cols-2">
+									<Field label="Assistant">
+										<AssistantSelect
+											value={scenario.assistantId}
+											onChange={(assistantId) => setScenario((v) => ({ ...v, assistantId }))}
+											items={assistants.items}
+										/>
+									</Field>
+									<Field label="Scenario name">
+										<Input
+											value={scenario.name}
+											onChange={(e) => setScenario((v) => ({ ...v, name: e.target.value }))}
+										/>
+									</Field>
+									<div className="space-y-2 md:col-span-2">
+										<Label>Scenario instructions</Label>
+										<Textarea
+											rows={6}
+											value={scenario.instructions}
+											onChange={(e) =>
+												setScenario((v) => ({
+													...v,
+													instructions: e.target.value,
+												}))
+											}
+										/>
+									</div>
+									<div className="flex justify-end md:col-span-2">
+										<Button disabled={saving} onClick={() => void createScenario()}>
+											<Plus /> Create scenario
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+							<ResourceList
+								loading={scenarios.loading}
+								empty="No assistant scenarios"
+								items={scenarios.items.map((item) => ({
+									id: item.id,
+									title: item.name,
+									detail: `Assistant ${item.assistant_id}`,
+									status: item.active ? "active" : "disabled",
+								}))}
+							/>
+						</div>
+					)}
+					{view === "tools" && (
+						<div className="space-y-4">
+							<Toolbar collection={tools} filters={viewSelect} />
+							<SupportError message={tools.error} />
+							<Card>
+								<CardHeader>
+									<CardTitle className="text-base">New allowlisted tool</CardTitle>
+								</CardHeader>
+								<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+									<Field label="Assistant">
+										<AssistantSelect
+											value={tool.assistantId}
+											onChange={(assistantId) => setTool((v) => ({ ...v, assistantId }))}
+											items={assistants.items}
+										/>
+									</Field>
+									<Field label="Name">
+										<Input
+											value={tool.name}
+											onChange={(e) => setTool((v) => ({ ...v, name: e.target.value }))}
+										/>
+									</Field>
+									<Field label="Method">
+										<Select
+											value={tool.method}
+											onChange={(method) => setTool((v) => ({ ...v, method }))}
+											options={["GET", "POST"]}
+										/>
+									</Field>
+									<Field label="Endpoint">
+										<Input
+											type="url"
+											value={tool.endpoint}
+											onChange={(e) => setTool((v) => ({ ...v, endpoint: e.target.value }))}
+										/>
+									</Field>
+									<Field label="Description">
+										<Input
+											value={tool.description}
+											onChange={(e) => setTool((v) => ({ ...v, description: e.target.value }))}
+										/>
+									</Field>
+									<div className="flex items-center gap-3 pt-7">
+										<Switch
+											checked={tool.allowed}
+											onCheckedChange={(allowed) => setTool((v) => ({ ...v, allowed }))}
+										/>
+										<Label>Allow execution</Label>
+									</div>
+									<div className="flex justify-end md:col-span-2 xl:col-span-4">
+										<Button disabled={saving} onClick={() => void createTool()}>
+											<Plus /> Add tool
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+							<ResourceList
+								loading={tools.loading}
+								empty="No assistant tools"
+								items={tools.items.map((item) => ({
+									id: item.id,
+									title: item.name,
+									detail: `${item.method} ${item.endpoint_url}`,
+									status: item.allowed ? "active" : "disabled",
+								}))}
+							/>
+						</div>
+					)}
+					{view === "tasks" && (
+						<div className="space-y-4">
+							<div className="flex flex-wrap items-center gap-2">{viewSelect}</div>
+							<Card>
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2 text-base">
+										<Play /> Run an assistant task
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+									<Field label="Assistant">
+										<AssistantSelect
+											value={task.assistantId}
+											onChange={(assistantId) => setTask((v) => ({ ...v, assistantId }))}
+											items={assistants.items}
+										/>
+									</Field>
+									<Field label="Task">
+										<Select
+											value={task.type}
+											onChange={(type) => setTask((v) => ({ ...v, type }))}
+											options={[
+												"suggest_reply",
+												"summarize",
+												"translate",
+												"index_document",
+												"copilot",
+												"handoff",
+												"run_tool",
+											]}
+										/>
+									</Field>
+									<Field label="Conversation ID (optional)">
+										<Input
+											value={task.conversationId}
+											onChange={(e) => setTask((v) => ({ ...v, conversationId: e.target.value }))}
+										/>
+									</Field>
+									{task.type === "run_tool" ? (
+										<>
+											<Field label="Allowlisted tool">
+												<select
+													className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+													value={task.toolId}
+													onChange={(event) =>
+														setTask((value) => ({
+															...value,
+															toolId: event.target.value,
+														}))
+													}
+												>
+													<option value="">Select tool</option>
+													{tools.items
+														.filter(
+															(item) => item.allowed && item.assistant_id === task.assistantId,
+														)
+														.map((item) => (
+															<option key={item.id} value={item.id}>
+																{item.name}
+															</option>
+														))}
+												</select>
+											</Field>
+											<div className="space-y-2 md:col-span-2 xl:col-span-4">
+												<Label>Tool arguments (JSON object)</Label>
+												<Textarea
+													rows={5}
+													spellCheck={false}
+													value={task.argumentsJson}
+													onChange={(event) =>
+														setTask((value) => ({
+															...value,
+															argumentsJson: event.target.value,
+														}))
+													}
+												/>
 											</div>
-											{item.result?.text ? (
-												<p className="whitespace-pre-wrap text-sm">{item.result.text}</p>
-											) : null}
-											{item.result?.handoff ? (
-												<p className="text-sm">Transferred to a human agent.</p>
-											) : null}
-											{item.result?.tool_id ? (
-												<pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
-													{JSON.stringify(item.result.output, null, 2)}
-												</pre>
-											) : null}
-											{(item.result?.sources ?? []).length ? (
-												<div className="text-xs text-muted-foreground">
-													Sources:{" "}
-													{(item.result.sources ?? []).map((source) => source.title).join(" · ")}
+										</>
+									) : null}
+									<div className="flex items-end">
+										<Button className="w-full" disabled={saving} onClick={() => void queueTask()}>
+											<Play /> Queue task
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+							{tasks.length === 0 ? (
+								<SupportEmpty
+									title="No assistant tasks"
+									description="Run a task to receive a project-isolated result with traceable sources."
+								/>
+							) : (
+								<div className="space-y-3">
+									{tasks.map((item) => (
+										<Card key={item.id}>
+											<CardContent className="space-y-2 p-4">
+												<div className="flex items-center justify-between gap-3">
+													<strong>{item.task_type}</strong>
+													<SupportStatus value={item.status} />
 												</div>
-											) : null}
-											{item.error_code ? (
-												<div className="text-sm text-destructive">
-													Task failed: {item.error_code}
-												</div>
-											) : null}
-										</CardContent>
-									</Card>
-								))}
-							</div>
-						)}
-					</TabsContent>
-				</Tabs>
+												{item.result?.text ? (
+													<p className="whitespace-pre-wrap text-sm">{item.result.text}</p>
+												) : null}
+												{item.result?.handoff ? (
+													<p className="text-sm">Transferred to a human agent.</p>
+												) : null}
+												{item.result?.tool_id ? (
+													<pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
+														{JSON.stringify(item.result.output, null, 2)}
+													</pre>
+												) : null}
+												{(item.result?.sources ?? []).length ? (
+													<div className="text-xs text-muted-foreground">
+														Sources:{" "}
+														{(item.result.sources ?? []).map((source) => source.title).join(" · ")}
+													</div>
+												) : null}
+												{item.error_code ? (
+													<div className="text-sm text-destructive">
+														Task failed: {item.error_code}
+													</div>
+												) : null}
+											</CardContent>
+										</Card>
+									))}
+								</div>
+							)}
+						</div>
+					)}
+				</div>
 			)}
 		</ModulePage>
 	);
@@ -612,7 +636,13 @@ function AssistantSelect({
 		</select>
 	);
 }
-function Toolbar({ collection }: { collection: ReturnType<typeof useSupportCollection<Named>> }) {
+function Toolbar({
+	collection,
+	filters,
+}: {
+	collection: ReturnType<typeof useSupportCollection<Named>>;
+	filters: ReactNode;
+}) {
 	return (
 		<SupportSearchToolbar
 			query={collection.query}
@@ -620,6 +650,7 @@ function Toolbar({ collection }: { collection: ReturnType<typeof useSupportColle
 			onSearch={collection.search}
 			onRefresh={collection.reload}
 			loading={collection.loading}
+			filters={filters}
 		/>
 	);
 }
@@ -636,7 +667,7 @@ function ResourceList({
 	if (!items.length)
 		return <SupportEmpty title={empty} description="Create one with the form above." />;
 	return (
-		<div className="grid gap-3 lg:grid-cols-2">
+		<div className="grid gap-3">
 			{items.map((item) => (
 				<Card key={item.id}>
 					<CardContent className="flex items-center justify-between gap-3 p-4">

@@ -33,6 +33,7 @@ const en = {
 	policies: "Recovery",
 	sso: "SSO/SAML",
 	"tab:users": "Users",
+	"tab:directory": "Directory",
 	"tab:devices": "Devices & profiles",
 	"tab:referrals": "Referrals",
 	"tab:activity": "Activity",
@@ -40,12 +41,6 @@ const en = {
 	"tab:access": "Access control",
 	"tab:fields": "Users & fields",
 	"tab:appearance": "Appearance",
-	"source:accounts": "Application accounts",
-	"source:directory": "Directory",
-	userSource: "User source",
-	sourceDescription:
-		"Application accounts come from the SDK; the directory holds invitations, roles, organizations and MFA for the same people.",
-	accessSections: "Access control sections",
 	devicesDescription: "SDK profiles, platforms and installation activity in the application.",
 	activityDescription: "Email, SMS and sign-in logs of your users.",
 };
@@ -70,6 +65,7 @@ const fr: typeof en = {
 	policies: "Récupération",
 	sso: "SSO/SAML",
 	"tab:users": "Utilisateurs",
+	"tab:directory": "Annuaire",
 	"tab:devices": "Appareils et profils",
 	"tab:referrals": "Parrainages",
 	"tab:activity": "Activité",
@@ -77,12 +73,6 @@ const fr: typeof en = {
 	"tab:access": "Contrôle d’accès",
 	"tab:fields": "Utilisateurs et champs",
 	"tab:appearance": "Apparence",
-	"source:accounts": "Comptes de l’application",
-	"source:directory": "Annuaire",
-	userSource: "Source des utilisateurs",
-	sourceDescription:
-		"Les comptes de l’application viennent du SDK ; l’annuaire gère les invitations, rôles, organisations et MFA des mêmes personnes.",
-	accessSections: "Sections du contrôle d’accès",
 	devicesDescription: "Profils SDK, plateformes et activité des installations dans l’application.",
 	activityDescription: "Journaux des e-mails, SMS et connexions de vos utilisateurs.",
 };
@@ -133,39 +123,6 @@ export function useAuthenticationTab(view: AuthenticationView) {
 			);
 		},
 	};
-}
-
-export function AuthenticationChoices({
-	label,
-	items,
-	selected,
-	onSelect,
-	labelOf,
-}: {
-	label: string;
-	items: readonly string[];
-	selected: string;
-	onSelect(item: string): void;
-	labelOf(item: string): string;
-}) {
-	return (
-		<div role="group" aria-label={label} className="flex flex-wrap gap-1">
-			{items.map((item) => (
-				<Button
-					key={item}
-					type="button"
-					size="sm"
-					variant={selected === item ? "secondary" : "ghost"}
-					aria-pressed={selected === item}
-					onClick={() => {
-						onSelect(item);
-					}}
-				>
-					{labelOf(item)}
-				</Button>
-			))}
-		</div>
-	);
 }
 
 export function AuthenticationTabs({

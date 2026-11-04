@@ -11,7 +11,7 @@ import { useSupportI18n } from "../../i18n.js";
 import { SupportEntityPage } from "../support/SupportEntityPage.js";
 import { SupportDetail } from "../support/SupportModulePage.js";
 import { SupportError, SupportMetric } from "../support/SupportUi.js";
-import SupportHelpCenterPage from "./SupportHelpCenterPage.js";
+import SupportHelpCenterPage, { type HelpCenterSection } from "./SupportHelpCenterPage.js";
 
 const createPortal = (project: string, name: string) =>
 	supportPortals.create(project, {
@@ -46,6 +46,24 @@ export default function SupportHelpCenterWorkspace() {
 	);
 }
 
+const portalTabs = {
+	articles: "Articles",
+	structure: "Structure",
+	translations: "Translations",
+	settings: "Settings",
+	reports: "Reports",
+};
+type PortalTab = keyof typeof portalTabs;
+const isPortalTab = (value: string): value is PortalTab => Object.hasOwn(portalTabs, value);
+
+function portalTab(search: string): PortalTab {
+	const tab = new URLSearchParams(search).get("tab");
+	if (tab === "content") return "articles";
+	return tab && isPortalTab(tab) ? tab : "settings";
+}
+
+const contentSections: ReadonlyArray<HelpCenterSection> = ["articles", "structure", "translations"];
+
 function HelpCenterDetails({
 	portal,
 	project,
@@ -56,29 +74,31 @@ function HelpCenterDetails({
 	update: (portal: SupportPortal) => void;
 }) {
 	const { t } = useSupportI18n();
-	const [tab, setTab] = useState(() => {
-		const requested = new URLSearchParams(window.location.search).get("tab");
-		return requested === "content" || requested === "reports" ? requested : "settings";
-	});
+	const [tab, setTab] = useState(() => portalTab(window.location.search));
 	return (
 		<SupportDetail>
 			<Tabs
 				value={tab}
 				onValueChange={(value) => {
+					if (!isPortalTab(value)) return;
 					setTab(value);
 					const url = new URL(window.location.href);
 					url.searchParams.set("tab", value);
 					window.history.replaceState(null, "", url);
 				}}
 			>
-				<TabsList aria-label={t("Help Center sections")}>
-					<TabsTrigger value="content">{t("Content")}</TabsTrigger>
-					<TabsTrigger value="settings">{t("Settings")}</TabsTrigger>
-					<TabsTrigger value="reports">{t("Reports")}</TabsTrigger>
+				<TabsList aria-label={t("Help Center sections")} className="h-auto flex-wrap">
+					{Object.entries(portalTabs).map(([value, label]) => (
+						<TabsTrigger key={value} value={value}>
+							{t(label)}
+						</TabsTrigger>
+					))}
 				</TabsList>
-				<TabsContent value="content">
-					<SupportHelpCenterPage portalId={portal.id} />
-				</TabsContent>
+				{contentSections.map((section) => (
+					<TabsContent key={section} value={section}>
+						<SupportHelpCenterPage portalId={portal.id} section={section} />
+					</TabsContent>
+				))}
 				<TabsContent value="settings">
 					<PortalSettings portal={portal} project={project} update={update} />
 				</TabsContent>

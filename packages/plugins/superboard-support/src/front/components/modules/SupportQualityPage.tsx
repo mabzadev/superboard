@@ -99,7 +99,7 @@ export function SupportQualityPage({
 							/>
 						</div>
 					)}
-					<div className={auditOnly ? "space-y-4" : "grid gap-6 xl:grid-cols-2"}>
+					<div className={auditOnly ? "space-y-4" : "space-y-6"}>
 						{!auditOnly && (
 							<Card>
 								<CardHeader>

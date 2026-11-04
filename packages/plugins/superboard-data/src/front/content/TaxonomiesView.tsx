@@ -6,6 +6,7 @@ import { DELETE, POST, PUT } from "./transport.js";
 import {
 	collectionPath,
 	encode,
+	Section,
 	TextField,
 	useDataI18n,
 	useOperation,
@@ -44,13 +45,40 @@ export function TaxonomiesView({ collections }: { collections: Collection[] }) {
 		resource.data?.taxonomies.find((taxonomy) => taxonomy.name === selected) ??
 		resource.data?.taxonomies[0];
 	return (
-		<div className="space-y-4 pt-4">
-			<TextField label={t.language} value={language} onChange={setLanguage} />
-			{operation.feedback}
+		<div className="max-w-3xl space-y-6 pt-4">
+			<div className="flex flex-wrap items-end gap-3">
+				<TextField label={t.language} value={language} onChange={setLanguage} />
+				{!!resource.data?.taxonomies.length && (
+					<label className="grid gap-2">
+						{t.taxonomies}
+						<select
+							value={current?.name ?? ""}
+							onChange={(event) => {
+								setSelected(event.target.value);
+							}}
+						>
+							{resource.data.taxonomies.map((taxonomy) => (
+								<option key={taxonomy.name} value={taxonomy.name}>
+									{taxonomy.label}
+								</option>
+							))}
+						</select>
+					</label>
+				)}
+			</div>
 			{resource.error && <p role="alert">{resource.error}</p>}
-			<div className="grid gap-6 lg:grid-cols-2">
+			{current ? (
+				<TaxonomyTerms
+					key={`${current.name}:${language}`}
+					name={current.name}
+					language={language}
+				/>
+			) : (
+				<p>{t.noTaxonomies}</p>
+			)}
+			<Section title={t.createTaxonomy} heading="h2">
 				<form
-					className="grid content-start gap-3"
+					className="grid gap-3"
 					onSubmit={(event) => {
 						event.preventDefault();
 						operation.run(async () => {
@@ -67,7 +95,7 @@ export function TaxonomiesView({ collections }: { collections: Collection[] }) {
 						});
 					}}
 				>
-					<h2>{t.createTaxonomy}</h2>
+					{operation.feedback}
 					<TextField label={t.taxonomyName} value={label} onChange={setLabel} required />
 					<TextField label={t.taxonomyKey} value={name} onChange={setName} required />
 					<fieldset className="space-y-2">
@@ -94,33 +122,7 @@ export function TaxonomiesView({ collections }: { collections: Collection[] }) {
 						{t.createTaxonomy}
 					</Button>
 				</form>
-				<div className="space-y-3">
-					<label className="grid gap-2">
-						{t.taxonomies}
-						<select
-							value={current?.name ?? ""}
-							onChange={(event) => {
-								setSelected(event.target.value);
-							}}
-						>
-							{resource.data?.taxonomies.map((taxonomy) => (
-								<option key={taxonomy.name} value={taxonomy.name}>
-									{taxonomy.label}
-								</option>
-							))}
-						</select>
-					</label>
-					{current ? (
-						<TaxonomyTerms
-							key={`${current.name}:${language}`}
-							name={current.name}
-							language={language}
-						/>
-					) : (
-						<p>{t.noTaxonomies}</p>
-					)}
-				</div>
-			</div>
+			</Section>
 		</div>
 	);
 }
@@ -140,10 +142,9 @@ function TaxonomyTerms({ name, language }: { name: string; language: string }) {
 		setSlug(term?.slug ?? "");
 	}
 	return (
-		<div className="space-y-4">
+		<Section title={t.terms} heading="h2">
 			{operation.feedback}
 			{resource.error && <p role="alert">{resource.error}</p>}
-			<h2>{t.terms}</h2>
 			<ul>
 				{flatten(resource.data?.terms ?? []).map((term) => (
 					<li key={term.id} className="flex gap-2">
@@ -216,7 +217,7 @@ function TaxonomyTerms({ name, language }: { name: string; language: string }) {
 					{selected ? t.save : t.addTerm}
 				</Button>
 			</form>
-		</div>
+		</Section>
 	);
 }
 export function DocumentTerms({ collection, item }: { collection: string; item: Document }) {

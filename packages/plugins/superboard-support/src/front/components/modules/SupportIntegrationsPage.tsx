@@ -828,7 +828,7 @@ export default function SupportIntegrationsPage() {
 							)}
 						/>
 					) : (
-						<div className="grid gap-3 lg:grid-cols-2">
+						<div className="grid gap-3">
 							{resources.items.map((item) => {
 								const itemProvider = isIntegrationProvider(item.provider) ? item.provider : null;
 								const itemDefinition = itemProvider ? integrations[itemProvider] : null;

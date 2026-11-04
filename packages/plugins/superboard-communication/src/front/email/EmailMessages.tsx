@@ -7,7 +7,7 @@ import {
 	TableHead as FrontTableHead,
 	TableCell as FrontTableCell,
 } from "@superboard/front-ui/ui/table.js";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { useStudioI18n } from "../marketing/studio/i18n.js";
 import {
@@ -17,7 +17,7 @@ import {
 	type EmailMessageDetail,
 } from "./api/email/emailService.js";
 
-export function EmailMessages({ project }: { project: string }) {
+export function EmailMessages({ project, filter }: { project: string; filter?: ReactNode }) {
 	const { t, locale } = useStudioI18n();
 	const [items, setItems] = useState<EmailMessageSummary[]>([]);
 	const [query, setQuery] = useState("");
@@ -48,7 +48,8 @@ export function EmailMessages({ project }: { project: string }) {
 	}, [project, query, status, t]);
 	return (
 		<section className="space-y-4">
-			<div className="flex flex-wrap gap-3">
+			<div className="flex flex-wrap items-end gap-3">
+				{filter}
 				<Input
 					label={t("Search messages")}
 					value={query}

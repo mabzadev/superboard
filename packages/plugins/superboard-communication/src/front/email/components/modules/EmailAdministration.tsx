@@ -140,7 +140,7 @@ export function EmailAdministration({
 			) : (
 				<div className="space-y-6">
 					{section === "delivery" && (
-						<div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+						<div className="space-y-6">
 							<FormCard title={t("Sender identity")}>
 								{deliveryProvider === "aws-ses" ? (
 									<div className="rounded-xl border border-primary/20 bg-primary/5 p-4">

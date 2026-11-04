@@ -150,10 +150,10 @@ export default function RedirectRulesPageContent() {
 		try {
 			if (form.id) {
 				await updateRedirectRule(selectedProject.id, form.id, payload);
-				showSuccessNotification("Redirect rule updated");
+				showSuccessNotification(tr("Redirect rule updated"));
 			} else {
 				await createRedirectRule(selectedProject.id, payload);
-				showSuccessNotification("Redirect rule created");
+				showSuccessNotification(tr("Redirect rule created"));
 			}
 			setDialogOpen(false);
 			await load();
@@ -170,7 +170,7 @@ export default function RedirectRulesPageContent() {
 		try {
 			await deleteRedirectRule(selectedProject.id, form.id);
 			setDialogOpen(false);
-			showSuccessNotification("Redirect rule deleted");
+			showSuccessNotification(tr("Redirect rule deleted"));
 			await load();
 		} catch (cause) {
 			showErrorNotification(moduleErrorMessage(cause));
@@ -193,14 +193,11 @@ export default function RedirectRulesPageContent() {
 				<div className="grid gap-6 2xl:grid-cols-[1fr_340px]">
 					<div className="space-y-4">
 						<div className="flex items-center justify-between gap-3">
-							<div>
-								<h2 className="font-semibold">Platform routing</h2>
-								<p className="text-sm text-muted-foreground">
-									Lower priority numbers are evaluated first.
-								</p>
-							</div>
+							<p className="text-sm text-muted-foreground">
+								{tr("Lower priority numbers are evaluated first.")}
+							</p>
 							<Button disabled={loading} onClick={() => openCreate()}>
-								<Plus className="size-4" /> Add rule
+								<Plus className="size-4" /> {tr("Add rule")}
 							</Button>
 						</div>
 						<div className="grid gap-4 xl:grid-cols-2">
@@ -211,14 +208,17 @@ export default function RedirectRulesPageContent() {
 											<Icon className="size-5" />
 										</div>
 										<div className="flex-1">
-											<CardTitle>{label}</CardTitle>
+											<CardTitle>{tr(label)}</CardTitle>
 											<CardDescription>
-												{grouped[value]?.length ?? 0} configured rules
+												{tr("{count} configured rules").replace(
+													"{count}",
+													String(grouped[value]?.length ?? 0),
+												)}
 											</CardDescription>
 										</div>
 										<Button variant="outline" size="sm" onClick={() => openCreate(value)}>
 											<Plus className="size-4" />
-											Add
+											{tr("Add")}
 										</Button>
 									</CardHeader>
 									<CardContent className="space-y-2">
@@ -239,11 +239,14 @@ export default function RedirectRulesPageContent() {
 													<span className="min-w-0 flex-1">
 														<span className="block truncate font-medium">{rule.name}</span>
 														<span className="block truncate text-xs text-muted-foreground">
-															{String(rule.rule.destination_url || "No destination")}
+															{typeof rule.rule.destination_url === "string" &&
+															rule.rule.destination_url
+																? rule.rule.destination_url
+																: tr("No destination")}
 														</span>
 													</span>
 													<Badge variant={rule.active ? "default" : "secondary"}>
-														{rule.active ? "Active" : "Paused"}
+														{tr(rule.active ? "Active" : "Paused")}
 													</Badge>
 													<Pencil className="size-4 text-muted-foreground" />
 												</button>
@@ -251,10 +254,13 @@ export default function RedirectRulesPageContent() {
 										) : (
 											<div className="rounded-lg border border-dashed p-8 text-center">
 												<p className="text-sm text-muted-foreground">
-													No {label} redirect configured.
+													{tr("No {platform} redirect configured.").replace(
+														"{platform}",
+														tr(label),
+													)}
 												</p>
 												<Button variant="link" onClick={() => openCreate(value)}>
-													Create the first rule
+													{tr("Create the first rule")}
 												</Button>
 											</div>
 										)}
@@ -266,19 +272,22 @@ export default function RedirectRulesPageContent() {
 
 					<Card className="h-fit 2xl:sticky 2xl:top-6">
 						<CardHeader>
-							<CardTitle>Resolution flow</CardTitle>
-							<CardDescription>Preview of the runtime decision order.</CardDescription>
+							<CardTitle>{tr("Resolution flow")}</CardTitle>
+							<CardDescription>{tr("Preview of the runtime decision order.")}</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-2">
-							<FlowStep icon={Globe2} label="Customer opens a dynamic link" />
+							<FlowStep icon={Globe2} label={tr("Customer opens a dynamic link")} />
 							<ArrowDown className="mx-auto size-4 text-muted-foreground" />
-							<FlowStep icon={Smartphone} label="Detect platform and device" />
+							<FlowStep icon={Smartphone} label={tr("Detect platform and device")} />
 							<ArrowDown className="mx-auto size-4 text-muted-foreground" />
-							<FlowStep icon={CircleCheck} label="Select first active matching rule" />
+							<FlowStep icon={CircleCheck} label={tr("Select first active matching rule")} />
 							<ArrowDown className="mx-auto size-4 text-muted-foreground" />
-							<FlowStep icon={Globe2} label="Use the link fallback destination" />
+							<FlowStep icon={Globe2} label={tr("Use the link fallback destination")} />
 							<p className="pt-3 text-xs text-muted-foreground">
-								{rules.filter((rule) => rule.active).length} active rules are currently evaluated.
+								{tr("{count} active rules are currently evaluated.").replace(
+									"{count}",
+									String(rules.filter((rule) => rule.active).length),
+								)}
 							</p>
 						</CardContent>
 					</Card>
@@ -288,19 +297,19 @@ export default function RedirectRulesPageContent() {
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>{form.id ? "Edit redirect rule" : "Add redirect rule"}</DialogTitle>
+						<DialogTitle>{tr(form.id ? "Edit redirect rule" : "Add redirect rule")}</DialogTitle>
 						<DialogDescription>
-							Choose a platform destination and its evaluation priority.
+							{tr("Choose a platform destination and its evaluation priority.")}
 						</DialogDescription>
 					</DialogHeader>
 					<div className="grid gap-4 sm:grid-cols-2">
 						<Field
-							label="Rule name"
+							label={tr("Rule name")}
 							value={form.name}
 							onChange={(name) => setForm((value) => ({ ...value, name }))}
 						/>
 						<label className="space-y-2">
-							<Label>Platform</Label>
+							<Label>{tr("Platform")}</Label>
 							<Select
 								value={form.platform}
 								onValueChange={(platform) => setForm((value) => ({ ...value, platform }))}
@@ -311,7 +320,7 @@ export default function RedirectRulesPageContent() {
 								<SelectContent>
 									{platforms.map((platform) => (
 										<SelectItem key={platform.value} value={platform.value}>
-											{platform.label}
+											{tr(platform.label)}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -319,14 +328,14 @@ export default function RedirectRulesPageContent() {
 						</label>
 						<div className="sm:col-span-2">
 							<Field
-								label="Destination URL"
+								label={tr("Destination URL")}
 								type="url"
 								value={form.destination}
 								onChange={(destination) => setForm((value) => ({ ...value, destination }))}
 							/>
 						</div>
 						<Field
-							label="Priority"
+							label={tr("Priority")}
 							type="number"
 							value={String(form.priority)}
 							onChange={(priority) =>
@@ -338,27 +347,27 @@ export default function RedirectRulesPageContent() {
 								checked={form.active}
 								onCheckedChange={(active) => setForm((value) => ({ ...value, active }))}
 							/>
-							Active rule
+							{tr("Active rule")}
 						</label>
 					</div>
 					<DialogFooter className="sm:justify-between">
 						{form.id ? (
 							<Button variant="destructive" disabled={saving} onClick={() => void remove()}>
 								<Trash2 className="size-4" />
-								Delete
+								{tr("Delete")}
 							</Button>
 						) : (
 							<span />
 						)}
 						<div className="flex gap-2">
 							<Button variant="outline" onClick={() => setDialogOpen(false)}>
-								Cancel
+								{tr("Cancel")}
 							</Button>
 							<Button
 								disabled={saving || !form.name.trim() || !form.destination.trim()}
 								onClick={() => void save()}
 							>
-								{saving ? "Saving…" : "Save rule"}
+								{tr(saving ? "Saving…" : "Save rule")}
 							</Button>
 						</div>
 					</DialogFooter>

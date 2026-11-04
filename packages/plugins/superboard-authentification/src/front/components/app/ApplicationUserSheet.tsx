@@ -1,147 +1,152 @@
 import { usePluginEnabled } from "@superboard/front-ui/context";
-import { LinkButton } from "@superboard/front-ui/kumo";
-import { Button } from "@superboard/front-ui/ui/button.js";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@superboard/front-ui/ui/card.js";
-import { ExternalLink } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Badge } from "@superboard/front-ui/ui/badge.js";
+import type { ReactNode } from "react";
 
-import type { ApplicationUserDetail } from "../../api/identity/applicationUsersService.js";
+import type {
+	ApplicationUser,
+	ApplicationUserDetail,
+} from "../../api/identity/applicationUsersService.js";
 import { useApplicationUsersI18n } from "../../application-users-i18n.js";
 
-const sections = ["account", "purchases", "messages", "support", "events"] as const;
-type Section = (typeof sections)[number];
-const labels: Record<Section, string> = {
-	account: "Account",
-	purchases: "Purchases & entitlements",
-	messages: "Messages",
-	support: "Support",
-	events: "Events",
-};
+type Translate = ReturnType<typeof useApplicationUsersI18n>["t"];
 
 export default function ApplicationUserSheet({
 	detail,
-	account,
-	purchases,
+	children,
 }: {
 	detail: ApplicationUserDetail;
-	account: ReactNode;
-	purchases: ReactNode;
+	children: ReactNode;
 }) {
-	const { t } = useApplicationUsersI18n();
-	const [section, setSection] = useState<Section>("account");
-	const marketing = usePluginEnabled("superboard-marketing");
-	const support = usePluginEnabled("superboard-support");
-	const analytics = usePluginEnabled("superboard-analytics");
-	const contact = detail.email || detail.id;
+	const { t, locale } = useApplicationUsersI18n();
 	return (
-		<section className="grid content-start gap-4" aria-label={t("User sheet")}>
+		<article className="grid gap-6" aria-label={t("User sheet")}>
 			<header>
-				<h2 className="text-lg font-semibold">
+				<h2 className="text-xl font-semibold">
 					{detail.name || detail.email || t("Anonymous user")}
 				</h2>
-				<p className="break-all font-mono text-xs text-muted-foreground">{detail.id}</p>
+				<p className="break-all text-sm text-muted-foreground">{detail.email || detail.id}</p>
 			</header>
-			<div role="tablist" aria-label={t("User sheet")} className="flex flex-wrap gap-1">
-				{sections.map((item) => (
-					<Button
-						key={item}
-						role="tab"
-						size="sm"
-						variant={section === item ? "secondary" : "ghost"}
-						aria-selected={section === item}
-						onClick={() => {
-							setSection(item);
-						}}
-					>
-						{t(labels[item])}
-					</Button>
-				))}
-			</div>
-			{section === "account" && account}
-			{section === "purchases" && purchases}
-			{section === "messages" && (
-				<DeepLink
-					title={t("Messages")}
-					description={
-						detail.email
-							? t("Email and marketing consent, lists and recent deliveries for {email}.", {
-									email: detail.email,
-								})
-							: t("This account has no email address, so it cannot receive email.")
-					}
-					href={
-						detail.email && marketing
-							? `/communication/marketing-email?tab=contacts&q=${encodeURIComponent(detail.email)}`
-							: null
-					}
-					label={t("View in Communication › Audience")}
-					unavailable={detail.email ? t("Communication is not enabled.") : null}
-				>
-					<LinkButton href="/auth/users?tab=activity" size="sm" variant="ghost">
-						{t("Authentication emails and SMS")}
-					</LinkButton>
-				</DeepLink>
-			)}
-			{section === "support" && (
-				<DeepLink
-					title={t("Support")}
-					description={t("Conversations with {contact}.", { contact })}
-					href={support ? `/support/inbox?q=${encodeURIComponent(contact)}` : null}
-					label={t("View in Support")}
-					unavailable={t("Support is not enabled.")}
-				/>
-			)}
-			{section === "events" && (
-				<DeepLink
-					title={t("Events")}
-					description={t("Recent analytics events sent by the SDK for this user.")}
-					href={analytics ? `/analytics/events?user=${encodeURIComponent(detail.id)}` : null}
-					label={t("View events")}
-					unavailable={t("Analytics is not enabled.")}
-				/>
-			)}
+			<dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+				<Fact label={t("Sign-in")}>{signInMethods(detail, t)}</Fact>
+				<Fact label={t("Session")}>
+					<SessionState user={detail} />
+				</Fact>
+				<Fact label={t("Signed up")}>{dateOnly(detail.created_at, locale)}</Fact>
+				<Fact label={t("Last sign-in")}>
+					{dateTime(detail.sessions.last_authenticated_at, locale)}
+				</Fact>
+			</dl>
+			{children}
+			<ElsewhereLinks detail={detail} />
+		</article>
+	);
+}
+
+export function SheetSection({
+	title,
+	icon,
+	children,
+}: {
+	title: string;
+	icon?: ReactNode;
+	children: ReactNode;
+}) {
+	return (
+		<section className="grid gap-3 border-t pt-5">
+			<h3 className="flex items-center gap-2 text-base font-semibold">
+				{icon}
+				{title}
+			</h3>
+			{children}
 		</section>
 	);
 }
 
-function DeepLink({
-	title,
-	description,
-	href,
-	label,
-	unavailable,
-	children,
-}: {
-	title: string;
-	description: string;
-	href: string | null;
-	label: string;
-	unavailable: string | null;
-	children?: ReactNode;
-}) {
+function Fact({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{title}</CardTitle>
-				<CardDescription>{description}</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-wrap items-center gap-2">
-				{href ? (
-					<LinkButton href={href} size="sm" variant="primary">
-						<ExternalLink className="size-4" />
-						{label}
-					</LinkButton>
-				) : (
-					unavailable && <p className="text-sm text-muted-foreground">{unavailable}</p>
-				)}
-				{children}
-			</CardContent>
-		</Card>
+		<div>
+			<dt className="text-xs text-muted-foreground">{label}</dt>
+			<dd className="mt-1 text-sm font-medium">{children}</dd>
+		</div>
 	);
+}
+
+function ElsewhereLinks({ detail }: { detail: ApplicationUserDetail }) {
+	const { t } = useApplicationUsersI18n();
+	const marketing = usePluginEnabled("superboard-marketing");
+	const support = usePluginEnabled("superboard-support");
+	const analytics = usePluginEnabled("superboard-analytics");
+	const contact = detail.email || detail.id;
+	const links = [
+		detail.email && marketing
+			? {
+					href: `/communication/marketing-email?tab=contacts&q=${encodeURIComponent(detail.email)}`,
+					label: t("View in Communication › Audience"),
+				}
+			: null,
+		support
+			? { href: `/support/inbox?q=${encodeURIComponent(contact)}`, label: t("View in Support") }
+			: null,
+		analytics
+			? {
+					href: `/analytics/events?user=${encodeURIComponent(detail.id)}`,
+					label: t("View events"),
+				}
+			: null,
+		{ href: "/auth/users?tab=activity", label: t("Authentication emails and SMS") },
+	].filter((link) => link !== null);
+	return (
+		<SheetSection title={t("Elsewhere in SuperBoard")}>
+			<ul className="grid gap-2 text-sm">
+				{links.map((link) => (
+					<li key={link.href}>
+						<a className="text-brand-link hover:underline" href={link.href}>
+							{link.label}
+						</a>
+					</li>
+				))}
+			</ul>
+		</SheetSection>
+	);
+}
+
+export function signInMethods(user: ApplicationUser, t: Translate): string {
+	const labels = user.auth_methods.map((method) =>
+		method === "password"
+			? t("Password")
+			: method === "anonymous"
+				? t("Anonymous")
+				: method.charAt(0).toUpperCase() + method.slice(1),
+	);
+	if (labels.length === 0 && user.anonymous) labels.push(t("Anonymous"));
+	return labels.join(", ") || "—";
+}
+
+export function SessionState({ user }: { user: ApplicationUser }) {
+	const { t, locale } = useApplicationUsersI18n();
+	if (user.active_session_count > 0)
+		return (
+			<Badge variant="secondary">
+				{user.active_session_count === 1
+					? t("Active")
+					: t("{count} active", { count: user.active_session_count.toLocaleString(locale) })}
+			</Badge>
+		);
+	return (
+		<span className="text-muted-foreground">
+			{user.last_session_at ? t("Inactive") : t("Never signed in")}
+		</span>
+	);
+}
+
+export function dateOnly(value: unknown, locale: string): string {
+	if (typeof value !== "string" || !value) return locale === "fr" ? "Jamais" : "Never";
+	const parsed = new Date(value);
+	return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString(locale);
+}
+
+export function dateTime(value: unknown, locale: string): string {
+	if (typeof value !== "string" || !value) return locale === "fr" ? "Jamais" : "Never";
+	const parsed = new Date(value);
+	return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString(locale);
 }

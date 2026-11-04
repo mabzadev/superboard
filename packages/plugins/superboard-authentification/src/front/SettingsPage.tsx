@@ -6,7 +6,6 @@ import { accessSections } from "./authentication-navigation.js";
 import AuthenticationEditor from "./AuthenticationEditor.js";
 import AuthenticationSettingsPage from "./AuthenticationSettingsPage.js";
 import {
-	AuthenticationChoices,
 	AuthenticationSection,
 	AuthenticationTabs,
 	useAuthenticationI18n,
@@ -46,8 +45,6 @@ function settingTab(key: string) {
 	if (Object.hasOwn(settingTabs, key)) return settingTabs[key];
 	return authenticationSettingDefinitions[key]?.group === "general" ? "appearance" : "sign-in";
 }
-const isAccessSection = (value: string | null): value is (typeof accessSections)[number] =>
-	(accessSections as readonly (string | null)[]).includes(value);
 
 export default function SettingsPage() {
 	const { path } = useFrontContext();
@@ -62,8 +59,6 @@ export default function SettingsPage() {
 			</section>
 		);
 	if (moved) return <p role="status">{i18n._("loading")}</p>;
-	const access = isAccessSection(section) ? section : "roles";
-	const AccessPanel = accessPanels[access];
 	return (
 		<AuthenticationTabs view="settings" selected={selected} select={select}>
 			<AuthenticationSettingsPage
@@ -86,22 +81,17 @@ export default function SettingsPage() {
 					</AuthenticationSection>
 				</>
 			)}
-			{selected === "access" && (
-				<>
-					<AuthenticationChoices
-						label={i18n._("accessSections")}
-						items={accessSections}
-						selected={access}
-						labelOf={(item) => i18n._(item)}
-						onSelect={(item) => {
-							select("access", item);
-						}}
-					/>
-					<IdentityPanel>
-						<AccessPanel key={access} />
-					</IdentityPanel>
-				</>
-			)}
+			{selected === "access" &&
+				accessSections.map((name) => {
+					const AccessPanel = accessPanels[name];
+					return (
+						<AuthenticationSection key={name} name={name}>
+							<IdentityPanel>
+								<AccessPanel />
+							</IdentityPanel>
+						</AuthenticationSection>
+					);
+				})}
 			{selected === "fields" && (
 				<IdentityPanel>
 					<Fields />

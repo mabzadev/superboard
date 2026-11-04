@@ -1,6 +1,6 @@
 import { useFrontContext } from "@superboard/front-ui/context";
 import { Input } from "@superboard/front-ui/ui/input.js";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { GET } from "./transport.js";
 
@@ -58,7 +58,6 @@ const fr = {
 	save: "Enregistrer",
 	create: "Créer le document",
 	back: "Retour aux documents",
-	edit: "Modifier",
 	publish: "Publier",
 	unpublish: "Dépublier",
 	duplicate: "Dupliquer",
@@ -154,7 +153,6 @@ const en: Record<keyof typeof fr, string> = {
 	save: "Save",
 	create: "Create document",
 	back: "Back to documents",
-	edit: "Edit",
 	publish: "Publish",
 	unpublish: "Unpublish",
 	duplicate: "Duplicate",
@@ -339,6 +337,22 @@ export function TextField({
 				}}
 			/>
 		</label>
+	);
+}
+export function Section({
+	title,
+	heading: Heading = "h3",
+	children,
+}: {
+	title: string;
+	heading?: "h2" | "h3";
+	children: ReactNode;
+}) {
+	return (
+		<section className="space-y-4 border-t pt-5 first:border-t-0 first:pt-0">
+			<Heading className="text-base font-semibold">{title}</Heading>
+			{children}
+		</section>
 	);
 }
 export function documentTitle(item: Document) {
