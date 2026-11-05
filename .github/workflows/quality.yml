@@ -147,19 +147,15 @@ jobs:
           path: ${{ runner.temp }}
       - name: Restore build outputs
         run: tar -xzf "$RUNNER_TEMP/build-outputs.tgz"
-      # The EmDash admin package runs its tests in Vitest browser mode. The Front
-      # UI layout test launches Chromium through the root @playwright/test, whose
-      # version and browser build can differ from the admin package's.
+      # The EmDash admin package runs its tests in Vitest browser mode.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: matrix.suite == 'emdash'
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-admin-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - if: matrix.suite == 'emdash' && steps.playwright-cache.outputs.cache-hit != 'true'
-        run: |
-          pnpm --filter @emdash-cms/admin exec playwright install --with-deps chromium
-          pnpm exec playwright install --only-shell chromium
+        run: pnpm --filter @emdash-cms/admin exec playwright install --with-deps chromium
       - name: Run the ${{ matrix.suite }} test suite
         run: pnpm run "$SUITE:test"
         env:

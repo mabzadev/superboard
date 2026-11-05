@@ -29,7 +29,7 @@
 		"xml-crypto": "^6.1.2",
 		"xml-encryption": "^6.0.0",
 		"yup": "^1.7.1",
-		"toml": "3.0.0"
+		"toml": "5.0.1"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "catalog:workers",

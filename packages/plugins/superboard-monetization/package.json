@@ -31,13 +31,13 @@
 		"@testing-library/jest-dom": "^6.9.1",
 		"@types/react-dom": "catalog:",
 		"@vitejs/plugin-react": "^6.0.1",
-		"@vitest/coverage-v8": "4.1.5",
+		"@vitest/coverage-v8": "^4.1.12",
 		"@xyflow/react": "^12.11.3",
 		"axios": "^1.19.0",
 		"jsdom": "26.1.0",
 		"react-dom": "catalog:",
 		"typescript": "catalog:",
-		"vitest": "4.1.5"
+		"vitest": "catalog:"
 	},
 	"license": "MIT"
 }

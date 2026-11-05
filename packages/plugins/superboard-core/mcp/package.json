@@ -9,7 +9,7 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/server": "2.0.0",
+		"@modelcontextprotocol/server": "2.4.0",
 		"@superboard/contracts": "workspace:*"
 	},
 	"devDependencies": {

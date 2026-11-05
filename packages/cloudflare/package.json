@@ -150,6 +150,7 @@
     "@types/pg": "^8.16.0",
     "@phosphor-icons/react": "catalog:",
     "@types/react": "catalog:",
+    "astro": "catalog:",
     "publint": "catalog:",
     "react": "catalog:",
     "tsdown": "catalog:",

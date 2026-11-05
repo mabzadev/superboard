@@ -135,10 +135,10 @@
 		"@types/react-dom": "catalog:",
 		"@types/validator": "^13.15.2",
 		"@vitejs/plugin-react": "^6.0.1",
-		"@vitest/coverage-v8": "4.1.5",
+		"@vitest/coverage-v8": "^4.1.12",
 		"jsdom": "26.1.0",
 		"typescript": "catalog:",
-		"vitest": "4.1.5"
+		"vitest": "catalog:"
 	},
 	"license": "MIT"
 }
