@@ -1,7 +1,7 @@
 import { resolveLocale } from "@emdash-cms/admin/locales/config.js";
 import { setupI18n } from "@lingui/core";
 
-const multilineSettingPattern = /(?:origins|locales|content_types|scopes|json)$/u;
+const multilineSettingPattern = /(?:origins|locales|content_types|scopes)$/u;
 const pluginPrefixPattern = /^(?:supbrd-(?:plug|plugmod)|superboard)-/u;
 const labelSeparatorPattern = /[_-]/u;
 

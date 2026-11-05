@@ -1,6 +1,6 @@
 import { config } from "@superboard/front-ui/lib/config.js";
 
-import { DELETE as DELETE_REQUEST, GET, POST, PUT } from "../../transport.js";
+import { GET, POST, PUT } from "../../transport.js";
 
 const projectPath = (projectRef: string, resource = "") =>
 	`${config.apiPath}/billing/projects/${projectRef}/ledger${resource}`;
@@ -17,29 +17,6 @@ export type Product = {
 	description: string | null;
 	product_type: "subscription" | "non_consumable" | "consumable";
 	status: "draft" | "active" | "archived";
-};
-
-export type ProductPackage = {
-	id: string;
-	identifier: string;
-	display_name: string;
-	description: string | null;
-	product_id: string | null;
-	product_identifier?: string | null;
-	position: number;
-	active: number | boolean;
-};
-
-export type Offering = {
-	id: string;
-	identifier: string;
-	display_name: string;
-	description: string | null;
-	placement: string;
-	priority: number;
-	active: number | boolean;
-	package_ids: string[];
-	packages?: ProductPackage[];
 };
 
 export type Entitlement = {
@@ -113,17 +90,6 @@ export type Subscription = {
 	updated_at?: string;
 };
 
-export type StoreSyncRun = {
-	id: string;
-	store: string;
-	environment: string;
-	status: string;
-	imported_count: number;
-	deactivated_count: number;
-	started_at: string;
-	completed_at?: string | null;
-};
-
 export type PurchaseFilters = {
 	status?: string;
 	customer_id?: string;
@@ -194,70 +160,7 @@ export type ProductStatistics = {
 export async function getProducts(projectRef: string) {
 	return unwrap<Product[]>(await GET(projectPath(projectRef, "/products")));
 }
-export async function createProduct(projectRef: string, input: Omit<Product, "id">) {
-	return unwrap<Product>(await POST(projectPath(projectRef, "/catalog/products"), input));
-}
-export async function updateProduct(projectRef: string, id: string, input: Omit<Product, "id">) {
-	return unwrap<Product>(await PUT(projectPath(projectRef, `/catalog/products/${id}`), input));
-}
-export async function archiveProduct(projectRef: string, id: string) {
-	return unwrap(await DELETE_REQUEST(projectPath(projectRef, `/catalog/products/${id}`)));
-}
-export async function getPackages(projectRef: string) {
-	return unwrap<ProductPackage[]>(await GET(projectPath(projectRef, "/packages")));
-}
-export async function createPackage(
-	projectRef: string,
-	input: Omit<ProductPackage, "id" | "product_identifier">,
-) {
-	return unwrap<ProductPackage>(await POST(projectPath(projectRef, "/packages"), input));
-}
-export async function updatePackage(
-	projectRef: string,
-	id: string,
-	input: Omit<ProductPackage, "id" | "product_identifier">,
-) {
-	return unwrap<ProductPackage>(await PUT(projectPath(projectRef, `/packages/${id}`), input));
-}
-export async function archivePackage(projectRef: string, id: string) {
-	return unwrap(await DELETE_REQUEST(projectPath(projectRef, `/packages/${id}`)));
-}
-export async function getOfferings(projectRef: string) {
-	return unwrap<Offering[]>(await GET(projectPath(projectRef, "/offerings")));
-}
-export async function createOffering(projectRef: string, input: Omit<Offering, "id" | "packages">) {
-	return unwrap<Offering>(await POST(projectPath(projectRef, "/offerings"), input));
-}
-export async function updateOffering(
-	projectRef: string,
-	id: string,
-	input: Omit<Offering, "id" | "packages">,
-) {
-	return unwrap<Offering>(await PUT(projectPath(projectRef, `/offerings/${id}`), input));
-}
-export async function archiveOffering(projectRef: string, id: string) {
-	return unwrap(await DELETE_REQUEST(projectPath(projectRef, `/offerings/${id}`)));
-}
-export async function getEntitlements(projectRef: string) {
-	return unwrap<Entitlement[]>(await GET(projectPath(projectRef, "/entitlements")));
-}
-export async function createEntitlement(
-	projectRef: string,
-	input: Omit<Entitlement, "id" | "products">,
-) {
-	return unwrap<Entitlement>(await POST(projectPath(projectRef, "/entitlements"), input));
-}
-export async function updateEntitlement(
-	projectRef: string,
-	id: string,
-	input: Omit<Entitlement, "id" | "products">,
-) {
-	return unwrap<Entitlement>(await PUT(projectPath(projectRef, `/entitlements/${id}`), input));
-}
-export async function archiveEntitlement(projectRef: string, id: string) {
-	return unwrap(await DELETE_REQUEST(projectPath(projectRef, `/entitlements/${id}`)));
-}
-export function productQuery(filters: Record<string, string | undefined>) {
+function productQuery(filters: Record<string, string | undefined>) {
 	const query = new URLSearchParams(
 		Object.entries(filters).filter((entry): entry is [string, string] => Boolean(entry[1])),
 	).toString();
@@ -279,24 +182,6 @@ export async function createRefund(
 	input: Record<string, unknown>,
 ) {
 	return unwrap(await POST(projectPath(projectRef, `/purchases/${purchaseId}/refunds`), input));
-}
-export async function getRefunds(projectRef: string) {
-	return unwrap<Refund[]>(await GET(projectPath(projectRef, "/refunds")));
-}
-export async function updateRefund(
-	projectRef: string,
-	refundId: string,
-	input: Omit<Refund, "id" | "purchase_id">,
-) {
-	return unwrap<Refund>(await PUT(projectPath(projectRef, `/refunds/${refundId}`), input));
-}
-export async function getFinancialCustomerEntitlements(projectRef: string, customerId: string) {
-	return unwrap<{
-		customer: { id: string; external_customer_id: string };
-		entitlements: Array<Entitlement & { expires_at?: string | null; purchase_id: string }>;
-	}>(
-		await GET(projectPath(projectRef, `/customers/${encodeURIComponent(customerId)}/entitlements`)),
-	);
 }
 export async function getSubscriptions(
 	projectRef: string,
@@ -332,16 +217,6 @@ export async function getProductStatistics(
 	return unwrap<ProductStatistics>(
 		await GET(`${projectPath(projectRef, "/statistics")}${productQuery(filters)}`),
 	);
-}
-export async function syncStoreCatalog(projectRef: string, input: Record<string, unknown>) {
-	return unwrap<{
-		id: string;
-		imported_count: number;
-		deactivated_count: number;
-	}>(await POST(projectPath(projectRef, "/catalog/sync"), input));
-}
-export async function getStoreSyncRuns(projectRef: string) {
-	return unwrap<StoreSyncRun[]>(await GET(projectPath(projectRef, "/catalog/syncs")));
 }
 
 export interface BillingMigrationStatus {

@@ -1,10 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import {
-	showErrorNotificationWithLink,
-	showGenericError,
-} from "../../../../../../../packages/supbrd-front-ui/src/shared/lib/Notifications.js";
+import { showGenericError } from "../../../../../../../packages/supbrd-front-ui/src/shared/lib/Notifications.js";
 import { toast, Toaster } from "../../../../../../../packages/supbrd-front-ui/src/toaster.js";
 
 afterEach(() => {
@@ -20,12 +17,10 @@ describe("generic notifications", () => {
 		render(<Toaster />);
 		act(() => {
 			showGenericError();
-			showErrorNotificationWithLink("Export indisponible", vi.fn());
 		});
 		expect(
 			await screen.findByText("Une erreur s’est produite, veuillez réessayer"),
 		).toBeInTheDocument();
-		expect(await screen.findByRole("button", { name: "Voir" })).toBeInTheDocument();
 	});
 
 	it("keep English on English pages", async () => {

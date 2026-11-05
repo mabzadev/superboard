@@ -15,6 +15,8 @@ test("renamed plugin links preserve detail IDs, queries and fragments", () => {
 		],
 		["/app/referrals", "/auth/users?tab=referrals"],
 		["/system/files", "/data/files"],
+		["/data/settings", "/data/content"],
+		["/data/settings/?tab=files&lang=fr#limits", "/data/content?tab=files&lang=fr#limits"],
 		["/products/offerings", "/monetization/products?tab=offerings"],
 		["/products/products", "/monetization/products/products"],
 		["/marketing/email", "/communication/marketing-email"],

@@ -41,6 +41,8 @@ try {
 		["/analytics/dashboards", "/analytics"],
 		["/app/members", "/auth/users"],
 		["/app/members/", "/auth/users"],
+		["/data/settings", "/data/content"],
+		["/data/settings/", "/data/content"],
 	]) {
 		const response = await context.request.get(new URL(`${retired}?lang=fr`, origin).href, {
 			maxRedirects: 0,
@@ -166,7 +168,7 @@ try {
 				assert.equal(
 					await page
 						.locator(
-							'aside a[href="/app/members"], main nav a[href="/app/members"], aside a[href="/dashboard"], aside a[href="/analytics/dashboards"], main nav a[href="/dashboard"], main nav a[href="/analytics/dashboards"]',
+							'aside a[href="/app/members"], main nav a[href="/app/members"], aside a[href="/dashboard"], aside a[href="/analytics/dashboards"], main nav a[href="/dashboard"], main nav a[href="/analytics/dashboards"], aside a[href^="/data/settings"], main nav a[href^="/data/settings"]',
 						)
 						.count(),
 					0,

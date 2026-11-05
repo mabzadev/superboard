@@ -4,9 +4,10 @@ import { applySeed, SchemaRegistry, validateSeed, type SeedFile } from "emdash";
 import seedJson from "../../seed/seed.json";
 import { ensureNativeFrontMenus } from "./native-front-menu-bootstrap.js";
 import { nativeFrontPluginCatalog } from "./native-front-plugins.js";
+import { retiredFrontPageDestination } from "./retired-front-pages.js";
 
 const VIEWS_BOOTSTRAP_KEY = Symbol.for("superboard:views-bootstrap");
-const VIEWS_BOOTSTRAP_VERSION = "10.5.0";
+const VIEWS_BOOTSTRAP_VERSION = "10.6.0";
 const seed = readSeedFile(seedJson);
 
 interface ViewsBootstrapState {
@@ -150,10 +151,10 @@ async function installPluginViews(db: Parameters<typeof applySeed>[0]): Promise<
 	for (const row of existing.filter((entry) => !entry.deleted_at)) {
 		const path = canonicalFrontPath(row.path);
 		const surface = surfaces.get(`${row.plugin_id}:${path}`);
-		if (!surface) continue;
+		if (!surface && !retiredFrontPageDestination(row.path)) continue;
 		const key = `${row.locale}:${row.plugin_id}:${path}`;
 		const current = canonicalRows.get(key);
-		if (current && current.id !== row.id) {
+		if (!surface || (current && current.id !== row.id)) {
 			await viewsDb
 				.updateTable("ec_views")
 				.set({ deleted_at: new Date().toISOString() })

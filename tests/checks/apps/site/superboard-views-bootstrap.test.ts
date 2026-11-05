@@ -28,7 +28,6 @@ import { setupTestDatabase, teardownTestDatabase } from "../../packages/core/uti
 let db: Awaited<ReturnType<typeof setupTestDatabase>>;
 
 const moduleSettings = [
-	"/data/settings",
 	"/monetization/settings",
 	"/communication/settings",
 	"/acquisition/settings",
@@ -856,7 +855,7 @@ test("menus seeded before the section simplification adopt it while edited menus
 			"/support/help-center",
 			"/support/settings",
 		]);
-		expect(children(items, "/data/content").at(-1)).toEqual(["Configuration", "/data/settings"]);
+		expect(sectionOf("/data/content")).toEqual(["/data/content", "/data/files"]);
 		const analytics = items.find(
 			(item) => item.parentId === null && item.customUrl === "/analytics",
 		)!;
@@ -1011,4 +1010,175 @@ test("an edited menu drops the default statistics overview entry and names the F
 		await ensureNativeFrontMenus(db, seedJson.menus);
 		expect(await repo.findItems(menu.id)).toEqual(items);
 	}
+});
+
+type StoredMenuItem = Awaited<ReturnType<MenuRepository["findItems"]>>[number];
+interface MenuShape {
+	label: string;
+	url: string | null;
+	cssClasses?: string;
+	children: MenuShape[];
+}
+interface SeedMenuEntry {
+	label?: string;
+	url?: string;
+	cssClasses?: string;
+	children?: readonly SeedMenuEntry[];
+}
+
+function storedMenuShape(items: readonly StoredMenuItem[], parentId: string | null = null) {
+	return items
+		.filter((item) => item.parentId === parentId)
+		.map(
+			(item): MenuShape => ({
+				label: item.label,
+				url: item.customUrl,
+				...(item.cssClasses ? { cssClasses: item.cssClasses } : {}),
+				children: storedMenuShape(items, item.id),
+			}),
+		);
+}
+
+function seedMenuShape(entries: readonly SeedMenuEntry[]): MenuShape[] {
+	return entries.map((entry) => ({
+		label: entry.label ?? "",
+		url: entry.url ?? null,
+		...(entry.cssClasses ? { cssClasses: entry.cssClasses } : {}),
+		children: seedMenuShape(entry.children ?? []),
+	}));
+}
+
+const dataSettingsLink = { type: "custom", label: "Data", url: "/data/settings" } as const;
+
+function menusWithDataSettings() {
+	return seedJson.menus.map((menu) => ({
+		...menu,
+		items: menu.items.map((item) =>
+			item.cssClasses !== "sb-icon-settings" ||
+			item.children?.some((child) => child.url === dataSettingsLink.url)
+				? item
+				: {
+						...item,
+						children: [
+							...(item.children ?? []).slice(0, 1),
+							dataSettingsLink,
+							...(item.children ?? []).slice(1),
+						],
+					},
+		),
+	}));
+}
+
+test("a new installation's menus do not link to the retired Data settings page", async () => {
+	db = await setupTestDatabase();
+	await ensureSuperBoardViews(db);
+	const repo = new MenuRepository(db);
+	for (const menu of await repo.findByName("superboard-admin")) {
+		const destinations = (await repo.findItems(menu.id)).map((item) => item.customUrl);
+		expect(destinations).not.toContain("/data/settings");
+		expect(destinations).toContain("/data/content");
+	}
+	expect(retiredFrontPageDestination("/data/settings")).toBe("/data/content");
+	expect(retiredFrontPageDestination("/data/settings/")).toBe("/data/content");
+});
+
+test("the previous default menu becomes the new default without its Data settings link", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: menusWithDataSettings() });
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	const repo = new MenuRepository(db);
+	for (const menu of await repo.findByName("superboard-admin")) {
+		const definition = seedJson.menus.find((entry) => entry.locale === menu.locale);
+		if (!definition) throw new Error(`Default menu is missing for ${menu.locale}`);
+		const items = await repo.findItems(menu.id);
+		expect(storedMenuShape(items)).toEqual(seedMenuShape(definition.items));
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		expect(await repo.findItems(menu.id)).toEqual(items);
+	}
+});
+
+test("an edited menu loses its Data settings links and keeps every other entry unchanged", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: menusWithDataSettings() });
+	const repo = new MenuRepository(db);
+	const menus = await repo.findByName("superboard-admin");
+	const expected = new Map<string, StoredMenuItem[]>();
+	for (const menu of menus) {
+		const items = await repo.findItems(menu.id);
+		const users = items.find((item) => item.parentId === null && item.customUrl === "/auth/users");
+		const data = items.find((item) => item.customUrl === "/data/settings");
+		if (!users || !data) throw new Error("Default menu fixture is incomplete");
+		await repo.updateItem(menu.id, users.id, { label: "App users" });
+		await repo.updateItem(menu.id, data.id, { label: "My data settings" });
+		await repo.createItem(menu.id, menu.locale, {
+			type: "custom",
+			label: "My data setup",
+			customUrl: "/data/settings/",
+			sortOrder: 100,
+		});
+		await repo.createItem(menu.id, menu.locale, {
+			type: "custom",
+			label: "My events",
+			customUrl: "/analytics/events?source=custom",
+			sortOrder: 101,
+		});
+		expected.set(
+			menu.id,
+			(await repo.findItems(menu.id)).filter(
+				(item) => !item.customUrl?.startsWith("/data/settings"),
+			),
+		);
+	}
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	for (const menu of menus) {
+		const items = await repo.findItems(menu.id);
+		expect(items).toEqual(expected.get(menu.id));
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		expect(await repo.findItems(menu.id)).toEqual(items);
+	}
+});
+
+test("an installed Data settings View is archived and its address opens the content workspace", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, seedJson as unknown as SeedFile, { includeContent: true });
+	const template = seedJson.content.views[0];
+	if (!template) throw new Error("View fixture missing");
+	await applySeed(
+		db,
+		{
+			version: "1",
+			defaultLocale: "en",
+			content: {
+				views: [
+					{
+						...template,
+						id: "installed-data-settings",
+						slug: "installed-data-settings",
+						data: {
+							...template.data,
+							name: "Data settings",
+							plugin_id: "superboard-files",
+							route_id: "superboard.data_settings",
+							path: "/data/settings",
+						},
+					},
+				],
+			},
+		},
+		{ includeContent: true },
+	);
+	await ensureSuperBoardViews(db);
+	const rows = await db
+		.selectFrom(db.dynamic.ref("ec_views"))
+		.select(["path", "deleted_at"])
+		.where("locale", "=", "en")
+		.where("path", "in", ["/data/settings", "/data/content"])
+		.execute();
+	expect(rows.find((row) => row.path === "/data/settings")?.deleted_at).toBeTruthy();
+	expect(
+		rows.filter((row) => row.path === "/data/content" && row.deleted_at === null),
+	).toHaveLength(1);
+	expect(canonicalFrontHref("/data/settings?tab=files&lang=fr")).toBe(
+		"/data/content?tab=files&lang=fr",
+	);
 });

@@ -32,15 +32,15 @@ for (const { manifest } of catalog.plugins) {
 		const plugin = module.namespace.default;
 		const publicKey = Object.entries(plugin.admin.settingsSchema).find(
 			([, field]) => field.type !== "secret",
-		)[0];
+		)?.[0];
 		const secretKey = Object.entries(plugin.admin.settingsSchema).find(
 			([, field]) => field.type === "secret",
 		)?.[0];
 		const stored = new Map([
-			[`settings:${publicKey}`, false],
 			["settings:unknown", "private"],
 			["other:key", "private"],
 		]);
+		if (publicKey) stored.set(`settings:${publicKey}`, false);
 		if (secretKey) stored.set(`settings:${secretKey}`, "private-secret");
 		for (const route of ["health", "settings/effective"]) {
 			let requests = 0;
@@ -62,7 +62,7 @@ for (const { manifest } of catalog.plugins) {
 			const result = await plugin.routes[route].handler({ kv });
 			if (route === "health") assert.equal(result.status, "ready");
 			const settings = route === "health" ? result.settings : result;
-			assert.equal(settings.values[publicKey], false);
+			if (publicKey) assert.equal(settings.values[publicKey], false);
 			if (secretKey) {
 				assert.equal(settings.secrets_set[secretKey], true);
 				assert.equal(settings.values[secretKey], undefined);
@@ -87,12 +87,9 @@ void test("the built Analytics plugin renders French in a sandbox without Node g
 	});
 	await module.evaluate();
 	const response = await module.namespace.default.routes.admin.handler({
-		request: new Request(
-			"https://console.test/_emdash/api/plugins/superboard-analytics/admin",
-			{
-				headers: { Cookie: "emdash-locale=fr" },
-			},
-		),
+		request: new Request("https://console.test/_emdash/api/plugins/superboard-analytics/admin", {
+			headers: { Cookie: "emdash-locale=fr" },
+		}),
 	});
 	assert.equal(
 		response.blocks.find((block) => block.type === "fields").fields[0].label,

@@ -9,8 +9,6 @@ const api = vi.hoisted(() => ({
 	getSubscriptions: vi.fn(),
 	getPaywallStatistics: vi.fn(),
 	getOnboardingStatistics: vi.fn(),
-	getOfferings: vi.fn(),
-	getPackages: vi.fn(),
 }));
 
 vi.mock(
@@ -29,26 +27,9 @@ vi.mock(
 	() => ({
 		getBillingMigrationStatus: vi.fn().mockResolvedValue({ complete: true }),
 		migrateProductsLedger: vi.fn(),
-		archiveEntitlement: vi.fn(),
-		archiveOffering: vi.fn(),
-		archivePackage: vi.fn(),
-		archiveProduct: vi.fn(),
-		createEntitlement: vi.fn(),
-		createOffering: vi.fn(),
-		createPackage: vi.fn(),
-		createProduct: vi.fn(),
 		createPurchase: vi.fn(),
 		createRefund: vi.fn(),
-		getEntitlements: vi.fn(),
-		getOfferings: api.getOfferings,
-		getPackages: api.getPackages,
 		getPurchase: vi.fn(),
-		getStoreSyncRuns: vi.fn(),
-		syncStoreCatalog: vi.fn(),
-		updateEntitlement: vi.fn(),
-		updateOffering: vi.fn(),
-		updatePackage: vi.fn(),
-		updateProduct: vi.fn(),
 		updateSubscription: vi.fn(),
 		getPurchases: api.getPurchases,
 		getProducts: api.getProducts,
@@ -102,18 +83,12 @@ vi.mock(
 
 import { OnboardingStatisticsPage } from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/onboardings/components/modules/OnboardingPages.js";
 import { PaywallStatisticsPage } from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/paywalls/components/modules/PaywallsPage.js";
-import {
-	OfferingsPage,
-	ProductsPage,
-	PurchasesPage,
-} from "../../../../../../../../packages/plugins/superboard-monetization/src/front/billing/components/modules/ProductsPages.js";
+import { PurchasesPage } from "../../../../../../../../packages/plugins/superboard-monetization/src/front/billing/components/modules/ProductsPages.js";
 
 describe("commerce and experience module parity", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		api.getPurchases.mockResolvedValue([]);
-		api.getOfferings.mockResolvedValue([]);
-		api.getPackages.mockResolvedValue([]);
 		api.getProducts.mockResolvedValue([
 			{
 				id: "product-1",
@@ -209,19 +184,5 @@ describe("commerce and experience module parity", () => {
 		expect(screen.getByText("30.0%")).toBeInTheDocument();
 		expect(screen.getAllByText("welcome").length).toBeGreaterThan(0);
 		expect(screen.getByText("first_run")).toBeInTheDocument();
-	});
-
-	it("renders ProductsPage with iOS, Android and Test store catalog sections", async () => {
-		render(<ProductsPage />);
-		expect(await screen.findByText("Products")).toBeInTheDocument();
-		expect(screen.getByText("iOS (Apple App Store)")).toBeInTheDocument();
-		expect(screen.getByText("Android (Google Play)")).toBeInTheDocument();
-		expect(screen.getByText("Special Test Product")).toBeInTheDocument();
-	});
-
-	it("renders OfferingsPage without a Product button or section", async () => {
-		render(<OfferingsPage />);
-		expect(await screen.findByText("Offerings")).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: /\+ Product/i })).not.toBeInTheDocument();
 	});
 });

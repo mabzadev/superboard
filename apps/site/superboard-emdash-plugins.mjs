@@ -1,4 +1,4 @@
-const multilineSettingPattern = /(?:origins|locales|content_types|scopes|json)$/u;
+const multilineSettingPattern = /(?:origins|locales|content_types|scopes)$/u;
 const pluginPrefixPattern = /^(?:supbrd-(?:plug|plugmod)|superboard)-/u;
 const settingLabelSeparators = /[_-]/u;
 import { fileURLToPath } from "node:url";

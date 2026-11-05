@@ -3,20 +3,19 @@ import { Button } from "@superboard/front-ui/ui/button.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { useEffect, useState } from "react";
 
-import { DataSettingsForm } from "../files/DataSettingsForm.js";
 import { CollectionsView } from "./CollectionsView.js";
 import { DocumentsView } from "./DocumentsView.js";
 import { TaxonomiesView } from "./TaxonomiesView.js";
 import { useDataI18n, useResource, type Collection, type Page } from "./workspace.js";
 
-const tabs = ["documents", "trash", "collections", "taxonomies", "settings"] as const;
+const tabs = ["documents", "trash", "collections", "taxonomies"] as const;
 function requestedTab() {
 	if (typeof window === "undefined") return "documents";
 	const value = new URLSearchParams(window.location.search).get("tab");
 	return tabs.find((tab) => tab === value) ?? "documents";
 }
 export default function ContentPage() {
-	const { t, locale } = useDataI18n();
+	const { t } = useDataI18n();
 	const router = useRouter();
 	const pathname = usePathname();
 	const search = useSearchParams();
@@ -76,9 +75,6 @@ export default function ContentPage() {
 				</TabsContent>
 				<TabsContent value="taxonomies">
 					<TaxonomiesView collections={rows} />
-				</TabsContent>
-				<TabsContent value="settings">
-					<DataSettingsForm section="content" locale={locale === "fr" ? "fr" : "en"} />
 				</TabsContent>
 				{["documents", "trash"].map((value) => (
 					<TabsContent key={value} value={value}>

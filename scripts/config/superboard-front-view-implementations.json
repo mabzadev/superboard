@@ -23,13 +23,6 @@
 			"module": "packages/plugins/superboard-data/src/front/content/views/superboard.system_content.tsx"
 		},
 		{
-			"plugin_id": "supbrd-plug-data",
-			"route_id": "superboard.data_settings",
-			"path": "/data/settings",
-			"status": "registered",
-			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_settings.tsx"
-		},
-		{
 			"plugin_id": "superboard-products",
 			"route_id": "superboard.monetization_products",
 			"path": "/monetization/products",

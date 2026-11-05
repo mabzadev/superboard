@@ -16,7 +16,6 @@ const packageDirectory = Object.fromEntries(
 );
 const settings = [
 	["auth", "superboard-authentification"],
-	["data", "superboard-data"],
 	["monetization", "superboard-monetization"],
 	["communication", "superboard-communication"],
 	["acquisition", "superboard-acquisition"],
@@ -93,10 +92,7 @@ try {
 					...(definition?.components ?? []),
 				]);
 				const liveRoutes = deployment.routes.filter(
-					(route) =>
-						route.pluginId &&
-						owners.has(route.pluginId) &&
-						route.surface === "sdk",
+					(route) => route.pluginId && owners.has(route.pluginId) && route.surface === "sdk",
 				);
 				assert(liveRoutes.length > 0, `No live API routes discovered for ${pluginId}`);
 				for (const route of liveRoutes)

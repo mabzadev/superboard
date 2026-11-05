@@ -13,9 +13,10 @@ const topologyPath = join(root, "scripts/config/emdash-plugin-topology.json");
 const parityReleasePath = join(root, "scripts/config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "scripts/config/superboard-front-bundle.json");
-const manifestMigrationPath = join(root, "apps/site/migrations/0059_plugin_manifest_refresh.sql");
+const manifestMigrationPath = join(root, "apps/site/migrations/0062_plugin_manifest_refresh.sql");
 const compatibilityPath = join(root, "scripts/config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0059_plugin_manifest_refresh.sql"),
 	join(root, "apps/site/migrations/0058_plugin_manifest_refresh.sql"),
 	join(root, "apps/site/migrations/0057_authentication_editors.sql"),
 	join(root, "apps/site/migrations/0056_authentication_tabs.sql"),
@@ -132,16 +133,6 @@ const pluginSettings = {
 		default_locale: { type: "string", minLength: 2 },
 		timezone: { type: "string", minLength: 1 },
 	},
-	"superboard-content": {
-		default_locale: { type: "string", minLength: 2 },
-		required_locales: { type: "string" },
-		publishing_mode: { type: "string", enum: ["draft_review", "direct"] },
-	},
-	"superboard-products": {
-		default_currency: { type: "string", pattern: "^[A-Z]{3}$" },
-		store_environment: { type: "string", enum: ["sandbox", "production"] },
-		catalog_sync_enabled: { type: "boolean" },
-	},
 	"superboard-audit": {
 		retention_days: { type: "integer", minimum: 30, maximum: 3650 },
 		archive_enabled: { type: "boolean" },
@@ -151,14 +142,6 @@ const pluginSettings = {
 		cors_allowed_origins: { type: "string" },
 		default_rate_limit_per_minute: { type: "integer", minimum: 1, maximum: 100000 },
 		default_timeout_ms: { type: "integer", minimum: 100, maximum: 30000 },
-	},
-	"superboard-billing": {
-		apple_issuer_id: { type: "string" },
-		apple_key_id: { type: "string" },
-		apple_private_key: { type: "string", writeOnly: true },
-		google_service_account_json: { type: "string", writeOnly: true },
-		stripe_secret_key: { type: "string", writeOnly: true },
-		webhook_signing_secret: { type: "string", writeOnly: true },
 	},
 	"superboard-support": {
 		business_name: { type: "string", minLength: 1 },
@@ -202,11 +185,6 @@ const pluginSettings = {
 		tracking_enabled: { type: "boolean" },
 		tracking_provider: { type: "string", enum: ["superboard", "google", "segment", "none"] },
 		tracking_credential: { type: "string", writeOnly: true },
-	},
-	"superboard-files": {
-		max_upload_bytes: { type: "integer", minimum: 1024, maximum: 5368709120 },
-		allowed_content_types: { type: "string" },
-		signed_url_ttl_seconds: { type: "integer", minimum: 60, maximum: 86400 },
 	},
 	"superboard-paywalls": {
 		default_locale: { type: "string", minLength: 2 },

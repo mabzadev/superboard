@@ -44,8 +44,12 @@ void test("registers plugin settings and contracts without nested component page
 		assert.equal(plugin.format, "standard", `${plugin.id} is not sandbox-compatible`);
 		assert.equal(plugin.adminEntry, undefined, `${plugin.id} exposes a trusted React Admin entry`);
 		assert.deepEqual(plugin.adminPages, []);
-		assert.ok(Object.keys(plugin.settingsSchema ?? {}).length, `${plugin.id} has no settings`);
 		assert.ok(plugin.superboardManifest, `${plugin.id} is missing its SuperBoard manifest`);
+		assert.deepEqual(
+			Object.keys(plugin.settingsSchema).toSorted(),
+			Object.keys(plugin.superboardManifest.settings.schema.properties).toSorted(),
+			`${plugin.id} does not register its declared settings`,
+		);
 		assert.ok(plugin.superboardManifest.commands.length, `${plugin.id} has no commands`);
 		assert.ok(plugin.superboardManifest.data_sources.length, `${plugin.id} has no data sources`);
 		assert.ok(plugin.routes.includes("admin"), `${plugin.id} has no Block Kit Admin route`);

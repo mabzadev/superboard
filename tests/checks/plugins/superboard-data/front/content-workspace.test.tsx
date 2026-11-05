@@ -61,21 +61,12 @@ it("restores a trashed document and removes it from the trash listing", async ()
 	expect(screen.queryByText("Deleted article")).not.toBeInTheDocument();
 });
 
-it("opens content settings from the Settings tab of the Content page", async () => {
+it("opens former content settings links on the Documents tab", async () => {
 	window.history.replaceState(null, "", "/data/content?tab=settings");
 	api.GET.mockResolvedValue({ data: { data: { items: [] } } });
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async () =>
-			Response.json({
-				data: { values: { "superboard-data.setting.content_default_locale": "fr" } },
-			}),
-		),
-	);
 	render(<ContentPage />);
-	expect(await screen.findByRole("tab", { name: "Settings", selected: true })).toBeVisible();
-	expect(await screen.findByLabelText("Default language")).toHaveValue("fr");
-	vi.unstubAllGlobals();
+	expect(await screen.findByRole("tab", { name: "Documents", selected: true })).toBeVisible();
+	expect(await screen.findByText("Create a collection to get started.")).toBeVisible();
 });
 
 const article = {

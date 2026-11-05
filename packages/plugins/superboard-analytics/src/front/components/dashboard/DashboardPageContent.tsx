@@ -245,12 +245,11 @@ export default function DashboardPageContent() {
 			title: string,
 			metric: number | string | undefined,
 			tooltip: string,
-			valueType?: string,
+			valueType?: DashBoardCardType["valueType"],
 		): DashBoardCardType => ({
 			title: t(title),
 			value: metric ?? "—",
 			valueType,
-			secondaryValue: "0",
 			tooltip: t(tooltip),
 		});
 		const netRevenueCard = () => {

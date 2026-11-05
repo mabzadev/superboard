@@ -52,7 +52,6 @@ const mergedDefaultItems = new Map<string, readonly string[]>([
 const selfNestedParents = new Set(["/analytics/users", "/analytics/reports"]);
 const renamedDefaultItems = new Map<string, readonly [readonly string[], string, string]>([
 	["/monetization/products", [["Products", "Produits"], "Catalog", "Catalogue"]],
-	["/data/settings", [["Settings", "Paramètres"], "Configuration", "Configuration"]],
 	[
 		"/core/settings",
 		[["Environment settings", "Paramètres de l’environnement"], "General", "Général"],
@@ -319,14 +318,6 @@ export async function ensureNativeFrontMenus(
 					});
 					continue;
 				}
-				const destination = retiredFrontPageDestination(item.customUrl ?? "");
-				if (!destination) continue;
-				if (
-					destination.startsWith("/identity/") ||
-					items.some((child) => child.parentId === item.id)
-				)
-					await repository.updateItem(menu.id, item.id, { customUrl: destination });
-				else await repository.deleteItem(menu.id, item.id);
 			}
 			const acquisition = items.find(
 				(item) => item.label === "Acquisition" && item.parentId === null,
@@ -593,15 +584,6 @@ export async function ensureNativeFrontMenus(
 							: "Support settings",
 					customUrl: "/support/settings",
 					parentId: settingsGroup?.id ?? supportParent.id,
-				});
-			}
-			const dataParent = items.find((i) => i.customUrl === "/data/content" && i.parentId === null);
-			if (dataParent && !items.some((i) => i.customUrl === "/data/settings")) {
-				await repository.createItem(menu.id, locale, {
-					type: "custom",
-					label: settingsGroup ? "Data" : "Configuration",
-					customUrl: "/data/settings",
-					parentId: settingsGroup?.id ?? dataParent.id,
 				});
 			}
 			const monetizationParent = items.find(

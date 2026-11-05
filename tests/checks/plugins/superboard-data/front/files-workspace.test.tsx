@@ -154,20 +154,11 @@ it("uploads every selected file and removes successful uploads from the pending 
 	expect(await screen.findByRole("status")).toHaveTextContent("File saved");
 	expect(screen.getByRole("button", { name: "Upload" })).toBeDisabled();
 });
-it("opens file settings in a dialog from the Files page", async () => {
-	api.GET.mockResolvedValue({ data: { data: { items: [], files: 0, bytes: 0 } } });
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async () =>
-			Response.json({
-				data: { values: { "superboard-data.setting.files_signed_url_ttl_seconds": 600 } },
-			}),
-		),
-	);
+it("opens former file settings links on the file list", async () => {
+	window.history.replaceState(null, "", "/data/files?tab=settings");
+	mockFiles();
 	render(<FilesPage />);
-	fireEvent.click(screen.getByRole("button", { name: "File settings" }));
-	const dialog = await screen.findByRole("dialog", { name: "File settings" });
-	expect(dialog).toBeVisible();
-	expect(await screen.findByLabelText("Signed URL lifetime (seconds)")).toHaveValue(600);
-	vi.unstubAllGlobals();
+	expect(await screen.findByRole("button", { name: "photo.png" })).toBeVisible();
+	expect(screen.getByRole("table")).toBeVisible();
+	expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });

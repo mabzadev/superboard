@@ -16,11 +16,9 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	translations: {
 		en: {
 			"superboard-files.menu.item_0": "Files and media",
-			"superboard-files.menu.settings": "Configuration",
 		},
 		fr: {
 			"superboard-files.menu.item_0": "Fichiers et médias",
-			"superboard-files.menu.settings": "Configuration",
 		},
 	},
 	surfaces: [
@@ -28,11 +26,6 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 			path_pattern: "/data/files",
 			navigation: navigation("superboard-files.menu.item_0", 1),
 			title: "File storage",
-		},
-		{
-			path_pattern: "/data/settings",
-			title: "Data settings",
-			navigation: navigation("superboard-files.menu.settings", 2),
 		},
 	],
 });

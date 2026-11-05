@@ -2966,10 +2966,8 @@
 		{
 			"source": "apps/dashboard/src/components/common/redirect-rules-gate-dialog.tsx",
 			"sha256": "3bbe39d4f4f98aafb1a06c0c252074207d72063df3b517f9242a0a57640d82be",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/supbrd-front-ui/src/shared/components/common/redirect-rules-gate-dialog.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -6114,9 +6112,9 @@
 		"unused-template-asset": 5,
 		"site-public-asset": 3,
 		"removed-dashboard-shell": 66,
-		"owned-source": 329,
+		"owned-source": 328,
 		"transferred": 88,
-		"unused-source": 93,
+		"unused-source": 94,
 		"native-route": 79,
 		"replaced-test": 18
 	},

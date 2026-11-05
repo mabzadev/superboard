@@ -100,9 +100,7 @@ describe("MonetizationSettingsPage", () => {
 		});
 	});
 
-	it("opens legacy Products settings links on the General tab without reading product settings", async () => {
-		const request = vi.fn(async () => Response.json({ data: { values: {}, secretsSet: {} } }));
-		vi.stubGlobal("fetch", request);
+	it("opens legacy Products settings links on the General tab", async () => {
 		window.history.replaceState(null, "", "/monetization/settings?tab=products");
 		render(<MonetizationSettingsPage />);
 
@@ -112,12 +110,6 @@ describe("MonetizationSettingsPage", () => {
 			"General",
 			"Gateways",
 		]);
-		for (const label of ["Default Currency", "Store environment", "Catalog synchronization"])
-			expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
-		expect(request).not.toHaveBeenCalledWith(
-			expect.stringContaining("/plugins/superboard-monetization/settings"),
-			expect.anything(),
-		);
 	});
 
 	it("loads persisted billing settings and reports a rejected save without discarding the draft", async () => {

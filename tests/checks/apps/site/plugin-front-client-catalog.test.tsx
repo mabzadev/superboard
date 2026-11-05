@@ -12,7 +12,6 @@ const publishedViews = parityFrontPluginCatalog.flatMap((plugin) =>
 );
 
 test.each([
-	["superboard-files", "/data/settings"],
 	["superboard-products", "/monetization/settings"],
 	["superboard-flows", "/acquisition/settings"],
 ])("publishes and loads the settings entry for %s", async (pluginId, path) => {

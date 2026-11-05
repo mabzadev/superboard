@@ -135,10 +135,6 @@ remplace la devise de l’opérateur pour une requête. Le détail d’un achat 
 `usd_rate_source`. L’export des transactions ajoute `usd_price_micros` et
 `usd_rate_date`.
 
-Le réglage de projet créé par `0073` (`billing_project_currency_settings`)
-n’est plus lu : une préférence de compte ne peut pas dépendre du projet ouvert,
-et la table ne dit pas quel opérateur avait fait ce choix.
-
 Écarts restants avec RevenueCat : les transactions vérifiées sont converties par
 le travail planifié et non au moment de l’achat ; un achat dont la devise n’est
 publiée par aucune source reste sans montant converti ; un week-end ou un jour
@@ -218,9 +214,14 @@ contexte observé ; elles ne constituent pas une preuve d’identité.
 - L’association tardive d’un produit à un droit ne mettait pas à jour ses acheteurs.
 - Un accès promotionnel révoqué pouvait masquer un achat actif du même droit.
 - Un changement de formule pouvait laisser actif le droit de la formule précédente.
-- Les champs génériques de configuration du plugin n’étaient pas la configuration
-  Apple/Google consultée par la vérification des achats. Les passerelles renvoient
-  vers les configurations des applications et permettent de tester la connexion.
+- Les réglages génériques du plugin (identifiants Apple et Google, clé secrète et
+  secret de webhook Stripe, puis devise, environnement et synchronisation de
+  l’ancien onglet Produits) étaient enregistrés sans être lus : la vérification
+  des achats utilise les clés des applications et la connexion Stripe du projet.
+  Ces réglages sont retirés, et la migration du Site
+  `0060_remove_unused_plugin_settings.sql` efface leurs valeurs et leur
+  historique. Les passerelles renvoient vers les configurations des applications
+  et permettent de tester la connexion.
 
 Les tests de régression sont dans
 [`catalog-management.runtime.test.ts`](../tests/checks/plugins/superboard-monetization/billing/runtime/catalog-management.runtime.test.ts),

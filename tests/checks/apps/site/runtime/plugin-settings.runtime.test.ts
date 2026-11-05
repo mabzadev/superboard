@@ -8,7 +8,7 @@ interface SettingsPackage {
 	label: string;
 	pluginId: string;
 	artifactComponent: string;
-	setting: [key: string, value: unknown];
+	settings: Array<[key: string, value: unknown]>;
 	apis: Array<[path: string, method: string]>;
 	disabledComponents: Array<[component: string, prefix: string]>;
 }
@@ -18,7 +18,7 @@ const packages: SettingsPackage[] = [
 		label: "Acquisition",
 		pluginId: "supbrd-plug-journeys",
 		artifactComponent: "superboard-flows",
-		setting: ["plugin:superboard-flows:settings:default_locale", "fr-CH"],
+		settings: [["plugin:superboard-flows:settings:default_locale", "fr-CH"]],
 		apis: [
 			["/api/v1/flows/projects/1-prod/environments", "GET"],
 			["/api/v1/flows/projects/1-prod/environments", "POST"],
@@ -31,7 +31,7 @@ const packages: SettingsPackage[] = [
 		label: "Analytics",
 		pluginId: "supbrd-plug-analytics",
 		artifactComponent: "superboard-analytics",
-		setting: ["plugin:superboard-analytics:settings:enabled", true],
+		settings: [["plugin:superboard-analytics:settings:enabled", true]],
 		apis: [
 			["/api/v1/analytics/projects/project-test/settings", "GET"],
 			["/api/v1/analytics/projects/project-test/settings", "PUT"],
@@ -48,7 +48,7 @@ const packages: SettingsPackage[] = [
 		label: "Communication",
 		pluginId: "supbrd-plug-communication",
 		artifactComponent: "superboard-marketing",
-		setting: ["plugin:superboard-marketing:settings:sender_name", "Preserved sender"],
+		settings: [["plugin:superboard-marketing:settings:sender_name", "Preserved sender"]],
 		apis: [
 			...["marketing", "email"].flatMap(
 				(service): Array<[string, string]> => [
@@ -72,7 +72,7 @@ const packages: SettingsPackage[] = [
 		label: "Data",
 		pluginId: "supbrd-plug-data",
 		artifactComponent: "superboard-files",
-		setting: ["plugin:superboard-content:settings:default_locale", "fr"],
+		settings: [],
 		apis: [],
 		disabledComponents: [],
 	},
@@ -80,7 +80,7 @@ const packages: SettingsPackage[] = [
 		label: "Monetization",
 		pluginId: "supbrd-plug-commerce",
 		artifactComponent: "superboard-billing",
-		setting: ["plugin:superboard-products:settings:default_currency", "CHF"],
+		settings: [],
 		apis: [],
 		disabledComponents: [],
 	},
@@ -88,7 +88,7 @@ const packages: SettingsPackage[] = [
 		label: "Support",
 		pluginId: "supbrd-plug-support",
 		artifactComponent: "superboard-support",
-		setting: ["plugin:superboard-support:settings:business_name", "Preserved sender"],
+		settings: [["plugin:superboard-support:settings:business_name", "Preserved sender"]],
 		apis: [
 			["/api/v1/support/projects/1-prod/settings", "GET"],
 			["/api/v1/support/projects/1-prod/settings", "PATCH"],
@@ -134,10 +134,11 @@ test.each(
 	),
 )(
 	"disabled %s refuses %s without removing its settings",
-	async (_label, action, { pluginId, artifactComponent, setting: [key, value] }) => {
-		await env.DB.prepare("INSERT OR REPLACE INTO options (name, value) VALUES (?, ?)")
-			.bind(key, JSON.stringify(value))
-			.run();
+	async (_label, action, { pluginId, artifactComponent, settings }) => {
+		for (const [key, value] of settings)
+			await env.DB.prepare("INSERT OR REPLACE INTO options (name, value) VALUES (?, ?)")
+				.bind(key, JSON.stringify(value))
+				.run();
 		await env.DB.prepare(
 			"INSERT OR REPLACE INTO superboard_plugin_lifecycle (instance_id, target, plugin_id, artifact_checksum, state, state_changed_at) SELECT ?, 'local', ?, artifact_checksum, 'disabled', datetime('now') FROM superboard_plugin_manifest_artifacts WHERE plugin_id = ? LIMIT 1",
 		)
@@ -154,9 +155,10 @@ test.each(
 				headers,
 			}),
 		);
-		expect(
-			await env.DB.prepare("SELECT value FROM options WHERE name = ?").bind(key).first("value"),
-		).toBe(JSON.stringify(value));
+		for (const [key, value] of settings)
+			expect(
+				await env.DB.prepare("SELECT value FROM options WHERE name = ?").bind(key).first("value"),
+			).toBe(JSON.stringify(value));
 	},
 );
 

@@ -22,6 +22,7 @@ const exactPaths: Readonly<Record<string, string>> = {
 	"/system/gateway": "/core/gateway",
 	"/system/content": "/data/content",
 	"/system/files": "/data/files",
+	"/data/settings": "/data/content",
 	"/system/email": "/communication/email",
 	"/marketing/email": "/communication/marketing-email",
 	"/notifications": "/communication/notifications",

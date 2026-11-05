@@ -76,7 +76,6 @@ export const publishedViewContracts = {
 	),
 	"/data/content": control("button", "Create collection", "Créer la collection", /collections/),
 	"/data/files": control("button", "Upload", "Transférer", /objects/),
-	"/data/settings": text("Default language", "Langue par défaut", /settings/),
 	"/monetization/customers": control("columnheader", "Identity", "Identity", /customers/),
 	"/monetization/products": control("button", "New iOS product", "Nouveau produit iOS", /products/),
 	"/monetization/offerings": control("button", "New offering", "Nouvelle offre", /offerings/),

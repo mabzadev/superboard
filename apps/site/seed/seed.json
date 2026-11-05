@@ -258,11 +258,6 @@
 						},
 						{
 							"type": "custom",
-							"label": "Data",
-							"url": "/data/settings"
-						},
-						{
-							"type": "custom",
 							"label": "Monetization",
 							"url": "/monetization/settings"
 						},
@@ -505,11 +500,6 @@
 							"type": "custom",
 							"label": "Authentification",
 							"url": "/auth/settings?lang=fr"
-						},
-						{
-							"type": "custom",
-							"label": "Data",
-							"url": "/data/settings"
 						},
 						{
 							"type": "custom",

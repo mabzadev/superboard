@@ -60,6 +60,10 @@ vi.mock("../../../../packages/plugins/superboard-data/src/front/content/transpor
 							: { items: [{ slug: "documents", label: "Documents" }] },
 					},
 				};
+			if (path.startsWith("/_emdash/api/taxonomies"))
+				return { data: { data: { taxonomies: [], terms: [] } } };
+			if (path.includes("/revisions")) return { data: { data: { items: [], total: 0 } } };
+			if (path.endsWith("/translations")) return { data: { data: { translations: [] } } };
 			const selected = state.items.find((item) => path.includes(String(item.id)));
 			if (selected) return { data: { data: { item: selected, _rev: selected._rev } } };
 			return { data: { data: { items: state.items, next_cursor: null } } };
@@ -144,6 +148,7 @@ test("clicking Update access policy shows the saved operator policy", async () =
 	expect(container.querySelector("section section pre")?.textContent).toContain('"operator-42"');
 });
 test("clicking Create and Save document persists the edited content in the list", async () => {
+	history.replaceState({}, "", "/data/content");
 	await render(<ContentPage />);
 	await click("New document");
 	await fill("Slug", "test-document");

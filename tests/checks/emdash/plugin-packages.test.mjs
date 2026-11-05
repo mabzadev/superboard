@@ -99,14 +99,14 @@ test("one component change updates its package artifact and preserves unrelated 
 	const before = buildPluginPackages(topology);
 	const changed = structuredClone(topology);
 	changed.plugins.find(
-		({ manifest }) => manifest.plugin_id === "superboard-files",
-	).manifest.settings.schema.properties.max_upload_bytes.maximum += 1;
+		({ manifest }) => manifest.plugin_id === "superboard-email",
+	).manifest.settings.schema.properties.port.maximum += 1;
 	const after = buildPluginPackages(changed);
 	for (const plugin of before.plugins) {
 		const updated = after.plugins.find(
 			({ manifest }) => manifest.plugin_id === plugin.manifest.plugin_id,
 		);
-		if (plugin.components.includes("superboard-files"))
+		if (plugin.components.includes("superboard-email"))
 			assert.notEqual(updated.manifest.artifact_checksum, plugin.manifest.artifact_checksum);
 		else assert.equal(updated.manifest.artifact_checksum, plugin.manifest.artifact_checksum);
 	}

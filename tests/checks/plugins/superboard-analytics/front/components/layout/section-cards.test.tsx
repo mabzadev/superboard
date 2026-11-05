@@ -19,8 +19,8 @@ function renderCards(locale: "en" | "fr") {
 		<FrontContextProvider value={context}>
 			<SectionCards
 				cards={[
-					{ title: "Events", value: 1_234_567, secondaryValue: "0" },
-					{ title: "Average session", value: "1m 35s", secondaryValue: "0" },
+					{ title: "Events", value: 1_234_567 },
+					{ title: "Average session", value: "1m 35s" },
 				]}
 			/>
 		</FrontContextProvider>,

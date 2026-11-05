@@ -27,17 +27,6 @@ const english = {
 	"date.lastMonth": "Last month",
 	"date.last3Months": "Last 3 months",
 	"notification.genericError": "Something went wrong, please try again",
-	"notification.export":
-		"We're preparing your CSV. You'll receive an email with a download link valid for 24 hours.",
-	"notification.view": "View",
-	"redirectRules.title": "Redirect rules required",
-	"redirectRules.description":
-		"You need to configure redirect rules before creating links or campaigns.",
-	"redirectRules.heading": "Set up redirect rules first",
-	"redirectRules.body":
-		"Before creating links, you need to configure how they behave on each platform. This defines where users are sent when they click your links.",
-	"redirectRules.configure": "Configure Redirect Rules",
-	"redirectRules.later": "Maybe later",
 };
 
 export type ComponentMessage = keyof typeof english;
@@ -66,17 +55,6 @@ const french: Record<ComponentMessage, string> = {
 	"date.lastMonth": "Dernier mois",
 	"date.last3Months": "3 derniers mois",
 	"notification.genericError": "Une erreur s’est produite, veuillez réessayer",
-	"notification.export":
-		"Nous préparons votre fichier CSV. Vous recevrez un e-mail avec un lien de téléchargement valable 24 heures.",
-	"notification.view": "Voir",
-	"redirectRules.title": "Règles de redirection requises",
-	"redirectRules.description":
-		"Configurez les règles de redirection avant de créer des liens ou des campagnes.",
-	"redirectRules.heading": "Configurez d’abord les règles de redirection",
-	"redirectRules.body":
-		"Avant de créer des liens, configurez leur comportement sur chaque plateforme. Cela définit où sont envoyés les utilisateurs qui cliquent sur vos liens.",
-	"redirectRules.configure": "Configurer les règles de redirection",
-	"redirectRules.later": "Plus tard",
 };
 
 export type ComponentLocale = "en" | "fr";
