@@ -69,12 +69,12 @@ export default function SettingsPage() {
 			/>
 			{selected === "sign-in" && (
 				<>
-					<AuthenticationSection name="sso">
+					<AuthenticationSection name="sso" open={section === "sso"}>
 						<IdentityPanel>
 							<Saml />
 						</IdentityPanel>
 					</AuthenticationSection>
-					<AuthenticationSection name="policies">
+					<AuthenticationSection name="policies" open={section === "policies"}>
 						<IdentityPanel>
 							<Recovery />
 						</IdentityPanel>
@@ -85,7 +85,7 @@ export default function SettingsPage() {
 				accessSections.map((name) => {
 					const AccessPanel = accessPanels[name];
 					return (
-						<AuthenticationSection key={name} name={name}>
+						<AuthenticationSection key={name} name={name} open={section === name}>
 							<IdentityPanel>
 								<AccessPanel />
 							</IdentityPanel>

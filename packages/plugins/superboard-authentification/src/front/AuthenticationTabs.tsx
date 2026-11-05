@@ -80,10 +80,17 @@ export function useAuthenticationI18n() {
 	return createFrontI18n({ locale, messages: { en, fr } });
 }
 
-export function AuthenticationSection({ name, children }: { name: string; children: ReactNode }) {
+export function AuthenticationSection({
+	name,
+	open,
+	children,
+}: {
+	name: string;
+	open: boolean;
+	children: ReactNode;
+}) {
 	const i18n = useAuthenticationI18n();
-	const search = useSearchParams();
-	const [expanded, setExpanded] = useState(search.get("section") === name);
+	const [expanded, setExpanded] = useState(open);
 	return (
 		<details
 			open={expanded}

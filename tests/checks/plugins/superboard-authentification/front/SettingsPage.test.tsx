@@ -63,4 +63,11 @@ describe("authentication settings access control", () => {
 		expect(await screen.findByText("permissions panel")).toBeInTheDocument();
 		expect(screen.queryByText("roles panel")).toBeNull();
 	});
+
+	it("opens the section of a legacy tab address that names no section", async () => {
+		window.history.replaceState({}, "", "/auth/settings?tab=roles");
+		render(<SettingsPage />);
+		expect(await screen.findByText("roles panel")).toBeInTheDocument();
+		expect(screen.queryByText("permissions panel")).toBeNull();
+	});
 });
