@@ -99,7 +99,7 @@ try {
 			await expect(page.getByRole("status")).toContainText(
 				locale === "fr" ? "Paramètres enregistrés." : "Settings saved.",
 			);
-			let persisted = await read();
+			const persisted = await read();
 			assert.equal(
 				persisted.values["superboard-products__default_currency"],
 				locale === "fr" ? "CHF" : "EUR",
@@ -114,50 +114,19 @@ try {
 			await page
 				.getByRole("tab", { name: locale === "fr" ? "Passerelles" : "Gateways", exact: true })
 				.click();
-			const advancedLabel = locale === "fr" ? "Avancé" : "Advanced";
-			const advanced = page.locator("details", {
-				has: page.getByText(advancedLabel, { exact: true }),
+			const gateways = page.getByRole("heading", {
+				name: locale === "fr" ? "Passerelles connectées" : "Connected Gateways",
 			});
-			await expect(advanced).not.toHaveAttribute("open", "");
-			await advanced.getByText(advancedLabel, { exact: true }).click();
-			await expect(advanced).toHaveAttribute("open", "");
-			for (const field of ["apple_issuer_id", "apple_key_id"])
-				await page.locator(`#setting-${field}`).fill(`isolated-${locale}`);
-			const secretFields = ["apple_private_key", "google_service_account_json"];
-			for (const field of secretFields) {
-				await expect(page.locator(`#setting-${field}`)).toHaveValue("");
-				const key = `superboard-billing__${field}`;
-				if (!original.secretsSet[key]) {
-					restore[key] = null;
-					const secret =
-						field === "apple_private_key"
-							? `-----BEGIN PRIVATE KEY-----\nisolated-${locale}\n-----END PRIVATE KEY-----`
-							: `isolated-test-${locale}-${field}`;
-					await page.locator(`#setting-${field}`).fill(secret);
-					await expect(page.locator(`#setting-${field}`)).toHaveValue(secret);
-				}
-			}
-			await advanced
-				.getByRole("button", {
-					name: locale === "fr" ? "Enregistrer" : "Save changes",
-					exact: true,
-				})
-				.click();
-			await expect(advanced.getByRole("status")).toContainText(
-				locale === "fr" ? "Paramètres enregistrés." : "Settings saved.",
-			);
-			persisted = await read();
-			assert.equal(persisted.values["superboard-billing__apple_issuer_id"], `isolated-${locale}`);
-			assert.equal(persisted.values["superboard-billing__apple_key_id"], `isolated-${locale}`);
-			for (const field of secretFields) {
-				const key = `superboard-billing__${field}`;
-				assert.equal(persisted.secretsSet[key], true);
-				assert.equal(key in persisted.values, false);
-			}
-			await page.reload();
-			await hydrate();
-			for (const field of secretFields)
-				await expect(page.locator(`#setting-${field}`)).toHaveValue("");
+			await expect(gateways).toBeVisible();
+			await expect(
+				page.getByText(locale === "fr" ? "Avancé" : "Advanced", { exact: true }),
+			).toHaveCount(0);
+			await expect(page.locator('[id^="setting-apple_"], [id^="setting-google_"]')).toHaveCount(0);
+			for (const key of Object.keys(original.values).filter((name) =>
+				name.startsWith("superboard-billing__"),
+			))
+				assert.deepEqual(persisted.values[key], original.values[key]);
+			assert.deepEqual(persisted.secretsSet, original.secretsSet);
 			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 			await expect(
 				page.getByRole("link", {
@@ -183,9 +152,9 @@ try {
 			await expect(
 				page.getByRole("tab", { name: locale === "fr" ? "Passerelles" : "Gateways", exact: true }),
 			).toHaveAttribute("aria-selected", "true");
-			await expect(advanced).toHaveAttribute("open", "");
+			await expect(gateways).toBeVisible();
 			console.log(
-				`${locale}: settings saved and reread; secret masking, reload, keyboard, Plugins diagnostics link, health check (${inventory.routes.api.length} API routes in diagnostic) and legacy configuration link passed`,
+				`${locale}: settings saved and reread; unused credential fields absent with stored values kept, reload, keyboard, Plugins diagnostics link, health check (${inventory.routes.api.length} API routes in diagnostic) and legacy configuration link passed`,
 			);
 		}
 	} finally {

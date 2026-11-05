@@ -268,4 +268,49 @@ describe("purchases page", () => {
 			"Échec",
 		]);
 	});
+
+	it("names platforms and stores and shows revenue days as localized dates", async () => {
+		const statistics = {
+			totals: {
+				purchases: 2,
+				gross_revenue_micros: 19_980_000,
+				refunds: 0,
+				refunded_micros: 0,
+				net_revenue_micros: 19_980_000,
+				active_subscriptions: 0,
+			},
+			by_status: [],
+			series: [{ bucket: "2026-11-01", purchases: 2, revenue_micros: 19_980_000 }],
+			by_product_platform: [
+				{ platform: "ios", store: "apple" },
+				{ platform: "android", store: "google" },
+				{ platform: "smart_tv", store: "manual" },
+			].map((source) => ({
+				product_id: "product-1",
+				product_name: "Pro",
+				units_sold: 1,
+				first_time_purchases: 1,
+				revenue_micros: 9_990_000,
+				currency: "EUR",
+				cancellations: 0,
+				...source,
+			})),
+		};
+		api.getProductStatistics.mockResolvedValue(statistics);
+		const platforms = (header: string) => {
+			const table = screen.getByRole("columnheader", { name: header }).closest("table");
+			if (!table) throw new Error("Revenue table missing");
+			return Array.from(table.querySelectorAll("tbody tr"), (row) => row.children[1]?.textContent);
+		};
+
+		const { unmount } = render(<PurchasesPage />);
+		expect(await screen.findByText("Nov 1, 2026")).toBeInTheDocument();
+		expect(platforms("Platform")).toEqual(["iOSApple", "AndroidGoogle", "Smart tvManual"]);
+		expect(screen.queryByText("2026-11-01")).not.toBeInTheDocument();
+		unmount();
+
+		render(<PurchasesPage />, { wrapper: French });
+		expect(await screen.findByText("1 nov. 2026")).toBeInTheDocument();
+		expect(platforms("Plateforme")).toEqual(["iOSApple", "AndroidGoogle", "Smart tvManuel"]);
+	});
 });

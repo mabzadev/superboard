@@ -47,6 +47,12 @@ const initial = (kind: Draft["kind"], offeringId = ""): Draft => ({
 	product_ids: [],
 });
 const titles = { products: "Products", offerings: "Offerings", entitlements: "Entitlements" };
+const dialogTitles: Record<Draft["kind"], readonly [create: string, edit: string]> = {
+	products: ["New product", "Edit product"],
+	offerings: ["New offering", "Edit offering"],
+	entitlements: ["Add entitlement", "Edit entitlement"],
+	package: ["New package", "Edit package"],
+};
 const sections: Section[] = ["products", "offerings", "entitlements"];
 
 function CatalogTabs({ section }: { section: Section }) {
@@ -95,7 +101,9 @@ export default function MobileCatalogPage({ section: routeSection }: { section: 
 }
 
 function Catalog({ projectId, section }: { projectId: string; section: Section }) {
-	const { t } = useMonetizationI18n();
+	const { t, code } = useMonetizationI18n();
+	const state = (kind: Draft["kind"], active: boolean | number) =>
+		code(kind === "offerings" ? "offering_status" : "status", active ? "active" : "archived");
 	const [data, setData] = useState<api.BillingOverview | null>(null);
 	const [draft, setDraft] = useState<Draft | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -297,7 +305,7 @@ function Catalog({ projectId, section }: { projectId: string; section: Section }
 														: "Google Play Billing",
 											)}{" "}
 											· {t(product.environment === "sandbox" ? "Sandbox" : "Production")} ·{" "}
-											{t(product.active ? "Active" : "Archived")}
+											{state("products", product.active)}
 										</p>
 									</div>
 									<Button
@@ -333,7 +341,7 @@ function Catalog({ projectId, section }: { projectId: string; section: Section }
 										<h2 className="font-semibold">{entitlement.display_name}</h2>
 										<code>{entitlement.identifier}</code>
 										<p>{names(linkedProducts(entitlement.id)) || t("No products")}</p>
-										<p>{t(entitlement.active ? "Active" : "Archived")}</p>
+										<p>{state("entitlements", entitlement.active)}</p>
 									</div>
 									<Button
 										variant="outline"
@@ -367,9 +375,9 @@ function Catalog({ projectId, section }: { projectId: string; section: Section }
 												<h2 className="font-semibold">{offering.display_name}</h2>
 												<code>{offering.identifier}</code>
 												<p>
-													{t("Placement")}: {offering.placement} ·{" "}
+													{t("Placement: {placement}", { placement: offering.placement })} ·{" "}
 													{t(offering.is_current ? "Current offering" : "Alternative offering")} ·{" "}
-													{t(offering.active ? "Active" : "Archived")}
+													{state("offerings", offering.active)}
 												</p>
 											</div>
 											<Button
@@ -459,9 +467,7 @@ function Catalog({ projectId, section }: { projectId: string; section: Section }
 			>
 				<DialogContent className="max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>
-							{t(draft?.kind === "package" ? "Package" : titles[draft?.kind ?? section])}
-						</DialogTitle>
+						<DialogTitle>{t(dialogTitles[draft?.kind ?? section][draft?.id ? 1 : 0])}</DialogTitle>
 						<DialogDescription>
 							{t("Identifiers are stable public keys exposed to the SDK.")}
 						</DialogDescription>
@@ -637,7 +643,7 @@ function Catalog({ projectId, section }: { projectId: string; section: Section }
 												setDraft({ ...draft, active: checked === true });
 											}}
 										/>
-										{t("Active")}
+										{state(draft.kind, true)}
 									</label>
 								)}
 							</fieldset>

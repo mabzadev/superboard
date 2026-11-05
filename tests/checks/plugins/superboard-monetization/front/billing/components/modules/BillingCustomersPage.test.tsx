@@ -48,7 +48,7 @@ const customer = {
 	primary_app_user_id: "app-user-1",
 	anonymous: 0,
 	blocked: 0,
-	attributes: JSON.stringify({ sdk_context: { country: "FR", platform: "ios" } }),
+	attributes: JSON.stringify({ sdk_context: { country: "FR", language: "fr", platform: "ios" } }),
 	transaction_count: 3,
 	active_subscription_count: 1,
 	first_seen_at: "2026-08-01T10:00:00.000Z",
@@ -56,6 +56,16 @@ const customer = {
 	created_at: "2026-08-01T10:00:00.000Z",
 	updated_at: "2026-08-10T10:00:00.000Z",
 };
+
+function row(text: string) {
+	const element = screen.getByText(text).closest("tr");
+	if (!element) throw new Error(`Row missing: ${text}`);
+	return element;
+}
+
+function fact(label: string) {
+	return screen.getByText(label, { selector: "dt" }).nextElementSibling?.textContent;
+}
 
 function French({ children }: { children: ReactNode }) {
 	const context = useOptionalFrontContext();
@@ -84,21 +94,60 @@ describe("billing customers page", () => {
 						is_active: true,
 						status: "active",
 						store: "apple",
-						verification: "apple",
+						expires_at: "2026-12-01T12:00:00.000Z",
+						verification: "verified",
 					},
 				},
 				active_subscriptions: ["premium.monthly"],
-				subscriptions: [],
+				subscriptions: [
+					{
+						id: "sub-1",
+						store_product_id: "premium.yearly",
+						store: "google",
+						status: "grace_period",
+						expires_at: "2026-12-01T12:00:00.000Z",
+					},
+				],
 				balances: { coins: 12 },
 				signature: "signed",
 				signature_algorithm: "ES256",
 				signature_key_id: "key-1",
 			},
 			transactions: [
-				{ id: "tx-1", store: "apple", store_transaction_id: "apple-tx-1", status: "succeeded" },
+				{
+					id: "tx-1",
+					store: "apple",
+					store_transaction_id: "apple-tx-1",
+					event_type: "INITIAL_PURCHASE",
+					status: "succeeded",
+					created_at: "2026-11-01T12:00:00.000Z",
+				},
 			],
-			events: [],
-			paywall_events: [],
+			events: [
+				{
+					id: "ev-1",
+					event_type: "RENEWAL",
+					status: "processed",
+					store: "apple",
+					occurred_at: "2026-11-01 12:00:00",
+				},
+				{
+					id: "ev-2",
+					event_type: "SOME_NEW_EVENT",
+					status: "awaiting_store",
+					store: "amazon",
+					occurred_at: "2026-11-01T12:00:00.000Z",
+				},
+			],
+			paywall_events: [
+				{
+					id: "pw-1",
+					event_type: "purchase_started",
+					paywall_id: "pw_main",
+					placement_identifier: "onboarding",
+					occurred_at: "2026-11-01T12:00:00.000Z",
+				},
+			],
 		});
 		mocks.deleteBillingCustomer.mockResolvedValue({});
 		mocks.setBillingCustomerBlocked.mockResolvedValue({});
@@ -132,7 +181,7 @@ describe("billing customers page", () => {
 		expect(mocks.getBillingCustomer).toHaveBeenCalledWith("10-test", "cus_1");
 		expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
 		expect(screen.queryByRole("tab")).not.toBeInTheDocument();
-		expect(screen.getByText("FR")).toBeInTheDocument();
+		expect(screen.getByText("France")).toBeInTheDocument();
 		expect(screen.getByText("alias-1")).toBeInTheDocument();
 		expect(screen.getByText("apple-tx-1")).toBeInTheDocument();
 		expect(screen.getByText("coins: 12")).toBeInTheDocument();
@@ -190,5 +239,51 @@ describe("billing customers page", () => {
 		if (!transaction) throw new Error("Transaction row missing");
 		expect(transaction).toHaveTextContent("Réussi");
 		expect(transaction).not.toHaveTextContent("succeeded");
+	});
+
+	it("shows readable labels and localized dates on the customer sheet", async () => {
+		window.history.replaceState({}, "", "/monetization/customers?customer=cus_1");
+		render(<BillingCustomersPage />);
+		await screen.findByText("apple-tx-1");
+
+		expect(fact("Platform")).toBe("iOS");
+		expect(fact("Country")).toBe("France");
+		expect(fact("Language")).toBe("French");
+		expect(fact("First seen")).toMatch(/^Aug 1, 2026/u);
+		expect(screen.getByText("premium").nextElementSibling).toHaveTextContent(
+			/^Active · Apple · expires Dec 1, 2026.* · Verified$/u,
+		);
+		expect(row("apple-tx-1")).toHaveTextContent(
+			/^Appleapple-tx-1Initial purchaseSucceededNov 1, 2026/u,
+		);
+		expect(row("premium.yearly")).toHaveTextContent(/GoogleGrace periodDec 1, 2026/u);
+		expect(row("pw_main")).toHaveTextContent(/^Purchase startedpw_mainonboardingNov 1, 2026/u);
+		fireEvent.click(screen.getByText("All billing events (2)"));
+		expect(row("Renewal")).toHaveTextContent(/^RenewalProcessedAppleNov 1, 2026/u);
+		expect(row("Some new event")).toHaveTextContent(
+			/^Some new eventAwaiting storeAmazonNov 1, 2026/u,
+		);
+		const sheet = screen.getByRole("article");
+		for (const raw of ["INITIAL_PURCHASE", "grace_period", "2026-11-01", "succeeded", "ios"])
+			expect(sheet.textContent).not.toContain(raw);
+	});
+
+	it("shows the customer sheet labels and dates in French", async () => {
+		window.history.replaceState({}, "", "/monetization/customers?lang=fr&customer=cus_1");
+		render(<BillingCustomersPage />, { wrapper: French });
+		await screen.findByText("apple-tx-1");
+
+		expect(fact("Plateforme")).toBe("iOS");
+		expect(fact("Pays")).toBe("France");
+		expect(fact("Langue")).toBe("Français");
+		expect(fact("Première activité")).toMatch(/^1 août 2026/u);
+		expect(screen.getByText("premium").nextElementSibling).toHaveTextContent(
+			/^Actif · Apple · expire le 1 déc\. 2026.* · Vérifié$/u,
+		);
+		expect(row("apple-tx-1")).toHaveTextContent(/^Appleapple-tx-1Achat initialRéussi1 nov\. 2026/u);
+		expect(row("premium.yearly")).toHaveTextContent(/GooglePériode de grâce1 déc\. 2026/u);
+		expect(row("pw_main")).toHaveTextContent(/^Achat commencépw_mainonboarding1 nov\. 2026/u);
+		fireEvent.click(screen.getByText("Tous les événements de facturation (2)"));
+		expect(row("Renouvellement")).toHaveTextContent(/^RenouvellementTraitéApple1 nov\. 2026/u);
 	});
 });

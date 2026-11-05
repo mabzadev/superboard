@@ -55,7 +55,14 @@ const columnLabels: Record<string, string> = {
 	placement_identifier: "Placement",
 	occurred_at: "Occurred",
 };
-const translatedColumns = new Set(["store", "status"]);
+const columnFormats: Record<string, "date" | "store" | "status" | "event"> = {
+	store: "store",
+	status: "status",
+	event_type: "event",
+	expires_at: "date",
+	created_at: "date",
+	occurred_at: "date",
+};
 const contextFields = [
 	["Country", "country"],
 	["Language", "language"],
@@ -207,7 +214,7 @@ function CustomerRow({
 	customer: BillingCustomerSummary;
 	onOpen: () => void;
 }) {
-	const { t, locale } = useMonetizationI18n();
+	const { t, locale, date } = useMonetizationI18n();
 	return (
 		<TableRow className="cursor-pointer" onClick={onOpen}>
 			<TableCell>
@@ -231,7 +238,7 @@ function CustomerRow({
 				{Number(customer.active_subscription_count || 0).toLocaleString(locale)}
 			</TableCell>
 			<TableCell>{Number(customer.transaction_count || 0).toLocaleString(locale)}</TableCell>
-			<TableCell>{date(customer.last_seen_at, locale)}</TableCell>
+			<TableCell>{date(customer.last_seen_at)}</TableCell>
 		</TableRow>
 	);
 }
@@ -249,7 +256,7 @@ function CustomerDetail({
 	onBack: () => void;
 	onChange: () => Promise<void>;
 }) {
-	const { t, locale } = useMonetizationI18n();
+	const { t, locale, code, date, region, language } = useMonetizationI18n();
 	const [detail, setDetail] = useState<BillingCustomerDetail | null>(null);
 	const [failure, setFailure] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -368,12 +375,20 @@ function CustomerDetail({
 						const value = clientContext[key];
 						return (
 							<Fact key={key} label={t(label)}>
-								{typeof value === "string" ? value : "—"}
+								{typeof value !== "string" || !value
+									? "—"
+									: key === "country"
+										? region(value)
+										: key === "language"
+											? language(value)
+											: key === "platform"
+												? code("platform", value)
+												: value}
 							</Fact>
 						);
 					})}
-					<Fact label={t("First seen")}>{date(customer.first_seen_at, locale)}</Fact>
-					<Fact label={t("Last seen")}>{date(customer.last_seen_at, locale)}</Fact>
+					<Fact label={t("First seen")}>{date(customer.first_seen_at)}</Fact>
+					<Fact label={t("Last seen")}>{date(customer.last_seen_at)}</Fact>
 					<Fact label={t("Aliases")}>
 						{info.aliases.length ? info.aliases.join(", ") : t("No aliases")}
 					</Fact>
@@ -393,12 +408,14 @@ function CustomerDetail({
 									<strong>{entitlement.identifier}</strong>
 									<p className="text-xs text-muted-foreground">
 										{[
-											t(entitlement.status),
-											t(entitlement.store || "manual"),
+											code("status", entitlement.status),
+											code("store", entitlement.store || "manual"),
 											entitlement.expires_at
-												? t("expires {date}", { date: date(entitlement.expires_at, locale) })
+												? t("expires {date}", { date: date(entitlement.expires_at) })
 												: t("no expiry"),
-											entitlement.verification || t("unknown proof"),
+											entitlement.verification
+												? code("verification", entitlement.verification)
+												: t("unknown proof"),
 										].join(" · ")}
 									</p>
 								</div>
@@ -624,7 +641,14 @@ function RecordTable({
 	rows: Array<Record<string, unknown>>;
 	columns: string[];
 }) {
-	const { t } = useMonetizationI18n();
+	const { t, code, date } = useMonetizationI18n();
+	const cell = (column: string, value: unknown) => {
+		const format = columnFormats[column];
+		if (format === "date")
+			return typeof value === "string" || typeof value === "number" ? date(value) : display(value);
+		if (format && typeof value === "string") return code(format, value);
+		return display(value);
+	};
 	return (
 		<div>
 			{title && <h4 className="mb-2 text-sm font-semibold">{title}</h4>}
@@ -641,9 +665,7 @@ function RecordTable({
 						{rows.slice(0, 100).map((row, index) => (
 							<TableRow key={text(row, "id") || `${text(row, columns[0] ?? "id")}:${index}`}>
 								{columns.map((column) => {
-									const value = translatedColumns.has(column)
-										? t(display(row[column]))
-										: display(row[column]);
+									const value = cell(column, row[column]);
 									return (
 										<TableCell key={column} className="max-w-56 truncate" title={value}>
 											{value}
@@ -695,8 +717,4 @@ function display(value: unknown) {
 	if (value == null || value === "") return "—";
 	if (typeof value === "object") return JSON.stringify(value);
 	return String(value);
-}
-
-function date(value: string | null | undefined, locale: string) {
-	return value ? new Date(value).toLocaleString(locale) : "—";
 }

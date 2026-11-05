@@ -117,22 +117,6 @@ const french: Record<string, string> = {
 	"Auto-renew off": "Renouvellement désactivé",
 	"View purchase {transaction}": "Voir l’achat {transaction}",
 	"Sandbox purchase recorded": "Achat de test enregistré",
-	pending: "En attente",
-	active: "Actif",
-	expired: "Expiré",
-	cancelled: "Annulé",
-	refunded: "Remboursé",
-	failed: "Échec",
-	succeeded: "Réussi",
-	trialing: "En période d’essai",
-	grace_period: "Période de grâce",
-	archived: "Archivé",
-	completed: "Terminé",
-	processed: "Traité",
-	manual: "Manuel",
-	apple: "Apple",
-	google: "Google",
-	stripe: "Stripe",
 	Catalog: "Catalogue",
 	Offerings: "Offres",
 	"Manage the store catalog, packages and SDK-resolved offerings.":
@@ -256,6 +240,7 @@ const french: Record<string, string> = {
 	Packages: "Packages",
 	Priority: "Priorité",
 	Placement: "Emplacement",
+	"Placement: {placement}": "Emplacement : {placement}",
 	Started: "Démarré le",
 	Environment: "Environnement",
 	Status: "Statut",
@@ -343,16 +328,10 @@ const french: Record<string, string> = {
 
 	"Store environment": "Environnement des boutiques",
 	"Catalog synchronization": "Synchronisation du catalogue",
-	"Apple issuer ID": "Identifiant d’émetteur Apple",
-	"Apple key ID": "Identifiant de clé Apple",
-	"Apple private key": "Clé privée Apple",
-	"Google service account JSON": "JSON du compte de service Google",
 	"Stripe secret key": "Clé secrète Stripe",
 	"Webhook signing secret": "Secret de signature des webhooks",
 	"Unable to load or save settings. Your changes have been kept.":
 		"Impossible de charger ou d’enregistrer les paramètres. Vos modifications sont conservées.",
-	"Leave blank to keep the stored secret.": "Laissez vide pour conserver le secret enregistré.",
-	"Clear secret": "Effacer le secret",
 	"Save changes": "Enregistrer",
 	Sandbox: "Bac à sable",
 	Production: "Production",
@@ -380,16 +359,13 @@ const french: Record<string, string> = {
 		"Configurez la facturation, les passerelles de paiement, les devises et consultez le diagnostic du service de monétisation.",
 	General: "Général",
 	Gateways: "Passerelles",
-	Advanced: "Avancé",
-	"Store credentials used by the Monetization service.":
-		"Identifiants des stores utilisés par le service de monétisation.",
 	"Default Currency": "Devise par défaut",
 	"Tax Calculation": "Calcul des taxes",
 	"Automatic (Stripe Tax)": "Automatique (Stripe Tax)",
 	"Payment Providers": "Fournisseurs de paiement",
 	"Connected Gateways": "Passerelles connectées",
 	"Apple App Store": "Apple App Store",
-	"Google Play Billing": "Google Play Facturation",
+	"Google Play Billing": "Facturation Google Play",
 	"Stripe Payments": "Paiements Stripe",
 	Configured: "Configuré",
 	"Settings sections": "Sections des paramètres",
@@ -399,10 +375,170 @@ const french: Record<string, string> = {
 	"USD ($)": "USD ($)",
 };
 
-const catalogs = {
-	en: Object.fromEntries(Object.keys(french).map((message) => [message, message])),
-	fr: french,
+type CodeKind =
+	| "status"
+	| "offering_status"
+	| "store"
+	| "platform"
+	| "environment"
+	| "verification"
+	| "event";
+
+const codeLabels: Record<CodeKind, Record<string, readonly [english: string, french: string]>> = {
+	status: {
+		pending: ["Pending", "En attente"],
+		trialing: ["In trial", "En période d’essai"],
+		active: ["Active", "Actif"],
+		grace_period: ["Grace period", "Période de grâce"],
+		billing_issue: ["Billing issue", "Problème de facturation"],
+		paused: ["Paused", "En pause"],
+		cancelled: ["Cancelled", "Annulé"],
+		expired: ["Expired", "Expiré"],
+		revoked: ["Revoked", "Révoqué"],
+		refunded: ["Refunded", "Remboursé"],
+		failed: ["Failed", "Échec"],
+		succeeded: ["Succeeded", "Réussi"],
+		archived: ["Archived", "Archivé"],
+		inactive: ["Inactive", "Inactif"],
+		draft: ["Draft", "Brouillon"],
+		completed: ["Completed", "Terminé"],
+		processed: ["Processed", "Traité"],
+		received: ["Received", "Reçu"],
+		requested: ["Requested", "Demandé"],
+		processing: ["Processing", "En cours"],
+		rejected: ["Rejected", "Refusé"],
+	},
+	offering_status: {
+		active: ["Active", "Active"],
+		archived: ["Archived", "Archivée"],
+	},
+	store: {
+		apple: ["Apple", "Apple"],
+		google: ["Google", "Google"],
+		stripe: ["Stripe", "Stripe"],
+		amazon: ["Amazon", "Amazon"],
+		manual: ["Manual", "Manuel"],
+		promotional: ["Promotional", "Promotionnel"],
+	},
+	platform: {
+		ios: ["iOS", "iOS"],
+		android: ["Android", "Android"],
+		macos: ["macOS", "macOS"],
+		web: ["Web", "Web"],
+		cross_platform: ["Cross-platform", "Multiplateforme"],
+		test: ["Test", "Test"],
+	},
+	environment: {
+		sandbox: ["Sandbox", "Bac à sable"],
+		production: ["Production", "Production"],
+	},
+	verification: {
+		verified: ["Verified", "Vérifié"],
+		admin: ["Granted by an administrator", "Accordé par un administrateur"],
+	},
+	event: {
+		initial_purchase: ["Initial purchase", "Achat initial"],
+		purchase: ["Purchase", "Achat"],
+		purchased: ["Purchase", "Achat"],
+		non_renewing_purchase: ["Non-renewing purchase", "Achat sans renouvellement"],
+		trial_started: ["Trial started", "Essai commencé"],
+		trial_converted: ["Trial converted", "Essai converti"],
+		renewal: ["Renewal", "Renouvellement"],
+		did_renew: ["Renewal", "Renouvellement"],
+		product_change: ["Product changed", "Changement de produit"],
+		product_changed: ["Product changed", "Changement de produit"],
+		cancellation: ["Cancellation", "Annulation"],
+		cancelled: ["Cancellation", "Annulation"],
+		uncancellation: ["Cancellation withdrawn", "Annulation retirée"],
+		reactivated: ["Reactivation", "Réactivation"],
+		grace_period_started: ["Grace period started", "Début de la période de grâce"],
+		billing_issue: ["Billing issue", "Problème de facturation"],
+		subscription_paused: ["Subscription paused", "Abonnement suspendu"],
+		expiration: ["Expiration", "Expiration"],
+		expired: ["Expiration", "Expiration"],
+		refund: ["Refund", "Remboursement"],
+		refunded: ["Refund", "Remboursement"],
+		refund_reversed: ["Refund reversed", "Remboursement annulé"],
+		chargeback: ["Chargeback", "Rétrofacturation"],
+		revoke: ["Revocation", "Révocation"],
+		revoked: ["Revocation", "Révocation"],
+		transfer: ["Transfer", "Transfert"],
+		transferred: ["Transfer", "Transfert"],
+		promotional_granted: ["Promotion granted", "Promotion accordée"],
+		promotional_revoked: ["Promotion revoked", "Promotion révoquée"],
+		virtual_currency_adjusted: ["Virtual balance adjusted", "Solde virtuel ajusté"],
+		reconciliation: ["Reconciliation", "Rapprochement"],
+		impression: ["Paywall shown", "Paywall affiché"],
+		package_selected: ["Package selected", "Package sélectionné"],
+		closed: ["Paywall closed", "Paywall fermé"],
+		purchase_started: ["Purchase started", "Achat commencé"],
+		purchase_succeeded: ["Purchase succeeded", "Achat réussi"],
+		purchase_cancelled: ["Purchase cancelled", "Achat annulé"],
+		purchase_failed: ["Purchase failed", "Échec de l’achat"],
+		restore_started: ["Restore started", "Restauration commencée"],
+		restore_succeeded: ["Restore succeeded", "Restauration réussie"],
+		restore_failed: ["Restore failed", "Échec de la restauration"],
+	},
 };
+
+const codeMessages = Object.entries(codeLabels).flatMap(([kind, labels]) =>
+	Object.entries(labels).map(([code, [english, translation]]) => ({
+		id: `code.${kind}.${code}`,
+		english,
+		translation,
+	})),
+);
+
+const catalogs = {
+	en: {
+		...Object.fromEntries(Object.keys(french).map((message) => [message, message])),
+		...Object.fromEntries(codeMessages.map(({ id, english }) => [id, english])),
+	},
+	fr: {
+		...french,
+		...Object.fromEntries(codeMessages.map(({ id, translation }) => [id, translation])),
+	},
+};
+
+const sqliteDateTime = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/u;
+const dateOnly = /^\d{4}-\d{2}-\d{2}$/u;
+
+function capitalize(value: string) {
+	return value.charAt(0).toLocaleUpperCase() + value.slice(1);
+}
+
+function readableCode(value: string) {
+	const words = value.replace(/[_-]+/gu, " ").trim().toLowerCase();
+	return words ? capitalize(words) : value;
+}
+
+function formatMonetizationDate(
+	value: string | number | null | undefined,
+	locale: string,
+	{ time = true }: { time?: boolean } = {},
+) {
+	if (value == null || value === "") return "—";
+	const day = typeof value === "string" && dateOnly.test(value);
+	const parsed = new Date(
+		typeof value === "string" && sqliteDateTime.test(value) ? `${value.replace(" ", "T")}Z` : value,
+	);
+	if (Number.isNaN(parsed.getTime())) return typeof value === "string" ? value : "—";
+	return day || !time
+		? parsed.toLocaleDateString(locale, {
+				dateStyle: "medium",
+				...(day ? { timeZone: "UTC" } : {}),
+			})
+		: parsed.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function displayName(type: "region" | "language", value: string, locale: string) {
+	try {
+		const name = new Intl.DisplayNames([locale], { type, fallback: "none" }).of(value);
+		return name ? capitalize(name) : value;
+	} catch {
+		return value;
+	}
+}
 
 export function useMonetizationI18n() {
 	const context = useOptionalFrontContext();
@@ -414,6 +550,15 @@ export function useMonetizationI18n() {
 			locale,
 			t: (message: string, values?: Record<string, unknown>) =>
 				Object.hasOwn(i18n.messages, message) ? i18n._(message, values) : message,
+			code: (kind: CodeKind, value: string | null | undefined) => {
+				if (!value) return "—";
+				const id = `code.${kind}.${value.trim().toLowerCase()}`;
+				return Object.hasOwn(i18n.messages, id) ? i18n._(id) : readableCode(value);
+			},
+			date: (value: string | number | null | undefined, options?: { time?: boolean }) =>
+				formatMonetizationDate(value, locale, options),
+			region: (value: string) => displayName("region", value, locale),
+			language: (value: string) => displayName("language", value, locale),
 		};
 	}, [locale]);
 }

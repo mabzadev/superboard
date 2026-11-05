@@ -104,7 +104,7 @@ const environmentLabels: Record<string, string> = {
 };
 
 export function PurchasesPage() {
-	const { t, locale } = useMonetizationI18n();
+	const { t, locale, code, date } = useMonetizationI18n();
 	const { selectedProject } = useProjectSelection();
 	const fieldId = useId();
 	const [items, setItems] = useState<Purchase[]>([]);
@@ -262,7 +262,12 @@ export function PurchasesPage() {
 			description={t("Purchases, subscriptions, restorations, refunds and financial history.")}
 			error={error}
 		>
-			<a href={`/monetization/settings?tab=general&lang=${locale}`}>{t("Purchase settings")}</a>
+			<a
+				className="w-fit text-sm underline underline-offset-4"
+				href={`/monetization/settings?tab=general&lang=${locale}`}
+			>
+				{t("Purchase settings")}
+			</a>
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
@@ -333,7 +338,7 @@ export function PurchasesPage() {
 							onChange={(value) => {
 								setFilter("status", value);
 							}}
-							options={purchaseStatuses.map((value) => ({ value, label: statusLabel(t, value) }))}
+							options={purchaseStatuses.map((value) => ({ value, label: code("status", value) }))}
 							empty={t("All statuses")}
 						/>
 						<Button
@@ -375,9 +380,11 @@ export function PurchasesPage() {
 										<TableCell>
 											<b>{row.product_name}</b>
 										</TableCell>
-										<TableCell className="capitalize">
-											{row.platform}
-											<span className="block text-xs text-muted-foreground">{row.store}</span>
+										<TableCell>
+											{code("platform", row.platform)}
+											<span className="block text-xs text-muted-foreground">
+												{code("store", row.store)}
+											</span>
 										</TableCell>
 										<TableCell>{Number(row.units_sold).toLocaleString(locale)}</TableCell>
 										<TableCell>{Number(row.first_time_purchases).toLocaleString(locale)}</TableCell>
@@ -421,7 +428,7 @@ export function PurchasesPage() {
 							>
 								{(statistics?.series ?? []).map((row) => (
 									<TableRow key={row.bucket}>
-										<TableCell>{row.bucket}</TableCell>
+										<TableCell>{date(row.bucket)}</TableCell>
 										<TableCell>{row.purchases.toLocaleString(locale)}</TableCell>
 										<TableCell>{money(row.revenue_micros, "USD", locale)}</TableCell>
 									</TableRow>
@@ -558,10 +565,8 @@ export function PurchasesPage() {
 									<Fact label={t("Environment")}>
 										{labelFor(environmentLabels, purchaseDetail.environment)}
 									</Fact>
-									<Fact label={t("Purchased")}>
-										{dateTime(purchaseDetail.purchased_at, locale)}
-									</Fact>
-									<Fact label={t("Expires")}>{dateTime(purchaseDetail.expires_at, locale)}</Fact>
+									<Fact label={t("Purchased")}>{date(purchaseDetail.purchased_at)}</Fact>
+									<Fact label={t("Expires")}>{date(purchaseDetail.expires_at)}</Fact>
 									<Fact label={t("Amount")}>
 										{money(
 											purchaseDetail.purchased_price_micros,
@@ -2243,18 +2248,14 @@ function DataTable({
 	);
 }
 function StatusBadge({ status }: { status: string }) {
-	const { t } = useMonetizationI18n();
+	const { code } = useMonetizationI18n();
 	const destructive = ["failed", "refunded", "cancelled", "expired", "archived"].includes(status);
 	const positive = ["active", "succeeded", "trialing", "grace_period"].includes(status);
 	return (
 		<Badge variant={destructive ? "destructive" : positive ? "default" : "outline"}>
-			{statusLabel(t, status)}
+			{code("status", status)}
 		</Badge>
 	);
-}
-function statusLabel(t: (message: string) => string, status: string) {
-	const label = t(status).replaceAll("_", " ");
-	return label.charAt(0).toUpperCase() + label.slice(1);
 }
 function RowActions({ onEdit, onArchive }: { onEdit: () => void; onArchive?: () => void }) {
 	return (

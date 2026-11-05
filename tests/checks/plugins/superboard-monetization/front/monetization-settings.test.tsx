@@ -57,31 +57,46 @@ describe("MonetizationSettingsPage", () => {
 		});
 	});
 
-	it("keeps a multiline secret draft across tabs and clears it after saving", async () => {
-		const key = "superboard-billing__apple_private_key";
-		const pem = "-----BEGIN PRIVATE KEY-----\nexample\n-----END PRIVATE KEY-----";
+	it("shows and saves product settings under the keys returned by the Monetization settings endpoint", async () => {
+		const prefix = "superboard-monetization.setting.products_";
+		let stored: Record<string, unknown> = {
+			[`${prefix}default_currency`]: "EUR",
+			[`${prefix}store_environment`]: "sandbox",
+			[`${prefix}catalog_sync_enabled`]: false,
+		};
 		let submitted: Record<string, unknown> | undefined;
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async (_url, options) => {
-				if (options?.method === "PUT") submitted = JSON.parse(options.body).values;
-				return Response.json({ data: { values: {}, secretsSet: { [key]: Boolean(submitted) } } });
+				if (options?.method === "PUT") {
+					submitted = JSON.parse(options.body).values;
+					stored = { ...stored, ...submitted };
+				}
+				return Response.json({
+					data: {
+						values: stored,
+						secretsSet: { "superboard-monetization.setting.billing_apple_private_key": false },
+					},
+				});
 			}),
 		);
+		window.history.replaceState(null, "", "/monetization/settings?tab=products");
 		render(<MonetizationSettingsPage />);
-		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
-		fireEvent.click(await screen.findByText("Advanced"));
-		const secret = await screen.findByLabelText("Apple private key");
-		fireEvent.change(secret, { target: { value: pem } });
-		fireEvent.keyDown(screen.getByRole("tab", { name: "Products" }), { key: "Enter" });
-		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
-		expect(screen.getByLabelText("Apple private key")).toHaveValue(pem);
-		const advanced = screen.getByText("Advanced").closest("details");
-		if (!advanced) throw new Error("Advanced section missing");
-		fireEvent.click(within(advanced).getByRole("button", { name: "Save changes" }));
-		await screen.findByText("Settings saved.");
-		expect(submitted).toEqual({ [key]: pem });
-		expect(screen.getByLabelText("Apple private key")).toHaveValue("");
+
+		const currency = await screen.findByLabelText("Default Currency");
+		await waitFor(() => {
+			expect(currency).toHaveValue("EUR");
+		});
+		expect(screen.getByLabelText("Store environment")).toHaveValue("sandbox");
+		expect(screen.getByLabelText("Catalog synchronization")).toHaveValue("false");
+
+		fireEvent.change(currency, { target: { value: "CHF" } });
+		fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+		expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
+		expect(submitted).toEqual({ [`${prefix}default_currency`]: "CHF" });
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		expect(currency).toHaveValue("CHF");
 	});
 
 	it("loads persisted billing settings and reports a rejected save without discarding the draft", async () => {
@@ -136,7 +151,7 @@ describe("MonetizationSettingsPage", () => {
 		expect(screen.getByText("Apple App Store")).toBeInTheDocument();
 	});
 
-	it("keeps store credentials in a collapsed Advanced section of the gateways tab", async () => {
+	it("leaves store credentials to the application settings instead of unused fields", async () => {
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => Response.json({ data: { values: {}, secretsSet: {} } })),
@@ -145,9 +160,16 @@ describe("MonetizationSettingsPage", () => {
 
 		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
 
-		const advanced = (await screen.findByText("Advanced")).closest("details");
-		expect(advanced).not.toHaveAttribute("open");
-		expect(advanced).toContainElement(await screen.findByLabelText("Apple private key"));
+		expect(await screen.findByText("Connected Gateways")).toBeInTheDocument();
+		expect(screen.getAllByRole("link", { name: "Configure store" })).toHaveLength(2);
+		expect(screen.queryByText("Advanced")).not.toBeInTheDocument();
+		for (const label of [
+			"Apple issuer ID",
+			"Apple key ID",
+			"Apple private key",
+			"Google service account JSON",
+		])
+			expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
 	});
 
 	it("asks for the Stripe secret key and webhook signing secret only in the Stripe section", async () => {
@@ -159,9 +181,6 @@ describe("MonetizationSettingsPage", () => {
 
 		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
 
-		const advanced = (await screen.findByText("Advanced")).closest("details");
-		if (!advanced) throw new Error("Advanced section missing");
-		await within(advanced).findByLabelText("Apple private key");
 		const stripe = (await screen.findByText("Stripe web payments")).closest("section");
 		if (!stripe) throw new Error("Stripe section missing");
 		for (const label of ["Stripe secret key", "Webhook signing secret"]) {
@@ -171,13 +190,11 @@ describe("MonetizationSettingsPage", () => {
 		}
 	});
 
-	it("opens legacy configuration links on the gateways tab with Advanced expanded", async () => {
+	it("opens legacy configuration links on the gateways tab", async () => {
 		window.history.replaceState(null, "", "/monetization/settings?tab=configuration");
 		render(<MonetizationSettingsPage />);
 
 		expect(screen.getByRole("tab", { name: "Gateways" })).toHaveAttribute("aria-selected", "true");
-		await waitFor(() => {
-			expect(screen.getByText("Advanced").closest("details")).toHaveAttribute("open");
-		});
+		expect(await screen.findByText("Connected Gateways")).toBeVisible();
 	});
 });

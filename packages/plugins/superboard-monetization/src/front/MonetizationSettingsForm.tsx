@@ -1,22 +1,16 @@
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
-import { Textarea } from "@superboard/front-ui/ui/textarea.js";
 import { useEffect, useState } from "react";
 
 import { useMonetizationI18n } from "./i18n.js";
 
 const endpoint = "/_emdash/api/admin/plugins/superboard-monetization/settings";
+const settingPrefix = "superboard-monetization.setting.";
 const fields = {
 	products: [
 		["default_currency", "Default Currency"],
 		["store_environment", "Store environment"],
 		["catalog_sync_enabled", "Catalog synchronization"],
-	],
-	billing: [
-		["apple_issuer_id", "Apple issuer ID"],
-		["apple_key_id", "Apple key ID"],
-		["apple_private_key", "Apple private key"],
-		["google_service_account_json", "Google service account JSON"],
 	],
 } as const;
 type Values = Record<string, string | boolean | null>;
@@ -60,7 +54,7 @@ async function readSettings(response: Response): Promise<Settings> {
 
 export function MonetizationSettingsForm({ section }: { section: keyof typeof fields }) {
 	const { t } = useMonetizationI18n();
-	const prefix = section === "products" ? "superboard-products__" : "superboard-billing__";
+	const prefix = `${settingPrefix}${section}_`;
 	const [settings, setSettings] = useState<Settings | null>(null);
 	const [changes, setChanges] = useState<Values>({});
 	const [busy, setBusy] = useState(false);
@@ -98,11 +92,7 @@ export function MonetizationSettingsForm({ section }: { section: keyof typeof fi
 			);
 			const persisted = await readSettings(await fetch(endpoint));
 			for (const [key, value] of Object.entries(changes)) {
-				if (
-					key in persisted.secretsSet
-						? persisted.secretsSet[key] !== (value !== null && value !== "")
-						: value !== null && persisted.values[key] !== value
-				)
+				if (value !== null && persisted.values[key] !== value)
 					throw new Error("SETTINGS_NOT_PERSISTED");
 			}
 			setSettings(persisted);
@@ -144,8 +134,7 @@ export function MonetizationSettingsForm({ section }: { section: keyof typeof fi
 				<>
 					{fields[section].map(([field, label]) => {
 						const key = prefix + field;
-						const secret = key in settings.secretsSet;
-						const value = key in changes ? changes[key] : secret ? "" : settings.values[key];
+						const value = key in changes ? changes[key] : settings.values[key];
 						const change = (next: string | boolean | null) => {
 							setSaved(false);
 							setChanges((current) => ({ ...current, [key]: next }));
@@ -153,9 +142,21 @@ export function MonetizationSettingsForm({ section }: { section: keyof typeof fi
 						return (
 							<div key={key} className="grid gap-2">
 								<label htmlFor={`setting-${field}`}>{t(label)}</label>
-								{field === "store_environment" || field === "catalog_sync_enabled" ? (
+								{field === "default_currency" ? (
+									<Input
+										id={`setting-${field}`}
+										disabled={busy}
+										autoComplete="off"
+										value={typeof value === "string" ? value : ""}
+										pattern="[A-Z]{3}"
+										onChange={(event) => {
+											change(event.target.value || null);
+										}}
+									/>
+								) : (
 									<select
 										id={`setting-${field}`}
+										className="h-9 rounded-md border bg-background px-3 text-sm"
 										disabled={busy}
 										value={value === true ? "true" : value === false ? "false" : (value ?? "")}
 										onChange={(event) => {
@@ -182,58 +183,6 @@ export function MonetizationSettingsForm({ section }: { section: keyof typeof fi
 											</>
 										)}
 									</select>
-								) : field === "apple_private_key" || field === "google_service_account_json" ? (
-									<Textarea
-										id={`setting-${field}`}
-										disabled={busy}
-										autoComplete="off"
-										className="[-webkit-text-security:disc]"
-										value={typeof value === "string" ? value : ""}
-										onChange={(event) => {
-											if (event.target.value === "") {
-												setSaved(false);
-												setChanges((current) => {
-													const next = { ...current };
-													delete next[key];
-													return next;
-												});
-											} else change(event.target.value);
-										}}
-									/>
-								) : (
-									<Input
-										id={`setting-${field}`}
-										disabled={busy}
-										type={secret ? "password" : "text"}
-										autoComplete="off"
-										value={typeof value === "string" ? value : ""}
-										pattern={field === "default_currency" ? "[A-Z]{3}" : undefined}
-										onChange={(event) => {
-											if (secret && event.target.value === "") {
-												setSaved(false);
-												setChanges((current) => {
-													const next = { ...current };
-													delete next[key];
-													return next;
-												});
-											} else change(event.target.value || null);
-										}}
-									/>
-								)}
-								{secret && (
-									<>
-										<p>{t(settings.secretsSet[key] ? "Configured" : "Not configured")}</p>
-										<p>{t("Leave blank to keep the stored secret.")}</p>
-										<Button
-											type="button"
-											disabled={busy}
-											onClick={() => {
-												change(null);
-											}}
-										>
-											{t("Clear secret")}
-										</Button>
-									</>
 								)}
 							</div>
 						);

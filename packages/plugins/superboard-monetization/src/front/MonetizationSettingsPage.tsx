@@ -60,12 +60,7 @@ export default function MonetizationSettingsPage() {
 					<TabsTrigger value="gateways">{t("Gateways")}</TabsTrigger>
 				</TabsList>
 				{selectedProject ? (
-					<BillingSettings
-						key={selectedProject.id}
-						projectId={selectedProject.id}
-						tab={tab}
-						advancedOpen={requested === "configuration"}
-					/>
+					<BillingSettings key={selectedProject.id} projectId={selectedProject.id} tab={tab} />
 				) : (
 					<p role="status">{t("Loading settings…")}</p>
 				)}
@@ -78,15 +73,7 @@ export default function MonetizationSettingsPage() {
 	);
 }
 
-function BillingSettings({
-	projectId,
-	tab,
-	advancedOpen,
-}: {
-	projectId: string;
-	tab: string;
-	advancedOpen: boolean;
-}) {
+function BillingSettings({ projectId, tab }: { projectId: string; tab: string }) {
 	const { t, locale } = useMonetizationI18n();
 	const [overview, setOverview] = useState<BillingOverview | null>(null);
 	const [enabled, setEnabled] = useState(false);
@@ -276,15 +263,6 @@ function BillingSettings({
 						})}
 					</div>
 				)}
-				<details className="rounded border p-4" open={advancedOpen}>
-					<summary className="cursor-pointer font-medium">{t("Advanced")}</summary>
-					<p className="mt-2 text-sm text-muted-foreground">
-						{t("Store credentials used by the Monetization service.")}
-					</p>
-					<div className="mt-4">
-						<MonetizationSettingsForm section="billing" />
-					</div>
-				</details>
 			</TabsContent>
 		</>
 	);
