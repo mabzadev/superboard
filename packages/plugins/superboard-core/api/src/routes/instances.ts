@@ -1,6 +1,6 @@
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import { registerRouter } from "@superboard/contracts/route-registry";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 
 import { getRequestAuthUserId } from "../lib/auth";
 import { hashPassword } from "../lib/crypto";
@@ -11,6 +11,7 @@ import { downloadFileMessage, invitationMessage, invitationUrl, sendMail } from 
 import { readApiJson } from "../lib/request-body";
 import { encryptCredential } from "../lib/secrets";
 import { siteOperatorAdapter, type SiteAdapterVariables } from "../lib/site-operator-adapter";
+import { encryptStoreCredentialCopies } from "../lib/store-credential-copies";
 import { tokenDigest } from "../lib/token-storage";
 import { Env } from "../types";
 
@@ -985,6 +986,36 @@ async function validateServiceAccountJson(
 	return { content, filename, parsed };
 }
 
+type ServerCredentialCopies = { sourceCiphertext: string; billingCiphertext: string | null };
+
+async function encryptServerCredential(
+	env: Env,
+	credential: string,
+): Promise<ServerCredentialCopies> {
+	if (env.BILLING || env.BILLING_EXECUTION_MODE === "service")
+		return encryptStoreCredentialCopies(env, credential);
+	return { sourceCiphertext: await encryptCredential(env, credential), billingCiphertext: null };
+}
+
+function billingCopyFailure(
+	c: Context<{ Bindings: Env; Variables: SiteAdapterVariables }>,
+	platform: "ios" | "android",
+	error: unknown,
+): Response {
+	if (!(error instanceof Error) || !("code" in error) || typeof error.code !== "string")
+		throw error;
+	console.error(
+		JSON.stringify({ event: "store_credential_billing_copy_failed", platform, code: error.code }),
+	);
+	return c.json(
+		{
+			error: "The Billing copy of this credential could not be created; nothing was changed",
+			code: "billing_credential_copy_failed",
+		},
+		503,
+	);
+}
+
 async function getOrCreateApplication(
 	db: D1Database,
 	instanceId: number,
@@ -1488,27 +1519,31 @@ instances.put("/:id/configurations/android/api_access_key", async (c) => {
 	const appId = await getOrCreateApplication(c.env.DB, instanceId, "android", true);
 	const androidConfigId = await findConfigId(c.env.DB, "android_configurations", appId);
 	if (!androidConfigId) return c.json({ error: "Android configuration must be set up first" }, 422);
-	const encrypted = await encryptCredential(c.env, content);
-	await c.env.DB.prepare(
-		"DELETE FROM android_server_api_keys WHERE android_configuration_id = ? OR instance_id = ?",
-	)
-		.bind(androidConfigId, instanceId)
-		.run();
-	await c.env.DB.prepare(`
+	let copies: ServerCredentialCopies;
+	try {
+		copies = await encryptServerCredential(c.env, content);
+	} catch (error) {
+		return billingCopyFailure(c, "android", error);
+	}
+	await c.env.DB.batch([
+		c.env.DB.prepare(
+			"DELETE FROM android_server_api_keys WHERE android_configuration_id = ? OR instance_id = ?",
+		).bind(androidConfigId, instanceId),
+		c.env.DB.prepare(`
     INSERT INTO android_server_api_keys (
-      android_configuration_id, instance_id, name, encrypted_key, key_id, project_id, client_email
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-  `)
-		.bind(
+      android_configuration_id, instance_id, name, encrypted_key, billing_encrypted_key, key_id, project_id, client_email
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
 			androidConfigId,
 			instanceId,
 			filename,
-			encrypted,
+			copies.sourceCiphertext,
+			copies.billingCiphertext,
 			parsed.private_key_id || null,
 			parsed.project_id || null,
 			parsed.client_email || null,
-		)
-		.run();
+		),
+	]);
 	return c.json(configPayload(await loadApplicationConfig(c.env.DB, instanceId, "android")));
 });
 
@@ -1543,36 +1578,38 @@ instances.put("/:id/configurations/ios/api_access_key", async (c) => {
 	if (!keyId || !issuerId || !appleAppId) {
 		return c.json({ error: "key_id, issuer_id and app_apple_id are required" }, 422);
 	}
-	const encrypted = await encryptCredential(c.env, content);
-	await c.env.DB.prepare(`
+	let copies: ServerCredentialCopies;
+	try {
+		copies = await encryptServerCredential(c.env, content);
+	} catch (error) {
+		return billingCopyFailure(c, "ios", error);
+	}
+	await c.env.DB.batch([
+		c.env.DB.prepare(`
     UPDATE ios_configurations
     SET app_apple_id = ?, updated_at = datetime('now')
     WHERE id = ?
-  `)
-		.bind(appleAppId, iosConfigId)
-		.run();
-	await c.env.DB.prepare(
-		"DELETE FROM ios_server_api_keys WHERE ios_configuration_id = ? OR instance_id = ?",
-	)
-		.bind(iosConfigId, instanceId)
-		.run();
-	await c.env.DB.prepare(`
+  `).bind(appleAppId, iosConfigId),
+		c.env.DB.prepare(
+			"DELETE FROM ios_server_api_keys WHERE ios_configuration_id = ? OR instance_id = ?",
+		).bind(iosConfigId, instanceId),
+		c.env.DB.prepare(`
     INSERT INTO ios_server_api_keys (
-      instance_id, ios_configuration_id, name, encrypted_key, private_key, key_id, issuer_id, bundle_id, filename
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `)
-		.bind(
+      instance_id, ios_configuration_id, name, encrypted_key, billing_encrypted_key, private_key, key_id, issuer_id, bundle_id, filename
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
 			instanceId,
 			iosConfigId,
 			pick(body, "name") || pick(body, "filename") || "App Store Connect API Key",
-			encrypted,
+			copies.sourceCiphertext,
+			copies.billingCiphertext,
 			null,
 			keyId,
 			issuerId,
 			pick(body, "bundle_id") || null,
 			pick(body, "filename") || (typeof file === "string" ? "AuthKey.p8" : (file as File).name),
-		)
-		.run();
+		),
+	]);
 	return c.json(configPayload(await loadApplicationConfig(c.env.DB, instanceId, "ios")));
 });
 

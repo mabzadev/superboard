@@ -225,6 +225,18 @@ export default function DashboardPageContent() {
 	const cards = useMemo<DashBoardCardType[]>(() => {
 		const linkTotals = snapshot.linkStatistics?.totals;
 		const productTotals = snapshot.productStatistics?.totals;
+		const currencyTotals = snapshot.productStatistics?.totals_by_currency ?? [];
+		const netRevenueByCurrency = currencyTotals.length
+			? currencyTotals
+					.map((row) =>
+						formatMoney(
+							(row.gross_revenue_micros - row.refunded_micros) / 1_000_000,
+							row.currency,
+							locale,
+						),
+					)
+					.join(" · ")
+			: undefined;
 		const card = (
 			title: string,
 			metric: number | string | undefined,
@@ -279,14 +291,20 @@ export default function DashboardPageContent() {
 				: []),
 			...(productsEnabled
 				? [
-						card(
-							"Net revenue",
-							typeof productTotals?.net_revenue_micros === "number"
-								? productTotals.net_revenue_micros / 10_000
-								: undefined,
-							"Gross purchase revenue after recorded refunds.",
-							"money",
-						),
+						netRevenueByCurrency
+							? card(
+									"Net revenue",
+									netRevenueByCurrency,
+									"Gross purchase revenue after recorded refunds.",
+								)
+							: card(
+									"Net revenue",
+									typeof productTotals?.net_revenue_micros === "number"
+										? productTotals.net_revenue_micros / 10_000
+										: undefined,
+									"Gross purchase revenue after recorded refunds.",
+									"money",
+								),
 					]
 				: []),
 		];
@@ -696,4 +714,12 @@ function TopLinks({
 			</CardContent>
 		</Card>
 	);
+}
+
+function formatMoney(amount: number, currency: string | null, locale: string) {
+	return currency && /^[A-Z]{3}$/u.test(currency)
+		? new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount)
+		: new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+				amount,
+			);
 }

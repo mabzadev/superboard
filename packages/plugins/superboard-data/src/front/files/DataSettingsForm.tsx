@@ -4,6 +4,7 @@ import { Textarea } from "@superboard/front-ui/ui/textarea.js";
 import { useEffect, useState } from "react";
 
 const endpoint = "/_emdash/api/admin/plugins/superboard-data/settings";
+const settingPrefix = "superboard-data.setting.";
 const fields = {
 	content: ["default_locale", "required_locales", "publishing_mode"],
 	files: ["max_upload_bytes", "allowed_content_types", "signed_url_ttl_seconds"],
@@ -77,7 +78,7 @@ export function DataSettingsForm({
 	locale: "en" | "fr";
 }) {
 	const t = messages[locale];
-	const prefix = section === "content" ? "superboard-content__" : "superboard-files__";
+	const prefix = `${settingPrefix}${section}_`;
 	const [values, setValues] = useState<Values | null>(null);
 	const [changes, setChanges] = useState<Values>({});
 	const [busy, setBusy] = useState(false);

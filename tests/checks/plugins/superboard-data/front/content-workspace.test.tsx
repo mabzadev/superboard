@@ -67,7 +67,9 @@ it("opens content settings from the Settings tab of the Content page", async () 
 	vi.stubGlobal(
 		"fetch",
 		vi.fn(async () =>
-			Response.json({ data: { values: { "superboard-content__default_locale": "fr" } } }),
+			Response.json({
+				data: { values: { "superboard-data.setting.content_default_locale": "fr" } },
+			}),
 		),
 	);
 	render(<ContentPage />);

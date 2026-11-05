@@ -90,7 +90,7 @@ export const publishedViewContracts = {
 		"checkbox",
 		"Enable purchases",
 		"Activer les achats",
-		/settings/,
+		/\/api\/v1\/billing\/[^/?]+$/u,
 	),
 	"/communication/campaigns": withHeading(
 		control("button", "Add email", "Ajouter un e-mail", /email_templates/),

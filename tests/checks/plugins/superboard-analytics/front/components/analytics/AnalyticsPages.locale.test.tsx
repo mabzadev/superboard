@@ -113,7 +113,6 @@ describe("Analytics follows the console language", () => {
 	});
 
 	it.each([
-		["overview", "Statistiques", "Analytics"],
 		["events", "Explorateur d’événements", "Event explorer"],
 		["installations", "Installations", "Installations"],
 		["purchases", "Achats vérifiés", "Verified purchases"],
@@ -181,7 +180,7 @@ describe("Analytics follows the console language", () => {
 
 	it("translates the shared empty project prompt", () => {
 		state.project = null;
-		render(<Page kind="overview" locale="fr" />);
+		render(<Page kind="events" locale="fr" />);
 		expect(screen.getByText("Sélectionnez un projet pour gérer ce module.")).toBeInTheDocument();
 	});
 

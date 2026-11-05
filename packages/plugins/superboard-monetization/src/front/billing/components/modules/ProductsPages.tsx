@@ -81,8 +81,19 @@ const selectClass = "h-9 w-full rounded-md border bg-background px-3 text-sm";
 const filterSelectClass = "h-[34px] rounded-md border bg-background px-3 text-sm";
 const asIdentifier = (value: string) => value.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
 const enabled = (value: number | boolean) => value === true || value === 1;
-const money = (micros = 0, currency = "USD", locale?: string) =>
-	new Intl.NumberFormat(locale, { style: "currency", currency }).format(micros / 1_000_000);
+const decimal = (amount: number, locale?: string) =>
+	new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+		amount,
+	);
+const money = (micros = 0, currency?: string | null, locale?: string) => {
+	const amount = micros / 1_000_000;
+	if (!currency) return decimal(amount, locale);
+	try {
+		return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+	} catch {
+		return `${decimal(amount, locale)} ${currency}`;
+	}
+};
 const dateTime = (value?: string | null, locale?: string) =>
 	value ? new Date(value).toLocaleString(locale) : "—";
 const shortDate = (value?: string | null, locale?: string) =>
@@ -256,6 +267,17 @@ export function PurchasesPage() {
 		return message ? t(message) : value;
 	};
 	const totals = statistics?.totals;
+	const currencyTotals =
+		statistics?.totals_by_currency ?? (totals ? [{ ...totals, currency: null }] : []);
+	const revenue = (key: "gross_revenue_micros" | "refunded_micros" | "net_revenue_micros") =>
+		currencyTotals.length ? (
+			<Amounts
+				amounts={currencyTotals.map((row) => ({ currency: row.currency, micros: row[key] }))}
+			/>
+		) : (
+			"—"
+		);
+	const days = revenueDays(statistics);
 	return (
 		<ModulePage
 			title={t("Purchases")}
@@ -388,9 +410,7 @@ export function PurchasesPage() {
 										</TableCell>
 										<TableCell>{Number(row.units_sold).toLocaleString(locale)}</TableCell>
 										<TableCell>{Number(row.first_time_purchases).toLocaleString(locale)}</TableCell>
-										<TableCell>
-											{money(Number(row.revenue_micros), row.currency || "USD", locale)}
-										</TableCell>
+										<TableCell>{money(Number(row.revenue_micros), row.currency, locale)}</TableCell>
 										<TableCell>{Number(row.cancellations).toLocaleString(locale)}</TableCell>
 									</TableRow>
 								))}
@@ -404,15 +424,9 @@ export function PurchasesPage() {
 							label={t("Active subscriptions")}
 							value={String(totals?.active_subscriptions ?? 0)}
 						/>
-						<Metric
-							label={t("Gross revenue")}
-							value={money(totals?.gross_revenue_micros, "USD", locale)}
-						/>
-						<Metric label={t("Refunded")} value={money(totals?.refunded_micros, "USD", locale)} />
-						<Metric
-							label={t("Net revenue")}
-							value={money(totals?.net_revenue_micros, "USD", locale)}
-						/>
+						<Metric label={t("Gross revenue")} value={revenue("gross_revenue_micros")} />
+						<Metric label={t("Refunded")} value={revenue("refunded_micros")} />
+						<Metric label={t("Net revenue")} value={revenue("net_revenue_micros")} />
 						<Metric label={t("Refunds")} value={String(totals?.refunds ?? 0)} />
 					</div>
 
@@ -426,11 +440,13 @@ export function PurchasesPage() {
 								headers={[t("Date"), t("Purchases"), t("Revenue")]}
 								empty={t("No financial activity in this period.")}
 							>
-								{(statistics?.series ?? []).map((row) => (
-									<TableRow key={row.bucket}>
-										<TableCell>{date(row.bucket)}</TableCell>
-										<TableCell>{row.purchases.toLocaleString(locale)}</TableCell>
-										<TableCell>{money(row.revenue_micros, "USD", locale)}</TableCell>
+								{days.map((day) => (
+									<TableRow key={day.bucket}>
+										<TableCell>{date(day.bucket)}</TableCell>
+										<TableCell>{day.purchases.toLocaleString(locale)}</TableCell>
+										<TableCell>
+											<Amounts amounts={day.amounts} />
+										</TableCell>
 									</TableRow>
 								))}
 							</DataTable>
@@ -499,7 +515,7 @@ export function PurchasesPage() {
 											)}
 										</TableCell>
 										<TableCell>
-											{money(item.purchased_price_micros, item.currency || "USD", locale)}
+											{money(item.purchased_price_micros, item.currency, locale)}
 										</TableCell>
 										<TableCell>
 											<div className="flex justify-end gap-1">
@@ -568,11 +584,7 @@ export function PurchasesPage() {
 									<Fact label={t("Purchased")}>{date(purchaseDetail.purchased_at)}</Fact>
 									<Fact label={t("Expires")}>{date(purchaseDetail.expires_at)}</Fact>
 									<Fact label={t("Amount")}>
-										{money(
-											purchaseDetail.purchased_price_micros,
-											purchaseDetail.currency || "USD",
-											locale,
-										)}
+										{money(purchaseDetail.purchased_price_micros, purchaseDetail.currency, locale)}
 									</Fact>
 								</dl>
 								<section>
@@ -610,7 +622,7 @@ export function PurchasesPage() {
 												<b>
 													{money(
 														item.amount_micros,
-														item.currency || purchaseDetail.currency || "USD",
+														item.currency || purchaseDetail.currency,
 														locale,
 													)}
 												</b>
@@ -871,7 +883,7 @@ const emptyOffering = (): OfferingForm => ({
 });
 
 export function ProductsPage() {
-	const { t, locale } = useMonetizationI18n();
+	const { t } = useMonetizationI18n();
 	const { selectedProject } = useProjectSelection();
 	const [products, setProducts] = useState<Product[]>([]);
 	const [productForm, setProductForm] = useState<ProductForm>(emptyProduct);
@@ -1009,7 +1021,6 @@ export function ProductsPage() {
 			description={t("Manage the store product catalog.")}
 			error={error}
 		>
-			<a href={`/monetization/settings?tab=products&lang=${locale}`}>{t("Product settings")}</a>
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
@@ -2170,7 +2181,7 @@ function Truncated({ value, className = "" }: { value: string; className?: strin
 		</span>
 	);
 }
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: React.ReactNode }) {
 	return (
 		<Card>
 			<CardHeader>
@@ -2179,6 +2190,31 @@ function Metric({ label, value }: { label: string; value: string }) {
 			</CardHeader>
 		</Card>
 	);
+}
+type Amount = { currency: string | null; micros: number };
+function revenueDays(statistics: ProductStatistics | null) {
+	if (!statistics?.series_by_currency)
+		return (statistics?.series ?? []).map((row) => ({
+			bucket: row.bucket,
+			purchases: row.purchases,
+			amounts: [{ currency: null, micros: row.revenue_micros }],
+		}));
+	const days = new Map<string, { bucket: string; purchases: number; amounts: Amount[] }>();
+	for (const row of statistics.series_by_currency) {
+		const day = days.get(row.bucket) ?? { bucket: row.bucket, purchases: 0, amounts: [] };
+		day.purchases += row.purchases;
+		day.amounts.push({ currency: row.currency, micros: row.revenue_micros });
+		days.set(row.bucket, day);
+	}
+	return [...days.values()];
+}
+function Amounts({ amounts }: { amounts: Amount[] }) {
+	const { locale } = useMonetizationI18n();
+	return amounts.map((amount) => (
+		<span key={amount.currency ?? ""} className="block">
+			{money(amount.micros, amount.currency, locale)}
+		</span>
+	));
 }
 function Trans({ children }: { children: React.ReactNode }) {
 	return <>{children}</>;

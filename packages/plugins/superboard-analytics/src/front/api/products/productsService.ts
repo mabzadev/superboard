@@ -133,6 +133,13 @@ export type ProductStatistics = {
 		net_revenue_micros: number;
 		active_subscriptions: number;
 	};
+	totals_by_currency?: Array<{
+		currency: string | null;
+		purchases: number;
+		gross_revenue_micros: number;
+		refunds: number;
+		refunded_micros: number;
+	}>;
 	by_status: Array<{ status: string; count: number }>;
 	series: Array<{ bucket: string; purchases: number; revenue_micros: number }>;
 	by_product_platform: Array<{

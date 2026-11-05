@@ -14,7 +14,6 @@ import {
 	type BillingOverview,
 } from "./billing/api/billing/billingService.js";
 import { useMonetizationI18n } from "./i18n.js";
-import { MonetizationSettingsForm } from "./MonetizationSettingsForm.js";
 import StripeSettings from "./StripeSettings.js";
 
 export default function MonetizationSettingsPage() {
@@ -24,11 +23,7 @@ export default function MonetizationSettingsPage() {
 		typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab"),
 	);
 	const [tab, setTab] = useState(() =>
-		requested === "configuration"
-			? "gateways"
-			: requested && ["general", "products", "gateways"].includes(requested)
-				? requested
-				: "general",
+		requested === "gateways" || requested === "configuration" ? "gateways" : "general",
 	);
 	return (
 		<section className="ds-page space-y-5">
@@ -56,7 +51,6 @@ export default function MonetizationSettingsPage() {
 					aria-label={t("Settings sections")}
 				>
 					<TabsTrigger value="general">{t("General")}</TabsTrigger>
-					<TabsTrigger value="products">{t("Products")}</TabsTrigger>
 					<TabsTrigger value="gateways">{t("Gateways")}</TabsTrigger>
 				</TabsList>
 				{selectedProject ? (
@@ -64,9 +58,6 @@ export default function MonetizationSettingsPage() {
 				) : (
 					<p role="status">{t("Loading settings…")}</p>
 				)}
-				<TabsContent value="products" forceMount hidden={tab !== "products"}>
-					<MonetizationSettingsForm section="products" />
-				</TabsContent>
 			</Tabs>
 			<PluginDiagnosticsLink locale={locale} />
 		</section>

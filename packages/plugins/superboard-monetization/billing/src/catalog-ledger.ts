@@ -25,7 +25,13 @@ import {
 } from "./catalog-ledger-http.js";
 import { catalogImportStatus, importCatalogBatch } from "./catalog-ledger-import.js";
 type EntityRow = Record<string, unknown> & { id: string };
-const app = registerRouter(new Hono<{ Bindings: WorkerBindings; Variables: WorkerVariables }>(), {"service":"billing","module":"catalog-ledger.app","pluginId":"superboard-billing","surface":"internal","access":"internal"});
+const app = registerRouter(new Hono<{ Bindings: WorkerBindings; Variables: WorkerVariables }>(), {
+	service: "billing",
+	module: "catalog-ledger.app",
+	pluginId: "superboard-billing",
+	surface: "internal",
+	access: "internal",
+});
 app.use("/internal/v1/catalog-ledger/*", internalAuth());
 app.use("/internal/v1/catalog-ledger", internalAuth());
 app.onError((error, c) => errorResponse(error, c));
@@ -531,20 +537,20 @@ app.get("/internal/v1/catalog-ledger/statistics", async (c) => {
 	const where = clauses.join(" AND ");
 	const [totals, statuses, series, activeSubscriptions] = await Promise.all([
 		c.env.DB.prepare(
-			`SELECT COUNT(*) AS purchases, COALESCE(SUM(p.purchased_price_micros),0) AS gross_revenue_micros FROM billing_catalog_purchases p WHERE ${where} AND p.status IN ('active','expired','cancelled','refunded')`,
+			`SELECT p.currency, COUNT(*) AS purchases, COALESCE(SUM(p.purchased_price_micros),0) AS gross_revenue_micros FROM billing_catalog_purchases p WHERE ${where} AND p.status IN ('active','expired','cancelled','refunded') GROUP BY p.currency`,
 		)
 			.bind(...values)
-			.first(),
+			.all<PurchaseCurrencyRow>(),
 		c.env.DB.prepare(
 			`SELECT p.status, COUNT(*) AS count FROM billing_catalog_purchases p WHERE ${where} GROUP BY p.status`,
 		)
 			.bind(...values)
 			.all(),
 		c.env.DB.prepare(
-			`SELECT substr(p.purchased_at,1,10) AS bucket, COUNT(*) AS purchases, COALESCE(SUM(p.purchased_price_micros),0) AS revenue_micros FROM billing_catalog_purchases p WHERE ${where} GROUP BY bucket ORDER BY bucket`,
+			`SELECT substr(p.purchased_at,1,10) AS bucket, p.currency, COUNT(*) AS purchases, COALESCE(SUM(p.purchased_price_micros),0) AS revenue_micros FROM billing_catalog_purchases p WHERE ${where} GROUP BY bucket, p.currency ORDER BY bucket, p.currency IS NULL, p.currency`,
 		)
 			.bind(...values)
-			.all(),
+			.all<SeriesCurrencyRow>(),
 		c.env.DB.prepare(
 			`SELECT COUNT(*) AS count FROM billing_catalog_subscriptions s WHERE s.project_id=? AND s.status IN ('trialing','active','grace_period') ${c.req.query("product_id") ? "AND s.product_id=?" : ""} ${platform ? "AND s.store=?" : ""}`,
 		)
@@ -566,10 +572,10 @@ app.get("/internal/v1/catalog-ledger/statistics", async (c) => {
 		refundValues.push(storeForPlatform(platform));
 	}
 	const refunds = await c.env.DB.prepare(
-		`SELECT COUNT(*) AS refunds, COALESCE(SUM(r.amount_micros),0) AS refunded_micros FROM billing_catalog_refunds r JOIN billing_catalog_purchases p ON p.id=r.purchase_id AND p.project_id=r.project_id WHERE ${refundClauses.join(" AND ")} AND r.status='completed'`,
+		`SELECT COALESCE(r.currency,p.currency) AS currency, COUNT(*) AS refunds, COALESCE(SUM(r.amount_micros),0) AS refunded_micros FROM billing_catalog_refunds r JOIN billing_catalog_purchases p ON p.id=r.purchase_id AND p.project_id=r.project_id WHERE ${refundClauses.join(" AND ")} AND r.status='completed' GROUP BY COALESCE(r.currency,p.currency)`,
 	)
 		.bind(...refundValues)
-		.first();
+		.all<RefundCurrencyRow>();
 	const breakdown = await c.env.DB.prepare(
 		`SELECT
        p.product_id,
@@ -595,13 +601,23 @@ app.get("/internal/v1/catalog-ledger/statistics", async (c) => {
 	)
 		.bind(...values)
 		.all();
+	const totalsByCurrency = currencyTotals(totals.results, refunds.results);
+	const sum = (key: "purchases" | "gross_revenue_micros" | "refunds" | "refunded_micros") =>
+		totalsByCurrency.reduce((total, row) => total + row[key], 0);
 	const mergedTotals = {
-		...totals,
-		...refunds,
+		purchases: sum("purchases"),
+		gross_revenue_micros: sum("gross_revenue_micros"),
+		refunds: sum("refunds"),
+		refunded_micros: sum("refunded_micros"),
 		active_subscriptions: activeSubscriptions?.count ?? 0,
-		net_revenue_micros:
-			Number(totals?.gross_revenue_micros ?? 0) - Number(refunds?.refunded_micros ?? 0),
+		net_revenue_micros: sum("gross_revenue_micros") - sum("refunded_micros"),
 	};
+	const seriesByCurrency = series.results.map((row) => ({
+		bucket: row.bucket,
+		currency: row.currency,
+		purchases: Number(row.purchases),
+		revenue_micros: Number(row.revenue_micros),
+	}));
 	return c.json({
 		data: {
 			range,
@@ -610,12 +626,74 @@ app.get("/internal/v1/catalog-ledger/statistics", async (c) => {
 				platform: platform ?? null,
 			},
 			totals: mergedTotals,
+			totals_by_currency: totalsByCurrency,
 			by_status: statuses.results,
-			series: series.results,
+			series: dailySeries(seriesByCurrency),
+			series_by_currency: seriesByCurrency,
 			by_product_platform: breakdown.results,
 		},
 	});
 });
+
+type PurchaseCurrencyRow = {
+	currency: string | null;
+	purchases: number;
+	gross_revenue_micros: number;
+};
+type RefundCurrencyRow = { currency: string | null; refunds: number; refunded_micros: number };
+type SeriesCurrencyRow = {
+	bucket: string;
+	currency: string | null;
+	purchases: number;
+	revenue_micros: number;
+};
+
+function currencyTotals(purchases: PurchaseCurrencyRow[], refunds: RefundCurrencyRow[]) {
+	const totals = new Map<string | null, PurchaseCurrencyRow & RefundCurrencyRow>();
+	const entry = (currency: string | null) => {
+		const total = totals.get(currency) ?? {
+			currency,
+			purchases: 0,
+			gross_revenue_micros: 0,
+			refunds: 0,
+			refunded_micros: 0,
+		};
+		totals.set(currency, total);
+		return total;
+	};
+	for (const row of purchases) {
+		const total = entry(row.currency);
+		total.purchases += Number(row.purchases);
+		total.gross_revenue_micros += Number(row.gross_revenue_micros);
+	}
+	for (const row of refunds) {
+		const total = entry(row.currency);
+		total.refunds += Number(row.refunds);
+		total.refunded_micros += Number(row.refunded_micros);
+	}
+	return [...totals.values()]
+		.map((total) => ({
+			...total,
+			net_revenue_micros: total.gross_revenue_micros - total.refunded_micros,
+		}))
+		.sort(
+			(left, right) =>
+				right.gross_revenue_micros - left.gross_revenue_micros ||
+				Number(left.currency === null) - Number(right.currency === null) ||
+				(left.currency ?? "").localeCompare(right.currency ?? ""),
+		);
+}
+
+function dailySeries(rows: Array<Omit<SeriesCurrencyRow, "currency">>) {
+	const days = new Map<string, { bucket: string; purchases: number; revenue_micros: number }>();
+	for (const row of rows) {
+		const day = days.get(row.bucket) ?? { bucket: row.bucket, purchases: 0, revenue_micros: 0 };
+		day.purchases += row.purchases;
+		day.revenue_micros += row.revenue_micros;
+		days.set(row.bucket, day);
+	}
+	return [...days.values()];
+}
 
 async function entitlements(c: WorkerContext, id?: string): Promise<EntityRow[]> {
 	const rows = await c.env.DB.prepare(

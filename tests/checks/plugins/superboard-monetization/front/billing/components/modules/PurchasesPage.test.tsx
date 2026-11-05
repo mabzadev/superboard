@@ -41,6 +41,50 @@ function fact(container: HTMLElement, label: string) {
 	return term.nextElementSibling?.textContent ?? "";
 }
 
+function metric(label: string) {
+	const card = screen
+		.getByText(label, { selector: "[data-slot=card-description]" })
+		.closest<HTMLElement>("[data-slot=card]");
+	if (!card) throw new Error(`${label} metric missing`);
+	return card;
+}
+
+const twoCurrencyStatistics = {
+	totals: {
+		purchases: 3,
+		gross_revenue_micros: 16_980_000,
+		refunds: 1,
+		refunded_micros: 4_990_000,
+		net_revenue_micros: 11_990_000,
+		active_subscriptions: 0,
+	},
+	totals_by_currency: [
+		{
+			currency: "EUR",
+			purchases: 2,
+			gross_revenue_micros: 14_980_000,
+			refunds: 1,
+			refunded_micros: 4_990_000,
+			net_revenue_micros: 9_990_000,
+		},
+		{
+			currency: "USD",
+			purchases: 1,
+			gross_revenue_micros: 2_000_000,
+			refunds: 0,
+			refunded_micros: 0,
+			net_revenue_micros: 2_000_000,
+		},
+	],
+	by_status: [],
+	series: [{ bucket: "2026-11-01", purchases: 3, revenue_micros: 16_980_000 }],
+	series_by_currency: [
+		{ bucket: "2026-11-01", currency: "EUR", purchases: 2, revenue_micros: 14_980_000 },
+		{ bucket: "2026-11-01", currency: "USD", purchases: 1, revenue_micros: 2_000_000 },
+	],
+	by_product_platform: [],
+};
+
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "10-test", name: "Test" } }),
 }));
@@ -267,6 +311,60 @@ describe("purchases page", () => {
 			"Remboursé",
 			"Échec",
 		]);
+	});
+
+	it("totals revenue in each purchase currency without adding currencies together", async () => {
+		api.getProductStatistics.mockResolvedValue(twoCurrencyStatistics);
+		const { unmount } = render(<PurchasesPage />);
+		const day = (await screen.findByText("Nov 1, 2026")).closest("tr");
+		if (!day) throw new Error("Revenue day missing");
+
+		expect(day).toHaveTextContent("3€14.98$2.00");
+		expect(metric("Gross revenue")).toHaveTextContent("€14.98$2.00");
+		expect(metric("Refunded")).toHaveTextContent("€4.99$0.00");
+		expect(metric("Net revenue")).toHaveTextContent("€9.99$2.00");
+		for (const mixed of ["16.98", "11.99"])
+			expect(screen.queryByText(new RegExp(mixed, "u"))).not.toBeInTheDocument();
+		unmount();
+
+		render(<PurchasesPage />, { wrapper: French });
+		await screen.findByText("1 nov. 2026");
+		expect(metric("Revenu brut")).toHaveTextContent(/14,98\s€\s*2,00\s\$US/u);
+	});
+
+	it("never presents an amount without a recorded currency as dollars", async () => {
+		const unknown = { ...purchase, currency: null };
+		api.getPurchases.mockResolvedValue([unknown]);
+		api.getPurchase.mockResolvedValue({
+			...unknown,
+			entitlements: [],
+			refunds: [
+				{
+					id: "refund-1",
+					purchase_id: "purchase-1",
+					status: "completed",
+					amount_micros: 4_990_000,
+					currency: null,
+					requested_at: "2026-08-08T10:00:00.000Z",
+				},
+			],
+		});
+		render(<PurchasesPage />);
+		const row = (await screen.findByText("tx-manual")).closest("tr");
+		if (!row) throw new Error("Purchase row missing");
+
+		expect(row).toHaveTextContent("9.99");
+		expect(row).not.toHaveTextContent("$");
+		expect(metric("Gross revenue")).toHaveTextContent("9.99");
+		expect(metric("Gross revenue")).not.toHaveTextContent("$");
+
+		fireEvent.click(within(row).getByRole("button", { name: "View purchase tx-manual" }));
+		const detail = (await screen.findByText("Purchase detail")).closest<HTMLElement>(
+			"[data-slot=card]",
+		);
+		if (!detail) throw new Error("Purchase detail missing");
+		expect(fact(detail, "Amount")).toBe("9.99");
+		expect(within(detail).getByText("4.99")).toBeInTheDocument();
 	});
 
 	it("names platforms and stores and shows revenue days as localized dates", async () => {

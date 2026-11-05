@@ -54,6 +54,54 @@ const messages = {
 		"sdk.web": "Web",
 		"sdk.ios": "iOS",
 		"sdk.android": "Android",
+		"store.appleTitle": "App Store Server API",
+		"store.appleDescription":
+			"Lets SuperBoard verify App Store purchases on the server, in the production and test environments. The private key is encrypted when saved and never shown again.",
+		"store.googleTitle": "Google Play Developer API",
+		"store.googleDescription":
+			"Lets SuperBoard verify Google Play purchases on the server, in the production and test environments. The service account key is encrypted when saved and never shown again.",
+		"store.configured": "Configured",
+		"store.notConfigured": "Not configured",
+		"store.loading": "Loading the store credentials…",
+		"store.loadError": "The store credentials could not be loaded.",
+		"store.retry": "Retry",
+		"store.bundleId": "Bundle ID",
+		"store.packageName": "Package name",
+		"store.keyId": "Key ID",
+		"store.issuerId": "Issuer ID",
+		"store.appleAppId": "Apple app ID",
+		"store.appleAppIdHint": "Numeric App Store ID of the application, shown in App Store Connect.",
+		"store.privateKey": "Private key (.p8)",
+		"store.serviceAccount": "Service account",
+		"store.serviceAccountKey": "Service account key (.json)",
+		"store.save": "Save credentials",
+		"store.saving": "Saving…",
+		"store.replace": "Replace credentials",
+		"store.cancel": "Cancel",
+		"store.registersIos":
+			"Saving also registers the bundle ID and Apple Team ID entered in step 1:",
+		"store.registersAndroid":
+			"Saving also registers the package name and SHA-256 certificate entered in step 1:",
+		"store.missingIosRegistration": "Enter the bundle ID and Apple Team ID in step 1 first.",
+		"store.missingAndroidRegistration":
+			"Enter the package name and SHA-256 certificate in step 1 first.",
+		"store.confirmTitle": "Replace the configured credentials?",
+		"store.confirmDescription":
+			"Purchase verification uses the new credentials as soon as they are saved. The current credentials cannot be recovered.",
+		"store.confirm": "Replace",
+		"store.saved": "Store credentials saved",
+		"store.errorRequired": "Fill in every field and choose the key file.",
+		"store.errorAppleAppId": "The Apple app ID contains digits only.",
+		"store.errorAppleKey": "Choose the .p8 private key downloaded from App Store Connect.",
+		"store.errorGoogleKey": "Choose the JSON key of a Google Cloud service account.",
+		"store.errorBillingCopy":
+			"The billing service could not secure a copy of these credentials. The configured credentials were not changed; try again in a few minutes.",
+		"store.errorRejected": "The credentials were rejected. Check the key file and the identifiers.",
+		"store.errorUnknown":
+			"The credentials could not be saved. The configured credentials were not changed.",
+		"store.referenceLabel": "Secret reference (optional)",
+		"store.referenceHint":
+			"Where your team keeps these credentials, for example secret://store/app-store. Purchase verification uses the credentials saved above, not this reference.",
 	},
 	fr: {
 		"environment.description":
@@ -109,6 +157,57 @@ const messages = {
 		"sdk.web": "Web",
 		"sdk.ios": "iOS",
 		"sdk.android": "Android",
+		"store.appleTitle": "App Store Server API",
+		"store.appleDescription":
+			"Permet à SuperBoard de vérifier les achats App Store sur le serveur, dans les environnements de production et de test. La clé privée est chiffrée à l’enregistrement et n’est plus jamais affichée.",
+		"store.googleTitle": "Google Play Developer API",
+		"store.googleDescription":
+			"Permet à SuperBoard de vérifier les achats Google Play sur le serveur, dans les environnements de production et de test. La clé du compte de service est chiffrée à l’enregistrement et n’est plus jamais affichée.",
+		"store.configured": "Configuré",
+		"store.notConfigured": "Non configuré",
+		"store.loading": "Chargement des identifiants du store…",
+		"store.loadError": "Impossible de charger les identifiants du store.",
+		"store.retry": "Réessayer",
+		"store.bundleId": "Bundle ID",
+		"store.packageName": "Nom du package",
+		"store.keyId": "ID de clé",
+		"store.issuerId": "ID d’émetteur",
+		"store.appleAppId": "Identifiant Apple de l’app",
+		"store.appleAppIdHint":
+			"Identifiant numérique App Store de l’application, affiché dans App Store Connect.",
+		"store.privateKey": "Clé privée (.p8)",
+		"store.serviceAccount": "Compte de service",
+		"store.serviceAccountKey": "Clé du compte de service (.json)",
+		"store.save": "Enregistrer les identifiants",
+		"store.saving": "Enregistrement…",
+		"store.replace": "Remplacer les identifiants",
+		"store.cancel": "Annuler",
+		"store.registersIos":
+			"L’enregistrement inscrit aussi le Bundle ID et l’Apple Team ID saisis à l’étape 1 :",
+		"store.registersAndroid":
+			"L’enregistrement inscrit aussi le nom du package et le certificat SHA-256 saisis à l’étape 1 :",
+		"store.missingIosRegistration":
+			"Saisissez d’abord le Bundle ID et l’Apple Team ID à l’étape 1.",
+		"store.missingAndroidRegistration":
+			"Saisissez d’abord le nom du package et le certificat SHA-256 à l’étape 1.",
+		"store.confirmTitle": "Remplacer les identifiants configurés ?",
+		"store.confirmDescription":
+			"La vérification des achats utilise les nouveaux identifiants dès leur enregistrement. Les identifiants actuels ne pourront pas être récupérés.",
+		"store.confirm": "Remplacer",
+		"store.saved": "Identifiants du store enregistrés",
+		"store.errorRequired": "Remplissez tous les champs et choisissez le fichier de clé.",
+		"store.errorAppleAppId": "L’identifiant Apple de l’app ne contient que des chiffres.",
+		"store.errorAppleKey": "Choisissez la clé privée .p8 téléchargée depuis App Store Connect.",
+		"store.errorGoogleKey": "Choisissez la clé JSON d’un compte de service Google Cloud.",
+		"store.errorBillingCopy":
+			"Le service de facturation n’a pas pu sécuriser une copie de ces identifiants. Les identifiants configurés n’ont pas été modifiés ; réessayez dans quelques minutes.",
+		"store.errorRejected":
+			"Les identifiants ont été refusés. Vérifiez le fichier de clé et les identifiants saisis.",
+		"store.errorUnknown":
+			"Les identifiants n’ont pas pu être enregistrés. Les identifiants configurés n’ont pas été modifiés.",
+		"store.referenceLabel": "Référence de secret (facultatif)",
+		"store.referenceHint":
+			"Emplacement où votre équipe conserve ces identifiants, par exemple secret://store/app-store. La vérification des achats utilise les identifiants enregistrés ci-dessus, pas cette référence.",
 	},
 } as const satisfies Record<"en" | "fr", Record<string, string>>;
 

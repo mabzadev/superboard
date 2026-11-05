@@ -33,21 +33,7 @@ import {
 	TableHead as FrontTableHead,
 	TableCell as FrontTableCell,
 } from "@superboard/front-ui/ui/table.js";
-import {
-	Activity,
-	BarChart3,
-	DatabaseBackup,
-	Download,
-	Filter,
-	MousePointerClick,
-	Plus,
-	RefreshCw,
-	Smartphone,
-	Trash2,
-	Users,
-	WalletCards,
-	X,
-} from "lucide-react";
+import { DatabaseBackup, Download, Filter, MousePointerClick, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
 	Area,
@@ -68,7 +54,6 @@ import {
 	getAnalyticsEvents,
 	getAnalyticsInstallations,
 	getAnalyticsOperations,
-	getAnalyticsOverview,
 	getAnalyticsPurchases,
 	getAnalyticsReports,
 	getAnalyticsRetention,
@@ -77,7 +62,6 @@ import {
 	type AnalyticsEventAnalysis,
 	type AnalyticsInstallation,
 	type AnalyticsOperation,
-	type AnalyticsOverview,
 	type AnalyticsPurchase,
 	type FunnelResult,
 	type RetentionResult,
@@ -98,7 +82,6 @@ import {
 } from "./AnalyticsFeaturePages.js";
 
 export type AnalyticsPageKind =
-	| "overview"
 	| "dashboards"
 	| "users"
 	| "profiles"
@@ -206,7 +189,6 @@ export function AnalyticsPage({ kind: routeKind }: { kind: AnalyticsPageKind }) 
 }
 
 function AnalyticsPageContent({ kind }: { kind: AnalyticsPageKind }) {
-	if (kind === "overview") return <OverviewPage />;
 	if (kind === "dashboards") return <AnalyticsDashboardsPage />;
 	if (kind === "users") return <AnalyticsUsersPage section="sessions" />;
 	if (kind === "profiles") return <AnalyticsUsersPage section="profiles" />;
@@ -231,125 +213,6 @@ function useAnalyticsRange() {
 		const from = new Date(to.getTime() - 29 * 86_400_000);
 		return { from: from.toISOString(), to: to.toISOString() };
 	}, []);
-}
-
-function OverviewPage() {
-	const { t, locale } = useAnalyticsI18n();
-	const { selectedProject } = useProjectSelection();
-	const range = useAnalyticsRange();
-	const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	const load = useCallback(async () => {
-		if (!selectedProject) return;
-		try {
-			setOverview(await getAnalyticsOverview(selectedProject.id, range));
-			setError(null);
-		} catch (cause) {
-			setError(moduleErrorMessage(cause, locale));
-		}
-	}, [range, selectedProject, locale]);
-	useEffect(() => void load(), [load]);
-
-	return (
-		<ModulePage
-			title={t("Analytics")}
-			description={t(
-				"A single, privacy-aware view of product usage, installations and verified revenue.",
-			)}
-			error={error}
-		>
-			{!selectedProject ? (
-				<EmptyProject />
-			) : (
-				<div className="space-y-6">
-					<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-						<MetricCard icon={Activity} label={t("Events")} value={overview?.events} />
-						<MetricCard icon={Users} label={t("Unique people")} value={overview?.unique_subjects} />
-						<MetricCard icon={BarChart3} label={t("Sessions")} value={overview?.sessions} />
-						<MetricCard
-							icon={Smartphone}
-							label={t("Installations")}
-							value={overview?.installations}
-						/>
-						<MetricCard
-							icon={WalletCards}
-							label={t("Verified purchases")}
-							value={overview?.successful_purchases}
-						/>
-					</div>
-					<Card>
-						<CardHeader className="flex-row items-start justify-between gap-4">
-							<div>
-								<CardTitle>{t("Activity over 30 days")}</CardTitle>
-								<CardDescription>
-									{t("Accepted events after idempotency and project isolation.")}
-								</CardDescription>
-							</div>
-							<Button variant="outline" size="sm" onClick={() => void load()}>
-								<RefreshCw className="size-4" />
-								{t("Refresh")}
-							</Button>
-						</CardHeader>
-						<CardContent>
-							<div className="h-80 w-full" aria-label={t("Events over time")}>
-								<ResponsiveContainer width="100%" height="100%">
-									<AreaChart data={overview?.series ?? []}>
-										<defs>
-											<linearGradient id="analyticsEvents" x1="0" y1="0" x2="0" y2="1">
-												<stop offset="5%" stopColor="var(--primary)" stopOpacity={0.35} />
-												<stop offset="95%" stopColor="var(--primary)" stopOpacity={0.02} />
-											</linearGradient>
-										</defs>
-										<CartesianGrid strokeDasharray="3 3" vertical={false} />
-										<XAxis
-											tickFormatter={(value: string) =>
-												new Intl.DateTimeFormat(locale, {
-													month: "short",
-													day: "numeric",
-													timeZone: "UTC",
-												}).format(new Date(value))
-											}
-											dataKey="date"
-											tickLine={false}
-											axisLine={false}
-											minTickGap={24}
-										/>
-										<YAxis allowDecimals={false} tickLine={false} axisLine={false} width={36} />
-										<Tooltip labelFormatter={(value) => formatDay(String(value), locale)} />
-										<Area
-											dataKey="events"
-											name={t("Events")}
-											type="monotone"
-											stroke="var(--primary)"
-											fill="url(#analyticsEvents)"
-											strokeWidth={2}
-										/>
-									</AreaChart>
-								</ResponsiveContainer>
-							</div>
-						</CardContent>
-					</Card>
-					<div className="grid gap-4 lg:grid-cols-3">
-						<SummaryCard
-							title={t("Average session")}
-							value={formatDuration(overview?.average_session_duration_seconds ?? 0, locale)}
-							detail={t("Across projected sessions in this period")}
-						/>
-						<SummaryCard
-							title={t("Purchase events")}
-							value={formatNumber(overview?.purchase_events, locale)}
-							detail={t("Purchases, renewals, refunds and chargebacks")}
-						/>
-						<SummaryCard
-							title={t("Accounting")}
-							value={t("Verified facts only")}
-							detail={t("SDK clients cannot forge financial events")}
-						/>
-					</div>
-				</div>
-			)}
-		</ModulePage>
-	);
 }
 
 function EventsPage() {
@@ -1033,43 +896,6 @@ function ReportsPage() {
 	);
 }
 
-function MetricCard({
-	icon: Icon,
-	label,
-	value,
-}: {
-	icon: typeof Activity;
-	label: string;
-	value?: number;
-}) {
-	const { locale } = useAnalyticsI18n();
-	return (
-		<Card>
-			<CardContent className="flex items-center gap-3 pt-6">
-				<div className="rounded-lg bg-primary/10 p-2 text-primary">
-					<Icon className="size-5" />
-				</div>
-				<div>
-					<p className="text-sm text-muted-foreground">{label}</p>
-					<p className="text-2xl font-semibold tabular-nums">{formatNumber(value, locale)}</p>
-				</div>
-			</CardContent>
-		</Card>
-	);
-}
-
-function SummaryCard({ title, value, detail }: { title: string; value: string; detail: string }) {
-	return (
-		<Card>
-			<CardHeader>
-				<CardDescription>{title}</CardDescription>
-				<CardTitle>{value}</CardTitle>
-			</CardHeader>
-			<CardContent className="text-sm text-muted-foreground">{detail}</CardContent>
-		</Card>
-	);
-}
-
 function DataTable({
 	columns,
 	empty,
@@ -1131,17 +957,6 @@ function formatDate(value: string, locale: string) {
 		dateStyle: "medium",
 		timeStyle: "short",
 	}).format(new Date(value));
-}
-
-function formatDuration(seconds: number, locale: string) {
-	const secondsFormat = new Intl.NumberFormat(locale, {
-		style: "unit",
-		unit: "second",
-		unitDisplay: "narrow",
-	});
-	if (seconds < 60) return secondsFormat.format(seconds);
-	const minutes = Math.floor(seconds / 60);
-	return `${new Intl.NumberFormat(locale, { style: "unit", unit: "minute", unitDisplay: "narrow" }).format(minutes)} ${secondsFormat.format(seconds % 60)}`;
 }
 
 function formatPercent(value: number, locale: string) {

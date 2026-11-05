@@ -326,18 +326,11 @@ const french: Record<string, string> = {
 	"Subscription restored": "Abonnement restauré",
 	"Subscription cancelled": "Abonnement annulé",
 
-	"Store environment": "Environnement des boutiques",
-	"Catalog synchronization": "Synchronisation du catalogue",
 	"Stripe secret key": "Clé secrète Stripe",
 	"Webhook signing secret": "Secret de signature des webhooks",
-	"Unable to load or save settings. Your changes have been kept.":
-		"Impossible de charger ou d’enregistrer les paramètres. Vos modifications sont conservées.",
 	"Save changes": "Enregistrer",
 	Sandbox: "Bac à sable",
 	Production: "Production",
-	Enabled: "Activé",
-	Disabled: "Désactivé",
-	"Product settings": "Paramètres des produits",
 	"Purchase settings": "Paramètres des achats",
 	"Manage purchase and restore rules and inspect configured store credentials.":
 		"Gérez les règles d’achat et de restauration et consultez la configuration des boutiques.",
@@ -359,7 +352,6 @@ const french: Record<string, string> = {
 		"Configurez la facturation, les passerelles de paiement, les devises et consultez le diagnostic du service de monétisation.",
 	General: "Général",
 	Gateways: "Passerelles",
-	"Default Currency": "Devise par défaut",
 	"Tax Calculation": "Calcul des taxes",
 	"Automatic (Stripe Tax)": "Automatique (Stripe Tax)",
 	"Payment Providers": "Fournisseurs de paiement",

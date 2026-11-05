@@ -42,3 +42,8 @@ tests/checks/sdks/web/identity/react/unit/Setup.test.tsx:generic-api-key:117
 tests/checks/sdks/web/identity/react/unit/Setup.test.tsx:generic-api-key:143
 tests/checks/sdks/web/identity/react/unit/Setup.test.tsx:generic-api-key:167
 tests/checks/sdks/web/identity/react/unit/Setup.test.tsx:generic-api-key:193
+
+# Store credential format check and fake keys in its tests.
+packages/plugins/superboard-core/src/front/settings/components/app/StoreCredentialsSection.tsx:private-key:34
+tests/checks/plugins/superboard-core/api/unit/routes/instances-store-credentials.test.ts:private-key:29
+tests/checks/plugins/superboard-core/front/settings/components/app/StoreCredentialsSection.test.tsx:private-key:47

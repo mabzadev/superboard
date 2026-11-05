@@ -29,7 +29,7 @@ import {
 	Store,
 	Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 import sdkCatalog from "../../../../../../../../scripts/config/sdk-libraries.json";
 import {
@@ -41,6 +41,7 @@ import {
 	type SdkConfiguration,
 	type SdkPlatform,
 } from "../../api/app/appService.js";
+import { useSettingsI18n } from "../../i18n.js";
 import {
 	RenderCodeBlock,
 	SectionHeader,
@@ -49,6 +50,7 @@ import {
 	type CodeBlockData,
 	type StepDef,
 } from "../developers/SetupShared.js";
+import StoreCredentialsSection from "./StoreCredentialsSection.js";
 
 type SetupForm = {
 	bundle_id: string;
@@ -481,6 +483,8 @@ function SetupStep({
 }) {
 	const config = usePublicConfig();
 	const front = useOptionalFrontContext();
+	const { t } = useSettingsI18n();
+	const referenceId = useId();
 	const configuredScheme = front?.projectScope?.instance?.uri_scheme ?? "";
 	const uriScheme = /^[a-z][a-z0-9+.-]*$/iu.test(configuredScheme)
 		? configuredScheme
@@ -527,23 +531,22 @@ function SetupStep({
 				</div>
 			) : null}
 			{(platform === "ios" || platform === "android") && step === 4 ? (
-				<div className="space-y-2">
-					<Label>Store secret reference</Label>
-					<Input
-						placeholder="secret://store/provider-key"
-						value={form.store_credential_reference}
-						onChange={(event) =>
-							setForm((value) => ({
-								...value,
-								store_credential_reference: event.currentTarget.value,
-							}))
-						}
-					/>
-					<p className="text-xs text-muted-foreground">
-						Save only a reference. App Store Connect and Google Play credentials remain Worker
-						secrets.
-					</p>
-				</div>
+				<>
+					<StoreCredentialsSection platform={platform} registration={form} />
+					<div className="space-y-2">
+						<Label htmlFor={referenceId}>{t("store.referenceLabel")}</Label>
+						<Input
+							id={referenceId}
+							placeholder="secret://store/provider-key"
+							value={form.store_credential_reference}
+							onChange={(event) => {
+								const store_credential_reference = event.currentTarget.value;
+								setForm((value) => ({ ...value, store_credential_reference }));
+							}}
+						/>
+						<p className="text-xs text-muted-foreground">{t("store.referenceHint")}</p>
+					</div>
+				</>
 			) : null}
 			{codeBlock ? <RenderCodeBlock data={codeBlock} /> : null}
 			{step > 0 ? (

@@ -187,6 +187,45 @@ describe("DashboardPageContent", () => {
 		});
 	});
 
+	it("shows net revenue in each real currency without adding currencies together", async () => {
+		mocks.productStatistics.mockResolvedValue({
+			totals: {
+				purchases: 3,
+				gross_revenue_micros: 18_980_000,
+				refunds: 1,
+				refunded_micros: 2_000_000,
+				net_revenue_micros: 16_980_000,
+				active_subscriptions: 0,
+			},
+			totals_by_currency: [
+				{
+					currency: "EUR",
+					purchases: 2,
+					gross_revenue_micros: 16_980_000,
+					refunds: 1,
+					refunded_micros: 2_000_000,
+				},
+				{
+					currency: "USD",
+					purchases: 1,
+					gross_revenue_micros: 2_000_000,
+					refunds: 0,
+					refunded_micros: 0,
+				},
+			],
+			by_status: [],
+			series: [],
+			by_product_platform: [],
+		});
+		render(<DashboardPageContent />);
+
+		const money = (value: number, currency: string) =>
+			new Intl.NumberFormat("en", { style: "currency", currency }).format(value);
+		expect(
+			await screen.findByText(`Net revenue: ${money(14.98, "EUR")} · ${money(2, "USD")}`),
+		).toBeInTheDocument();
+	});
+
 	it("aggregates Analytics with the optional Dynamic Links and Products services", async () => {
 		render(<DashboardPageContent />);
 

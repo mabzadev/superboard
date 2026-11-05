@@ -37,7 +37,6 @@ try {
 		return (await response.json()).data;
 	};
 	const original = await read();
-	const restore = { ...original.values };
 	const hydrate = async () => {
 		await page.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])').waitFor();
 		await expect(page.getByRole("link", { name: pluginsLinkName })).toBeVisible();
@@ -77,40 +76,23 @@ try {
 			await expect(transfer).toBeChecked({ checked: blocked });
 			await page.goto(new URL(`/monetization/settings?lang=${locale}&tab=products`, origin).href);
 			await hydrate();
-			const products = page.getByRole("tab", {
-				name: locale === "fr" ? "Produits" : "Products",
+			const general = page.getByRole("tab", {
+				name: locale === "fr" ? "Général" : "General",
 				exact: true,
 			});
-			await expect(products).toHaveAttribute("aria-selected", "true");
-			await products.focus();
-			await products.press("ArrowRight");
+			await expect(general).toHaveAttribute("aria-selected", "true");
+			await expect(page.getByRole("tab")).toHaveCount(2);
+			await expect(
+				page.getByRole("tab", { name: locale === "fr" ? "Produits" : "Products", exact: true }),
+			).toHaveCount(0);
+			await expect(page.locator("#setting-default_currency")).toHaveCount(0);
+			await general.focus();
+			await general.press("ArrowRight");
 			await expect(
 				page.getByRole("tab", { name: locale === "fr" ? "Passerelles" : "Gateways", exact: true }),
 			).toHaveAttribute("aria-selected", "true");
-			await products.click();
-			await page.locator("#setting-default_currency").fill(locale === "fr" ? "CHF" : "EUR");
-			await page.locator("#setting-store_environment").selectOption("sandbox");
-			await page.locator("#setting-catalog_sync_enabled").selectOption("false");
-			const save = page.getByRole("button", {
-				name: locale === "fr" ? "Enregistrer" : "Save changes",
-				exact: true,
-			});
-			await save.click();
-			await expect(page.getByRole("status")).toContainText(
-				locale === "fr" ? "Paramètres enregistrés." : "Settings saved.",
-			);
 			const persisted = await read();
-			assert.equal(
-				persisted.values["superboard-products__default_currency"],
-				locale === "fr" ? "CHF" : "EUR",
-			);
-			assert.equal(persisted.values["superboard-products__store_environment"], "sandbox");
-			assert.equal(persisted.values["superboard-products__catalog_sync_enabled"], false);
-			await page.reload();
-			await hydrate();
-			await expect(page.locator("#setting-default_currency")).toHaveValue(
-				locale === "fr" ? "CHF" : "EUR",
-			);
+			assert.deepEqual(persisted.values, original.values);
 			await page
 				.getByRole("tab", { name: locale === "fr" ? "Passerelles" : "Gateways", exact: true })
 				.click();
@@ -122,10 +104,6 @@ try {
 				page.getByText(locale === "fr" ? "Avancé" : "Advanced", { exact: true }),
 			).toHaveCount(0);
 			await expect(page.locator('[id^="setting-apple_"], [id^="setting-google_"]')).toHaveCount(0);
-			for (const key of Object.keys(original.values).filter((name) =>
-				name.startsWith("superboard-billing__"),
-			))
-				assert.deepEqual(persisted.values[key], original.values[key]);
 			assert.deepEqual(persisted.secretsSet, original.secretsSet);
 			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 			await expect(
@@ -154,7 +132,7 @@ try {
 			).toHaveAttribute("aria-selected", "true");
 			await expect(gateways).toBeVisible();
 			console.log(
-				`${locale}: settings saved and reread; unused credential fields absent with stored values kept, reload, keyboard, Plugins diagnostics link, health check (${inventory.routes.api.length} API routes in diagnostic) and legacy configuration link passed`,
+				`${locale}: settings saved and reread; legacy Products link opens General, unused fields absent with stored values kept, keyboard, Plugins diagnostics link, health check (${inventory.routes.api.length} API routes in diagnostic) and legacy configuration link passed`,
 			);
 		}
 	} finally {
@@ -169,11 +147,6 @@ try {
 				restore_behavior: originalBilling.restore_behavior,
 			},
 		});
-		const response = await context.request.put(endpoint, {
-			headers: { Origin: origin.origin, "X-EmDash-Request": "1" },
-			data: { values: restore },
-		});
-		assert.equal(response.status(), 200);
 		assert.equal(restoredBilling.status(), 200);
 	}
 	const anonymous = await browser.newContext();

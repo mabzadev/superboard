@@ -1,13 +1,7 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 
 import MonetizationSettingsPage from "../../../../../packages/plugins/superboard-monetization/src/front/MonetizationSettingsPage.js";
-import {
-	fireEvent,
-	render,
-	screen,
-	waitFor,
-	within,
-} from "../../../packages/supbrd-front-ui/render.js";
+import { fireEvent, render, screen, within } from "../../../packages/supbrd-front-ui/render.js";
 
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "1-test" } }),
@@ -28,12 +22,6 @@ vi.mock("@superboard/front-ui/section-navigation.js", () => ({
 }));
 
 describe("MonetizationSettingsPage", () => {
-	it("opens a linked products settings tab", async () => {
-		window.history.replaceState(null, "", "/monetization/settings?tab=products");
-		render(<MonetizationSettingsPage />);
-		expect(screen.getByRole("tab", { name: "Products" })).toHaveAttribute("aria-selected", "true");
-	});
-
 	const originalFetch = globalThis.fetch;
 	beforeEach(() => {
 		vi.stubGlobal(
@@ -57,46 +45,24 @@ describe("MonetizationSettingsPage", () => {
 		});
 	});
 
-	it("shows and saves product settings under the keys returned by the Monetization settings endpoint", async () => {
-		const prefix = "superboard-monetization.setting.products_";
-		let stored: Record<string, unknown> = {
-			[`${prefix}default_currency`]: "EUR",
-			[`${prefix}store_environment`]: "sandbox",
-			[`${prefix}catalog_sync_enabled`]: false,
-		};
-		let submitted: Record<string, unknown> | undefined;
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(async (_url, options) => {
-				if (options?.method === "PUT") {
-					submitted = JSON.parse(options.body).values;
-					stored = { ...stored, ...submitted };
-				}
-				return Response.json({
-					data: {
-						values: stored,
-						secretsSet: { "superboard-monetization.setting.billing_apple_private_key": false },
-					},
-				});
-			}),
-		);
+	it("opens legacy Products settings links on the General tab without reading product settings", async () => {
+		const request = vi.fn(async () => Response.json({ data: { values: {}, secretsSet: {} } }));
+		vi.stubGlobal("fetch", request);
 		window.history.replaceState(null, "", "/monetization/settings?tab=products");
 		render(<MonetizationSettingsPage />);
 
-		const currency = await screen.findByLabelText("Default Currency");
-		await waitFor(() => {
-			expect(currency).toHaveValue("EUR");
-		});
-		expect(screen.getByLabelText("Store environment")).toHaveValue("sandbox");
-		expect(screen.getByLabelText("Catalog synchronization")).toHaveValue("false");
-
-		fireEvent.change(currency, { target: { value: "CHF" } });
-		fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
-
-		expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
-		expect(submitted).toEqual({ [`${prefix}default_currency`]: "CHF" });
-		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-		expect(currency).toHaveValue("CHF");
+		expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
+		expect(await screen.findByRole("checkbox", { name: "Enable purchases" })).toBeVisible();
+		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+			"General",
+			"Gateways",
+		]);
+		for (const label of ["Default Currency", "Store environment", "Catalog synchronization"])
+			expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+		expect(request).not.toHaveBeenCalledWith(
+			expect.stringContaining("/plugins/superboard-monetization/settings"),
+			expect.anything(),
+		);
 	});
 
 	it("loads persisted billing settings and reports a rejected save without discarding the draft", async () => {

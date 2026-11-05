@@ -2530,6 +2530,9 @@ importers:
       '@superboard/front-ui':
         specifier: workspace:*
         version: link:../../supbrd-front-ui
+      lucide-react:
+        specifier: ^0.525.0
+        version: 0.525.0(react@19.2.4)
     devDependencies:
       '@dnd-kit/core':
         specifier: ^6.3.1
@@ -2585,9 +2588,6 @@ importers:
       jsdom:
         specifier: 26.1.0
         version: 26.1.0
-      lucide-react:
-        specifier: ^0.525.0
-        version: 0.525.0(react@19.2.4)
       react:
         specifier: 'catalog:'
         version: 19.2.4

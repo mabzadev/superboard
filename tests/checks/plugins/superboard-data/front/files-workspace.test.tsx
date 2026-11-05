@@ -159,7 +159,9 @@ it("opens file settings in a dialog from the Files page", async () => {
 	vi.stubGlobal(
 		"fetch",
 		vi.fn(async () =>
-			Response.json({ data: { values: { "superboard-files__signed_url_ttl_seconds": 600 } } }),
+			Response.json({
+				data: { values: { "superboard-data.setting.files_signed_url_ttl_seconds": 600 } },
+			}),
 		),
 	);
 	render(<FilesPage />);
