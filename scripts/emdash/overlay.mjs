@@ -198,8 +198,10 @@ export function renderRootPackage(upstreamPackage, overlay) {
 
 	scripts["emdash:overlay"] = "node scripts/emdash/overlay.mjs apply";
 	scripts["emdash:overlay:check"] = "node scripts/emdash/overlay.mjs check";
-	scripts["emdash:integration:test"] = "node --test tests/checks/emdash/overlay.test.mjs";
+	scripts["emdash:integration:test"] =
+		"node --test tests/checks/emdash/overlay.test.mjs tests/checks/emdash/format-staged.test.mjs tests/checks/emdash/upstream-sync.test.mjs";
 	scripts["emdash:lint"] = "node scripts/emdash/overlay.mjs lint-upstream";
+	scripts["emdash:upstream-sync"] = "node scripts/emdash/upstream-sync.mjs";
 	scripts.lint = "node --test tests/checks/repository/lint.test.mjs && node tests/lints/lint.mjs";
 	scripts["lint:quick"] = "node tests/lints/lint.mjs --quick --json";
 	scripts["lint:json"] = "node tests/lints/lint.mjs --json";
