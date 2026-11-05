@@ -1,11 +1,32 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, renameSync, rmSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { filesRequiringFormatting } from "../../../scripts/emdash/format-staged.mjs";
+
+const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
+const hook = join(repositoryRoot, "scripts/emdash/format-staged.mjs");
+
+test("a commit whose only staged files are ignored by the formatter passes unchanged", () => {
+	const directory = mkdtempSync(join(repositoryRoot, ".format-staged-fixture-"));
+	try {
+		const manifest = join(directory, "package.json");
+		const content = '{ "name": "fixture",\n      "private": true }\n';
+		writeFileSync(manifest, content);
+		const result = spawnSync(process.execPath, [hook, "code", manifest], {
+			cwd: repositoryRoot,
+			encoding: "utf8",
+		});
+		assert.equal(result.status, 0, result.stdout + result.stderr);
+		assert.equal(readFileSync(manifest, "utf8"), content);
+	} finally {
+		rmSync(directory, { recursive: true, force: true });
+	}
+});
 
 test("moving unchanged code preserves its bytes while edited and new files still require formatting", () => {
 	const root = mkdtempSync(join(tmpdir(), "superboard-staged-format-"));

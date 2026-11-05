@@ -47,7 +47,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
 	const selected = filesRequiringFormatting(root, files);
 	if (selected.length) {
 		const command = resolve(root, "node_modules/.bin", mode === "astro" ? "prettier" : "oxfmt");
-		const args = mode === "astro" ? ["--write"] : ["--ignore-path", ".gitignore", "--write"];
+		const args =
+			mode === "astro"
+				? ["--write"]
+				: ["--ignore-path", ".gitignore", "--no-error-on-unmatched-pattern", "--write"];
 		const result = spawnSync(command, [...args, ...selected], { cwd: root, stdio: "inherit" });
 		if (result.error) throw result.error;
 		process.exitCode = result.status ?? 1;
