@@ -34,8 +34,7 @@ export const PAYWALL_EVENT_TYPES = [
 	"restore_failed",
 ] as const;
 
-export type PurchaseEventType = (typeof PURCHASE_EVENT_TYPES)[number];
-export type PaywallEventType = (typeof PAYWALL_EVENT_TYPES)[number];
+type PurchaseEventType = (typeof PURCHASE_EVENT_TYPES)[number];
 
 export type TargetingContext = {
 	platform?: string | null;
@@ -84,31 +83,49 @@ export function errorEnvelope(error: unknown, requestId: string = crypto.randomU
 	};
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function jsonObject(value: unknown): Record<string, unknown> {
-	if (value && typeof value === "object" && !Array.isArray(value))
-		return value as Record<string, unknown>;
+	if (isRecord(value)) return value;
 	if (typeof value !== "string" || !value) return {};
 	try {
-		const parsed = JSON.parse(value);
-		return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+		const parsed: unknown = JSON.parse(value);
+		return isRecord(parsed) ? parsed : {};
 	} catch {
 		return {};
 	}
 }
 
-function jsonArray<T = unknown>(value: unknown): T[] {
-	if (Array.isArray(value)) return value as T[];
-	if (typeof value !== "string" || !value) return [];
-	try {
-		const parsed = JSON.parse(value);
-		return Array.isArray(parsed) ? (parsed as T[]) : [];
-	} catch {
-		return [];
+function isTargetingCondition(value: unknown): value is TargetingCondition {
+	return isRecord(value) && typeof value.field === "string";
+}
+
+function targetingConditions(value: unknown): TargetingCondition[] | null {
+	let parsed: unknown = value;
+	if (typeof value === "string") {
+		if (!value) return [];
+		try {
+			parsed = JSON.parse(value);
+		} catch {
+			return [];
+		}
 	}
+	if (!Array.isArray(parsed)) return [];
+	const items: unknown[] = parsed;
+	return items.every(isTargetingCondition) ? items : null;
+}
+
+function scalarText(value: unknown): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint")
+		return value ? value.toString() : "";
+	return "";
 }
 
 function versionParts(value: unknown): number[] {
-	const matched = String(value || "").match(/\d+/g) || [];
+	const matched = scalarText(value).match(/\d+/g) || [];
 	return matched.slice(0, 4).map(Number);
 }
 
@@ -139,7 +156,8 @@ function contextValue(condition: TargetingCondition, context: TargetingContext):
 }
 
 export function targetingMatches(conditionsValue: unknown, context: TargetingContext): boolean {
-	const conditions = jsonArray<TargetingCondition>(conditionsValue);
+	const conditions = targetingConditions(conditionsValue);
+	if (!conditions) return false;
 	return conditions.every((condition) => {
 		const actual = contextValue(condition, context);
 		const expected = condition.value;
@@ -151,8 +169,8 @@ export function targetingMatches(conditionsValue: unknown, context: TargetingCon
 			const included = values.includes(String(actual));
 			return operator === "in" ? included : !included;
 		}
-		if (operator === "contains") return String(actual || "").includes(String(expected || ""));
-		if (operator === "not_contains") return !String(actual || "").includes(String(expected || ""));
+		if (operator === "contains") return scalarText(actual).includes(scalarText(expected));
+		if (operator === "not_contains") return !scalarText(actual).includes(scalarText(expected));
 		if (["gt", "gte", "lt", "lte"].includes(operator)) {
 			const difference = condition.field.endsWith("_version")
 				? compareVersions(actual, expected)

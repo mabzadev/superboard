@@ -41,6 +41,28 @@ describe("Purchases v2 targeting", () => {
 	});
 });
 
+describe("Purchases v2 targeting input", () => {
+	it("does not match when a stored condition is malformed", () => {
+		expect(targetingMatches([{ operator: "exists" }], { platform: "ios" })).toBe(false);
+		expect(targetingMatches('[{"field":"platform"},{"value":"ios"}]', { platform: "ios" })).toBe(
+			false,
+		);
+	});
+
+	it("compares text values without turning objects into text", () => {
+		expect(
+			targetingMatches([{ field: "attribute.plan", operator: "contains", value: "object" }], {
+				attributes: { plan: { tier: "gold" } },
+			}),
+		).toBe(false);
+		expect(
+			targetingMatches([{ field: "attribute.plan", operator: "contains", value: "gold" }], {
+				attributes: { plan: "gold-annual" },
+			}),
+		).toBe(true);
+	});
+});
+
 describe("Purchases v2 event normalization", () => {
 	it.each([
 		["DID_RENEW", "active", "normal", "renewal"],

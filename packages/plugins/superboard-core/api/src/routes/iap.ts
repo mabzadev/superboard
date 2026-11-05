@@ -199,7 +199,9 @@ function msDate(value: unknown) {
 }
 
 async function projectForInstance(db: D1Database, instanceId: number, test: boolean) {
-	return getOrCreateProject(db, instanceId, test ? "test" : "production");
+	const project = await getOrCreateProject(db, instanceId, test ? "test" : "production");
+	// D1 binds JavaScript numbers as REAL, which a TEXT project_id column stores as "422.0".
+	return { ...project, id: String(project.id) };
 }
 
 async function recordWebhook(
@@ -209,7 +211,7 @@ async function recordWebhook(
 		notificationType: string;
 		payload: unknown;
 		instanceId: number;
-		projectId: number | string;
+		projectId: string;
 	},
 ) {
 	await db
@@ -226,7 +228,7 @@ async function recordWebhook(
 			params.notificationType,
 			JSON.stringify(params.payload),
 			params.instanceId,
-			String(params.projectId),
+			params.projectId,
 		)
 		.run();
 }
@@ -245,7 +247,7 @@ async function markWebhookQueueFailure(db: D1Database, eventId: string) {
 async function upsertPurchaseEvent(
 	db: D1Database,
 	event: {
-		projectId: number | string;
+		projectId: string;
 		source: "apple" | "google";
 		eventType: string;
 		purchaseType: string;
@@ -288,7 +290,7 @@ async function upsertPurchaseEvent(
       updated_at = datetime('now')
   `)
 		.bind(
-			String(event.projectId),
+			event.projectId,
 			event.productId,
 			event.transactionId,
 			event.originalTransactionId,
@@ -329,7 +331,7 @@ async function upsertPurchaseEvent(
         updated_at = datetime('now')
     `)
 			.bind(
-				String(event.projectId),
+				event.projectId,
 				event.productId,
 				event.transactionId,
 				event.transactionId,
@@ -366,14 +368,14 @@ async function handleApple(c: any, test: boolean) {
 		if (billingServiceEnabled(c.env)) {
 			try {
 				const result = await ingestProviderEventWithBillingAuthority(c.env, {
-					projectId: String(project.id),
+					projectId: project.id,
 					store: "apple",
 					environment,
 					externalEventId,
 					payload: JSON.stringify(body),
 					job: {
 						type: "billing.apple.notification",
-						projectId: String(project.id),
+						projectId: project.id,
 						signedPayload: body.signedPayload,
 						environment,
 					},
@@ -426,7 +428,7 @@ async function handleApple(c: any, test: boolean) {
 		const job = {
 			type: "billing.apple.notification" as const,
 			eventId: persisted.id,
-			projectId: String(project.id),
+			projectId: project.id,
 			signedPayload: body.signedPayload,
 			environment,
 		};
@@ -591,7 +593,7 @@ async function handleGoogle(c: any) {
     `)
 			.bind(instanceId, orderId, orderId)
 			.first()) as { project_id: string; environment: "sandbox" | "production" } | null;
-		const projectId = String(purchase?.project_id || productionProject.id);
+		const projectId = purchase?.project_id || productionProject.id;
 		const environment: "sandbox" | "production" =
 			purchase?.environment === "sandbox" ? "sandbox" : "production";
 		const eventOccurredAt = msDate(data.eventTimeMillis) || new Date().toISOString();
@@ -704,7 +706,7 @@ async function handleGoogle(c: any) {
 		if (billingServiceEnabled(c.env)) {
 			try {
 				const result = await ingestProviderEventWithBillingAuthority(c.env, {
-					projectId: String(project.id),
+					projectId: project.id,
 					store: "google",
 					environment: providerEnvironment,
 					externalEventId: String(pubsubMessageId),
@@ -712,7 +714,7 @@ async function handleGoogle(c: any) {
 					payload: JSON.stringify(body),
 					job: {
 						type: "billing.google.notification",
-						projectId: String(project.id),
+						projectId: project.id,
 						purchaseToken: String(notification.purchaseToken || data.purchaseToken || ""),
 						productId: String(productId || ""),
 						productType,
@@ -768,7 +770,7 @@ async function handleGoogle(c: any) {
 				await c.env.BILLING_QUEUE.send({
 					type: "billing.google.notification",
 					eventId: persisted.id,
-					projectId: String(project.id),
+					projectId: project.id,
 					purchaseToken: String(notification.purchaseToken || data.purchaseToken || ""),
 					productId: String(productId || ""),
 					productType,
@@ -849,9 +851,8 @@ async function handleGoogle(c: any) {
 	const customerId =
 		externalIdentifiers.obfuscatedExternalAccountId || verified?.obfuscatedExternalAccountId;
 	if (verified && customerId) {
-		// D1 binds the numeric project id as REAL ("422.0"), which never equals the TEXT project_id.
 		const customer = await c.env.DB.prepare(
-			"SELECT id FROM billing_customers WHERE id = ? AND project_id = CAST(? AS INTEGER)",
+			"SELECT id FROM billing_customers WHERE id = ? AND project_id = ?",
 		)
 			.bind(String(customerId), project.id)
 			.first();
