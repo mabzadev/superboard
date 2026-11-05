@@ -6,16 +6,20 @@ import {
 	processGoogleBillingNotification,
 	reconcileStoreSubscription,
 } from "../../../../../../packages/plugins/superboard-core/api/src/lib/billing-jobs.js";
+import { identifyCustomer } from "../../../../../../packages/plugins/superboard-core/api/src/lib/billing.js";
 import { encryptCredential } from "../../../../../../packages/plugins/superboard-core/api/src/lib/secrets.js";
+import iapRoutes from "../../../../../../packages/plugins/superboard-core/api/src/routes/iap.js";
 import worker from "../../../../../../packages/plugins/superboard-monetization/billing/src/index.js";
 import { billingTestEnv as testEnv, createExecutionContext } from "./apply-migrations.js";
 
 const projectId = "421";
+const productionProjectId = "422";
 const projectRef = "42-test";
 const weekly = "restore.weekly";
 const lifetime = "restore.lifetime";
 const googlePurchases = new Map<string, Record<string, unknown>>();
 const billingEnv = { ...testEnv, CREDENTIAL_KEY_SCOPE: "billing" };
+let serviceAccount = "";
 
 type TransferEvent = { customer_id: string; event_type: string; payload: string };
 
@@ -31,7 +35,7 @@ async function send(path: string, body: unknown) {
 	);
 }
 
-async function admin(method: string, path: string, body?: unknown) {
+async function admin(method: string, path: string, body?: unknown, role = "owner") {
 	const headers = await createProjectContextHeaders(
 		{
 			module: "billing",
@@ -43,7 +47,7 @@ async function admin(method: string, path: string, body?: unknown) {
 			environment: "test",
 			actorId: 0,
 			operatorId: "restore-operator",
-			role: "owner",
+			role,
 			requestId: crypto.randomUUID(),
 			issuedAt: Math.floor(Date.now() / 1000),
 		},
@@ -80,23 +84,23 @@ async function storeLegacySetting(value: string) {
 		.run();
 }
 
-async function customer(id: string, anonymous = false) {
+async function customer(id: string, anonymous = false, project = projectId) {
 	const appUserId = anonymous ? `$superboard_anon_${id}` : `user-${id}`;
 	await testEnv.DB.batch([
 		testEnv.DB.prepare(
 			"INSERT INTO billing_customers (id, project_id, primary_app_user_id, anonymous) VALUES (?, ?, ?, ?)",
-		).bind(id, projectId, appUserId, anonymous ? 1 : 0),
+		).bind(id, project, appUserId, anonymous ? 1 : 0),
 		testEnv.DB.prepare(
 			"INSERT INTO billing_customer_aliases (project_id, customer_id, app_user_id, alias_type) VALUES (?, ?, ?, ?)",
-		).bind(projectId, id, appUserId, anonymous ? "anonymous" : "identified"),
+		).bind(project, id, appUserId, anonymous ? "anonymous" : "identified"),
 	]);
 	return appUserId;
 }
 
-function subscriptionReceipt(token: string, owner: string | null, active = true) {
+function subscriptionReceipt(token: string, owner: string | null, active = true, sandbox = true) {
 	googlePurchases.set(token, {
 		subscriptionState: active ? "SUBSCRIPTION_STATE_ACTIVE" : "SUBSCRIPTION_STATE_EXPIRED",
-		testPurchase: {},
+		...(sandbox ? { testPurchase: {} } : {}),
 		latestOrderId: `GPA.${token}`,
 		startTime: "2026-10-01T00:00:00.000Z",
 		acknowledgementState: "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED",
@@ -122,30 +126,42 @@ function lifetimeReceipt(token: string, owner: string | null) {
 	});
 }
 
-const buy = (customerId: string, token: string, productId = weekly) =>
+const buy = (
+	customerId: string,
+	token: string,
+	productId = weekly,
+	environment = "sandbox",
+	project = projectId,
+) =>
 	send("/internal/v1/receipts/verify", {
-		project_id: projectId,
+		project_id: project,
 		customer_id: customerId,
 		store: "google",
-		environment: "sandbox",
+		environment,
 		purchase_token: token,
 		product_id: productId,
 	});
 
-const restore = (customerId: string, token: string, productId = weekly) =>
+const restore = (
+	customerId: string,
+	token: string,
+	productId = weekly,
+	environment = "sandbox",
+	project = projectId,
+) =>
 	send("/internal/v1/receipts/restore", {
-		project_id: projectId,
+		project_id: project,
 		customer_id: customerId,
-		environment: "sandbox",
+		environment,
 		google_purchases: [{ purchase_token: token, product_id: productId }],
 	});
 
-async function chainOwners(token: string) {
+async function chainOwners(token: string, project = projectId) {
 	const rows = await testEnv.DB.prepare(
 		`SELECT customer_id FROM billing_subscriptions WHERE project_id = ? AND original_transaction_id = ?
 		 UNION SELECT customer_id FROM billing_transactions WHERE project_id = ? AND original_transaction_id = ?`,
 	)
-		.bind(projectId, token, projectId, token)
+		.bind(project, token, project, token)
 		.all<{ customer_id: string | null }>();
 	return rows.results.map((row) => row.customer_id).sort();
 }
@@ -174,6 +190,16 @@ async function transferEvents(...customerIds: string[]) {
 	return rows.results.filter((row) => customerIds.includes(row.customer_id));
 }
 
+async function coinBalances(...customerIds: string[]) {
+	const rows = await testEnv.DB.prepare(
+		`SELECT customer_id, SUM(amount) AS amount FROM billing_balance_ledger
+		 WHERE project_id = ? AND currency_identifier = 'coins' GROUP BY customer_id ORDER BY customer_id`,
+	)
+		.bind(projectId)
+		.all<{ customer_id: string; amount: number }>();
+	return rows.results.filter((row) => customerIds.includes(row.customer_id));
+}
+
 async function expectReceiptInUse(response: Response) {
 	expect(response.status).toBe(409);
 	expect(await response.json()).toMatchObject({ code: "receipt_already_in_use", retryable: false });
@@ -182,7 +208,7 @@ async function expectReceiptInUse(response: Response) {
 describe("RevenueCat restore behavior in the Billing runtime", () => {
 	beforeAll(async () => {
 		const { privateKey } = await generateKeyPair("RS256", { extractable: true });
-		const serviceAccount = JSON.stringify({
+		serviceAccount = JSON.stringify({
 			client_email: "billing@restore.test",
 			private_key: await exportPKCS8(privateKey),
 			token_uri: "https://oauth2.restore.test/token",
@@ -209,6 +235,10 @@ describe("RevenueCat restore behavior in the Billing runtime", () => {
 				 VALUES ('restore-weekly', ?, 'google', 'sandbox', ?, 'subscription'),
 				        ('restore-lifetime', ?, 'google', 'sandbox', ?, 'non_consumable')`,
 			).bind(projectId, weekly, projectId, lifetime),
+			testEnv.DB.prepare(
+				`INSERT INTO billing_products (id, project_id, store, environment, store_product_id, product_type, metadata)
+				 VALUES ('restore-coins', ?, 'google', 'sandbox', 'restore.coins', 'consumable', ?)`,
+			).bind(projectId, JSON.stringify({ currency_identifier: "coins", credit_amount: 5 })),
 			testEnv.DB.prepare(
 				"INSERT INTO billing_entitlements (id, project_id, identifier, display_name) VALUES ('restore-premium', ?, 'premium', 'Premium')",
 			).bind(projectId),
@@ -463,5 +493,237 @@ describe("RevenueCat restore behavior in the Billing runtime", () => {
 
 		expect((await restore("missing-restorer", "missing-token", lifetime)).status).toBe(200);
 		expect(await chainOwners("missing-token")).toEqual(["missing-restorer"]);
+	});
+
+	it("applies the sandbox restore behavior to sandbox purchases only, when one is set", async () => {
+		const saved = await admin("PUT", `/internal/v1/admin/billing/${projectRef}/settings`, {
+			purchases_enabled: true,
+			restore_behavior: "block",
+			sandbox_restore_behavior: "transfer",
+		});
+		expect(saved.status).toBe(200);
+		expect(await saved.json()).toMatchObject({
+			restore_behavior: "block",
+			sandbox_restore_behavior: "transfer",
+		});
+		await testEnv.DB.prepare(
+			`INSERT INTO billing_products (id, project_id, store, environment, store_product_id, product_type)
+			 VALUES ('restore-weekly-production', ?, 'google', 'production', ?, 'subscription')`,
+		)
+			.bind(projectId, weekly)
+			.run();
+		await customer("sandbox-owner");
+		await customer("sandbox-restorer");
+		subscriptionReceipt("sandbox-token", "sandbox-owner");
+		expect((await buy("sandbox-owner", "sandbox-token")).status).toBe(200);
+		expect((await restore("sandbox-restorer", "sandbox-token")).status).toBe(200);
+		expect(await chainOwners("sandbox-token")).toEqual(["sandbox-restorer"]);
+
+		await customer("production-owner");
+		await customer("production-restorer");
+		subscriptionReceipt("production-token", "production-owner", true, false);
+		expect((await buy("production-owner", "production-token", weekly, "production")).status).toBe(
+			200,
+		);
+		await expectReceiptInUse(
+			await restore("production-restorer", "production-token", weekly, "production"),
+		);
+		expect(await chainOwners("production-token")).toEqual(["production-owner"]);
+
+		expect(await setRestoreBehavior("block")).toBe("block");
+		const overview = await admin("GET", `/internal/v1/admin/billing/${projectRef}`);
+		expect((await overview.json<{ settings: Record<string, unknown> }>()).settings).toMatchObject({
+			restore_behavior: "block",
+			sandbox_restore_behavior: "transfer",
+		});
+
+		const cleared = await admin("PUT", `/internal/v1/admin/billing/${projectRef}/settings`, {
+			purchases_enabled: true,
+			restore_behavior: "block",
+			sandbox_restore_behavior: null,
+		});
+		expect(await cleared.json()).toMatchObject({ sandbox_restore_behavior: null });
+		await customer("cleared-owner");
+		await customer("cleared-restorer");
+		subscriptionReceipt("cleared-token", "cleared-owner");
+		expect((await buy("cleared-owner", "cleared-token")).status).toBe(200);
+		await expectReceiptInUse(await restore("cleared-restorer", "cleared-token"));
+		expect(await chainOwners("cleared-token")).toEqual(["cleared-owner"]);
+	});
+
+	it("transfers a customer's purchases to another App User ID from the customer profile", async () => {
+		await storeLegacySetting("block");
+		const sourceAppUserId = await customer("manual-source");
+		const targetAppUserId = await customer("manual-target");
+		subscriptionReceipt("manual-subscription", "manual-source");
+		lifetimeReceipt("manual-coins", "manual-source");
+		expect((await buy("manual-source", "manual-subscription")).status).toBe(200);
+		expect((await buy("manual-source", "manual-coins", "restore.coins")).status).toBe(200);
+		const transferPath = `/internal/v1/admin/purchases/projects/${projectRef}/customers/manual-source/transfer`;
+
+		expect(
+			(await admin("POST", transferPath, { target_customer_id: "manual-target" }, "member")).status,
+		).toBe(403);
+		expect(
+			(await admin("POST", transferPath, { target_customer_id: "manual-missing" })).status,
+		).toBe(404);
+		expect(
+			(await admin("POST", transferPath, { target_customer_id: "manual-source" })).status,
+		).toBe(422);
+		expect(await chainOwners("manual-subscription")).toEqual(["manual-source"]);
+
+		const transferred = await admin("POST", transferPath, { target_customer_id: "manual-target" });
+
+		expect(transferred.status).toBe(200);
+		expect(await transferred.json()).toEqual({ customer_id: "manual-target", transferred: 2 });
+		expect(await chainOwners("manual-subscription")).toEqual(["manual-target"]);
+		expect(await chainOwners("manual-coins")).toEqual(["manual-target"]);
+		expect(await premiumActive("manual-source")).toBe(false);
+		expect(await premiumActive("manual-target")).toBe(true);
+		const events = await transferEvents("manual-source", "manual-target");
+		expect(events.map((event) => event.customer_id)).toEqual(["manual-source", "manual-target"]);
+		for (const event of events)
+			expect(JSON.parse(event.payload)).toMatchObject({
+				transferred_from: [sourceAppUserId],
+				transferred_to: [targetAppUserId],
+				store: "google",
+				environment: "sandbox",
+			});
+		const webhooks = await testEnv.DB.prepare(
+			`SELECT customer_id, payload FROM billing_webhook_deliveries
+			 WHERE endpoint_id = 'restore-transfer-endpoint' AND customer_id IN ('manual-source', 'manual-target')`,
+		).all<{ customer_id: string; payload: string }>();
+		expect(webhooks.results.map((webhook) => webhook.customer_id)).toEqual(["manual-target"]);
+		expect(JSON.parse(webhooks.results[0]?.payload ?? "{}")).toMatchObject({
+			type: "TRANSFER",
+			transferred_from: [sourceAppUserId],
+			transferred_to: [targetAppUserId],
+		});
+		expect(await coinBalances("manual-source", "manual-target")).toEqual([
+			{ customer_id: "manual-source", amount: 5 },
+		]);
+		const audit = await testEnv.DB.prepare(
+			`SELECT resource_id, metadata FROM billing_admin_audit_logs
+			 WHERE project_id = ? AND action = 'customer.purchases_transferred'`,
+		)
+			.bind(projectId)
+			.first<{ resource_id: string; metadata: string }>();
+		expect(audit?.resource_id).toBe("manual-source");
+		expect(JSON.parse(audit?.metadata ?? "{}")).toEqual({
+			target_customer_id: "manual-target",
+			transferred: 2,
+		});
+
+		expect((await restore("manual-target", "manual-subscription")).status).toBe(200);
+		await expectReceiptInUse(await restore("manual-source", "manual-subscription"));
+		expect(await chainOwners("manual-subscription")).toEqual(["manual-target"]);
+	});
+
+	it("leaves virtual currency granted by a transferred consumable with the customer who received it", async () => {
+		expect(await setRestoreBehavior("transfer")).toBe("transfer");
+		await customer("coins-owner");
+		await customer("coins-buyer");
+		lifetimeReceipt("coins-token", "coins-owner");
+		expect((await buy("coins-owner", "coins-token", "restore.coins")).status).toBe(200);
+
+		expect((await buy("coins-buyer", "coins-token", "restore.coins")).status).toBe(200);
+
+		expect(await chainOwners("coins-token")).toEqual(["coins-buyer"]);
+		expect(await coinBalances("coins-owner", "coins-buyer")).toEqual([
+			{ customer_id: "coins-owner", amount: 5 },
+		]);
+	});
+
+	it("records an alias in the customer history when an anonymous App User ID is merged", async () => {
+		expect(await setRestoreBehavior("transfer")).toBe("transfer");
+		const anonymousAppUserId = await customer("alias-anonymous", true);
+		const restorerAppUserId = await customer("alias-restorer");
+		subscriptionReceipt("alias-token", "alias-anonymous");
+		expect((await buy("alias-anonymous", "alias-token")).status).toBe(200);
+		expect((await restore("alias-restorer", "alias-token")).status).toBe(200);
+
+		const history = await admin(
+			"GET",
+			`/internal/v1/admin/purchases/projects/${projectRef}/customers/alias-restorer`,
+		);
+		const detail = await history.json<{ events: Array<{ event_type: string; payload: string }> }>();
+		expect(
+			detail.events
+				.filter((event) => event.event_type === "aliased")
+				.map((event) => JSON.parse(event.payload)),
+		).toEqual([{ alias: anonymousAppUserId, app_user_id: restorerAppUserId }]);
+
+		const loginAppUserId = await customer("alias-login", true);
+		const identified = await identifyCustomer(
+			testEnv.DB,
+			projectId,
+			loginAppUserId,
+			"user-alias-login",
+		);
+		const loginEvents = await testEnv.DB.prepare(
+			"SELECT payload FROM billing_events WHERE customer_id = ? AND event_type = 'aliased'",
+		)
+			.bind(String(identified?.id))
+			.all<{ payload: string }>();
+		expect(loginEvents.results.map((event) => JSON.parse(event.payload))).toEqual([
+			{ alias: loginAppUserId, app_user_id: "user-alias-login" },
+		]);
+	});
+
+	it("keeps a transferred purchase with its new owner when the legacy Google webhook names the previous owner", async () => {
+		await testEnv.DB.batch([
+			testEnv.DB.prepare(
+				"INSERT INTO projects (id, name, identifier, instance_id, is_test) VALUES (422, 'Restore production', 'restore-production', 42, 0)",
+			),
+			testEnv.DB.prepare(
+				`INSERT INTO billing_products (id, project_id, store, environment, store_product_id, product_type)
+				 VALUES ('legacy-weekly', ?, 'google', 'production', ?, 'subscription')`,
+			).bind(productionProjectId, weekly),
+		]);
+		await customer("legacy-owner", false, productionProjectId);
+		await customer("legacy-restorer", false, productionProjectId);
+		subscriptionReceipt("legacy-token", "legacy-owner", true, false);
+		const production = ["production", productionProjectId] as const;
+		expect((await buy("legacy-owner", "legacy-token", weekly, ...production)).status).toBe(200);
+		expect((await restore("legacy-restorer", "legacy-token", weekly, ...production)).status).toBe(
+			200,
+		);
+		googlePurchases.set("legacy-token", {
+			...googlePurchases.get("legacy-token"),
+			latestOrderId: "GPA.legacy-token..1",
+		});
+
+		const notified = await iapRoutes.request(
+			"/google/42",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Goog-Channel-Token": "legacy-channel-token",
+				},
+				body: JSON.stringify({
+					packageName: "com.superboard.restore",
+					subscriptionNotification: {
+						notificationType: "SUBSCRIPTION_RENEWED",
+						purchaseToken: "legacy-token",
+						subscriptionId: weekly,
+					},
+				}),
+			},
+			{
+				...billingEnv,
+				GOOGLE_PUBSUB_VERIFICATION_TOKEN: "legacy-channel-token",
+				GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: serviceAccount,
+			},
+		);
+
+		expect(notified.status).toBe(200);
+		const renewal = await testEnv.DB.prepare(
+			"SELECT customer_id FROM billing_transactions WHERE project_id = ? AND store_transaction_id = ?",
+		)
+			.bind(productionProjectId, "GPA.legacy-token..1")
+			.first<{ customer_id: string }>();
+		expect(renewal?.customer_id).toBe("legacy-restorer");
+		expect(await chainOwners("legacy-token", productionProjectId)).toEqual(["legacy-restorer"]);
 	});
 });

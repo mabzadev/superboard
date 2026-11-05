@@ -244,6 +244,15 @@ class SuperBoardOfferings {
   final Map<String, SuperBoardOffering> all;
 }
 
+/// Stable error codes reported in [SuperBoardPurchaseResult.code].
+abstract final class SuperBoardPurchasesErrorCode {
+  /// The Store purchase belongs to another App User ID, and the project's
+  /// restore behavior keeps it with that App User ID. Retrying with the same
+  /// App User ID does not succeed: the customer must sign in with the App User
+  /// ID that owns the purchase.
+  static const receiptAlreadyInUse = 'receipt_already_in_use';
+}
+
 class SuperBoardPurchaseResult {
   const SuperBoardPurchaseResult(
     this.outcome, {
@@ -263,6 +272,11 @@ class SuperBoardPurchaseResult {
   final String? productIdentifier;
   final String? transactionIdentifier;
   final String? requestId;
+
+  /// Whether the server refused the purchase or restore because another App
+  /// User ID owns it ([SuperBoardPurchasesErrorCode.receiptAlreadyInUse]).
+  bool get isReceiptAlreadyInUse =>
+      code == SuperBoardPurchasesErrorCode.receiptAlreadyInUse;
 
   Map<String, dynamic> toJson() => {
     'state': outcome.name,

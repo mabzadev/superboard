@@ -7,10 +7,17 @@ import {
 	queueCustomerEntitlementChanged,
 	refreshCatalogEntitlement,
 } from "../lib/billing";
-import { DISPLAY_CURRENCIES, isDisplayCurrency } from "../lib/billing-exchange-rates";
+import {
+	DISPLAY_CURRENCIES,
+	displayCurrencyViewer,
+	isDisplayCurrency,
+	readDisplayCurrency,
+	saveDisplayCurrency,
+	type DisplayCurrency,
+} from "../lib/billing-exchange-rates";
 import { signedCustomerInfo } from "../lib/billing-identity";
 import { customerForAppUserId } from "../lib/billing-identity";
-import { restoreBehavior } from "../lib/billing-restore";
+import { restoreBehavior, sandboxRestoreBehavior } from "../lib/billing-restore";
 import { getOrCreateProject, parseProjectExternalId } from "../lib/db";
 import { isPurchasesEnabled } from "../lib/deployment";
 import { readApiJson } from "../lib/request-body";
@@ -160,6 +167,7 @@ admin.get("/:projectId", async (c) => {
 			settings: settings || {
 				project_id: String(project.id),
 				restore_behavior: "transfer",
+				sandbox_restore_behavior: null,
 				purchases_enabled: isPurchasesEnabled(c.env, null) ? 1 : 0,
 			},
 			products: products.results,
@@ -208,6 +216,12 @@ admin.put("/:projectId/settings", async (c) => {
     `)
 			.bind(project.id, restore, data.purchases_enabled ? 1 : 0)
 			.run();
+		if (Object.hasOwn(data, "sandbox_restore_behavior"))
+			await c.env.DB.prepare(
+				"UPDATE billing_project_settings SET sandbox_restore_behavior = ? WHERE project_id = ?",
+			)
+				.bind(sandboxRestoreBehavior(data.sandbox_restore_behavior), project.id)
+				.run();
 		return c.json(
 			await c.env.DB.prepare("SELECT * FROM billing_project_settings WHERE project_id = ?")
 				.bind(project.id)
@@ -1208,42 +1222,31 @@ admin.post("/:projectId/stripe/sync", async (c) => {
 	}
 });
 
-async function projectDisplayCurrency(db: D1Database, projectId: string) {
-	const row = await db
-		.prepare("SELECT display_currency FROM billing_project_currency_settings WHERE project_id = ?")
-		.bind(projectId)
-		.first<{ display_currency: string }>();
-	const currency = row?.display_currency;
-	return {
-		display_currency: isDisplayCurrency(currency) ? currency : "USD",
-		available_currencies: DISPLAY_CURRENCIES,
-	};
+function displayCurrencyResponse(currency: DisplayCurrency) {
+	return { display_currency: currency, available_currencies: DISPLAY_CURRENCIES };
 }
-admin.get("/:projectId/settings/display-currency", async (c) => {
+admin.get("/:projectId/operator/display-currency", async (c) => {
 	try {
 		const project = await projectFor(c);
-		return c.json(await projectDisplayCurrency(c.env.DB, String(project.id)));
+		const viewer = displayCurrencyViewer(project.instanceId, c.get("operatorId"));
+		return c.json(displayCurrencyResponse(await readDisplayCurrency(c.env.DB, viewer)));
 	} catch (error) {
 		return fail(c, error);
 	}
 });
-admin.put("/:projectId/settings/display-currency", async (c) => {
+admin.put("/:projectId/operator/display-currency", async (c) => {
 	try {
 		const project = await projectFor(c);
-		if (!["owner", "admin"].includes(String(project.role)))
-			return c.json({ error: "Administrator access required" }, 403);
+		const viewer = displayCurrencyViewer(project.instanceId, c.get("operatorId"));
+		if (!viewer) return c.json({ error: "An operator session is required" }, 403);
 		const data = await body(c);
 		if (!isDisplayCurrency(data.display_currency))
-			return c.json({ error: "display_currency must be USD or EUR" }, 422);
-		await c.env.DB.prepare(`
-      INSERT INTO billing_project_currency_settings (project_id, display_currency)
-      VALUES (?, ?)
-      ON CONFLICT(project_id) DO UPDATE SET display_currency = excluded.display_currency,
-        updated_at = datetime('now')
-    `)
-			.bind(String(project.id), data.display_currency)
-			.run();
-		return c.json(await projectDisplayCurrency(c.env.DB, String(project.id)));
+			return c.json(
+				{ error: `display_currency must be one of ${DISPLAY_CURRENCIES.join(", ")}` },
+				422,
+			);
+		await saveDisplayCurrency(c.env.DB, viewer, data.display_currency);
+		return c.json(displayCurrencyResponse(data.display_currency));
 	} catch (error) {
 		return fail(c, error);
 	}

@@ -1,3 +1,4 @@
+import { usePluginEnabled } from "@superboard/front-ui/context";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
 import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
@@ -41,6 +42,10 @@ type RestoreBehavior = (typeof restoreBehaviors)[number]["value"];
 
 function storedRestoreBehavior(value: string | undefined): RestoreBehavior {
 	return restoreBehaviors.find((behavior) => behavior.value === value)?.value ?? "transfer";
+}
+
+function storedSandboxBehavior(value: string | null | undefined): RestoreBehavior | null {
+	return restoreBehaviors.find((behavior) => behavior.value === value)?.value ?? null;
 }
 
 export default function MonetizationSettingsPage() {
@@ -92,10 +97,12 @@ export default function MonetizationSettingsPage() {
 }
 
 function BillingSettings({ projectId, tab }: { projectId: string; tab: string }) {
+	const operatorAccountPage = usePluginEnabled("superboard-user");
 	const { t, locale } = useMonetizationI18n();
 	const [overview, setOverview] = useState<BillingOverview | null>(null);
 	const [enabled, setEnabled] = useState(false);
 	const [restoreBehavior, setRestoreBehavior] = useState<RestoreBehavior>("transfer");
+	const [sandboxBehavior, setSandboxBehavior] = useState<RestoreBehavior | null>(null);
 	const [error, setError] = useState<"load" | "save" | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [saved, setSaved] = useState(false);
@@ -111,6 +118,7 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 				setOverview(data);
 				setEnabled(data.settings.purchases_enabled === 1);
 				setRestoreBehavior(storedRestoreBehavior(data.settings.restore_behavior));
+				setSandboxBehavior(storedSandboxBehavior(data.settings.sandbox_restore_behavior));
 			})
 			.catch(() => {
 				if (active) setError("load");
@@ -122,21 +130,27 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 	const dirty =
 		overview?.settings &&
 		(enabled !== (overview.settings.purchases_enabled === 1) ||
-			restoreBehavior !== storedRestoreBehavior(overview.settings.restore_behavior));
+			restoreBehavior !== storedRestoreBehavior(overview.settings.restore_behavior) ||
+			sandboxBehavior !== storedSandboxBehavior(overview.settings.sandbox_restore_behavior));
 	const save = async () => {
 		setBusy(true);
 		setError(null);
 		setSaved(false);
+		const storedSandbox = storedSandboxBehavior(overview?.settings?.sandbox_restore_behavior);
 		try {
 			await updateBillingSettings(projectId, {
 				purchases_enabled: enabled,
 				restore_behavior: restoreBehavior,
+				...(sandboxBehavior !== null || storedSandbox !== null
+					? { sandbox_restore_behavior: sandboxBehavior }
+					: {}),
 			});
 			const persisted = await getBillingOverview(projectId);
 			if (
 				!persisted.settings ||
 				(persisted.settings.purchases_enabled === 1) !== enabled ||
-				storedRestoreBehavior(persisted.settings.restore_behavior) !== restoreBehavior
+				storedRestoreBehavior(persisted.settings.restore_behavior) !== restoreBehavior ||
+				storedSandboxBehavior(persisted.settings.sandbox_restore_behavior) !== sandboxBehavior
 			)
 				throw new Error("BILLING_SETTINGS_NOT_PERSISTED");
 			setOverview(persisted);
@@ -230,6 +244,44 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 										</div>
 									))}
 								</RadioGroup>
+								<label className="flex items-center gap-2">
+									<Checkbox
+										checked={sandboxBehavior !== null}
+										onCheckedChange={(value) => {
+											setSandboxBehavior(value === true ? restoreBehavior : null);
+											setSaved(false);
+										}}
+									/>
+									{t("Use a different restore behavior for sandbox")}
+								</label>
+								{sandboxBehavior !== null && (
+									<div className="space-y-2 ps-6">
+										<Label htmlFor="sandbox-restore-behavior">
+											{t("Sandbox restore behavior")}
+										</Label>
+										<select
+											id="sandbox-restore-behavior"
+											aria-describedby="sandbox-restore-behavior-help"
+											className="h-9 w-full max-w-md rounded-md border bg-background px-3 text-sm"
+											value={sandboxBehavior}
+											onChange={(event) => {
+												setSandboxBehavior(storedRestoreBehavior(event.target.value));
+												setSaved(false);
+											}}
+										>
+											{restoreBehaviors.map((behavior) => (
+												<option key={behavior.value} value={behavior.value}>
+													{t(behavior.label)}
+												</option>
+											))}
+										</select>
+										<p id="sandbox-restore-behavior-help" className="text-sm text-muted-foreground">
+											{t(
+												"Applies to sandbox purchases instead of the behavior above, to test another behavior without changing production.",
+											)}
+										</p>
+									</div>
+								)}
 							</div>
 						</fieldset>
 						{error === "save" && <p role="alert">{t("Could not save billing settings.")}</p>}
@@ -239,7 +291,7 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 						</Button>
 					</form>
 				)}
-				<DisplayCurrencySetting key={projectId} projectId={projectId} />
+				{!operatorAccountPage && <DisplayCurrencySetting key={projectId} projectId={projectId} />}
 			</TabsContent>
 			<TabsContent className="space-y-5" value="gateways" forceMount hidden={tab !== "gateways"}>
 				<StripeSettings key={projectId} projectId={projectId} />

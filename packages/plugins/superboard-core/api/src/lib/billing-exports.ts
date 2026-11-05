@@ -110,7 +110,12 @@ function parseColumns(value: unknown) {
 
 function csv(value: unknown) {
 	if (value === null || value === undefined) return "";
-	const text = typeof value === "object" ? JSON.stringify(value) : String(value);
+	const text =
+		typeof value === "string"
+			? value
+			: typeof value === "number" || typeof value === "boolean" || typeof value === "bigint"
+				? value.toString()
+				: (JSON.stringify(value) ?? "");
 	return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 

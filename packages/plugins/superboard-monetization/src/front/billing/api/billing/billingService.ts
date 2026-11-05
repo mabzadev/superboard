@@ -45,7 +45,11 @@ export interface BillingProductEntitlement {
 }
 
 export interface BillingOverview {
-	settings?: { purchases_enabled: number; restore_behavior: string };
+	settings?: {
+		purchases_enabled: number;
+		restore_behavior: string;
+		sandbox_restore_behavior?: string | null;
+	};
 	products: BillingProduct[];
 	entitlements: BillingEntitlement[];
 	offerings: BillingOffering[];
@@ -146,35 +150,42 @@ export const getBillingOverview = async (projectId: string): Promise<BillingOver
 
 export const updateBillingSettings = async (
 	projectId: string,
-	data: { purchases_enabled: boolean; restore_behavior: string },
+	data: {
+		purchases_enabled: boolean;
+		restore_behavior: string;
+		sandbox_restore_behavior?: string | null;
+	},
 ) => (await PUT(config.apiPath + `/billing/${projectId}/settings`, data)).data;
 
 export type DisplayCurrencySetting = {
-	display_currency: "USD" | "EUR";
-	available_currencies: Array<"USD" | "EUR">;
+	display_currency: string;
+	available_currencies: string[];
 };
 
 function displayCurrencySetting(value: unknown): DisplayCurrencySetting {
-	const currency =
-		value && typeof value === "object" && "display_currency" in value
-			? value.display_currency
-			: null;
+	const record = value && typeof value === "object" ? value : {};
+	const available =
+		"available_currencies" in record && Array.isArray(record.available_currencies)
+			? record.available_currencies.filter(
+					(currency): currency is string =>
+						typeof currency === "string" && /^[A-Z]{3}$/u.test(currency),
+				)
+			: [];
+	const currency = "display_currency" in record ? record.display_currency : null;
 	return {
-		display_currency: currency === "EUR" ? "EUR" : "USD",
-		available_currencies: ["USD", "EUR"],
+		display_currency:
+			typeof currency === "string" && available.includes(currency) ? currency : "USD",
+		available_currencies: available.length ? available : ["USD"],
 	};
 }
 
-export const getDisplayCurrency = async (projectId: string) => {
-	const response = await GET(config.apiPath + `/billing/${projectId}/settings/display-currency`);
+export const getOperatorDisplayCurrency = async (projectId: string) => {
+	const response = await GET(config.apiPath + `/billing/${projectId}/operator/display-currency`);
 	return displayCurrencySetting(response.data);
 };
 
-export const updateDisplayCurrency = async (
-	projectId: string,
-	displayCurrency: DisplayCurrencySetting["display_currency"],
-) => {
-	const response = await PUT(config.apiPath + `/billing/${projectId}/settings/display-currency`, {
+export const updateOperatorDisplayCurrency = async (projectId: string, displayCurrency: string) => {
+	const response = await PUT(config.apiPath + `/billing/${projectId}/operator/display-currency`, {
 		display_currency: displayCurrency,
 	});
 	return displayCurrencySetting(response.data);
@@ -895,6 +906,26 @@ export const revokeBillingEntitlement = async (
 			),
 		)
 	).data;
+
+export const transferBillingCustomerPurchases = async (
+	projectId: string,
+	customerId: string,
+	targetCustomerId: string,
+) => {
+	const response = await POST(
+		purchasesV2Path(projectId, `/customers/${encodeURIComponent(customerId)}/transfer`),
+		{ target_customer_id: targetCustomerId },
+	);
+	const data: unknown = response.data;
+	const transferred =
+		data &&
+		typeof data === "object" &&
+		"transferred" in data &&
+		typeof data.transferred === "number"
+			? data.transferred
+			: 0;
+	return { customer_id: targetCustomerId, transferred };
+};
 
 export const mergeBillingCustomers = async (
 	projectId: string,

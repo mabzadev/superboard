@@ -1,7 +1,7 @@
 import { useFrontContext } from "@superboard/front-ui/context";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { operatorMessages } from "./operator-messages.js";
 import { operatorGet, operatorPost, registerOperatorPasskey } from "./operator-passkey.js";
@@ -13,7 +13,13 @@ interface Passkey {
 	lastUsedAt: string;
 }
 
-export function OperatorProfile({ security = false }: { security?: boolean }) {
+export function OperatorProfile({
+	security = false,
+	children,
+}: {
+	security?: boolean;
+	children?: ReactNode;
+}) {
 	const { operator, locale } = useFrontContext();
 	const text = operatorMessages[locale];
 	const [name, setName] = useState(operator?.name ?? "");
@@ -152,6 +158,7 @@ export function OperatorProfile({ security = false }: { security?: boolean }) {
 					<a href="/auth/account">{text.security}</a>
 				</form>
 			)}
+			{!security && children}
 			<Button
 				variant="outline"
 				disabled={busy}

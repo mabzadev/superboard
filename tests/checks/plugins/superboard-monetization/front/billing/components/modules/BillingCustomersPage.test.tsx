@@ -10,6 +10,7 @@ import {
 	render,
 	screen,
 	waitFor,
+	within,
 } from "../../../../../../packages/supbrd-front-ui/render.js";
 
 const mocks = vi.hoisted(() => ({
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 	getBillingCustomer: vi.fn(),
 	deleteBillingCustomer: vi.fn(),
 	setBillingCustomerBlocked: vi.fn(),
+	transferBillingCustomerPurchases: vi.fn(),
 }));
 
 vi.mock(
@@ -31,6 +33,7 @@ vi.mock(
 		grantBillingEntitlement: vi.fn(),
 		mergeBillingCustomers: vi.fn(),
 		revokeBillingEntitlement: vi.fn(),
+		transferBillingCustomerPurchases: mocks.transferBillingCustomerPurchases,
 	}),
 );
 vi.mock(
@@ -370,5 +373,121 @@ describe("billing customers page", () => {
 			/^27,48\s€1 achat en attente de conversion n’est pas inclus\.$/u,
 		);
 		expect(row("google-tx-2")).toHaveTextContent(/4,99\sR\$ · Conversion en attente$/u);
+	});
+
+	it("shows the store of each billing event and the aliases recorded in the history", async () => {
+		const detail = await mocks.getBillingCustomer.getMockImplementation()?.();
+		mocks.getBillingCustomer.mockResolvedValue({
+			...detail,
+			events: [
+				{
+					id: "ev-renewal",
+					event_type: "RENEWAL",
+					status: "processed",
+					provider: "google",
+					occurred_at: "2026-11-01T12:00:00.000Z",
+				},
+				{
+					id: "ev-alias",
+					event_type: "aliased",
+					status: "processed",
+					provider: "superboard",
+					occurred_at: "2026-11-02T12:00:00.000Z",
+					payload: JSON.stringify({ alias: "$superboard_anon_1", app_user_id: "app-user-1" }),
+				},
+			],
+		});
+		window.history.replaceState({}, "", "/monetization/customers?customer=cus_1");
+		const { unmount } = render(<BillingCustomersPage />);
+		fireEvent.click(await screen.findByText("All billing events (2)"));
+		expect(row("Renewal")).toHaveTextContent(/^RenewalProcessedGoogleNov 1, 2026/u);
+		expect(row("Alias created")).toHaveTextContent(
+			/^Alias createdProcessed—Nov 2, 2026.*Aliased with \$superboard_anon_1$/u,
+		);
+		unmount();
+
+		window.history.replaceState({}, "", "/monetization/customers?lang=fr&customer=cus_1");
+		render(<BillingCustomersPage />, { wrapper: French });
+		fireEvent.click(await screen.findByText("Tous les événements de facturation (2)"));
+		expect(row("Renouvellement")).toHaveTextContent(/^RenouvellementTraitéGoogle1 nov\. 2026/u);
+		expect(row("Alias créé")).toHaveTextContent(
+			/^Alias crééTraité—2 nov\. 2026.*Associé à \$superboard_anon_1$/u,
+		);
+	});
+
+	it("transfers the purchases to another App User ID after a confirmation", async () => {
+		const target = { ...customer, id: "cus_2", primary_app_user_id: "app-user-2" };
+		mocks.searchBillingCustomers.mockImplementation(async (_projectId: string, query: string) => ({
+			data: query
+				? [{ ...customer, id: "cus_3", primary_app_user_id: "app-user-20" }, target]
+				: [customer],
+			next_cursor: null,
+		}));
+		mocks.transferBillingCustomerPurchases.mockResolvedValue({
+			customer_id: "cus_2",
+			transferred: 2,
+		});
+		window.history.replaceState({}, "", "/monetization/customers?customer=cus_1");
+		render(<BillingCustomersPage />);
+		const destination = await screen.findByLabelText("Destination App User ID");
+
+		fireEvent.change(destination, { target: { value: "nobody" } });
+		mocks.searchBillingCustomers.mockResolvedValueOnce({ data: [], next_cursor: null });
+		fireEvent.click(screen.getByRole("button", { name: "Find" }));
+		expect(await screen.findByText("No customer has this App User ID.")).toBeInTheDocument();
+
+		fireEvent.change(destination, { target: { value: "app-user-1" } });
+		fireEvent.click(screen.getByRole("button", { name: "Find" }));
+		expect(
+			await screen.findByText("Enter the App User ID of another customer."),
+		).toBeInTheDocument();
+
+		fireEvent.change(destination, { target: { value: "app-user-2" } });
+		fireEvent.click(screen.getByRole("button", { name: "Find" }));
+		const found = await screen.findByRole("group", { name: "Destination customer" });
+		expect(found).toHaveTextContent("app-user-2");
+		expect(found).toHaveTextContent("cus_2");
+		expect(mocks.searchBillingCustomers).toHaveBeenCalledWith("10-test", "app-user-2");
+
+		fireEvent.click(within(found).getByRole("button", { name: "Transfer purchases" }));
+		const dialog = await screen.findByRole("alertdialog", {
+			name: "Transfer the purchases of app-user-1 to app-user-2?",
+		});
+		expect(dialog).toHaveTextContent(/app-user-1 loses the access they give/u);
+		expect(mocks.transferBillingCustomerPurchases).not.toHaveBeenCalled();
+		fireEvent.click(within(dialog).getByRole("button", { name: "Transfer purchases" }));
+
+		await waitFor(() => {
+			expect(mocks.transferBillingCustomerPurchases).toHaveBeenCalledWith(
+				"10-test",
+				"cus_1",
+				"cus_2",
+			);
+		});
+		await waitFor(() => {
+			expect(window.location.search).toBe("?customer=cus_2");
+		});
+	});
+
+	it("offers the purchase transfer in French", async () => {
+		const target = { ...customer, id: "cus_2", primary_app_user_id: "app-user-2" };
+		mocks.searchBillingCustomers.mockResolvedValue({ data: [target], next_cursor: null });
+		window.history.replaceState({}, "", "/monetization/customers?lang=fr&customer=cus_1");
+		render(<BillingCustomersPage />, { wrapper: French });
+
+		expect(
+			await screen.findByRole("heading", { name: "Transférer les achats" }),
+		).toBeInTheDocument();
+		fireEvent.change(screen.getByLabelText("Identifiant de destination"), {
+			target: { value: "app-user-2" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Rechercher" }));
+		const found = await screen.findByRole("group", { name: "Client de destination" });
+		fireEvent.click(within(found).getByRole("button", { name: "Transférer les achats" }));
+		const dialog = await screen.findByRole("alertdialog", {
+			name: "Transférer les achats de app-user-1 vers app-user-2\u00a0?",
+		});
+		expect(within(dialog).getByRole("button", { name: "Annuler" })).toBeInTheDocument();
+		expect(dialog).not.toHaveTextContent(/purchases|loses/u);
 	});
 });

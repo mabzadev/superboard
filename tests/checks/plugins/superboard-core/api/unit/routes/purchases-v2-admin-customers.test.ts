@@ -86,7 +86,7 @@ describe("billing customer administration", () => {
 		);
 		expect(query?.args).toEqual(["20", "customer-1"]);
 		const spent = db.calls.find((call) => call.sql.includes("COUNT(spent.purchase) AS purchases"));
-		expect(spent?.args).toEqual([null, "20", null, "20", "customer-1"]);
+		expect(spent?.args).toEqual([null, null, null, null, null, null, "customer-1"]);
 	});
 });
 

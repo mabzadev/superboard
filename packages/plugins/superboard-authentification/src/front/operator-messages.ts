@@ -29,6 +29,12 @@ export const operatorMessages = {
 		security: "Account security",
 		editProfile: "Edit profile",
 		complete: "Complete registration",
+		displayCurrency: "Display currency",
+		displayCurrencyHelp:
+			"Only for you: other operators choose their own. Monetization revenue, charts and customer spending are converted to USD at the exchange rate of each purchase day, then to this currency at the same day’s rate.",
+		displayCurrencySaved: "Display currency saved.",
+		displayCurrencySaveError: "Could not save the display currency.",
+		displayCurrencyLoadError: "Could not load the display currency.",
 	},
 	fr: {
 		login: "Connexion opérateur",
@@ -60,5 +66,11 @@ export const operatorMessages = {
 		security: "Sécurité du compte",
 		editProfile: "Modifier le profil",
 		complete: "Terminer l’inscription",
+		displayCurrency: "Devise d’affichage",
+		displayCurrencyHelp:
+			"Pour vous seul : chaque opérateur choisit la sienne. Les revenus, les graphiques et les dépenses des clients de Monétisation sont convertis en USD au taux de change du jour de chaque achat, puis dans cette devise au taux du même jour.",
+		displayCurrencySaved: "Devise d’affichage enregistrée.",
+		displayCurrencySaveError: "Impossible d’enregistrer la devise d’affichage.",
+		displayCurrencyLoadError: "Impossible de charger la devise d’affichage.",
 	},
 };

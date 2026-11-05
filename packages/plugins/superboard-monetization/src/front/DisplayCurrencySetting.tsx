@@ -2,35 +2,24 @@ import { Label } from "@superboard/front-ui/ui/label.js";
 import { useEffect, useId, useState } from "react";
 
 import {
-	getDisplayCurrency,
-	updateDisplayCurrency,
+	getOperatorDisplayCurrency,
+	updateOperatorDisplayCurrency,
 	type DisplayCurrencySetting as Setting,
 } from "./billing/api/billing/billingService.js";
 import { useMonetizationI18n } from "./i18n.js";
 
-type Currency = Setting["display_currency"];
-
-const currencyLabels: Record<Currency, string> = {
-	USD: "US dollar (USD)",
-	EUR: "Euro (EUR)",
-};
-
-function isCurrency(value: string): value is Currency {
-	return Object.hasOwn(currencyLabels, value);
-}
-
 export default function DisplayCurrencySetting({ projectId }: { projectId: string }) {
-	const { t } = useMonetizationI18n();
+	const { t, currency: currencyName } = useMonetizationI18n();
 	const id = useId();
-	const [currency, setCurrency] = useState<Currency | null>(null);
+	const [setting, setSetting] = useState<Setting | null>(null);
 	const [status, setStatus] = useState<"saved" | "load-error" | "save-error" | null>(null);
 	const [busy, setBusy] = useState(false);
 
 	useEffect(() => {
 		let active = true;
-		getDisplayCurrency(projectId)
-			.then((setting) => {
-				if (active) setCurrency(setting.display_currency);
+		getOperatorDisplayCurrency(projectId)
+			.then((loaded) => {
+				if (active) setSetting(loaded);
 			})
 			.catch(() => {
 				if (active) setStatus("load-error");
@@ -40,18 +29,19 @@ export default function DisplayCurrencySetting({ projectId }: { projectId: strin
 		};
 	}, [projectId]);
 
-	const change = (next: Currency) => {
-		const previous = currency;
-		setCurrency(next);
+	const change = (next: string) => {
+		if (!setting) return;
+		const previous = setting;
+		setSetting({ ...setting, display_currency: next });
 		setBusy(true);
 		setStatus(null);
-		updateDisplayCurrency(projectId, next)
-			.then((setting) => {
-				setCurrency(setting.display_currency);
+		updateOperatorDisplayCurrency(projectId, next)
+			.then((saved) => {
+				setSetting(saved);
 				setStatus("saved");
 			})
 			.catch(() => {
-				setCurrency(previous);
+				setSetting(previous);
 				setStatus("save-error");
 			})
 			.finally(() => {
@@ -61,27 +51,27 @@ export default function DisplayCurrencySetting({ projectId }: { projectId: strin
 
 	return (
 		<section className="mt-6 space-y-2 border-t pt-5">
-			<Label htmlFor={id}>{t("Display currency")}</Label>
+			<Label htmlFor={id}>{t("Your display currency")}</Label>
 			<p id={`${id}-help`} className="text-sm text-muted-foreground">
 				{t(
-					"Revenue totals, charts and customer spending are converted to USD at the ECB reference rate of each purchase day, then to the display currency at the same day’s rate.",
+					"Only for you: other operators choose their own. Revenue totals, charts and customer spending are converted to USD at the exchange rate of each purchase day, then to this currency at the same day’s rate.",
 				)}
 			</p>
 			<select
 				id={id}
 				aria-describedby={`${id}-help`}
 				className="h-9 w-full max-w-xs rounded-md border bg-background px-3 text-sm"
-				value={currency ?? ""}
-				disabled={busy || !currency}
+				value={setting?.display_currency ?? ""}
+				disabled={busy || !setting}
 				onChange={(event) => {
 					const value = event.currentTarget.value;
-					if (isCurrency(value)) change(value);
+					if (setting?.available_currencies.includes(value)) change(value);
 				}}
 			>
-				{!currency && <option value="" />}
-				{Object.entries(currencyLabels).map(([value, label]) => (
-					<option key={value} value={value}>
-						{t(label)}
+				{!setting && <option value="" />}
+				{setting?.available_currencies.map((code) => (
+					<option key={code} value={code}>
+						{`${currencyName(code)} (${code})`}
 					</option>
 				))}
 			</select>

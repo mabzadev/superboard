@@ -497,8 +497,8 @@ const french: Record<string, string> = {
 	"Net revenue": "Revenu net",
 	"Gross purchase revenue after recorded refunds.":
 		"Revenu brut des achats après remboursements enregistrés.",
-	"Gross purchase revenue after recorded refunds, converted at the ECB reference rate of each purchase day.":
-		"Revenu brut des achats après remboursements enregistrés, converti au taux de référence de la BCE du jour de chaque achat.",
+	"Gross purchase revenue after recorded refunds, converted at the exchange rate of each purchase day.":
+		"Revenu brut des achats après remboursements enregistrés, converti au taux de change du jour de chaque achat.",
 	"1 transaction awaiting conversion is not included.":
 		"1 transaction en attente de conversion n’est pas incluse.",
 	"{count} transactions awaiting conversion are not included.":

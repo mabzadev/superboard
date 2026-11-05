@@ -563,6 +563,83 @@ void main() {
   );
 
   test(
+    'reports a restored receipt kept by another App User ID with a typed code',
+    () async {
+      final store = FakePurchaseStore([]);
+      final purchases = testPurchases(store, MemoryPurchaseStorage([]), (
+        request,
+      ) async {
+        if (request.url.path.endsWith('/restore')) {
+          return jsonResponse({
+            'error': 'The receipt is already in use by another App User ID',
+            'code': 'receipt_already_in_use',
+          }, 409);
+        }
+        return jsonResponse(customerInfo());
+      });
+      addTearDown(() async {
+        await purchases.disposeForTesting();
+        await store.close();
+      });
+      await configure(purchases);
+
+      final resultFuture = purchases.purchaseResultStream.firstWhere(
+        (result) => result.outcome == SuperBoardPurchaseOutcome.failed,
+      );
+      store.emit(restored());
+      final result = await resultFuture;
+
+      expect(result.code, SuperBoardPurchasesErrorCode.receiptAlreadyInUse);
+      expect(result.isReceiptAlreadyInUse, isTrue);
+      expect(result.retryable, isFalse);
+      expect(store.completed, isEmpty);
+    },
+  );
+
+  test(
+    'reports a purchase receipt kept by another App User ID with a typed code',
+    () async {
+      final store = FakePurchaseStore([]);
+      final purchases = testPurchases(store, MemoryPurchaseStorage([]), (
+        request,
+      ) async {
+        if (request.url.path.endsWith('/receipts')) {
+          return jsonResponse({
+            'error': {
+              'code': 'receipt_already_in_use',
+              'message': 'The receipt is already in use by another App User ID',
+              'retryable': false,
+              'request_id': 'request-409',
+            },
+          }, 409);
+        }
+        return jsonResponse(customerInfo());
+      });
+      addTearDown(() async {
+        await purchases.disposeForTesting();
+        await store.close();
+      });
+      await configure(purchases);
+
+      final resultFuture = purchases.purchaseResultStream.firstWhere(
+        (result) => result.outcome == SuperBoardPurchaseOutcome.failed,
+      );
+      store.emit(purchased());
+      final result = await resultFuture;
+
+      expect(result.isReceiptAlreadyInUse, isTrue);
+      expect(result.requestId, 'request-409');
+      expect(
+        const SuperBoardPurchaseResult(
+          SuperBoardPurchaseOutcome.failed,
+          code: 'network_timeout',
+        ).isReceiptAlreadyInUse,
+        isFalse,
+      );
+    },
+  );
+
+  test(
     'reuses a deterministic certification result ID after an uncertain retry',
     () async {
       final resultIds = <String>[];
@@ -690,6 +767,22 @@ PurchaseDetails purchased() {
     ),
     transactionDate: DateTime.now().millisecondsSinceEpoch.toString(),
     status: PurchaseStatus.purchased,
+  );
+  value.pendingCompletePurchase = true;
+  return value;
+}
+
+PurchaseDetails restored() {
+  final value = PurchaseDetails(
+    purchaseID: 'store-transaction-1',
+    productID: 'premium-weekly',
+    verificationData: PurchaseVerificationData(
+      localVerificationData: 'local',
+      serverVerificationData: 'purchase-token-1',
+      source: 'google_play',
+    ),
+    transactionDate: DateTime.now().millisecondsSinceEpoch.toString(),
+    status: PurchaseStatus.restored,
   );
   value.pendingCompletePurchase = true;
   return value;

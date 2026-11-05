@@ -20,14 +20,6 @@ CREATE TABLE IF NOT EXISTS billing_exchange_rate_sync (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS billing_project_currency_settings (
-  project_id TEXT PRIMARY KEY,
-  display_currency TEXT NOT NULL DEFAULT 'USD',
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-);
-
 -- usd_*_micros is the amount converted to USD at the reference rate of the purchase (or
 -- refund) day. usd_rate_date is the ECB publication date used. It stays NULL until that
 -- day's rate is final, and the exchange rate job fills it in bounded batches.

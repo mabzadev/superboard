@@ -22,6 +22,36 @@ function French({ children }: { children: ReactNode }) {
 	);
 }
 
+function WithoutAuthentication({ children }: { children: ReactNode }) {
+	const context = useOptionalFrontContext();
+	if (!context) throw new Error("Missing Front context");
+	return (
+		<FrontContextProvider
+			value={{
+				...context,
+				activePluginIds: context.activePluginIds.filter((id) => id !== "superboard-user"),
+			}}
+		>
+			{children}
+		</FrontContextProvider>
+	);
+}
+
+const displayCurrencies = [
+	"USD",
+	"EUR",
+	"GBP",
+	"AUD",
+	"CAD",
+	"JPY",
+	"BRL",
+	"KRW",
+	"CNY",
+	"MXN",
+	"SEK",
+	"PLN",
+];
+
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "1-test" } }),
 }));
@@ -30,8 +60,8 @@ const billing = vi.hoisted(() => ({
 	getBillingOverview: vi.fn(),
 	updateBillingSettings: vi.fn(),
 	getStripeConnection: vi.fn(),
-	getDisplayCurrency: vi.fn(),
-	updateDisplayCurrency: vi.fn(),
+	getOperatorDisplayCurrency: vi.fn(),
+	updateOperatorDisplayCurrency: vi.fn(),
 }));
 vi.mock(
 	"../../../../../packages/plugins/superboard-monetization/src/front/billing/api/billing/billingService.js",
@@ -64,9 +94,9 @@ describe("MonetizationSettingsPage", () => {
 			settings: { purchases_enabled: 0, restore_behavior: "block" },
 			credentials: { ios: { configured: false }, android: { configured: false } },
 		});
-		billing.getDisplayCurrency.mockResolvedValue({
+		billing.getOperatorDisplayCurrency.mockResolvedValue({
 			display_currency: "USD",
-			available_currencies: ["USD", "EUR"],
+			available_currencies: displayCurrencies,
 		});
 	});
 
@@ -169,6 +199,94 @@ describe("MonetizationSettingsPage", () => {
 			expect(screen.queryByText(english, { exact: false })).not.toBeInTheDocument();
 	});
 
+	it("applies a different restore behavior to sandbox purchases when asked", async () => {
+		billing.updateBillingSettings.mockResolvedValue({});
+		render(<MonetizationSettingsPage />);
+
+		const different = await screen.findByRole("checkbox", {
+			name: "Use a different restore behavior for sandbox",
+		});
+		expect(different).not.toBeChecked();
+		expect(
+			screen.queryByRole("combobox", { name: "Sandbox restore behavior" }),
+		).not.toBeInTheDocument();
+		fireEvent.click(different);
+		const sandbox = screen.getByRole("combobox", { name: "Sandbox restore behavior" });
+		expect(sandbox).toHaveValue("block");
+		expect(
+			within(sandbox)
+				.getAllByRole("option")
+				.map((option) => option.textContent),
+		).toEqual([
+			"Transfer to new App User ID",
+			"Transfer if there are no active subscriptions",
+			"Keep with original App User ID",
+		]);
+		fireEvent.change(sandbox, { target: { value: "transfer" } });
+
+		billing.getBillingOverview.mockResolvedValue({
+			settings: {
+				purchases_enabled: 0,
+				restore_behavior: "block",
+				sandbox_restore_behavior: "transfer",
+			},
+			credentials: { ios: { configured: false }, android: { configured: false } },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+		expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
+		expect(billing.updateBillingSettings).toHaveBeenCalledWith("1-test", {
+			purchases_enabled: false,
+			restore_behavior: "block",
+			sandbox_restore_behavior: "transfer",
+		});
+	});
+
+	it("shows and clears a stored sandbox restore behavior, in French", async () => {
+		billing.getBillingOverview.mockResolvedValue({
+			settings: {
+				purchases_enabled: 1,
+				restore_behavior: "transfer",
+				sandbox_restore_behavior: "transfer_if_no_active_subscriptions",
+			},
+			credentials: { ios: { configured: false }, android: { configured: false } },
+		});
+		billing.updateBillingSettings.mockResolvedValue({});
+		render(<MonetizationSettingsPage />, { wrapper: French });
+
+		const different = await screen.findByRole("checkbox", {
+			name: "Utiliser un autre comportement pour le bac à sable",
+		});
+		expect(different).toBeChecked();
+		const sandbox = screen.getByRole("combobox", {
+			name: "Comportement de restauration du bac à sable",
+		});
+		expect(sandbox).toHaveValue("transfer_if_no_active_subscriptions");
+		expect(sandbox).toHaveAccessibleDescription(/achats du bac à sable/u);
+		expect(screen.getByRole("button", { name: "Enregistrer les paramètres" })).toBeDisabled();
+
+		billing.getBillingOverview.mockResolvedValue({
+			settings: {
+				purchases_enabled: 1,
+				restore_behavior: "transfer",
+				sandbox_restore_behavior: null,
+			},
+			credentials: { ios: { configured: false }, android: { configured: false } },
+		});
+		fireEvent.click(different);
+		fireEvent.click(screen.getByRole("button", { name: "Enregistrer les paramètres" }));
+
+		expect(await screen.findByText("Paramètres enregistrés.")).toBeInTheDocument();
+		expect(billing.updateBillingSettings).toHaveBeenCalledWith("1-test", {
+			purchases_enabled: true,
+			restore_behavior: "transfer",
+			sandbox_restore_behavior: null,
+		});
+		expect(
+			screen.queryByRole("combobox", { name: "Comportement de restauration du bac à sable" }),
+		).not.toBeInTheDocument();
+	});
+
 	afterEach(() => {
 		window.history.replaceState(null, "", "/");
 		vi.unstubAllGlobals();
@@ -244,50 +362,83 @@ describe("MonetizationSettingsPage", () => {
 		}
 	});
 
-	it("saves the display currency of the project from the General tab", async () => {
-		billing.updateDisplayCurrency.mockResolvedValue({
-			display_currency: "EUR",
-			available_currencies: ["USD", "EUR"],
-		});
+	it("leaves the display currency to the operator profile when Authentication is active", async () => {
 		window.history.replaceState(null, "", "/monetization/settings");
 		render(<MonetizationSettingsPage />);
 
-		const select = await screen.findByRole("combobox", { name: "Display currency" });
+		expect(await screen.findByRole("checkbox", { name: "Enable purchases" })).toBeVisible();
+		expect(
+			screen.queryByRole("combobox", { name: "Your display currency" }),
+		).not.toBeInTheDocument();
+		expect(billing.getOperatorDisplayCurrency).not.toHaveBeenCalled();
+	});
+
+	it("saves the operator's own display currency when there is no operator profile page", async () => {
+		billing.updateOperatorDisplayCurrency.mockResolvedValue({
+			display_currency: "JPY",
+			available_currencies: displayCurrencies,
+		});
+		window.history.replaceState(null, "", "/monetization/settings");
+		render(<MonetizationSettingsPage />, { wrapper: WithoutAuthentication });
+
+		const select = await screen.findByRole("combobox", { name: "Your display currency" });
 		await waitFor(() => {
 			expect(select).toHaveValue("USD");
 		});
+		expect(select).toHaveAccessibleDescription(
+			/^Only for you: other operators choose their own\./u,
+		);
 		expect(
 			within(select)
 				.getAllByRole("option")
 				.map((option) => option.textContent),
-		).toEqual(["US dollar (USD)", "Euro (EUR)"]);
-		fireEvent.change(select, { target: { value: "EUR" } });
+		).toEqual([
+			"US Dollar (USD)",
+			"Euro (EUR)",
+			"British Pound (GBP)",
+			"Australian Dollar (AUD)",
+			"Canadian Dollar (CAD)",
+			"Japanese Yen (JPY)",
+			"Brazilian Real (BRL)",
+			"South Korean Won (KRW)",
+			"Chinese Yuan (CNY)",
+			"Mexican Peso (MXN)",
+			"Swedish Krona (SEK)",
+			"Polish Zloty (PLN)",
+		]);
+		fireEvent.change(select, { target: { value: "JPY" } });
 
 		expect(await screen.findByText("Display currency saved.")).toBeInTheDocument();
-		expect(billing.updateDisplayCurrency).toHaveBeenCalledWith("1-test", "EUR");
-		expect(select).toHaveValue("EUR");
+		expect(billing.updateOperatorDisplayCurrency).toHaveBeenCalledWith("1-test", "JPY");
+		expect(select).toHaveValue("JPY");
 	});
 
 	it("restores the previous display currency when saving fails, in French", async () => {
-		billing.updateDisplayCurrency.mockRejectedValue(new Error("Forbidden"));
+		billing.updateOperatorDisplayCurrency.mockRejectedValue(new Error("Forbidden"));
 		window.history.replaceState(null, "", "/monetization/settings?lang=fr");
-		render(<MonetizationSettingsPage />, { wrapper: French });
+		render(<MonetizationSettingsPage />, {
+			wrapper: ({ children }) => (
+				<WithoutAuthentication>
+					<French>{children}</French>
+				</WithoutAuthentication>
+			),
+		});
 
-		const select = await screen.findByRole("combobox", { name: "Devise d’affichage" });
+		const select = await screen.findByRole("combobox", { name: "Votre devise d’affichage" });
 		await waitFor(() => {
 			expect(select).toHaveValue("USD");
 		});
 		expect(
-			screen.getByText(/convertis en USD au taux de référence de la BCE du jour de chaque achat/u),
+			screen.getByText(/^Pour vous seul : chaque opérateur choisit la sienne\./u),
 		).toBeInTheDocument();
-		fireEvent.change(select, { target: { value: "EUR" } });
+		fireEvent.change(select, { target: { value: "KRW" } });
 
 		expect(
 			await screen.findByText("Impossible d’enregistrer la devise d’affichage."),
 		).toBeInTheDocument();
 		expect(select).toHaveValue("USD");
 		expect(
-			within(select).getByRole("option", { name: "Dollar américain (USD)" }),
+			within(select).getByRole("option", { name: "Won sud-coréen (KRW)" }),
 		).toBeInTheDocument();
 	});
 

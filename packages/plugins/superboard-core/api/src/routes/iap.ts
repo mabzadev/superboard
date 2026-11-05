@@ -28,7 +28,13 @@ import {
 } from "../lib/store-verification";
 import { Env } from "../types";
 
-const iap = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.iap.iap","pluginId":"superboard-billing","surface":"internal","access":"operator"});
+const iap = registerRouter(new Hono<{ Bindings: Env }>(), {
+	service: "api",
+	module: "routes.iap.iap",
+	pluginId: "superboard-billing",
+	surface: "internal",
+	access: "operator",
+});
 iap.onError((error, c) => providerUnhandledHttpError(c, error));
 
 function b64urlDecode(value: string): any {
@@ -843,8 +849,9 @@ async function handleGoogle(c: any) {
 	const customerId =
 		externalIdentifiers.obfuscatedExternalAccountId || verified?.obfuscatedExternalAccountId;
 	if (verified && customerId) {
+		// D1 binds the numeric project id as REAL ("422.0"), which never equals the TEXT project_id.
 		const customer = await c.env.DB.prepare(
-			"SELECT id FROM billing_customers WHERE id = ? AND project_id = ?",
+			"SELECT id FROM billing_customers WHERE id = ? AND project_id = CAST(? AS INTEGER)",
 		)
 			.bind(String(customerId), project.id)
 			.first();
@@ -882,6 +889,7 @@ async function handleGoogle(c: any) {
 				expiresAt: msDate(verifiedLineItem?.expiryTime),
 				autoRenews: Boolean(verifiedLineItem?.autoRenewingPlan?.autoRenewEnabled),
 				rawPayload: verified,
+				keepCurrentOwner: true,
 			};
 			await applyVerifiedPurchase(c.env, purchase);
 		}

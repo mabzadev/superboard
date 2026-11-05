@@ -40,8 +40,20 @@ function nextDay(day: string) {
 	return date.toISOString().slice(0, 10);
 }
 
+const secondaryUsd = 1.07;
+const secondarySar = 4.0125;
+
 const ecb = vi.fn(async (input: RequestInfo | URL) => {
 	const url = new URL(input instanceof Request ? input.url : input);
+	const secondaryDay =
+		/^\/npm\/@fawazahmed0\/currency-api@(\d{4}-\d{2}-\d{2})\/v1\/currencies\/eur\.min\.json$/u.exec(
+			url.pathname,
+		)?.[1];
+	if (url.hostname === "cdn.jsdelivr.net" && secondaryDay)
+		return Response.json({
+			date: secondaryDay,
+			eur: { usd: secondaryUsd, sar: secondarySar, eur: 1 },
+		});
 	expect(`${url.origin}${url.pathname}`).toBe(
 		"https://data-api.ecb.europa.eu/service/data/EXR/D..EUR.SP00.A",
 	);
@@ -55,7 +67,13 @@ function sync(now: string, fetcher: typeof fetch = ecb) {
 	return syncBillingExchangeRates(testEnv, { now: new Date(now), fetcher });
 }
 
-async function signedRequest(method: string, path: string, body?: unknown, role = "owner") {
+async function signedRequest(
+	method: string,
+	path: string,
+	body?: unknown,
+	role = "owner",
+	operatorId = "currency-operator",
+) {
 	const headers = await createProjectContextHeaders(
 		{
 			module: "billing",
@@ -66,7 +84,7 @@ async function signedRequest(method: string, path: string, body?: unknown, role 
 			instanceId: 73,
 			environment: "test",
 			actorId: 0,
-			operatorId: "currency-operator",
+			operatorId,
 			role,
 			requestId: crypto.randomUUID(),
 			issuedAt: Math.floor(Date.now() / 1000),
@@ -164,7 +182,6 @@ describe("exchange rate migration", () => {
 				"ALTER TABLE billing_transactions DROP COLUMN usd_rate_date",
 				"DROP TABLE billing_exchange_rates",
 				"DROP TABLE billing_exchange_rate_sync",
-				"DROP TABLE billing_project_currency_settings",
 			].map((query) => testEnv.DB.prepare(query)),
 		);
 		await testEnv.DB.batch([
@@ -256,7 +273,7 @@ describe("exchange rate job", () => {
 			usd_rate_date: "2026-10-06",
 		});
 		expect(await purchaseRow("legacy-sar")).toEqual({
-			usd_price_micros: null,
+			usd_price_micros: Math.round((5_000_000 * secondaryUsd) / secondarySar),
 			usd_rate_date: "2026-10-06",
 		});
 		expect(await purchaseRow("legacy-later")).toEqual({
@@ -462,24 +479,20 @@ describe("exchange rate job", () => {
 });
 
 describe("display currency", () => {
-	test("defaults to USD and lets an administrator choose EUR for the project", async () => {
-		const path = `/internal/v1/admin/billing/${projectRef}/settings/display-currency`;
+	test("defaults to USD and saves the choice of the signed operator only", async () => {
+		const path = `/internal/v1/admin/billing/${projectRef}/operator/display-currency`;
 		const initial = await signedRequest("GET", path);
-		expect(await initial.json()).toEqual({
-			display_currency: "USD",
-			available_currencies: ["USD", "EUR"],
-		});
-		expect((await signedRequest("PUT", path, { display_currency: "GBP" })).status).toBe(422);
-		expect((await signedRequest("PUT", path, { display_currency: "EUR" }, "member")).status).toBe(
-			403,
-		);
-		const saved = await signedRequest("PUT", path, { display_currency: "EUR" });
+		expect(await initial.json()).toMatchObject({ display_currency: "USD" });
+		expect((await signedRequest("PUT", path, { display_currency: "CHF" })).status).toBe(422);
+		const saved = await signedRequest("PUT", path, { display_currency: "EUR" }, "member");
 		expect(saved.status).toBe(200);
 		expect(await saved.json()).toMatchObject({ display_currency: "EUR" });
 		expect(
 			(await (await signedRequest("GET", path)).json<{ display_currency: string }>())
 				.display_currency,
 		).toBe("EUR");
+		const colleague = await signedRequest("GET", path, undefined, "owner", "currency-colleague");
+		expect((await colleague.json<{ display_currency: string }>()).display_currency).toBe("USD");
 		await signedRequest("PUT", path, { display_currency: "USD" });
 	});
 
@@ -508,11 +521,11 @@ describe("display currency", () => {
 			gross_revenue_micros: convertedUsd,
 			unconverted_purchases: unconverted,
 		});
-		expect(unconverted).toBe(3);
+		expect(unconverted).toBe(2);
 
 		const eur = await statistics("&display_currency=EUR");
 		expect(eur.display_currency).toBe("EUR");
-		expect(eur.totals_in_display_currency.unconverted_purchases).toBe(2);
+		expect(eur.totals_in_display_currency.unconverted_purchases).toBe(1);
 		expect(
 			eur.series_in_display_currency.find((row: { bucket: string }) => row.bucket === "2026-10-04"),
 		).toEqual({
@@ -533,11 +546,11 @@ describe("display currency", () => {
 			Math.round(Math.round(9_990_000 * 1.05) / 1.05) +
 				Math.round(Math.round((9_500_000 * 1.06) / 0.95) / 1.06),
 		);
-		expect((await ledger("GET", "/statistics?display_currency=GBP")).status).toBe(422);
+		expect((await ledger("GET", "/statistics?display_currency=CHF")).status).toBe(422);
 
 		await signedRequest(
 			"PUT",
-			`/internal/v1/admin/billing/${projectRef}/settings/display-currency`,
+			`/internal/v1/admin/billing/${projectRef}/operator/display-currency`,
 			{
 				display_currency: "EUR",
 			},
@@ -554,7 +567,7 @@ describe("display currency", () => {
 		});
 		await signedRequest(
 			"PUT",
-			`/internal/v1/admin/billing/${projectRef}/settings/display-currency`,
+			`/internal/v1/admin/billing/${projectRef}/operator/display-currency`,
 			{
 				display_currency: "USD",
 			},

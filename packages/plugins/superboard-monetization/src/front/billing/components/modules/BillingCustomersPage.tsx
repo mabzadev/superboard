@@ -11,6 +11,16 @@ import {
 	moduleErrorMessage,
 } from "@superboard/front-ui/modules/ModulePage.js";
 import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@superboard/front-ui/ui/alert-dialog.js";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
@@ -37,6 +47,7 @@ import {
 	revokeBillingEntitlement,
 	searchBillingCustomers,
 	setBillingCustomerBlocked,
+	transferBillingCustomerPurchases,
 	type BillingCustomerDetail,
 	type BillingCustomerSummary,
 	type BillingOverview,
@@ -140,6 +151,7 @@ export default function BillingCustomersPage() {
 					onBack={() => {
 						showCustomer(null);
 					}}
+					onOpenCustomer={showCustomer}
 					onChange={load}
 				/>
 			) : (
@@ -251,12 +263,14 @@ function CustomerDetail({
 	customerId,
 	overview,
 	onBack,
+	onOpenCustomer,
 	onChange,
 }: {
 	projectId: string;
 	customerId: string;
 	overview: BillingOverview | null;
 	onBack: () => void;
+	onOpenCustomer: (customerId: string) => void;
 	onChange: () => Promise<void>;
 }) {
 	const { t, locale, code, date, region, language } = useMonetizationI18n();
@@ -268,9 +282,15 @@ function CustomerDetail({
 	const [mergeTarget, setMergeTarget] = useState("");
 	const [mergeConfirmation, setMergeConfirmation] = useState("");
 	const [deleteConfirmation, setDeleteConfirmation] = useState("");
-	const transfer = (event: Record<string, unknown>) => {
+	const [transferQuery, setTransferQuery] = useState("");
+	const [destination, setDestination] = useState<BillingCustomerSummary | null>(null);
+	const [lookup, setLookup] = useState<"missing" | "self" | null>(null);
+	const [confirmingTransfer, setConfirmingTransfer] = useState(false);
+	const eventDetails = (event: Record<string, unknown>) => {
 		const parties = transferParties(event);
-		return parties ? t("From {from} to {to}", parties) : null;
+		if (parties) return t("From {from} to {to}", parties);
+		const alias = aliasOf(event);
+		return alias ? t("Aliased with {alias}", { alias }) : null;
 	};
 
 	const refresh = useCallback(async () => {
@@ -312,6 +332,58 @@ function CustomerDetail({
 			onBack();
 			await onChange();
 		} catch (cause) {
+			showErrorNotification(moduleErrorMessage(cause, locale));
+		} finally {
+			setBusy(false);
+		}
+	};
+
+	const findDestination = async (current: BillingCustomerDetail) => {
+		const query = transferQuery.trim();
+		setDestination(null);
+		setLookup(null);
+		if (
+			query === current.customer.id ||
+			query === current.customer.primary_app_user_id ||
+			current.customer_info.aliases.includes(query)
+		) {
+			setLookup("self");
+			return;
+		}
+		setBusy(true);
+		try {
+			const page = await searchBillingCustomers(projectId, query);
+			const match = page.data.find(
+				(candidate) =>
+					candidate.id === query ||
+					candidate.primary_app_user_id === query ||
+					(candidate.aliases ?? "").split(",").includes(query),
+			);
+			if (match) setDestination(match);
+			else setLookup("missing");
+		} catch (cause) {
+			showErrorNotification(moduleErrorMessage(cause, locale));
+		} finally {
+			setBusy(false);
+		}
+	};
+
+	const transferPurchases = async (target: BillingCustomerSummary) => {
+		setBusy(true);
+		try {
+			const result = await transferBillingCustomerPurchases(projectId, customerId, target.id);
+			setConfirmingTransfer(false);
+			if (result.transferred === 0) {
+				showErrorNotification(
+					t("This customer has no App Store or Google Play purchase to transfer."),
+				);
+				return;
+			}
+			showSuccessNotification(t("Purchases transferred"));
+			onOpenCustomer(target.id);
+			await onChange();
+		} catch (cause) {
+			setConfirmingTransfer(false);
 			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setBusy(false);
@@ -543,6 +615,112 @@ function CustomerDetail({
 							)}
 						</div>
 					</div>
+					<div className="space-y-3">
+						<h4 className="text-sm font-semibold">{t("Transfer purchases")}</h4>
+						<p className="text-sm text-muted-foreground">
+							{t(
+								"Move this customer’s App Store and Google Play purchases, and the access they give, to another App User ID. Virtual currency balances and promotional entitlements stay with this customer.",
+							)}
+						</p>
+						<form
+							className="flex flex-wrap items-end gap-2"
+							onSubmit={(event) => {
+								event.preventDefault();
+								findDestination(detail).catch(() => undefined);
+							}}
+						>
+							<div className="min-w-64 flex-1 space-y-2">
+								<Label htmlFor="billing-transfer-target">{t("Destination App User ID")}</Label>
+								<Input
+									id="billing-transfer-target"
+									value={transferQuery}
+									onChange={(event) => {
+										setTransferQuery(event.currentTarget.value);
+										setDestination(null);
+										setLookup(null);
+									}}
+								/>
+							</div>
+							<Button type="submit" variant="outline" disabled={busy || !transferQuery.trim()}>
+								<Search />
+								{t("Find")}
+							</Button>
+						</form>
+						{lookup && (
+							<p role="status" className="text-sm text-muted-foreground">
+								{t(
+									lookup === "missing"
+										? "No customer has this App User ID."
+										: "Enter the App User ID of another customer.",
+								)}
+							</p>
+						)}
+						{destination && (
+							<div
+								role="group"
+								aria-labelledby="billing-transfer-destination"
+								className="space-y-3 rounded-md border p-3"
+							>
+								<h5 id="billing-transfer-destination" className="text-sm font-medium">
+									{t("Destination customer")}
+								</h5>
+								<dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+									<Fact label={t("App User ID")}>{destination.primary_app_user_id}</Fact>
+									<Fact label={t("Customer ID")}>{destination.id}</Fact>
+									<Fact label={t("Active subscriptions")}>
+										{Number(destination.active_subscription_count || 0).toLocaleString(locale)}
+									</Fact>
+									<Fact label={t("Transactions")}>
+										{Number(destination.transaction_count || 0).toLocaleString(locale)}
+									</Fact>
+								</dl>
+								<Button
+									variant="outline"
+									disabled={busy}
+									onClick={() => {
+										setConfirmingTransfer(true);
+									}}
+								>
+									{t("Transfer purchases")}
+								</Button>
+								<AlertDialog
+									open={confirmingTransfer}
+									onOpenChange={(open) => {
+										if (!busy) setConfirmingTransfer(open);
+									}}
+								>
+									<AlertDialogContent>
+										<AlertDialogHeader>
+											<AlertDialogTitle>
+												{t("Transfer the purchases of {from} to {to}?", {
+													from: customer.primary_app_user_id,
+													to: destination.primary_app_user_id,
+												})}
+											</AlertDialogTitle>
+											<AlertDialogDescription>
+												{t(
+													"{from} loses the access they give. The transfer is recorded on both customers and sent to the webhooks that accept TRANSFER events.",
+													{ from: customer.primary_app_user_id },
+												)}
+											</AlertDialogDescription>
+										</AlertDialogHeader>
+										<AlertDialogFooter>
+											<AlertDialogCancel disabled={busy}>{t("Cancel")}</AlertDialogCancel>
+											<AlertDialogAction
+												disabled={busy}
+												onClick={(event) => {
+													event.preventDefault();
+													transferPurchases(destination).catch(() => undefined);
+												}}
+											>
+												{t("Transfer purchases")}
+											</AlertDialogAction>
+										</AlertDialogFooter>
+									</AlertDialogContent>
+								</AlertDialog>
+							</div>
+						)}
+					</div>
 				</Section>
 
 				<Section title={t("Financial and paywall history")}>
@@ -569,7 +747,11 @@ function CustomerDetail({
 						</summary>
 						<div className="mt-3">
 							<RecordTable
-								rows={detail.events.map((event) => ({ ...event, details: transfer(event) }))}
+								rows={detail.events.map((event) => ({
+									...event,
+									store: eventStore(event),
+									details: eventDetails(event),
+								}))}
 								columns={["event_type", "status", "store", "occurred_at", "details"]}
 							/>
 						</div>
@@ -750,6 +932,25 @@ function sdkContext(attributes?: string | null): Record<string, unknown> {
 		return {};
 	}
 	return {};
+}
+
+function eventStore(event: Record<string, unknown>) {
+	const source = text(event, "store") || text(event, "provider");
+	return source && source !== "superboard" ? source : null;
+}
+
+function aliasOf(event: Record<string, unknown>) {
+	if (event.event_type !== "aliased") return null;
+	try {
+		const payload: unknown = JSON.parse(text(event, "payload") || "{}");
+		return payload && typeof payload === "object" && "alias" in payload
+			? typeof payload.alias === "string"
+				? payload.alias
+				: null
+			: null;
+	} catch {
+		return null;
+	}
 }
 
 function transferParties(event: Record<string, unknown>) {

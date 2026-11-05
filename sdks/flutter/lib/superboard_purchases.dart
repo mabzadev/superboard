@@ -1066,9 +1066,9 @@ class SuperBoardPurchases {
           : error?.toString();
       throw SuperBoardPurchasesException(
         message ?? 'HTTP ${streamed.statusCode}',
-        code: error is Map
-            ? error['code']?.toString() ?? 'http_${streamed.statusCode}'
-            : 'http_${streamed.statusCode}',
+        code:
+            (error is Map ? error['code'] : decoded['code'])?.toString() ??
+            'http_${streamed.statusCode}',
         retryable: error is Map
             ? error['retryable'] == true
             : streamed.statusCode >= 500,

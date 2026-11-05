@@ -1,10 +1,10 @@
 import type { BillingEnv } from "../types";
 import {
 	applyVerifiedPurchase,
+	currentPurchaseOwner,
 	queueCustomerEntitlementChanged,
 	type BillingEnvironment,
 } from "./billing";
-import { currentPurchaseOwner } from "./billing-restore";
 import { readTextLimited } from "./http-limits";
 import { recordGooglePendingRefundReview } from "./refunds";
 import { decryptCredential, hmacSha256 } from "./secrets";

@@ -464,10 +464,9 @@ export function PurchasesPage() {
 					{displayTotals && displayCurrency && (
 						<div className="-mt-3 space-y-1 text-sm text-muted-foreground">
 							<p>
-								{t(
-									"Amounts in {currency}, converted at the ECB reference rate of each purchase day.",
-									{ currency: displayCurrency },
-								)}
+								{t("Amounts in {currency}, converted at the exchange rate of each purchase day.", {
+									currency: displayCurrency,
+								})}
 							</p>
 							{conversionNotes.map((note) => (
 								<p key={note} role="status">
@@ -661,11 +660,14 @@ export function PurchasesPage() {
 												: purchaseDetail.usd_rate_date
 													? t("No exchange rate for this currency")
 													: t("Conversion pending")}
-											{purchaseDetail.usd_rate_date && (
+											{purchaseDetail.usd_rate_date && purchaseDetail.usd_rate_source !== null && (
 												<span className="block text-xs font-normal text-muted-foreground">
-													{t("ECB reference rate of {date}", {
-														date: date(purchaseDetail.usd_rate_date),
-													})}
+													{t(
+														purchaseDetail.usd_rate_source === "currency-api"
+															? "Currency API daily rate of {date} (not published by the ECB)"
+															: "ECB reference rate of {date}",
+														{ date: date(purchaseDetail.usd_rate_date) },
+													)}
 												</span>
 											)}
 										</Fact>

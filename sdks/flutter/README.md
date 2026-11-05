@@ -69,6 +69,18 @@ Available APIs: `configure`, `logIn`, `logOut`, `getOfferings`,
 `getCustomerInfo`, `isEntitled`, `purchasePackage`, `restorePurchases`,
 `syncPurchases`, `customerInfoStream`, and `purchaseResultStream`.
 
+When the project's restore behavior keeps a Store purchase with another App
+User ID, `purchasePackage` and the restore results on `purchaseResultStream`
+fail with `SuperBoardPurchasesErrorCode.receiptAlreadyInUse`. Retrying with the
+same App User ID does not succeed; ask the customer to sign in with the account
+that made the purchase:
+
+```dart
+if (result.isReceiptAlreadyInUse) {
+  showSignInWithPurchasingAccount();
+}
+```
+
 ## SuperBoard Support
 
 Use the gateway URL exactly as configured for the application. The Support

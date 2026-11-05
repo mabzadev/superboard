@@ -99,11 +99,13 @@ const french: Record<string, string> = {
 	Amount: "Montant",
 	"Amount in {currency}": "Montant en {currency}",
 	"ECB reference rate of {date}": "Taux de référence BCE du {date}",
+	"Currency API daily rate of {date} (not published by the ECB)":
+		"Taux quotidien Currency API du {date} (devise non publiée par la BCE)",
 	"Conversion pending": "Conversion en attente",
 	"No exchange rate for this currency": "Aucun taux de change pour cette devise",
 	"{count} awaiting conversion": "{count} en attente de conversion",
-	"Amounts in {currency}, converted at the ECB reference rate of each purchase day.":
-		"Montants en {currency}, convertis au taux de référence de la BCE du jour de chaque achat.",
+	"Amounts in {currency}, converted at the exchange rate of each purchase day.":
+		"Montants en {currency}, convertis au taux de change du jour de chaque achat.",
 	"1 purchase awaiting conversion is not included in these totals.":
 		"1 achat en attente de conversion n’est pas inclus dans ces totaux.",
 	"{count} purchases awaiting conversion are not included in these totals.":
@@ -117,11 +119,9 @@ const french: Record<string, string> = {
 		"1 achat en attente de conversion n’est pas inclus.",
 	"{count} purchases awaiting conversion are not included.":
 		"{count} achats en attente de conversion ne sont pas inclus.",
-	"Display currency": "Devise d’affichage",
-	"Revenue totals, charts and customer spending are converted to USD at the ECB reference rate of each purchase day, then to the display currency at the same day’s rate.":
-		"Les totaux de revenus, les graphiques et les dépenses des clients sont convertis en USD au taux de référence de la BCE du jour de chaque achat, puis dans la devise d’affichage au taux du même jour.",
-	"US dollar (USD)": "Dollar américain (USD)",
-	"Euro (EUR)": "Euro (EUR)",
+	"Your display currency": "Votre devise d’affichage",
+	"Only for you: other operators choose their own. Revenue totals, charts and customer spending are converted to USD at the exchange rate of each purchase day, then to this currency at the same day’s rate.":
+		"Pour vous seul : chaque opérateur choisit la sienne. Les totaux de revenus, les graphiques et les dépenses des clients sont convertis en USD au taux de change du jour de chaque achat, puis dans cette devise au taux du même jour.",
 	"Display currency saved.": "Devise d’affichage enregistrée.",
 	"Could not save the display currency.": "Impossible d’enregistrer la devise d’affichage.",
 	"Could not load the display currency.": "Impossible de charger la devise d’affichage.",
@@ -207,6 +207,23 @@ const french: Record<string, string> = {
 		"Les transactions, abonnements et événements sont conservés sans lien avec le client ; les alias, soldes et droits promotionnels sont supprimés.",
 	"Delete billing customer": "Supprimer le client de facturation",
 	"Billing customer deleted": "Client de facturation supprimé",
+	"Transfer purchases": "Transférer les achats",
+	"Move this customer’s App Store and Google Play purchases, and the access they give, to another App User ID. Virtual currency balances and promotional entitlements stay with this customer.":
+		"Transférez les achats App Store et Google Play de ce client, et l’accès qu’ils donnent, vers un autre identifiant. Les soldes de monnaie virtuelle et les droits promotionnels restent à ce client.",
+	"Destination App User ID": "Identifiant de destination",
+	Find: "Rechercher",
+	"No customer has this App User ID.": "Aucun client n’a cet identifiant.",
+	"Enter the App User ID of another customer.": "Saisissez l’identifiant d’un autre client.",
+	"Destination customer": "Client de destination",
+	"App User ID": "Identifiant",
+	"Customer ID": "ID du client",
+	"Transfer the purchases of {from} to {to}?": "Transférer les achats de {from} vers {to} ?",
+	"{from} loses the access they give. The transfer is recorded on both customers and sent to the webhooks that accept TRANSFER events.":
+		"{from} perd l’accès qu’ils donnent. Le transfert est enregistré sur les deux clients et envoyé aux webhooks qui acceptent les événements TRANSFER.",
+	"Purchases transferred": "Achats transférés",
+	"This customer has no App Store or Google Play purchase to transfer.":
+		"Ce client n’a aucun achat App Store ou Google Play à transférer.",
+	"Aliased with {alias}": "Associé à {alias}",
 	"No record.": "Aucun enregistrement.",
 	"Store product": "Produit du store",
 	"Transaction ID": "ID de transaction",
@@ -377,6 +394,11 @@ const french: Record<string, string> = {
 	"Keep with original App User ID": "Garder l’identifiant d’origine",
 	"Use with caution. Restoring or buying with a receipt that belongs to another App User ID returns an error. Choose this only if customers must create an account before purchasing, and be ready to help them recover their account.":
 		"À utiliser avec prudence. La restauration ou l’achat avec un reçu qui appartient à un autre identifiant renvoie une erreur. Réservez ce choix aux applications qui exigent un compte avant l’achat, et prévoyez d’aider les clients à récupérer leur compte.",
+	"Use a different restore behavior for sandbox":
+		"Utiliser un autre comportement pour le bac à sable",
+	"Sandbox restore behavior": "Comportement de restauration du bac à sable",
+	"Applies to sandbox purchases instead of the behavior above, to test another behavior without changing production.":
+		"S’applique aux achats du bac à sable à la place du comportement ci-dessus, pour tester un autre comportement sans modifier la production.",
 	"Loading settings…": "Chargement des paramètres…",
 	"Could not load billing settings.": "Impossible de charger les paramètres de facturation.",
 	"Could not save billing settings.": "Impossible d’enregistrer les paramètres de facturation.",
@@ -497,6 +519,7 @@ const codeLabels: Record<CodeKind, Record<string, readonly [english: string, fre
 		revoked: ["Revocation", "Révocation"],
 		transfer: ["Transfer", "Transfert"],
 		transferred: ["Transfer", "Transfert"],
+		aliased: ["Alias created", "Alias créé"],
 		promotional_granted: ["Promotion granted", "Promotion accordée"],
 		promotional_revoked: ["Promotion revoked", "Promotion révoquée"],
 		virtual_currency_adjusted: ["Virtual balance adjusted", "Solde virtuel ajusté"],
@@ -564,7 +587,7 @@ function formatMonetizationDate(
 		: parsed.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
 }
 
-function displayName(type: "region" | "language", value: string, locale: string) {
+function displayName(type: "region" | "language" | "currency", value: string, locale: string) {
 	try {
 		const name = new Intl.DisplayNames([locale], { type, fallback: "none" }).of(value);
 		return name ? capitalize(name) : value;
@@ -592,6 +615,7 @@ export function useMonetizationI18n() {
 				formatMonetizationDate(value, locale, options),
 			region: (value: string) => displayName("region", value, locale),
 			language: (value: string) => displayName("language", value, locale),
+			currency: (value: string) => displayName("currency", value, locale),
 		};
 	}, [locale]);
 }

@@ -9,6 +9,7 @@ export type ProjectContext = {
 	instanceId: string | null;
 	environment: string | null;
 	actorId: string;
+	operatorId: string | null;
 	role: string | null;
 	requestId: string;
 };
@@ -43,6 +44,7 @@ export function internalAuth(): MiddlewareHandler<{
 			instanceId: String(context.instanceId),
 			environment: context.environment,
 			actorId: context.operatorId ?? String(context.actorId),
+			operatorId: context.operatorId ?? null,
 			role: context.role,
 			requestId: context.requestId,
 		});

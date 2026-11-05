@@ -36,24 +36,37 @@ type SdkReceipt = {
 	productType?: ProductType;
 };
 
+type RestoreSettings = Record<BillingEnvironment, RestoreBehavior>;
+
 type ClaimedPurchase = {
 	purchase: VerifiedPurchase;
-	anonymousOwnerIds: string[];
+	anonymousOwners: Array<{ id: string; appUserId: string }>;
 	finalize: (() => Promise<void>) | null;
 };
 
-type PurchaseOwner = { id: string; anonymous: number; recorded: number };
+type PurchaseOwner = { id: string; app_user_id: string; anonymous: number; recorded: number };
 
 export function restoreBehavior(value: unknown): RestoreBehavior {
 	return RESTORE_BEHAVIORS.find((behavior) => behavior === value) ?? "transfer";
 }
 
-async function projectRestoreBehavior(db: D1Database, projectId: string | number) {
+export function sandboxRestoreBehavior(value: unknown): RestoreBehavior | null {
+	return RESTORE_BEHAVIORS.find((behavior) => behavior === value) ?? null;
+}
+
+async function projectRestoreSettings(
+	db: D1Database,
+	projectId: string | number,
+): Promise<RestoreSettings> {
 	const settings = await db
-		.prepare("SELECT restore_behavior FROM billing_project_settings WHERE project_id = ?")
+		.prepare("SELECT * FROM billing_project_settings WHERE project_id = ?")
 		.bind(String(projectId))
-		.first<{ restore_behavior?: string }>();
-	return restoreBehavior(settings?.restore_behavior);
+		.first<{ restore_behavior?: string; sandbox_restore_behavior?: string | null }>();
+	const production = restoreBehavior(settings?.restore_behavior);
+	return {
+		production,
+		sandbox: sandboxRestoreBehavior(settings?.sandbox_restore_behavior) ?? production,
+	};
 }
 
 export async function restoreVerifiedPurchases(env: BillingEnv, request: RestoreRequest) {
@@ -90,9 +103,9 @@ export async function restoreVerifiedPurchases(env: BillingEnv, request: Restore
 			};
 		}),
 	];
-	const behavior = await projectRestoreBehavior(env.DB, request.projectId);
+	const settings = await projectRestoreSettings(env.DB, request.projectId);
 	const claims: ClaimedPurchase[] = [];
-	for (const receipt of receipts) claims.push(await claimReceipt(env, receipt, behavior));
+	for (const receipt of receipts) claims.push(await claimReceipt(env, receipt, settings));
 
 	const restored: Array<Record<string, unknown>> = [];
 	for (const claim of claims) {
@@ -107,42 +120,15 @@ export async function restoreVerifiedPurchases(env: BillingEnv, request: Restore
 }
 
 export async function applySdkPurchase(env: BillingEnv, receipt: SdkReceipt) {
-	const behavior = await projectRestoreBehavior(env.DB, receipt.projectId);
-	const claim = await claimReceipt(env, receipt, behavior);
+	const settings = await projectRestoreSettings(env.DB, receipt.projectId);
+	const claim = await claimReceipt(env, receipt, settings);
 	return { purchase: claim.purchase, applied: await commitClaim(env, claim) };
-}
-
-export async function currentPurchaseOwner(db: D1Database, purchase: VerifiedPurchase) {
-	const chain = [
-		String(purchase.projectId),
-		purchase.store,
-		purchase.environment,
-		purchase.originalTransactionId || purchase.storeTransactionId,
-	];
-	const owner = await db
-		.prepare(
-			`SELECT customer_id FROM (
-        SELECT customer_id, 0 AS source, COALESCE(latest_event_at, updated_at) AS observed_at
-        FROM billing_subscriptions
-        WHERE project_id = ? AND store = ? AND environment = ? AND original_transaction_id = ?
-        UNION ALL
-        SELECT customer_id, 1 AS source, COALESCE(event_occurred_at, verified_at) AS observed_at
-        FROM billing_transactions
-        WHERE project_id = ? AND store = ? AND environment = ? AND original_transaction_id = ?
-      )
-      WHERE customer_id IS NOT NULL
-      ORDER BY source, datetime(observed_at) DESC
-      LIMIT 1`,
-		)
-		.bind(...chain, ...chain)
-		.first<{ customer_id: string }>();
-	return owner?.customer_id ?? null;
 }
 
 async function claimReceipt(
 	env: BillingEnv,
 	receipt: SdkReceipt,
-	behavior: RestoreBehavior,
+	settings: RestoreSettings,
 ): Promise<ClaimedPurchase> {
 	if (receipt.store === "apple") {
 		const verified = await verifyAppleTransaction(env, {
@@ -156,7 +142,7 @@ async function claimReceipt(
 			purchase: verified.purchase,
 			customerId: receipt.customerId,
 			boundCustomerId: verified.transaction.appAccountToken ?? null,
-			behavior,
+			behavior: settings[verified.purchase.environment],
 			finalize: null,
 		});
 	}
@@ -173,7 +159,7 @@ async function claimReceipt(
 		purchase: verified.purchase,
 		customerId: receipt.customerId,
 		boundCustomerId: googleBoundCustomer(verified.verified),
-		behavior,
+		behavior: settings[verified.purchase.environment],
 		finalize: () => finalizeGooglePurchase(verified),
 	});
 }
@@ -203,10 +189,12 @@ async function claimPurchase(
       SELECT customer_id FROM billing_transactions
       WHERE project_id = ? AND store = ? AND environment = ? AND original_transaction_id = ?
     )
-    SELECT c.id, c.anonymous, c.id IN (SELECT customer_id FROM chain) AS recorded
+    SELECT c.id, c.primary_app_user_id AS app_user_id, c.anonymous,
+      c.id IN (SELECT customer_id FROM chain) AS recorded
     FROM billing_customers c
     WHERE c.project_id = ? AND c.id <> ?
-      AND (c.id IN (SELECT customer_id FROM chain) OR c.id = ?)`,
+      AND (c.id IN (SELECT customer_id FROM chain)
+        OR (c.id = ? AND NOT EXISTS (SELECT 1 FROM chain WHERE customer_id IS NOT NULL)))`,
 	)
 		.bind(...chain, ...chain, String(purchase.projectId), customerId, params.boundCustomerId ?? "")
 		.all<PurchaseOwner>();
@@ -223,9 +211,9 @@ async function claimPurchase(
 	}
 	return {
 		purchase: { ...purchase, customerId, transfer: identified.length > 0 },
-		anonymousOwnerIds: owners.results
+		anonymousOwners: owners.results
 			.filter((owner) => Number(owner.anonymous) === 1 && Number(owner.recorded) === 1)
-			.map((owner) => owner.id),
+			.map((owner) => ({ id: owner.id, appUserId: owner.app_user_id })),
 		finalize: params.finalize,
 	};
 }
@@ -259,7 +247,7 @@ async function ownsActiveSubscription(
 
 async function commitClaim(env: BillingEnv, claim: ClaimedPurchase) {
 	const customerId = claim.purchase.customerId ?? "";
-	for (const ownerId of claim.anonymousOwnerIds) await aliasCustomer(env.DB, customerId, ownerId);
+	for (const owner of claim.anonymousOwners) await aliasCustomer(env.DB, customerId, owner);
 	const applied = await applyVerifiedPurchase(env, claim.purchase);
 	if (claim.finalize) await claim.finalize();
 	return applied;

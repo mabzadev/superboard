@@ -1,5 +1,10 @@
 ## 4.0.0 (unreleased)
 
+- Report a purchase or restore that another App User ID owns with
+  `SuperBoardPurchasesErrorCode.receiptAlreadyInUse`, and add
+  `SuperBoardPurchaseResult.isReceiptAlreadyInUse` to check it. Restore results
+  previously carried `http_409` for this case. Purchases API errors that carry a
+  top-level `code` now report it instead of `http_<status>`.
 - Use the SuperBoard entrypoints and types. Deprecated namespace aliases are removed.
 - Use the canonical native channels, HTTP headers, authentication endpoint and cache keys.
 - Rebuild native applications after upgrading; cached wrappers from earlier releases are not supported.

@@ -91,6 +91,7 @@ export type Refund = {
 };
 
 export type PurchaseDetail = Purchase & {
+	usd_rate_source?: string | null;
 	entitlements: Entitlement[];
 	refunds: Refund[];
 };

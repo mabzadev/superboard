@@ -45,45 +45,105 @@ décrit dans [Restore behavior](SUPERBOARD_PURCHASES.md#restore-behavior) ;
 la référence est la page
 [Restore Behavior de RevenueCat](https://www.revenuecat.com/docs/projects/restore-behavior).
 
-Le réglage distinct pour le bac à sable, l’ancien mode de partage entre
-identifiants et le transfert manuel depuis la fiche client ne sont pas proposés.
+Comme dans RevenueCat :
+
+- **Utiliser un autre comportement pour le bac à sable** applique un autre des
+  trois comportements aux achats que le store déclare en bac à sable. Sans ce
+  réglage, ils suivent le comportement du projet. Appliquez la migration API
+  `0075_billing_sandbox_restore_behavior.sql`, qui ajoute la colonne
+  `sandbox_restore_behavior`.
+- Un propriétaire ou un administrateur transfère les achats App Store et Google
+  Play d’un client vers un autre depuis la fiche client (**Transférer les
+  achats**, recherche de l’identifiant de destination, puis confirmation). Le
+  transfert ignore le comportement de restauration, apparaît dans l’historique
+  des deux fiches et envoie le webhook `TRANSFER`.
+- La fusion d’un identifiant anonyme ajoute « Alias créé » à l’historique du
+  client, sans webhook (l’événement `SUBSCRIBER_ALIAS` de RevenueCat est
+  obsolète).
+- Les soldes de monnaie virtuelle restent au client qui les a reçus lors d’un
+  transfert.
+- Les notifications Google reçues par l’ancienne route `/api/v1/iap/google`,
+  sans file de facturation, gardent le propriétaire actuel d’un achat transféré.
+- Le SDK Flutter expose le refus par `SuperBoardPurchasesErrorCode.receiptAlreadyInUse`
+  et `SuperBoardPurchaseResult.isReceiptAlreadyInUse`.
+
+Écarts restants avec RevenueCat : l’ancien mode de partage entre identifiants
+n’est pas proposé ; « abonnement actif » désigne un abonnement du propriétaire
+dans le même store et le même environnement, et non le contenu du reçu, car les
+SDK envoient une transaction par requête ; le transfert depuis la fiche client
+ne déplace ni les achats Stripe ni les droits promotionnels ; le SDK Web
+n’appelle ni la restauration ni l’envoi de reçus et n’a donc pas d’erreur
+équivalente.
 
 ## Devises et devise d’affichage
 
 Comme RevenueCat, chaque achat est converti en USD au taux du jour de l’achat,
 et chaque remboursement au taux du jour de sa demande. Les montants d’origine
-restent stockés et affichés. La source est le taux de référence quotidien de la
-[Banque centrale européenne](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html),
-sans clé d’API. Pour un jour sans cotation (week-end, jour férié), le dernier
-taux publié avant ce jour s’applique, une fois ce jour connu comme non coté.
+restent stockés et affichés. Pour un jour sans cotation (week-end, jour férié),
+le dernier taux publié avant ce jour s’applique, une fois ce jour connu comme
+non coté.
 
-1. Appliquez la migration API `0073_billing_exchange_rates.sql`. Elle ajoute les
-   colonnes `usd_price_micros` et `usd_rate_date` aux achats du registre et aux
+Deux sources gratuites, sans clé d’API, fournissent les taux :
+
+- le taux de référence quotidien de la
+  [Banque centrale européenne](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html),
+  prioritaire, pour la trentaine de devises qu’elle publie ;
+- le taux quotidien de [Currency API](https://github.com/fawazahmed0/exchange-api)
+  (`@fawazahmed0/currency-api`, servi par jsDelivr, avec le miroir
+  `currency-api.pages.dev`), seulement pour les devises que la BCE ne publie
+  pas, comme SAR, AED, VND, EGP, NGN, PKR, QAR ou KZT. Ses taux sont alignés sur
+  le dollar de la BCE du même jour, pour conserver le cours de la devise contre
+  l’USD donné par Currency API. Son historique commence le 2 mars 2024.
+
+Chaque taux enregistre sa source (`ecb` ou `currency-api`), et le détail d’un
+achat l’indique.
+
+1. Appliquez les migrations API `0073_billing_exchange_rates.sql` et
+   `0074_billing_operator_display_currency.sql`. La première ajoute les colonnes
+   `usd_price_micros` et `usd_rate_date` aux achats du registre et aux
    transactions vérifiées, `usd_amount_micros` et `usd_rate_date` aux
-   remboursements, ainsi que la table des taux et le réglage d’affichage.
+   remboursements, ainsi que la table des taux. La seconde ajoute la devise
+   d’affichage de chaque opérateur et le suivi des jours consultés chez
+   Currency API. Elle rouvre aussi les montants restés sans conversion faute de
+   taux BCE, pour que Currency API les convertisse.
 2. La tâche planifiée de Billing (rapprochement toutes les dix minutes) met en
-   file `billing.exchange_rates.sync`. Ce travail récupère les nouveaux taux au
-   plus une fois par heure, charge l’historique manquant par fenêtres de
-   180 jours, puis convertit les montants en attente par lots bornés. Il reprend
-   là où il s’est arrêté. Une indisponibilité de la BCE est enregistrée sans
-   faire échouer le travail.
-3. Choisissez USD ou EUR dans **Paramètres → Général → Devise d’affichage**.
-   L’euro est obtenu depuis l’USD au taux du même jour. Un montant déjà dans la
-   devise d’affichage est repris tel quel.
+   file `billing.exchange_rates.sync`. Ce travail récupère les nouveaux taux de
+   la BCE au plus une fois par heure, charge l’historique manquant par fenêtres
+   de 180 jours, puis convertit les montants en attente par lots bornés. Pour
+   les devises absentes chez la BCE, il interroge Currency API pour au plus dix
+   jours par passage, puis convertit les montants concernés. Il reprend là où il
+   s’est arrêté. Une indisponibilité d’une source est enregistrée sans faire
+   échouer le travail ; Currency API est de nouveau interrogé une heure plus
+   tard.
+3. Chaque opérateur choisit sa devise d’affichage dans son profil (menu du
+   compte, **Compte → Modifier le profil → Devise d’affichage**) : USD (par
+   défaut), EUR, GBP, AUD, CAD, JPY, BRL, KRW, CNY, MXN, SEK ou PLN. Le choix
+   suit l’opérateur sur tous les projets et tous les appareils, sans modifier
+   l’affichage des autres opérateurs. Sans le plugin Authentification, le choix
+   se fait dans **Monétisation → Paramètres → Général**. Le montant en USD est
+   converti dans cette devise au taux de la BCE du même jour. Un montant déjà
+   dans la devise d’affichage est repris tel quel.
 
-Les totaux et la série de la page Achats, le revenu net de la Vue d’ensemble et
-le « Total dépensé » de la fiche client additionnent uniquement les montants
-convertis. Les achats encore sans taux sont comptés à part et signalés à
-l’écran. L’API des statistiques ajoute `display_currency`,
-`totals_in_display_currency` et `series_in_display_currency` ; le paramètre
-facultatif `display_currency` remplace le réglage du projet pour une requête.
-L’export des transactions ajoute `usd_price_micros` et `usd_rate_date`.
+Un montant reste sans conversion lorsque aucune source ne publie sa devise pour
+ce jour, par exemple un achat en SAR antérieur au 2 mars 2024. Les totaux et la
+série de la page Achats, le revenu net de la Vue d’ensemble et le « Total
+dépensé » de la fiche client additionnent uniquement les montants convertis.
+Les achats encore sans taux sont comptés à part et signalés à l’écran. L’API
+des statistiques ajoute `display_currency`, `totals_in_display_currency` et
+`series_in_display_currency` ; le paramètre facultatif `display_currency`
+remplace la devise de l’opérateur pour une requête. Le détail d’un achat ajoute
+`usd_rate_source`. L’export des transactions ajoute `usd_price_micros` et
+`usd_rate_date`.
 
-Écarts restants avec RevenueCat : le réglage est commun au projet, et non
-propre à chaque compte du tableau de bord ; seules USD et EUR sont proposées ;
-les devises absentes des taux de la BCE (par exemple SAR, AED ou VND) restent
-sans montant converti ; les transactions vérifiées sont converties par le
-travail planifié et non au moment de l’achat.
+Le réglage de projet créé par `0073` (`billing_project_currency_settings`)
+n’est plus lu : une préférence de compte ne peut pas dépendre du projet ouvert,
+et la table ne dit pas quel opérateur avait fait ce choix.
+
+Écarts restants avec RevenueCat : les transactions vérifiées sont converties par
+le travail planifié et non au moment de l’achat ; un achat dont la devise n’est
+publiée par aucune source reste sans montant converti ; un week-end ou un jour
+férié utilise le dernier taux publié par la BCE, y compris pour les devises de
+Currency API.
 
 ## Activer Stripe sur le web
 

@@ -876,3 +876,39 @@ export const archiveBillingEntitlement = async (projectId: string, entitlementId
 
 export const archiveBillingOffering = async (projectId: string, offeringId: string) =>
 	(await DELETE(config.apiPath + `/billing/${projectId}/offerings/${offeringId}`)).data;
+
+export type OperatorDisplayCurrency = {
+	display_currency: string;
+	available_currencies: string[];
+};
+
+function operatorDisplayCurrency(value: unknown): OperatorDisplayCurrency {
+	const record = value && typeof value === "object" ? value : {};
+	const available =
+		"available_currencies" in record && Array.isArray(record.available_currencies)
+			? record.available_currencies.filter(
+					(currency): currency is string =>
+						typeof currency === "string" && /^[A-Z]{3}$/u.test(currency),
+				)
+			: [];
+	const currency = "display_currency" in record ? record.display_currency : null;
+	return {
+		display_currency:
+			typeof currency === "string" && available.includes(currency) ? currency : "USD",
+		available_currencies: available.length ? available : ["USD"],
+	};
+}
+
+export const getOperatorDisplayCurrency = async (projectId: string) =>
+	operatorDisplayCurrency(
+		(await GET(config.apiPath + `/billing/${projectId}/operator/display-currency`)).data,
+	);
+
+export const updateOperatorDisplayCurrency = async (projectId: string, displayCurrency: string) =>
+	operatorDisplayCurrency(
+		(
+			await PUT(config.apiPath + `/billing/${projectId}/operator/display-currency`, {
+				display_currency: displayCurrency,
+			})
+		).data,
+	);

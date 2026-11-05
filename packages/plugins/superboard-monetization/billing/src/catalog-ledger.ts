@@ -1,7 +1,10 @@
 import {
+	DISPLAY_CURRENCIES,
 	displayAmountJoins,
 	displayAmountSql,
+	displayCurrencyBindings,
 	displayCurrencySource,
+	displayCurrencyViewer,
 	isDisplayCurrency,
 	usdConversions,
 } from "@superboard/api-worker/billing-exchange-rates";
@@ -252,10 +255,14 @@ app.get("/internal/v1/catalog-ledger/purchases/:id", async (c) => {
 			.bind(...displayValues(c), c.req.param("id"), project(c))
 			.all(),
 		c.env.DB.prepare(
-			`SELECT display.currency AS display_currency, ${displayAmountSql({ amount: "p.purchased_price_micros", currency: "p.currency" }, "p.usd_price_micros", "display", "purchase")} AS display_price_micros FROM billing_catalog_purchases p JOIN ${displayCurrencySource("display")} ${displayAmountJoins("p.usd_rate_date", "display", "purchase")} WHERE p.id=? AND p.project_id=?`,
+			`SELECT display.currency AS display_currency, ${displayAmountSql({ amount: "p.purchased_price_micros", currency: "p.currency" }, "p.usd_price_micros", "display", "purchase")} AS display_price_micros, (SELECT rate.source FROM billing_exchange_rates rate WHERE rate.currency = upper(p.currency) AND rate.rate_date = p.usd_rate_date) AS usd_rate_source FROM billing_catalog_purchases p JOIN ${displayCurrencySource("display")} ${displayAmountJoins("p.usd_rate_date", "display", "purchase")} WHERE p.id=? AND p.project_id=?`,
 		)
 			.bind(...displayValues(c), c.req.param("id"), project(c))
-			.first<{ display_currency: string; display_price_micros: number | null }>(),
+			.first<{
+				display_currency: string;
+				display_price_micros: number | null;
+				usd_rate_source: string | null;
+			}>(),
 	]);
 	const customer = await c.env.DB.prepare(
 		"SELECT external_customer_id FROM billing_catalog_financial_customers WHERE id=? AND project_id=?",
@@ -267,6 +274,7 @@ app.get("/internal/v1/catalog-ledger/purchases/:id", async (c) => {
 			...purchaseRow,
 			display_currency: displayRow?.display_currency ?? "USD",
 			display_price_micros: displayRow?.display_price_micros ?? null,
+			usd_rate_source: displayRow?.usd_rate_source ?? null,
 			external_customer_id: customer?.external_customer_id ?? null,
 			entitlements: entitlementRows.results,
 			refunds: refundRows.results,
@@ -1013,11 +1021,19 @@ async function owned(
 function project(c: WorkerContext): string {
 	return c.get("project").projectId;
 }
-function displayValues(c: WorkerContext): [string | null, string] {
+function displayValues(c: WorkerContext) {
 	const requested = c.req.query("display_currency");
 	if (requested !== undefined && !isDisplayCurrency(requested))
-		throw httpError("display_currency_invalid", "display_currency must be USD or EUR", 422);
-	return [requested ?? null, project(c)];
+		throw httpError(
+			"display_currency_invalid",
+			`display_currency must be one of ${DISPLAY_CURRENCIES.join(", ")}`,
+			422,
+		);
+	const context = c.get("project");
+	return displayCurrencyBindings(
+		displayCurrencyViewer(context.instanceId, context.operatorId),
+		requested ?? null,
+	);
 }
 function flag(value: boolean): number {
 	return value ? 1 : 0;

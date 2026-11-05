@@ -260,7 +260,7 @@ export default function DashboardPageContent() {
 					...card(
 						"Net revenue",
 						formatMoney(displayTotals.net_revenue_micros / 1_000_000, displayCurrency, locale),
-						"Gross purchase revenue after recorded refunds, converted at the ECB reference rate of each purchase day.",
+						"Gross purchase revenue after recorded refunds, converted at the exchange rate of each purchase day.",
 					),
 					...(unconverted > 0
 						? {

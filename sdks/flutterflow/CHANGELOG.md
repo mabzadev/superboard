@@ -1,5 +1,8 @@
 ## 4.0.0 (unreleased)
 
+- Purchase results report `"code": "receipt_already_in_use"`, for purchases and
+  restores, when another App User ID owns the Store purchase and the project's
+  restore behavior keeps it there. Restores previously reported `http_409`.
 - Use the SuperBoard entrypoints and types. Deprecated namespace aliases are removed.
 - Use the canonical native channels, HTTP headers, authentication endpoint and cache keys.
 - Rebuild native applications after upgrading; cached wrappers from earlier releases are not supported.

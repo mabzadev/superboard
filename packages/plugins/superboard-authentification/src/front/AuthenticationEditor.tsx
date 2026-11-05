@@ -6,6 +6,7 @@ import { lazy, Suspense, type ComponentType } from "react";
 import { authenticationTarget, type AuthenticationView } from "./authentication-navigation.js";
 import { useAuthenticationI18n } from "./AuthenticationTabs.js";
 import IdentityPanel from "./IdentityPanel.js";
+import { OperatorDisplayCurrency } from "./OperatorDisplayCurrency.js";
 import { OperatorProfile } from "./OperatorProfile.js";
 
 interface Editor {
@@ -106,7 +107,11 @@ const editors: Record<string, Editor> = {
 		tab: "sign-in",
 		label: "profile",
 		identity: false,
-		edit: OperatorProfile,
+		edit: () => (
+			<OperatorProfile>
+				<OperatorDisplayCurrency />
+			</OperatorProfile>
+		),
 	},
 	account: {
 		view: "settings",

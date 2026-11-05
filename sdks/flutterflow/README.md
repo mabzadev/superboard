@@ -167,6 +167,10 @@ concurrent refreshes are deduplicated. Store transactions received during SDK
 startup are buffered, then processed serially with outbox recovery.
 Purchase actions always return a structured JSON result, including identity or
 network failures that happen before the Store sheet opens.
+A result with `"code": "receipt_already_in_use"` means that another App User ID
+owns the Store purchase and the project's restore behavior keeps it there. Ask
+the customer to sign in with the account that made the purchase. Restores report
+this code through `superboardPurchaseResultJsonStream`.
 No Apple or Google secret is embedded in the application.
 
 Application access and rotating refresh tokens are owned by the SDK session

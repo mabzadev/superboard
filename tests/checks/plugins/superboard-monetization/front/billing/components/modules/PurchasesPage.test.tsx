@@ -364,7 +364,7 @@ describe("purchases page", () => {
 		expect(metric("Refunded")).toHaveTextContent("$1.00");
 		expect(metric("Net revenue")).toHaveTextContent("$11.50");
 		expect(
-			screen.getByText("Amounts in USD, converted at the ECB reference rate of each purchase day."),
+			screen.getByText("Amounts in USD, converted at the exchange rate of each purchase day."),
 		).toBeInTheDocument();
 		expect(
 			screen.getByText("2 purchases awaiting conversion are not included in these totals."),
@@ -381,10 +381,79 @@ describe("purchases page", () => {
 			screen.getByText("2 achats en attente de conversion ne sont pas inclus dans ces totaux."),
 		).toBeInTheDocument();
 		expect(
-			screen.getByText(
-				"Montants en USD, convertis au taux de référence de la BCE du jour de chaque achat.",
-			),
+			screen.getByText("Montants en USD, convertis au taux de change du jour de chaque achat."),
 		).toBeInTheDocument();
+	});
+
+	it("shows yen and won totals without decimals", async () => {
+		const inDisplayCurrency = (currency: string) => ({
+			...twoCurrencyStatistics,
+			display_currency: currency,
+			totals_in_display_currency: {
+				purchases: 3,
+				gross_revenue_micros: 1_250_000_000,
+				refunds: 0,
+				refunded_micros: 0,
+				net_revenue_micros: 1_250_000_000,
+				active_subscriptions: 0,
+				unconverted_purchases: 0,
+				unconverted_refunds: 0,
+			},
+			series_in_display_currency: [],
+		});
+		api.getProductStatistics.mockResolvedValue(inDisplayCurrency("JPY"));
+		const { unmount } = render(<PurchasesPage />);
+		await screen.findByText("Amounts in JPY, converted at the exchange rate of each purchase day.");
+		expect(metric("Net revenue")).toHaveTextContent(/^Net revenue¥1,250$/u);
+		unmount();
+
+		api.getProductStatistics.mockResolvedValue(inDisplayCurrency("KRW"));
+		render(<PurchasesPage />, { wrapper: French });
+		await screen.findByText(
+			"Montants en KRW, convertis au taux de change du jour de chaque achat.",
+		);
+		expect(metric("Revenu net")).toHaveTextContent(/^Revenu net1\s250\s₩$/u);
+	});
+
+	it("names the daily Currency API rate for a currency the ECB does not publish", async () => {
+		const riyals = {
+			...purchase,
+			id: "purchase-sar",
+			external_transaction_id: "tx-sar",
+			purchased_price_micros: 37_500_000,
+			currency: "SAR",
+			usd_price_micros: 10_000_000,
+			usd_rate_date: "2026-08-07",
+			display_currency: "USD",
+			display_price_micros: 10_000_000,
+		};
+		api.getPurchases.mockResolvedValue([riyals]);
+		api.getPurchase.mockResolvedValue({
+			...riyals,
+			usd_rate_source: "currency-api",
+			entitlements: [],
+			refunds: [],
+		});
+		const { unmount } = render(<PurchasesPage />);
+		fireEvent.click(await screen.findByRole("button", { name: "View purchase tx-sar" }));
+		const detail = (await screen.findByText("Purchase detail")).closest<HTMLElement>(
+			"[data-slot=card]",
+		);
+		if (!detail) throw new Error("Purchase detail missing");
+		expect(fact(detail, "Amount in USD")).toBe(
+			"$10.00Currency API daily rate of Aug 7, 2026 (not published by the ECB)",
+		);
+		unmount();
+
+		render(<PurchasesPage />, { wrapper: French });
+		fireEvent.click(await screen.findByRole("button", { name: "Voir l’achat tx-sar" }));
+		const french = (await screen.findByText("Détail de l’achat")).closest<HTMLElement>(
+			"[data-slot=card]",
+		);
+		if (!french) throw new Error("Purchase detail missing");
+		expect(fact(french, "Montant en USD")).toMatch(
+			/^10,00\s\$USTaux quotidien Currency API du 7 août 2026 \(devise non publiée par la BCE\)$/u,
+		);
 	});
 
 	it("shows each transaction in its original currency and in the display currency", async () => {

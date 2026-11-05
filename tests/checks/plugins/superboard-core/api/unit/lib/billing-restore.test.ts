@@ -37,8 +37,14 @@ afterEach(() => {
 describe("verified purchase restoration", () => {
 	it("restores Apple and Google through provider verification and finalizes Google last", async () => {
 		const order: string[] = [];
-		providerMocks.apple.mockResolvedValue({ purchase: { store: "apple" }, transaction: {} });
-		providerMocks.google.mockResolvedValue({ purchase: { store: "google" }, verified: {} });
+		providerMocks.apple.mockResolvedValue({
+			purchase: { store: "apple", environment: "sandbox" },
+			transaction: {},
+		});
+		providerMocks.google.mockResolvedValue({
+			purchase: { store: "google", environment: "sandbox" },
+			verified: {},
+		});
 		providerMocks.apply.mockImplementation(async (_env, purchase) => {
 			order.push(`apply:${purchase.store}`);
 			return { transactionId: `${purchase.store}-transaction`, duplicate: false };
@@ -79,8 +85,14 @@ describe("verified purchase restoration", () => {
 
 	it("rejects a receipt kept by another App User ID before applying any purchase", async () => {
 		const env = restoreEnvironment("block", [{ id: "owner-1", anonymous: 0, recorded: 1 }]);
-		providerMocks.apple.mockResolvedValue({ purchase: { store: "apple" }, transaction: {} });
-		providerMocks.google.mockResolvedValue({ purchase: { store: "google" }, verified: {} });
+		providerMocks.apple.mockResolvedValue({
+			purchase: { store: "apple", environment: "production" },
+			transaction: {},
+		});
+		providerMocks.google.mockResolvedValue({
+			purchase: { store: "google", environment: "production" },
+			verified: {},
+		});
 
 		await expect(
 			restoreVerifiedPurchases(env, {
@@ -128,7 +140,7 @@ describe("verified purchase restoration", () => {
 function restoreEnvironment(restoreBehavior: string, owners: unknown[] = []) {
 	return {
 		DB: createFakeD1((call) => {
-			if (call.op === "first" && call.sql.includes("restore_behavior"))
+			if (call.op === "first" && call.sql.includes("FROM billing_project_settings"))
 				return { restore_behavior: restoreBehavior };
 			if (call.op === "all" && call.sql.includes("WITH chain AS")) return owners;
 			return undefined;

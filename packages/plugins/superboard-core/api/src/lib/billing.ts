@@ -51,6 +51,7 @@ export type VerifiedPurchase = {
 	periodType?: "normal" | "trial" | "intro";
 	rawPayload: unknown;
 	transfer?: boolean;
+	keepCurrentOwner?: boolean;
 };
 
 function parseJson(value: unknown): Record<string, unknown> {
@@ -162,21 +163,63 @@ export async function identifyCustomer(
 			)
 			.bind(targetAppUserId, destination.id),
 	]);
+	await recordCustomerAlias(db, destination.id, merged.primary_app_user_id);
 	return db
 		.prepare("SELECT * FROM billing_customers WHERE id = ?")
 		.bind(destination.id)
 		.first<Record<string, unknown>>();
 }
 
-export async function aliasCustomer(db: D1Database, destinationId: string, mergedId: string) {
+export async function aliasCustomer(
+	db: D1Database,
+	destinationId: string,
+	merged: { id: string; appUserId: string },
+) {
 	await db.batch([
-		...customerMergeStatements(db, destinationId, mergedId),
+		...customerMergeStatements(db, destinationId, merged.id),
 		db
 			.prepare(
 				"UPDATE billing_customers SET last_seen_at = datetime('now'), updated_at = datetime('now') WHERE id = ?",
 			)
 			.bind(destinationId),
 	]);
+	await recordCustomerAlias(db, destinationId, merged.appUserId);
+}
+
+async function recordCustomerAlias(db: D1Database, customerId: unknown, alias: unknown) {
+	if (typeof customerId !== "string" || typeof alias !== "string") return;
+	try {
+		await db
+			.prepare(
+				`INSERT INTO billing_events (
+          id, project_id, customer_id, provider, environment, external_event_id, event_type,
+          status, occurred_at, processed_at, payload
+        )
+        SELECT ?, c.project_id, c.id, 'superboard',
+          CASE WHEN p.is_test = 1 THEN 'sandbox' ELSE 'production' END,
+          ?, 'aliased', 'processed', ?, datetime('now'),
+          json_object('alias', ?, 'app_user_id', c.primary_app_user_id)
+        FROM billing_customers c JOIN projects p ON p.id = c.project_id
+        WHERE c.id = ?`,
+			)
+			.bind(
+				crypto.randomUUID(),
+				`alias:${crypto.randomUUID()}`,
+				new Date().toISOString(),
+				alias,
+				customerId,
+			)
+			.run();
+	} catch (error) {
+		// The merge is already committed; a missing history entry must not fail it.
+		console.error(
+			JSON.stringify({
+				event: "billing_alias_history_failed",
+				customer_id: customerId,
+				error: error instanceof Error ? error.message : "Unknown error",
+			}),
+		);
+	}
 }
 
 function customerMergeStatements(db: D1Database, destinationId: unknown, mergedId: unknown) {
@@ -656,7 +699,39 @@ export async function queueCustomerEntitlementChanged(
 	});
 }
 
-export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedPurchase) {
+export async function currentPurchaseOwner(db: D1Database, purchase: VerifiedPurchase) {
+	const chain = [
+		String(purchase.projectId),
+		purchase.store,
+		purchase.environment,
+		purchase.originalTransactionId || purchase.storeTransactionId,
+	];
+	const owner = await db
+		.prepare(
+			`SELECT customer_id FROM (
+        SELECT customer_id, 0 AS source, COALESCE(latest_event_at, updated_at) AS observed_at
+        FROM billing_subscriptions
+        WHERE project_id = ? AND store = ? AND environment = ? AND original_transaction_id = ?
+        UNION ALL
+        SELECT customer_id, 1 AS source, COALESCE(event_occurred_at, verified_at) AS observed_at
+        FROM billing_transactions
+        WHERE project_id = ? AND store = ? AND environment = ? AND original_transaction_id = ?
+      )
+      WHERE customer_id IS NOT NULL
+      ORDER BY source, datetime(observed_at) DESC
+      LIMIT 1`,
+		)
+		.bind(...chain, ...chain)
+		.first<{ customer_id: string }>();
+	return owner?.customer_id ?? null;
+}
+
+export async function applyVerifiedPurchase(env: BillingEnv, verified: VerifiedPurchase) {
+	const owner =
+		verified.keepCurrentOwner === true && verified.transfer !== true
+			? await currentPurchaseOwner(env.DB, verified)
+			: null;
+	const purchase = owner ? { ...verified, customerId: owner } : verified;
 	if (!BILLING_STATUSES.includes(purchase.status))
 		throw new Error(`Unsupported billing status: ${purchase.status}`);
 	const product = await getOrCreateProduct(env.DB, purchase);
@@ -905,6 +980,73 @@ export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedP
 	return { transactionId: stored.id, duplicate: insert.meta.changes === 0 };
 }
 
+type PurchaseTransfer = {
+	projectId: string;
+	applicationId: string | null;
+	store: VerifiedPurchase["store"];
+	environment: BillingEnvironment;
+	transactionId: string | null;
+	fromCustomerIds: string[];
+	toCustomerId: string;
+	details: Record<string, unknown>;
+};
+
+async function recordPurchaseTransfer(
+	env: BillingEnv,
+	transfer: PurchaseTransfer,
+	ownershipChanges: D1PreparedStatement[],
+) {
+	const customers = await env.DB.prepare(
+		`SELECT id, primary_app_user_id FROM billing_customers
+     WHERE project_id = ? AND id IN (SELECT value FROM json_each(?))`,
+	)
+		.bind(transfer.projectId, JSON.stringify([...transfer.fromCustomerIds, transfer.toCustomerId]))
+		.all<{ id: string; primary_app_user_id: string }>();
+	const appUserIds = new Map(
+		customers.results.map((customer) => [customer.id, customer.primary_app_user_id]),
+	);
+	const payload = {
+		transferred_from: transfer.fromCustomerIds.map((id) => appUserIds.get(id) ?? id),
+		transferred_to: [appUserIds.get(transfer.toCustomerId) ?? transfer.toCustomerId],
+		from_customer_ids: transfer.fromCustomerIds,
+		to_customer_id: transfer.toCustomerId,
+		store: transfer.store,
+		environment: transfer.environment,
+		...transfer.details,
+	};
+	const transferId = crypto.randomUUID();
+	const occurredAt = new Date().toISOString();
+	await env.DB.batch([
+		...ownershipChanges,
+		...[...transfer.fromCustomerIds, transfer.toCustomerId].map((id) =>
+			env.DB.prepare(
+				`INSERT OR IGNORE INTO billing_events (
+          id, project_id, application_id, customer_id, transaction_id, provider, environment,
+          external_event_id, event_type, status, occurred_at, processed_at, payload
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'transferred', 'processed', ?, datetime('now'), ?)`,
+			).bind(
+				crypto.randomUUID(),
+				transfer.projectId,
+				transfer.applicationId,
+				id,
+				transfer.transactionId,
+				transfer.store,
+				transfer.environment,
+				`transfer:${transferId}:${id}`,
+				occurredAt,
+				JSON.stringify(payload),
+			),
+		),
+	]);
+	await queueOutboundWebhookEvent(env, {
+		projectId: transfer.projectId,
+		environment: transfer.environment,
+		eventType: "TRANSFER",
+		transactionId: transfer.transactionId,
+		payload: { customer_id: transfer.toCustomerId, ...payload },
+	});
+}
+
 async function transferPurchaseChain(
 	env: BillingEnv,
 	purchase: VerifiedPurchase,
@@ -913,66 +1055,150 @@ async function transferPurchaseChain(
 	previousCustomerIds: string[],
 ) {
 	const projectId = String(purchase.projectId);
-	const customers = await env.DB.prepare(
-		`SELECT id, primary_app_user_id FROM billing_customers
-     WHERE project_id = ? AND id IN (SELECT value FROM json_each(?))`,
-	)
-		.bind(projectId, JSON.stringify([...previousCustomerIds, customerId]))
-		.all<{ id: string; primary_app_user_id: string }>();
-	const appUserIds = new Map(
-		customers.results.map((customer) => [customer.id, customer.primary_app_user_id]),
-	);
-	const transfer = {
-		transferred_from: previousCustomerIds.map((id) => appUserIds.get(id) ?? id),
-		transferred_to: [appUserIds.get(customerId) ?? customerId],
-		from_customer_ids: previousCustomerIds,
-		to_customer_id: customerId,
-		store: purchase.store,
-		environment: purchase.environment,
-		product_id: purchase.storeProductId,
-	};
-	const transferId = crypto.randomUUID();
-	const occurredAt = new Date().toISOString();
-	await env.DB.batch([
-		env.DB.prepare(
-			`UPDATE billing_transactions SET customer_id = ?
+	await recordPurchaseTransfer(
+		env,
+		{
+			projectId,
+			applicationId: purchase.applicationId ? String(purchase.applicationId) : null,
+			store: purchase.store,
+			environment: purchase.environment,
+			transactionId,
+			fromCustomerIds: previousCustomerIds,
+			toCustomerId: customerId,
+			details: { product_id: purchase.storeProductId },
+		},
+		[
+			env.DB.prepare(
+				`UPDATE billing_transactions SET customer_id = ?
        WHERE project_id = ? AND store = ? AND environment = ? AND original_transaction_id = ?
          AND customer_id IN (SELECT value FROM json_each(?))`,
-		).bind(
-			customerId,
-			projectId,
-			purchase.store,
-			purchase.environment,
-			purchase.originalTransactionId || purchase.storeTransactionId,
-			JSON.stringify(previousCustomerIds),
-		),
-		...[...previousCustomerIds, customerId].map((id) =>
-			env.DB.prepare(
-				`INSERT OR IGNORE INTO billing_events (
-          id, project_id, application_id, customer_id, transaction_id, provider, environment,
-          external_event_id, event_type, status, occurred_at, processed_at, payload
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'transferred', 'processed', ?, datetime('now'), ?)`,
 			).bind(
-				crypto.randomUUID(),
+				customerId,
 				projectId,
-				purchase.applicationId ? String(purchase.applicationId) : null,
-				id,
-				transactionId,
 				purchase.store,
 				purchase.environment,
-				`transfer:${transferId}:${id}`,
-				occurredAt,
-				JSON.stringify(transfer),
+				purchase.originalTransactionId || purchase.storeTransactionId,
+				JSON.stringify(previousCustomerIds),
 			),
-		),
-	]);
-	await queueOutboundWebhookEvent(env, {
-		projectId: purchase.projectId,
-		environment: purchase.environment,
-		eventType: "TRANSFER",
-		transactionId,
-		payload: { customer_id: customerId, ...transfer },
-	});
+		],
+	);
+}
+
+type OwnedPurchase = {
+	store: VerifiedPurchase["store"];
+	environment: BillingEnvironment;
+	original_transaction_id: string;
+	transaction_id: string | null;
+	application_id: string | null;
+	product_id: string;
+	store_product_id: string;
+	observed_at: string | null;
+};
+
+export async function transferCustomerPurchases(
+	env: BillingEnv,
+	params: { projectId: string; fromCustomerId: string; toCustomerId: string },
+) {
+	const customers = await env.DB.prepare(
+		"SELECT id FROM billing_customers WHERE project_id = ? AND id IN (?, ?)",
+	)
+		.bind(params.projectId, params.fromCustomerId, params.toCustomerId)
+		.all<{ id: string }>();
+	if (customers.results.length !== 2) return null;
+	const owned = await env.DB.prepare(
+		`SELECT t.store, t.environment, t.original_transaction_id, t.id AS transaction_id,
+        t.application_id, t.product_id, p.store_product_id,
+        COALESCE(t.event_occurred_at, t.verified_at) AS observed_at
+      FROM billing_transactions t JOIN billing_products p ON p.id = t.product_id
+      WHERE t.project_id = ? AND t.customer_id = ? AND t.store IN ('apple', 'google')
+      UNION ALL
+      SELECT s.store, s.environment, s.original_transaction_id, s.latest_transaction_id,
+        s.application_id, s.product_id, p.store_product_id,
+        COALESCE(s.latest_event_at, s.updated_at)
+      FROM billing_subscriptions s JOIN billing_products p ON p.id = s.product_id
+      WHERE s.project_id = ? AND s.customer_id = ? AND s.store IN ('apple', 'google')`,
+	)
+		.bind(params.projectId, params.fromCustomerId, params.projectId, params.fromCustomerId)
+		.all<OwnedPurchase>();
+	const groups = new Map<string, OwnedPurchase[]>();
+	for (const purchase of owned.results) {
+		const key = `${purchase.store}:${purchase.environment}`;
+		groups.set(key, [...(groups.get(key) ?? []), purchase]);
+	}
+	let transferred = 0;
+	for (const purchases of groups.values()) {
+		const [first] = purchases;
+		if (!first) continue;
+		const latest = purchases.reduce((current, purchase) =>
+			Date.parse(purchase.observed_at ?? "") > Date.parse(current.observed_at ?? "")
+				? purchase
+				: current,
+		);
+		const chainIds = [...new Set(purchases.map((purchase) => purchase.original_transaction_id))];
+		const chains = JSON.stringify(chainIds);
+		const ownership = [params.toCustomerId, params.projectId, first.store, first.environment];
+		await recordPurchaseTransfer(
+			env,
+			{
+				projectId: params.projectId,
+				applicationId: latest.application_id,
+				store: first.store,
+				environment: first.environment,
+				transactionId: latest.transaction_id,
+				fromCustomerIds: [params.fromCustomerId],
+				toCustomerId: params.toCustomerId,
+				details: {
+					product_ids: [...new Set(purchases.map((purchase) => purchase.store_product_id))],
+				},
+			},
+			[
+				env.DB.prepare(
+					`UPDATE billing_transactions SET customer_id = ?
+           WHERE project_id = ? AND store = ? AND environment = ? AND customer_id = ?
+             AND original_transaction_id IN (SELECT value FROM json_each(?))`,
+				).bind(...ownership, params.fromCustomerId, chains),
+				env.DB.prepare(
+					`UPDATE billing_subscriptions SET customer_id = ?, updated_at = datetime('now')
+           WHERE project_id = ? AND store = ? AND environment = ? AND customer_id = ?
+             AND original_transaction_id IN (SELECT value FROM json_each(?))`,
+				).bind(...ownership, params.fromCustomerId, chains),
+			],
+		);
+		transferred += chainIds.length;
+		const entitlements = await env.DB.prepare(
+			`SELECT pe.entitlement_id AS id
+       FROM billing_product_entitlements pe
+       JOIN billing_entitlements e ON e.id = pe.entitlement_id
+       WHERE e.active = 1 AND pe.product_id IN (SELECT value FROM json_each(?))
+       UNION
+       SELECT entitlement_id AS id FROM billing_customer_entitlements
+       WHERE project_id = ? AND source = 'purchase' AND customer_id IN (?, ?)`,
+		)
+			.bind(
+				JSON.stringify(purchases.map((purchase) => purchase.product_id)),
+				params.projectId,
+				params.fromCustomerId,
+				params.toCustomerId,
+			)
+			.all<{ id: string }>();
+		for (const customerId of [params.fromCustomerId, params.toCustomerId]) {
+			for (const entitlement of entitlements.results)
+				await projectCustomerEntitlement(env.DB, {
+					projectId: params.projectId,
+					customerId,
+					entitlementId: entitlement.id,
+					fallbackProductId: null,
+				});
+			await queueCustomerEntitlementChanged(env, {
+				projectId: params.projectId,
+				customerId,
+				environment: first.environment,
+				transactionId: latest.transaction_id,
+				reason: "purchase_transferred",
+			});
+		}
+	}
+	return { transferred };
 }
 
 function verifiedPurchaseAnalyticsEventType(purchase: VerifiedPurchase): VerifiedPurchaseEventType {

@@ -7,12 +7,18 @@ import {
 	persistAppleNotificationConfiguration,
 	readAppleNotificationConfiguration,
 } from "../lib/apple-notification-configuration";
-import { identifyCustomer, queueCustomerEntitlementChanged } from "../lib/billing";
+import {
+	identifyCustomer,
+	queueCustomerEntitlementChanged,
+	transferCustomerPurchases,
+} from "../lib/billing";
 import { isBillingQueueJob } from "../lib/billing-dispatch";
 import {
 	displayAmountJoins,
 	displayAmountSql,
+	displayCurrencyBindings,
 	displayCurrencySource,
+	displayCurrencyViewer,
 } from "../lib/billing-exchange-rates";
 import { signedCustomerInfo } from "../lib/billing-identity";
 import { callBillingServiceBinding } from "../lib/billing-service";
@@ -2819,11 +2825,14 @@ admin.get("/:projectId/customers/:customerId", async (c) => {
 			"transaction",
 		);
 		const transactionSource = `billing_transactions t JOIN ${displayCurrencySource("display")} ${displayAmountJoins("t.usd_rate_date", "display", "transaction")}`;
+		const display = displayCurrencyBindings(
+			displayCurrencyViewer(project.instanceId, c.get("operatorId")),
+		);
 		const [transactions, events, paywallEvents, aliases, totalSpent] = await Promise.all([
 			c.env.DB.prepare(
 				`SELECT t.*, p.store_product_id, display.currency AS display_currency, ${transactionAmount} AS display_price_micros FROM ${transactionSource} LEFT JOIN billing_products p ON p.id = t.product_id WHERE t.customer_id = ? ORDER BY t.created_at DESC LIMIT 250`,
 			)
-				.bind(null, project.id, customer.id)
+				.bind(...display, customer.id)
 				.all(),
 			c.env.DB.prepare(
 				`SELECT * FROM billing_events WHERE customer_id = ? ORDER BY occurred_at DESC LIMIT 250`,
@@ -2857,7 +2866,7 @@ admin.get("/:projectId/customers/:customerId", async (c) => {
           GROUP BY t.store, t.environment, t.store_transaction_id
         ) spent`,
 			)
-				.bind(null, project.id, null, project.id, customer.id)
+				.bind(...display, ...display, customer.id)
 				.first<{
 					currency: string;
 					purchases: number;
@@ -3024,6 +3033,43 @@ admin.post("/:projectId/customers/:customerId/merge", async (c) => {
 		return c.json({ customer_id: merged?.id });
 	} catch (error) {
 		return replyError(c, error);
+	}
+});
+
+admin.post("/:projectId/customers/:customerId/transfer", async (c) => {
+	try {
+		const project = await projectFor(c);
+		requireAdmin(project);
+		const data = await jsonBody(c);
+		const sourceId = c.req.param("customerId");
+		const targetId =
+			typeof data.target_customer_id === "string" ? data.target_customer_id.trim() : "";
+		if (!targetId || targetId === sourceId)
+			throw purchasesError(
+				"transfer_target_invalid",
+				"Choose another customer to receive the purchases",
+				422,
+			);
+		const result = await transferCustomerPurchases(c.env, {
+			projectId: project.id,
+			fromCustomerId: sourceId,
+			toCustomerId: targetId,
+		});
+		if (!result)
+			throw purchasesError("customer_not_found", "Source or target customer not found", 404);
+		await audit(c, project.id, "customer.purchases_transferred", "customer", sourceId, {
+			target_customer_id: targetId,
+			transferred: result.transferred,
+		});
+		return c.json({ customer_id: targetId, transferred: result.transferred });
+	} catch (error) {
+		const status =
+			error instanceof Error && "status" in error && typeof error.status === "number"
+				? error.status
+				: 422;
+		return Response.json(errorEnvelope(error, c.req.header("cf-ray") || crypto.randomUUID()), {
+			status,
+		});
 	}
 });
 
