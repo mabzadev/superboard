@@ -1,12 +1,12 @@
 import { resolveRouteReference } from "@superboard/contracts/route-reference";
 import type { RouteDescriptor } from "@superboard/contracts/route-registry";
+import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
 import { SELF, env } from "cloudflare:test";
 import { beforeAll, expect, test } from "vitest";
 
 import { proxyOperatorApiRequest } from "../../../../../apps/site/src/lib/operator-api-proxy.js";
 import { initializeOperatorProjectScope } from "../../../../../apps/site/src/lib/operator-project-scope.js";
 import { matchPluginApiAdapter } from "../../../../../apps/site/src/lib/plugin-api-adapter.js";
-import { importPluginStoreEncryptionKey } from "../../../../../apps/site/src/lib/plugin-store-repository.js";
 import { resolveApiRouteOwner } from "../../../../../apps/site/src/lib/route-owner.js";
 import { resolveApiRouteReferences } from "../../../../../apps/site/src/lib/route-references.js";
 import { canonicalPluginId } from "../../../../../packages/contracts/src/plugin-packages.js";
@@ -359,16 +359,25 @@ test("preserves multipart bytes through the command repository and signed Worker
 	const response = await SELF.fetch(request);
 	expect(response.status, await response.clone().text()).toBe(400);
 	const row = await env.DB.prepare(
-		"SELECT request_payload_json FROM superboard_plugin_command_operations WHERE operation_id = ?",
+		"SELECT request_checksum FROM superboard_plugin_command_operations WHERE operation_id = ?",
 	)
 		.bind(key)
-		.first<{ request_payload_json: string }>();
-	expect(row).not.toBeNull();
-	const payload = JSON.parse(row!.request_payload_json) as { iv: string; ciphertext: string };
-	const decrypted = await crypto.subtle.decrypt(
-		{ name: "AES-GCM", iv: Uint8Array.from(atob(payload.iv), (c) => c.charCodeAt(0)) },
-		await importPluginStoreEncryptionKey(env.SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY),
-		Uint8Array.from(atob(payload.ciphertext), (c) => c.charCodeAt(0)),
+		.first<{ request_checksum: string }>();
+	const sha256 = async (bytes: Uint8Array) =>
+		`sha256:${Array.from(
+			new Uint8Array(await crypto.subtle.digest("SHA-256", Uint8Array.from(bytes).buffer)),
+			(byte) => byte.toString(16).padStart(2, "0"),
+		).join("")}`;
+	const encode = (text: string) => new TextEncoder().encode(text);
+	expect(row?.request_checksum).toBe(
+		await sha256(
+			encode(
+				canonicalizeReleasePayload({
+					method: "POST",
+					path_checksum: await sha256(encode(`/api/v1/paywalls/projects/${projectRef}`)),
+					body_checksum: await sha256(original),
+				}),
+			),
+		),
 	);
-	expect(new Uint8Array(decrypted)).toEqual(original);
 });

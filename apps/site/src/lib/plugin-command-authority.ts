@@ -60,7 +60,8 @@ export async function beginRepositoryCommand(db: D1Database, input: RepositoryCo
 			}),
 		),
 	);
-	const encryptedRequest = await encryptBytes(input.encryption_key, input.request_body);
+	// Request bodies can carry plugin secrets and nothing reads them back: idempotency compares
+	// request_checksum and a replay returns the stored response.
 	const inserted = await db
 		.prepare(
 			`INSERT INTO superboard_plugin_command_operations (
@@ -68,7 +69,7 @@ export async function beginRepositoryCommand(db: D1Database, input: RepositoryCo
 			   adapter_operation, method, request_path_checksum, request_payload_json,
 			   request_checksum, state, response_status, response_headers_json,
 			   response_payload_json, response_checksum, accepted_at, completed_at
-			 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', NULL, NULL, NULL, NULL, ?, NULL)
+			 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{"retained":false}', ?, 'accepted', NULL, NULL, NULL, NULL, ?, NULL)
 			 ON CONFLICT(operation_id) DO NOTHING
 			 RETURNING *`,
 		)
@@ -81,7 +82,6 @@ export async function beginRepositoryCommand(db: D1Database, input: RepositoryCo
 			input.adapter_operation,
 			input.method,
 			pathChecksum,
-			JSON.stringify(encryptedRequest),
 			requestChecksum,
 			input.accepted_at,
 		)

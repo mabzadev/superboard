@@ -141,9 +141,9 @@ describe("EmDash plugin Store authority", () => {
 			.run();
 		const reducedLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
 		expect(reducedLock).toHaveLength(17);
-		expect(
-			reducedLock.some(({ plugin_id: pluginId }) => pluginId === "superboard-marketing"),
-		).toBe(false);
+		expect(reducedLock.some(({ plugin_id: pluginId }) => pluginId === "superboard-marketing")).toBe(
+			false,
+		);
 		const reducedPresentation = await composeUserFrontReleaseInput({
 			...releaseIdentifiers,
 			plugin_lock: reducedLock,
@@ -351,6 +351,67 @@ describe("EmDash plugin Store authority", () => {
 				request_path: "/api/v1/analytics/10-test/reports/other",
 			}),
 		).rejects.toThrow(/IDEMPOTENCY_CONFLICT/u);
+	});
+
+	test("keeps command idempotency without retaining a recoverable request body", async () => {
+		await synchronizeSuperBoardPluginCatalog(env.DB, {
+			...targetProof,
+			instance_id: "reference-production",
+			approved_by: "operator-1",
+			checked_at: "2026-08-30T09:05:00.000Z",
+			expires_at: "2999-08-31T09:05:00.000Z",
+		});
+		await env.DB.prepare(
+			"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'reference-production' AND plugin_id = 'superboard-analytics'",
+		).run();
+		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+			"encrypt",
+			"decrypt",
+		]);
+		const secrets = [`secret-${crypto.randomUUID()}`, `secret-${crypto.randomUUID()}`];
+		const body = (value: Record<string, string>) => new TextEncoder().encode(JSON.stringify(value));
+		const input = {
+			operation_id: "operation-analytics-secret-1",
+			instance_id: "reference-production",
+			project_ref: "10-test",
+			plugin_id: "superboard-analytics",
+			command_id: "superboard-analytics.command.create_analytics_report",
+			adapter_operation: "api-v1:superboard-analytics",
+			method: "POST" as const,
+			request_path: "/api/v1/analytics/10-test/reports",
+			request_body: body({ secret_key: secrets[0] ?? "", webhook_secret: secrets[1] ?? "" }),
+			accepted_at: "2026-08-30T09:05:00.000Z",
+			encryption_key: encryptionKey,
+		};
+		const otherBody = { ...input, request_body: body({ secret_key: "replacement" }) };
+
+		await expect(beginRepositoryCommand(env.DB, input)).resolves.toMatchObject({
+			status: "accepted",
+		});
+		await expect(beginRepositoryCommand(env.DB, input)).resolves.toMatchObject({
+			status: "accepted",
+			resumed: true,
+		});
+		await expect(beginRepositoryCommand(env.DB, otherBody)).rejects.toThrow(
+			/IDEMPOTENCY_CONFLICT/u,
+		);
+		await completeRepositoryCommand(env.DB, {
+			operation_id: input.operation_id,
+			response: Response.json({ configured: true }, { status: 200 }),
+			completed_at: "2026-08-30T09:05:01.000Z",
+			encryption_key: encryptionKey,
+		});
+		const replay = await beginRepositoryCommand(env.DB, input);
+		if (replay.status !== "replay") throw new Error("expected replay");
+		expect(replay.response.status).toBe(200);
+		await expect(replay.response.json()).resolves.toEqual({ configured: true });
+		await expect(beginRepositoryCommand(env.DB, otherBody)).rejects.toThrow(
+			/IDEMPOTENCY_CONFLICT/u,
+		);
+
+		const stored = await recoverableCommandText(input.operation_id, encryptionKey);
+		expect(stored).toContain('"configured":true');
+		for (const secret of secrets) expect(stored).not.toContain(secret);
 	});
 
 	test("keeps the compatibility Worker transient behind the repository-first gateway", async () => {
@@ -697,6 +758,49 @@ async function activatePluginRelease(
 		release_id: releaseId,
 		finalized_at: activatedAt,
 	});
+}
+
+async function recoverableCommandText(operationId: string, key: CryptoKey): Promise<string> {
+	const operation = await env.DB.prepare(
+		"SELECT * FROM superboard_plugin_command_operations WHERE operation_id = ?",
+	)
+		.bind(operationId)
+		.first();
+	const outbox = await env.DB.prepare(
+		"SELECT * FROM superboard_plugin_command_outbox WHERE operation_id = ?",
+	)
+		.bind(operationId)
+		.all();
+	const values = [operation ?? {}, ...outbox.results].flatMap((row) => Object.values(row));
+	const decrypted = await Promise.all(values.map((value) => decryptStoredEnvelope(value, key)));
+	return [JSON.stringify(values), ...decrypted].join("\n");
+}
+
+async function decryptStoredEnvelope(value: unknown, key: CryptoKey): Promise<string> {
+	if (typeof value !== "string") return "";
+	let envelope: unknown;
+	try {
+		envelope = JSON.parse(value);
+	} catch {
+		return "";
+	}
+	if (
+		typeof envelope !== "object" ||
+		envelope === null ||
+		!("iv" in envelope) ||
+		!("ciphertext" in envelope) ||
+		typeof envelope.iv !== "string" ||
+		typeof envelope.ciphertext !== "string"
+	)
+		return "";
+	const bytes = (encoded: string) =>
+		Uint8Array.from(atob(encoded), (character) => character.codePointAt(0) ?? 0);
+	const plaintext = await crypto.subtle.decrypt(
+		{ name: "AES-GCM", iv: bytes(envelope.iv) },
+		key,
+		bytes(envelope.ciphertext),
+	);
+	return new TextDecoder().decode(plaintext);
 }
 
 const releaseIdentifiers = {
