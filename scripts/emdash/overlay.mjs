@@ -350,11 +350,20 @@ export function renderPnpmWorkspace(upstreamWorkspace, overlay, compatibility) {
 		patchedDependenciesAnchor,
 		`${patchedDependenciesAnchor}  # SuperBoard retained dependency patches.\n${patchedDependencyLines}\n`,
 	);
-	for (const [name, version] of Object.entries(overlay.package.catalog ?? {})) {
-		const prefix = `  ${JSON.stringify(name)}:`;
+	const catalogOverrides = new Map(Object.entries(overlay.package.catalog ?? {}));
+	if (catalogOverrides.size > 0) {
+		let inCatalog = false;
 		rendered = rendered
 			.split("\n")
-			.map((line) => (line.startsWith(prefix) ? `${prefix} ${version}` : line))
+			.map((line) => {
+				if (!line.startsWith(" ")) inCatalog = line === "catalog:";
+				if (!inCatalog) return line;
+				const entry = /^ {2}("([^"]+)"|[^\s:"]+):/u.exec(line);
+				const name = entry?.[2] ?? entry?.[1];
+				return name && catalogOverrides.has(name)
+					? `  ${entry[1]}: ${catalogOverrides.get(name)}`
+					: line;
+			})
 			.join("\n");
 	}
 	for (const workspace of overlay.package.removedWorkspaces ?? []) {

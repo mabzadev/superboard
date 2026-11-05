@@ -197,6 +197,38 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 	assert.ok(parse(withoutDemos).packages.includes("apps/*"));
 });
 
+void test("overlay catalog entries replace upstream catalog values written with or without quotes", () => {
+	const upstream =
+		'trustPolicyExclude:\n  - vite@6.4.1\nallowBuilds:\n  esbuild: true\npackages:\n  - packages/*\n  - infra/*\ncatalog:\n  astro: ^7.0.0\n  "@lingui/core": ^5.0.0\noverrides:\n  astro: 7.0.0\npatchedDependencies:\n  image-size@2.0.2: patches/image-size.patch\n';
+	const compatibility = {
+		eslintImportResolverTypescript: "4.4.5",
+		allowBuilds: {},
+		additionalOverrides: {},
+		patchedDependencies: {},
+		trustPolicyExclude: [],
+		virtualStoreType: "project",
+		verifyDepsBeforeRun: "warn",
+		hoistPattern: ["*"],
+		resolvePeersFromWorkspaceRoot: false,
+		dedupePeerDependents: false,
+		packageExtensions: {},
+		supportedArchitectures: { os: ["current"], cpu: ["x64"] },
+	};
+	const workspace = parse(
+		renderPnpmWorkspace(
+			upstream,
+			{
+				...overlay,
+				package: { ...overlay.package, catalog: { astro: "~7.0.0", "@lingui/core": "^5.9.5" } },
+			},
+			compatibility,
+		),
+	);
+	assert.equal(workspace.catalog.astro, "~7.0.0");
+	assert.equal(workspace.catalog["@lingui/core"], "^5.9.5");
+	assert.equal(workspace.overrides.astro, "7.0.0");
+});
+
 void test("gitignore keeps the pnpm lock authoritative", () => {
 	const result = renderGitignore("node_modules/\n", overlay);
 
