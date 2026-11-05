@@ -254,6 +254,6 @@ catalogs:
     "@typescript-eslint/eslint-plugin": "8.68.0"
     "@typescript-eslint/parser": "8.68.0"
     "eslint": "9.39.5"
-    "hono": "4.13.5"
+    "hono": "4.13.16"
     "typescript": "5.9.3"
     "wrangler": "4.125.0"
