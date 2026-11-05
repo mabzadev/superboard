@@ -127,6 +127,13 @@ export type BillingCustomerDetail = {
 	transactions: Array<Record<string, unknown>>;
 	events: Array<Record<string, unknown>>;
 	paywall_events: Array<Record<string, unknown>>;
+	display_currency?: string;
+	total_spent?: {
+		currency: string;
+		purchases: number;
+		amount_micros: number;
+		unconverted_purchases: number;
+	} | null;
 };
 
 export type BillingCustomerPage = {
@@ -141,6 +148,37 @@ export const updateBillingSettings = async (
 	projectId: string,
 	data: { purchases_enabled: boolean; restore_behavior: string },
 ) => (await PUT(config.apiPath + `/billing/${projectId}/settings`, data)).data;
+
+export type DisplayCurrencySetting = {
+	display_currency: "USD" | "EUR";
+	available_currencies: Array<"USD" | "EUR">;
+};
+
+function displayCurrencySetting(value: unknown): DisplayCurrencySetting {
+	const currency =
+		value && typeof value === "object" && "display_currency" in value
+			? value.display_currency
+			: null;
+	return {
+		display_currency: currency === "EUR" ? "EUR" : "USD",
+		available_currencies: ["USD", "EUR"],
+	};
+}
+
+export const getDisplayCurrency = async (projectId: string) => {
+	const response = await GET(config.apiPath + `/billing/${projectId}/settings/display-currency`);
+	return displayCurrencySetting(response.data);
+};
+
+export const updateDisplayCurrency = async (
+	projectId: string,
+	displayCurrency: DisplayCurrencySetting["display_currency"],
+) => {
+	const response = await PUT(config.apiPath + `/billing/${projectId}/settings/display-currency`, {
+		display_currency: displayCurrency,
+	});
+	return displayCurrencySetting(response.data);
+};
 
 export const createEntitlement = async (
 	projectId: string,

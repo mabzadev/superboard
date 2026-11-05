@@ -332,6 +332,118 @@ describe("purchases page", () => {
 		expect(metric("Revenu brut")).toHaveTextContent(/14,98\s€\s*2,00\s\$US/u);
 	});
 
+	it("totals revenue in the display currency and reports purchases awaiting conversion", async () => {
+		api.getProductStatistics.mockResolvedValue({
+			...twoCurrencyStatistics,
+			display_currency: "USD",
+			totals_in_display_currency: {
+				purchases: 3,
+				gross_revenue_micros: 12_500_000,
+				refunds: 1,
+				refunded_micros: 1_000_000,
+				net_revenue_micros: 11_500_000,
+				active_subscriptions: 0,
+				unconverted_purchases: 2,
+				unconverted_refunds: 1,
+			},
+			series_in_display_currency: [
+				{
+					bucket: "2026-11-01",
+					purchases: 3,
+					revenue_micros: 12_500_000,
+					unconverted_purchases: 2,
+				},
+			],
+		});
+		const { unmount } = render(<PurchasesPage />);
+		const day = (await screen.findByText("Nov 1, 2026")).closest("tr");
+		if (!day) throw new Error("Revenue day missing");
+
+		expect(day).toHaveTextContent("3$12.502 awaiting conversion");
+		expect(metric("Gross revenue")).toHaveTextContent(/^Gross revenue\$12\.50$/u);
+		expect(metric("Refunded")).toHaveTextContent("$1.00");
+		expect(metric("Net revenue")).toHaveTextContent("$11.50");
+		expect(
+			screen.getByText("Amounts in USD, converted at the ECB reference rate of each purchase day."),
+		).toBeInTheDocument();
+		expect(
+			screen.getByText("2 purchases awaiting conversion are not included in these totals."),
+		).toBeInTheDocument();
+		expect(
+			screen.getByText("1 refund awaiting conversion is not included in these totals."),
+		).toBeInTheDocument();
+		unmount();
+
+		render(<PurchasesPage />, { wrapper: French });
+		await screen.findByText("1 nov. 2026");
+		expect(metric("Revenu net")).toHaveTextContent(/11,50\s\$US/u);
+		expect(
+			screen.getByText("2 achats en attente de conversion ne sont pas inclus dans ces totaux."),
+		).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				"Montants en USD, convertis au taux de référence de la BCE du jour de chaque achat.",
+			),
+		).toBeInTheDocument();
+	});
+
+	it("shows each transaction in its original currency and in the display currency", async () => {
+		const converted = {
+			...purchase,
+			id: "purchase-2",
+			external_transaction_id: "tx-converted",
+			usd_price_micros: 10_800_000,
+			usd_rate_date: "2026-08-07",
+			display_currency: "USD",
+			display_price_micros: 10_800_000,
+		};
+		const awaiting = {
+			...purchase,
+			display_currency: "USD",
+			display_price_micros: null,
+			usd_rate_date: null,
+		};
+		api.getPurchases.mockResolvedValue([converted, awaiting]);
+		api.getPurchase.mockResolvedValue({
+			...converted,
+			entitlements: [],
+			refunds: [
+				{
+					id: "refund-1",
+					purchase_id: "purchase-2",
+					status: "completed",
+					amount_micros: 9_990_000,
+					currency: "EUR",
+					usd_amount_micros: 10_900_000,
+					usd_rate_date: "2026-08-10",
+					display_currency: "USD",
+					display_amount_micros: 10_900_000,
+					requested_at: "2026-08-10T10:00:00.000Z",
+				},
+			],
+		});
+		const { unmount } = render(<PurchasesPage />);
+		const row = (await screen.findByText("tx-converted")).closest("tr");
+		const pending = screen.getByText("tx-manual").closest("tr");
+		if (!row || !pending) throw new Error("Purchase rows missing");
+		expect(row).toHaveTextContent("€9.99$10.80");
+		expect(pending).toHaveTextContent("€9.99Conversion pending");
+
+		fireEvent.click(within(row).getByRole("button", { name: "View purchase tx-converted" }));
+		const detail = (await screen.findByText("Purchase detail")).closest<HTMLElement>(
+			"[data-slot=card]",
+		);
+		if (!detail) throw new Error("Purchase detail missing");
+		expect(fact(detail, "Amount")).toBe("€9.99");
+		expect(fact(detail, "Amount in USD")).toBe("$10.80ECB reference rate of Aug 7, 2026");
+		expect(within(detail).getByText("$10.90")).toBeInTheDocument();
+		unmount();
+
+		render(<PurchasesPage />, { wrapper: French });
+		const frenchPending = (await screen.findByText("tx-manual")).closest("tr");
+		expect(frenchPending).toHaveTextContent(/9,99\s€Conversion en attente/u);
+	});
+
 	it("never presents an amount without a recorded currency as dollars", async () => {
 		const unknown = { ...purchase, currency: null };
 		api.getPurchases.mockResolvedValue([unknown]);

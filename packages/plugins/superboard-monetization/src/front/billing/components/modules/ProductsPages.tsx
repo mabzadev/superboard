@@ -76,6 +76,7 @@ import {
 	type Subscription,
 } from "../../api/products/productsService.js";
 import { BillingLedgerMigration } from "./BillingLedgerMigration.js";
+import { ConvertedAmount } from "./ConvertedAmount.js";
 
 const selectClass = "h-9 w-full rounded-md border bg-background px-3 text-sm";
 const filterSelectClass = "h-[34px] rounded-md border bg-background px-3 text-sm";
@@ -269,14 +270,34 @@ export function PurchasesPage() {
 	const totals = statistics?.totals;
 	const currencyTotals =
 		statistics?.totals_by_currency ?? (totals ? [{ ...totals, currency: null }] : []);
+	const displayCurrency = statistics?.display_currency;
+	const displayTotals = displayCurrency ? statistics?.totals_in_display_currency : undefined;
 	const revenue = (key: "gross_revenue_micros" | "refunded_micros" | "net_revenue_micros") =>
-		currencyTotals.length ? (
+		displayTotals && displayCurrency ? (
+			money(displayTotals[key], displayCurrency, locale)
+		) : currencyTotals.length ? (
 			<Amounts
 				amounts={currencyTotals.map((row) => ({ currency: row.currency, micros: row[key] }))}
 			/>
 		) : (
 			"—"
 		);
+	const awaitingConversion = (count: number, one: string, many: string) =>
+		count > 0 ? t(count === 1 ? one : many, { count: count.toLocaleString(locale) }) : null;
+	const conversionNotes = displayTotals
+		? [
+				awaitingConversion(
+					displayTotals.unconverted_purchases,
+					"1 purchase awaiting conversion is not included in these totals.",
+					"{count} purchases awaiting conversion are not included in these totals.",
+				),
+				awaitingConversion(
+					displayTotals.unconverted_refunds,
+					"1 refund awaiting conversion is not included in these totals.",
+					"{count} refunds awaiting conversion are not included in these totals.",
+				),
+			].filter((note): note is string => Boolean(note))
+		: [];
 	const days = revenueDays(statistics);
 	return (
 		<ModulePage
@@ -410,7 +431,18 @@ export function PurchasesPage() {
 										</TableCell>
 										<TableCell>{Number(row.units_sold).toLocaleString(locale)}</TableCell>
 										<TableCell>{Number(row.first_time_purchases).toLocaleString(locale)}</TableCell>
-										<TableCell>{money(Number(row.revenue_micros), row.currency, locale)}</TableCell>
+										<TableCell>
+											<ConvertedAmount
+												micros={Number(row.revenue_micros)}
+												currency={row.currency}
+												displayMicros={
+													row.unconverted_purchases
+														? null
+														: (row.revenue_in_display_currency_micros ?? null)
+												}
+												displayCurrency={displayCurrency}
+											/>
+										</TableCell>
 										<TableCell>{Number(row.cancellations).toLocaleString(locale)}</TableCell>
 									</TableRow>
 								))}
@@ -429,6 +461,21 @@ export function PurchasesPage() {
 						<Metric label={t("Net revenue")} value={revenue("net_revenue_micros")} />
 						<Metric label={t("Refunds")} value={String(totals?.refunds ?? 0)} />
 					</div>
+					{displayTotals && displayCurrency && (
+						<div className="-mt-3 space-y-1 text-sm text-muted-foreground">
+							<p>
+								{t(
+									"Amounts in {currency}, converted at the ECB reference rate of each purchase day.",
+									{ currency: displayCurrency },
+								)}
+							</p>
+							{conversionNotes.map((note) => (
+								<p key={note} role="status">
+									{note}
+								</p>
+							))}
+						</div>
+					)}
 
 					<Card>
 						<CardHeader>
@@ -446,6 +493,13 @@ export function PurchasesPage() {
 										<TableCell>{day.purchases.toLocaleString(locale)}</TableCell>
 										<TableCell>
 											<Amounts amounts={day.amounts} />
+											{day.unconverted > 0 && (
+												<span className="block text-xs text-muted-foreground">
+													{t("{count} awaiting conversion", {
+														count: day.unconverted.toLocaleString(locale),
+													})}
+												</span>
+											)}
 										</TableCell>
 									</TableRow>
 								))}
@@ -515,7 +569,13 @@ export function PurchasesPage() {
 											)}
 										</TableCell>
 										<TableCell>
-											{money(item.purchased_price_micros, item.currency, locale)}
+											<ConvertedAmount
+												micros={item.purchased_price_micros}
+												currency={item.currency}
+												displayMicros={item.display_price_micros}
+												displayCurrency={item.display_currency}
+												rateDate={item.usd_rate_date}
+											/>
 										</TableCell>
 										<TableCell>
 											<div className="flex justify-end gap-1">
@@ -586,6 +646,30 @@ export function PurchasesPage() {
 									<Fact label={t("Amount")}>
 										{money(purchaseDetail.purchased_price_micros, purchaseDetail.currency, locale)}
 									</Fact>
+									{purchaseDetail.display_currency && (
+										<Fact
+											label={t("Amount in {currency}", {
+												currency: purchaseDetail.display_currency,
+											})}
+										>
+											{purchaseDetail.display_price_micros != null
+												? money(
+														purchaseDetail.display_price_micros,
+														purchaseDetail.display_currency,
+														locale,
+													)
+												: purchaseDetail.usd_rate_date
+													? t("No exchange rate for this currency")
+													: t("Conversion pending")}
+											{purchaseDetail.usd_rate_date && (
+												<span className="block text-xs font-normal text-muted-foreground">
+													{t("ECB reference rate of {date}", {
+														date: date(purchaseDetail.usd_rate_date),
+													})}
+												</span>
+											)}
+										</Fact>
+									)}
 								</dl>
 								<section>
 									<h3 className="mb-2 text-sm font-medium">{t("Granted entitlements")}</h3>
@@ -619,13 +703,15 @@ export function PurchasesPage() {
 														{item.reason || t("No reason")}
 													</span>
 												</span>
-												<b>
-													{money(
-														item.amount_micros,
-														item.currency || purchaseDetail.currency,
-														locale,
-													)}
-												</b>
+												<div className="text-end font-semibold">
+													<ConvertedAmount
+														micros={item.amount_micros}
+														currency={item.currency || purchaseDetail.currency}
+														displayMicros={item.display_amount_micros}
+														displayCurrency={item.display_currency}
+														rateDate={item.usd_rate_date}
+													/>
+												</div>
 											</div>
 										))}
 										{!purchaseDetail.refunds.length && (
@@ -2193,15 +2279,32 @@ function Metric({ label, value }: { label: string; value: React.ReactNode }) {
 }
 type Amount = { currency: string | null; micros: number };
 function revenueDays(statistics: ProductStatistics | null) {
+	const displayCurrency = statistics?.display_currency;
+	if (displayCurrency && statistics?.series_in_display_currency)
+		return statistics.series_in_display_currency.map((row) => ({
+			bucket: row.bucket,
+			purchases: row.purchases,
+			amounts: [{ currency: displayCurrency, micros: row.revenue_micros }],
+			unconverted: row.unconverted_purchases,
+		}));
 	if (!statistics?.series_by_currency)
 		return (statistics?.series ?? []).map((row) => ({
 			bucket: row.bucket,
 			purchases: row.purchases,
 			amounts: [{ currency: null, micros: row.revenue_micros }],
+			unconverted: 0,
 		}));
-	const days = new Map<string, { bucket: string; purchases: number; amounts: Amount[] }>();
+	const days = new Map<
+		string,
+		{ bucket: string; purchases: number; amounts: Amount[]; unconverted: number }
+	>();
 	for (const row of statistics.series_by_currency) {
-		const day = days.get(row.bucket) ?? { bucket: row.bucket, purchases: 0, amounts: [] };
+		const day = days.get(row.bucket) ?? {
+			bucket: row.bucket,
+			purchases: 0,
+			amounts: [],
+			unconverted: 0,
+		};
 		day.purchases += row.purchases;
 		day.amounts.push({ currency: row.currency, micros: row.revenue_micros });
 		days.set(row.bucket, day);

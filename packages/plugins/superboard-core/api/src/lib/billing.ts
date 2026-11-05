@@ -151,39 +151,7 @@ export async function identifyCustomer(
 	const merged = destination.id === source.id ? target : source;
 
 	await db.batch([
-		db
-			.prepare(
-				"UPDATE OR IGNORE billing_customer_aliases SET customer_id = ? WHERE customer_id = ?",
-			)
-			.bind(destination.id, merged.id),
-		db
-			.prepare("UPDATE billing_transactions SET customer_id = ? WHERE customer_id = ?")
-			.bind(destination.id, merged.id),
-		db
-			.prepare("UPDATE billing_subscriptions SET customer_id = ? WHERE customer_id = ?")
-			.bind(destination.id, merged.id),
-		db
-			.prepare("UPDATE billing_events SET customer_id = ? WHERE customer_id = ?")
-			.bind(destination.id, merged.id),
-		db
-			.prepare("UPDATE billing_paywall_events SET customer_id = ? WHERE customer_id = ?")
-			.bind(destination.id, merged.id),
-		db
-			.prepare(
-				"UPDATE OR IGNORE billing_experiment_assignments SET customer_id = ? WHERE customer_id = ?",
-			)
-			.bind(destination.id, merged.id),
-		db.prepare("DELETE FROM billing_experiment_assignments WHERE customer_id = ?").bind(merged.id),
-		db
-			.prepare(
-				"UPDATE OR IGNORE billing_customer_entitlements SET customer_id = ? WHERE customer_id = ?",
-			)
-			.bind(destination.id, merged.id),
-		db
-			.prepare("UPDATE billing_balance_ledger SET customer_id = ? WHERE customer_id = ?")
-			.bind(destination.id, merged.id),
-		db.prepare("DELETE FROM billing_customer_entitlements WHERE customer_id = ?").bind(merged.id),
-		db.prepare("DELETE FROM billing_customers WHERE id = ?").bind(merged.id),
+		...customerMergeStatements(db, destination.id, merged.id),
 		db
 			.prepare(
 				`
@@ -198,6 +166,55 @@ export async function identifyCustomer(
 		.prepare("SELECT * FROM billing_customers WHERE id = ?")
 		.bind(destination.id)
 		.first<Record<string, unknown>>();
+}
+
+export async function aliasCustomer(db: D1Database, destinationId: string, mergedId: string) {
+	await db.batch([
+		...customerMergeStatements(db, destinationId, mergedId),
+		db
+			.prepare(
+				"UPDATE billing_customers SET last_seen_at = datetime('now'), updated_at = datetime('now') WHERE id = ?",
+			)
+			.bind(destinationId),
+	]);
+}
+
+function customerMergeStatements(db: D1Database, destinationId: unknown, mergedId: unknown) {
+	return [
+		db
+			.prepare(
+				"UPDATE OR IGNORE billing_customer_aliases SET customer_id = ? WHERE customer_id = ?",
+			)
+			.bind(destinationId, mergedId),
+		db
+			.prepare("UPDATE billing_transactions SET customer_id = ? WHERE customer_id = ?")
+			.bind(destinationId, mergedId),
+		db
+			.prepare("UPDATE billing_subscriptions SET customer_id = ? WHERE customer_id = ?")
+			.bind(destinationId, mergedId),
+		db
+			.prepare("UPDATE billing_events SET customer_id = ? WHERE customer_id = ?")
+			.bind(destinationId, mergedId),
+		db
+			.prepare("UPDATE billing_paywall_events SET customer_id = ? WHERE customer_id = ?")
+			.bind(destinationId, mergedId),
+		db
+			.prepare(
+				"UPDATE OR IGNORE billing_experiment_assignments SET customer_id = ? WHERE customer_id = ?",
+			)
+			.bind(destinationId, mergedId),
+		db.prepare("DELETE FROM billing_experiment_assignments WHERE customer_id = ?").bind(mergedId),
+		db
+			.prepare(
+				"UPDATE OR IGNORE billing_customer_entitlements SET customer_id = ? WHERE customer_id = ?",
+			)
+			.bind(destinationId, mergedId),
+		db
+			.prepare("UPDATE billing_balance_ledger SET customer_id = ? WHERE customer_id = ?")
+			.bind(destinationId, mergedId),
+		db.prepare("DELETE FROM billing_customer_entitlements WHERE customer_id = ?").bind(mergedId),
+		db.prepare("DELETE FROM billing_customers WHERE id = ?").bind(mergedId),
+	];
 }
 
 async function getOrCreateProduct(db: D1Database, purchase: VerifiedPurchase) {
@@ -830,6 +847,8 @@ export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedP
 			transferredFrom.push(previous.customer_id);
 		}
 	}
+	if (purchase.customerId && transferredFrom.length > 0)
+		await transferPurchaseChain(env, purchase, stored.id, purchase.customerId, transferredFrom);
 	const mappedEntitlementIds = subscriptionAccepted
 		? await syncEntitlements(env.DB, purchase, String(product.id))
 		: [];
@@ -884,6 +903,76 @@ export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedP
 		});
 	}
 	return { transactionId: stored.id, duplicate: insert.meta.changes === 0 };
+}
+
+async function transferPurchaseChain(
+	env: BillingEnv,
+	purchase: VerifiedPurchase,
+	transactionId: string,
+	customerId: string,
+	previousCustomerIds: string[],
+) {
+	const projectId = String(purchase.projectId);
+	const customers = await env.DB.prepare(
+		`SELECT id, primary_app_user_id FROM billing_customers
+     WHERE project_id = ? AND id IN (SELECT value FROM json_each(?))`,
+	)
+		.bind(projectId, JSON.stringify([...previousCustomerIds, customerId]))
+		.all<{ id: string; primary_app_user_id: string }>();
+	const appUserIds = new Map(
+		customers.results.map((customer) => [customer.id, customer.primary_app_user_id]),
+	);
+	const transfer = {
+		transferred_from: previousCustomerIds.map((id) => appUserIds.get(id) ?? id),
+		transferred_to: [appUserIds.get(customerId) ?? customerId],
+		from_customer_ids: previousCustomerIds,
+		to_customer_id: customerId,
+		store: purchase.store,
+		environment: purchase.environment,
+		product_id: purchase.storeProductId,
+	};
+	const transferId = crypto.randomUUID();
+	const occurredAt = new Date().toISOString();
+	await env.DB.batch([
+		env.DB.prepare(
+			`UPDATE billing_transactions SET customer_id = ?
+       WHERE project_id = ? AND store = ? AND environment = ? AND original_transaction_id = ?
+         AND customer_id IN (SELECT value FROM json_each(?))`,
+		).bind(
+			customerId,
+			projectId,
+			purchase.store,
+			purchase.environment,
+			purchase.originalTransactionId || purchase.storeTransactionId,
+			JSON.stringify(previousCustomerIds),
+		),
+		...[...previousCustomerIds, customerId].map((id) =>
+			env.DB.prepare(
+				`INSERT OR IGNORE INTO billing_events (
+          id, project_id, application_id, customer_id, transaction_id, provider, environment,
+          external_event_id, event_type, status, occurred_at, processed_at, payload
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'transferred', 'processed', ?, datetime('now'), ?)`,
+			).bind(
+				crypto.randomUUID(),
+				projectId,
+				purchase.applicationId ? String(purchase.applicationId) : null,
+				id,
+				transactionId,
+				purchase.store,
+				purchase.environment,
+				`transfer:${transferId}:${id}`,
+				occurredAt,
+				JSON.stringify(transfer),
+			),
+		),
+	]);
+	await queueOutboundWebhookEvent(env, {
+		projectId: purchase.projectId,
+		environment: purchase.environment,
+		eventType: "TRANSFER",
+		transactionId,
+		payload: { customer_id: customerId, ...transfer },
+	});
 }
 
 function verifiedPurchaseAnalyticsEventType(purchase: VerifiedPurchase): VerifiedPurchaseEventType {

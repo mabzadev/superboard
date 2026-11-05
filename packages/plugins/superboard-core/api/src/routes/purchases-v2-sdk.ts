@@ -1,12 +1,9 @@
 import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono, type Context } from "hono";
 
-import {
-	applyVerifiedPurchase,
-	offeringsForCustomer,
-	type BillingEnvironment,
-} from "../lib/billing";
+import { offeringsForCustomer, type BillingEnvironment } from "../lib/billing";
 import { billingClientContextFromRequest } from "../lib/billing-client-context.js";
+import { applySdkPurchase } from "../lib/billing-restore";
 import {
 	billingServiceEnabled,
 	callBillingService,
@@ -25,11 +22,6 @@ import {
 	type TargetingContext,
 } from "../lib/purchases-v2";
 import { readApiJson } from "../lib/request-body";
-import {
-	finalizeGooglePurchase,
-	verifyAppleTransaction,
-	verifyGooglePurchase,
-} from "../lib/store-verification";
 import { createStripeCheckout, createStripePortal } from "../lib/stripe-billing.js";
 import type { AppVariables, Env } from "../types";
 
@@ -248,43 +240,39 @@ sdk.post("/receipts", async (c) => {
 			);
 			return c.json(result);
 		}
-		let purchase;
-		let finalize: (() => Promise<void>) | null = null;
+		let verified;
 		if (data.store === "apple") {
 			if (!data.signed_transaction)
 				throw purchasesError("receipt_required", "signed_transaction is required");
-			purchase = (
-				await verifyAppleTransaction(c.env, {
-					projectId: ctx.projectId,
-					customerId: String(ctx.customer.id),
-					signedTransaction: String(data.signed_transaction),
-					environment: ctx.environment,
-				})
-			).purchase;
+			verified = await applySdkPurchase(c.env, {
+				projectId: ctx.projectId,
+				customerId: String(ctx.customer.id),
+				environment: ctx.environment,
+				store: "apple",
+				signedTransaction: String(data.signed_transaction),
+			});
 		} else if (data.store === "google") {
 			if (!data.purchase_token || !data.product_id)
 				throw purchasesError("receipt_required", "purchase_token and product_id are required");
-			const verified = await verifyGooglePurchase(c.env, {
+			verified = await applySdkPurchase(c.env, {
 				projectId: ctx.projectId,
 				customerId: String(ctx.customer.id),
-				purchaseToken: String(data.purchase_token),
-				storeProductId: String(data.product_id),
-				productType: data.product_type,
 				environment: ctx.environment,
+				store: "google",
+				purchaseToken: String(data.purchase_token),
+				productId: String(data.product_id),
+				productType: data.product_type,
 			});
-			purchase = verified.purchase;
-			finalize = () => finalizeGooglePurchase(verified);
 		} else {
 			throw purchasesError(
 				"unsupported_receipt_store",
 				"Receipts currently support apple and google",
 			);
 		}
-		const result = await applyVerifiedPurchase(c.env, purchase);
-		if (finalize) await finalize();
+		const { purchase, applied } = verified;
 		return c.json({
-			transaction_id: result.transactionId,
-			duplicate: result.duplicate,
+			transaction_id: applied.transactionId,
+			duplicate: applied.duplicate,
 			status: purchase.status,
 			finish_transaction: purchase.status !== "pending",
 			customer_info: await customerInfoFromBillingAuthority(

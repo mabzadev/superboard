@@ -9,6 +9,11 @@ import {
 } from "../lib/apple-notification-configuration";
 import { identifyCustomer, queueCustomerEntitlementChanged } from "../lib/billing";
 import { isBillingQueueJob } from "../lib/billing-dispatch";
+import {
+	displayAmountJoins,
+	displayAmountSql,
+	displayCurrencySource,
+} from "../lib/billing-exchange-rates";
 import { signedCustomerInfo } from "../lib/billing-identity";
 import { callBillingServiceBinding } from "../lib/billing-service";
 import {
@@ -2807,11 +2812,18 @@ admin.get("/:projectId/customers/:customerId", async (c) => {
 			.bind(c.req.param("customerId"), project.id)
 			.first<Record<string, any>>();
 		if (!customer) throw purchasesError("customer_not_found", "Customer not found", 404);
-		const [transactions, events, paywallEvents, aliases] = await Promise.all([
+		const transactionAmount = displayAmountSql(
+			{ amount: "t.price_micros", currency: "t.currency" },
+			"t.usd_price_micros",
+			"display",
+			"transaction",
+		);
+		const transactionSource = `billing_transactions t JOIN ${displayCurrencySource("display")} ${displayAmountJoins("t.usd_rate_date", "display", "transaction")}`;
+		const [transactions, events, paywallEvents, aliases, totalSpent] = await Promise.all([
 			c.env.DB.prepare(
-				`SELECT t.*, p.store_product_id FROM billing_transactions t LEFT JOIN billing_products p ON p.id = t.product_id WHERE t.customer_id = ? ORDER BY t.created_at DESC LIMIT 250`,
+				`SELECT t.*, p.store_product_id, display.currency AS display_currency, ${transactionAmount} AS display_price_micros FROM ${transactionSource} LEFT JOIN billing_products p ON p.id = t.product_id WHERE t.customer_id = ? ORDER BY t.created_at DESC LIMIT 250`,
 			)
-				.bind(customer.id)
+				.bind(null, project.id, customer.id)
 				.all(),
 			c.env.DB.prepare(
 				`SELECT * FROM billing_events WHERE customer_id = ? ORDER BY occurred_at DESC LIMIT 250`,
@@ -2833,9 +2845,30 @@ admin.get("/:projectId/customers/:customerId", async (c) => {
 			)
 				.bind(customer.id)
 				.all(),
+			c.env.DB.prepare(
+				`SELECT display.currency AS currency, COUNT(spent.purchase) AS purchases,
+          COALESCE(SUM(spent.amount_micros), 0) AS amount_micros,
+          SUM(CASE WHEN spent.purchase IS NOT NULL AND spent.amount_micros IS NULL THEN 1 ELSE 0 END) AS unconverted_purchases
+        FROM ${displayCurrencySource("display")}
+        LEFT JOIN (
+          SELECT 1 AS purchase, MAX(${transactionAmount}) AS amount_micros
+          FROM ${transactionSource}
+          WHERE t.customer_id = ? AND t.price_micros > 0 AND t.status <> 'pending'
+          GROUP BY t.store, t.environment, t.store_transaction_id
+        ) spent`,
+			)
+				.bind(null, project.id, null, project.id, customer.id)
+				.first<{
+					currency: string;
+					purchases: number;
+					amount_micros: number;
+					unconverted_purchases: number;
+				}>(),
 		]);
 		return c.json({
 			customer,
+			display_currency: totalSpent?.currency ?? "USD",
+			total_spent: totalSpent ?? null,
 			aliases: aliases.results,
 			customer_info: await signedCustomerInfo(c.env, project.id, String(customer.id)),
 			transactions: transactions.results,

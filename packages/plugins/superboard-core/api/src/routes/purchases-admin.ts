@@ -7,8 +7,10 @@ import {
 	queueCustomerEntitlementChanged,
 	refreshCatalogEntitlement,
 } from "../lib/billing";
+import { DISPLAY_CURRENCIES, isDisplayCurrency } from "../lib/billing-exchange-rates";
 import { signedCustomerInfo } from "../lib/billing-identity";
 import { customerForAppUserId } from "../lib/billing-identity";
+import { restoreBehavior } from "../lib/billing-restore";
 import { getOrCreateProject, parseProjectExternalId } from "../lib/db";
 import { isPurchasesEnabled } from "../lib/deployment";
 import { readApiJson } from "../lib/request-body";
@@ -197,7 +199,7 @@ admin.put("/:projectId/settings", async (c) => {
 	try {
 		const project = await projectFor(c);
 		const data = await body(c);
-		const restore = data.restore_behavior === "block" ? "block" : "transfer";
+		const restore = restoreBehavior(data.restore_behavior);
 		await c.env.DB.prepare(`
       INSERT INTO billing_project_settings (project_id, restore_behavior, purchases_enabled)
       VALUES (?, ?, ?)
@@ -1201,6 +1203,47 @@ admin.post("/:projectId/stripe/sync", async (c) => {
 		return c.json(
 			await syncStripeCatalog(c.env, String(project.id), project.isTest ? "sandbox" : "production"),
 		);
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+
+async function projectDisplayCurrency(db: D1Database, projectId: string) {
+	const row = await db
+		.prepare("SELECT display_currency FROM billing_project_currency_settings WHERE project_id = ?")
+		.bind(projectId)
+		.first<{ display_currency: string }>();
+	const currency = row?.display_currency;
+	return {
+		display_currency: isDisplayCurrency(currency) ? currency : "USD",
+		available_currencies: DISPLAY_CURRENCIES,
+	};
+}
+admin.get("/:projectId/settings/display-currency", async (c) => {
+	try {
+		const project = await projectFor(c);
+		return c.json(await projectDisplayCurrency(c.env.DB, String(project.id)));
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+admin.put("/:projectId/settings/display-currency", async (c) => {
+	try {
+		const project = await projectFor(c);
+		if (!["owner", "admin"].includes(String(project.role)))
+			return c.json({ error: "Administrator access required" }, 403);
+		const data = await body(c);
+		if (!isDisplayCurrency(data.display_currency))
+			return c.json({ error: "display_currency must be USD or EUR" }, 422);
+		await c.env.DB.prepare(`
+      INSERT INTO billing_project_currency_settings (project_id, display_currency)
+      VALUES (?, ?)
+      ON CONFLICT(project_id) DO UPDATE SET display_currency = excluded.display_currency,
+        updated_at = datetime('now')
+    `)
+			.bind(String(project.id), data.display_currency)
+			.run();
+		return c.json(await projectDisplayCurrency(c.env.DB, String(project.id)));
 	} catch (error) {
 		return fail(c, error);
 	}

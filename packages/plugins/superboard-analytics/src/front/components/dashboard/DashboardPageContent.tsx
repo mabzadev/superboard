@@ -237,6 +237,10 @@ export default function DashboardPageContent() {
 					)
 					.join(" · ")
 			: undefined;
+		const displayCurrency = snapshot.productStatistics?.display_currency;
+		const displayTotals = displayCurrency
+			? snapshot.productStatistics?.totals_in_display_currency
+			: undefined;
 		const card = (
 			title: string,
 			metric: number | string | undefined,
@@ -249,6 +253,42 @@ export default function DashboardPageContent() {
 			secondaryValue: "0",
 			tooltip: t(tooltip),
 		});
+		const netRevenueCard = () => {
+			if (displayTotals && displayCurrency) {
+				const unconverted = displayTotals.unconverted_purchases + displayTotals.unconverted_refunds;
+				return {
+					...card(
+						"Net revenue",
+						formatMoney(displayTotals.net_revenue_micros / 1_000_000, displayCurrency, locale),
+						"Gross purchase revenue after recorded refunds, converted at the ECB reference rate of each purchase day.",
+					),
+					...(unconverted > 0
+						? {
+								note:
+									unconverted === 1
+										? t("1 transaction awaiting conversion is not included.")
+										: t("{count} transactions awaiting conversion are not included.", {
+												count: unconverted.toLocaleString(locale),
+											}),
+							}
+						: {}),
+				};
+			}
+			return netRevenueByCurrency
+				? card(
+						"Net revenue",
+						netRevenueByCurrency,
+						"Gross purchase revenue after recorded refunds.",
+					)
+				: card(
+						"Net revenue",
+						typeof productTotals?.net_revenue_micros === "number"
+							? productTotals.net_revenue_micros / 10_000
+							: undefined,
+						"Gross purchase revenue after recorded refunds.",
+						"money",
+					);
+		};
 		const analytics = snapshot.analytics;
 		return [
 			card("Events", analytics?.events, "Accepted events in the selected period."),
@@ -289,24 +329,7 @@ export default function DashboardPageContent() {
 						),
 					]
 				: []),
-			...(productsEnabled
-				? [
-						netRevenueByCurrency
-							? card(
-									"Net revenue",
-									netRevenueByCurrency,
-									"Gross purchase revenue after recorded refunds.",
-								)
-							: card(
-									"Net revenue",
-									typeof productTotals?.net_revenue_micros === "number"
-										? productTotals.net_revenue_micros / 10_000
-										: undefined,
-									"Gross purchase revenue after recorded refunds.",
-									"money",
-								),
-					]
-				: []),
+			...(productsEnabled ? [netRevenueCard()] : []),
 		];
 	}, [snapshot, linksEnabled, productsEnabled, t, locale]);
 

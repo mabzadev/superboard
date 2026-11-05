@@ -29,6 +29,7 @@ export interface DashBoardCardType {
 	secondaryValue: string;
 	secondaryValueType?: string;
 	tooltip?: string;
+	note?: string;
 }
 
 interface SectionCardsProps {
@@ -98,6 +99,7 @@ function CardContent({ card }: { card: DashBoardCardType }) {
 			</div>
 
 			{hasChange && <p className="mt-2 text-xs text-muted-foreground/70">vs. previous period</p>}
+			{card.note && <p className="mt-2 text-xs text-muted-foreground">{card.note}</p>}
 		</>
 	);
 }

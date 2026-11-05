@@ -1,13 +1,9 @@
 import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono, type Context } from "hono";
 
-import {
-	applyVerifiedPurchase,
-	offeringsForCustomer,
-	type BillingEnvironment,
-} from "../lib/billing";
+import { offeringsForCustomer, type BillingEnvironment } from "../lib/billing";
 import { billingClientContextFromRequest } from "../lib/billing-client-context.js";
-import { restoreVerifiedPurchases } from "../lib/billing-restore";
+import { applySdkPurchase, restoreVerifiedPurchases } from "../lib/billing-restore";
 import {
 	billingServiceEnabled,
 	callBillingService,
@@ -17,18 +13,24 @@ import {
 } from "../lib/billing-service";
 import { isPurchasesEnabled } from "../lib/deployment";
 import { readApiJson } from "../lib/request-body";
-import {
-	finalizeGooglePurchase,
-	verifyAppleTransaction,
-	verifyGooglePurchase,
-} from "../lib/store-verification";
 import { AppVariables, Env } from "../types";
 
 function brandedHeader(c: any, suffix: string): string | undefined {
 	return c.req.header(`X-SuperBoard-${suffix}`);
 }
 
-const purchases = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.purchases-sdk.purchases","pluginId":"superboard-billing","surface":"sdk","access":"sdk-key","public":{"surface":"sdk","prefix":"/v1/monetization/purchases","aliases":["/purchases/v1","/purchases/v2"]}});
+const purchases = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {
+	service: "api",
+	module: "routes.purchases-sdk.purchases",
+	pluginId: "superboard-billing",
+	surface: "sdk",
+	access: "sdk-key",
+	public: {
+		surface: "sdk",
+		prefix: "/v1/monetization/purchases",
+		aliases: ["/purchases/v1", "/purchases/v2"],
+	},
+});
 
 async function jsonBody(c: any): Promise<Record<string, any>> {
 	return readApiJson(c.req.raw);
@@ -62,6 +64,8 @@ async function context(c: Context<{ Bindings: Env; Variables: AppVariables }>) {
 
 function purchaseError(c: any, error: unknown) {
 	const message = error instanceof Error ? error.message : "Purchase request failed";
+	if (error instanceof Error && "code" in error && error.code === "receipt_already_in_use")
+		return Response.json({ error: message, code: error.code }, { status: 409 });
 	const status = /required|invalid|incomplete|not configured|not bound/i.test(message)
 		? 422
 		: /blocked|not enabled/i.test(message)
@@ -152,18 +156,18 @@ purchases.post("/apple/transactions", async (c) => {
 				customer_info: result.customer_info,
 			});
 		}
-		const verified = await verifyAppleTransaction(c.env, {
+		const verified = await applySdkPurchase(c.env, {
 			projectId: ctx.projectId,
 			customerId: String(ctx.customer.id),
-			signedTransaction: body.signed_transaction,
 			environment: ctx.environment,
+			store: "apple",
+			signedTransaction: body.signed_transaction,
 		});
-		const result = await applyVerifiedPurchase(c.env, verified.purchase);
 		return c.json({
 			result: verified.purchase.status === "pending" ? "pending" : "purchased",
 			finish_transaction: verified.purchase.status !== "pending",
-			transaction_id: result.transactionId,
-			duplicate: result.duplicate,
+			transaction_id: verified.applied.transactionId,
+			duplicate: verified.applied.duplicate,
 			customer_info: await customerInfoFromBillingAuthority(
 				c.env,
 				ctx.projectId,
@@ -204,20 +208,19 @@ purchases.post("/google/purchases", async (c) => {
 				customer_info: result.customer_info,
 			});
 		}
-		const verified = await verifyGooglePurchase(c.env, {
+		const verified = await applySdkPurchase(c.env, {
 			projectId: ctx.projectId,
 			customerId: String(ctx.customer.id),
-			purchaseToken: String(body.purchase_token),
-			storeProductId: String(body.product_id),
-			productType: body.product_type,
 			environment: ctx.environment,
+			store: "google",
+			purchaseToken: String(body.purchase_token),
+			productId: String(body.product_id),
+			productType: body.product_type,
 		});
-		const result = await applyVerifiedPurchase(c.env, verified.purchase);
-		await finalizeGooglePurchase(verified);
 		return c.json({
 			result: verified.purchase.status === "pending" ? "pending" : "purchased",
-			transaction_id: result.transactionId,
-			duplicate: result.duplicate,
+			transaction_id: verified.applied.transactionId,
+			duplicate: verified.applied.duplicate,
 			customer_info: await customerInfoFromBillingAuthority(
 				c.env,
 				ctx.projectId,

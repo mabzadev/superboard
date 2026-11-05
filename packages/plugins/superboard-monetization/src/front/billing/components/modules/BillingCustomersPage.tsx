@@ -41,6 +41,7 @@ import {
 	type BillingCustomerSummary,
 	type BillingOverview,
 } from "../../api/billing/billingService.js";
+import { amountText, formatMoney } from "./ConvertedAmount.js";
 
 const selectClass = "h-9 w-full rounded-md border bg-background px-3 text-sm";
 const columnLabels: Record<string, string> = {
@@ -54,6 +55,8 @@ const columnLabels: Record<string, string> = {
 	paywall_id: "Paywall",
 	placement_identifier: "Placement",
 	occurred_at: "Occurred",
+	details: "Details",
+	amount: "Amount",
 };
 const columnFormats: Record<string, "date" | "store" | "status" | "event"> = {
 	store: "store",
@@ -265,6 +268,10 @@ function CustomerDetail({
 	const [mergeTarget, setMergeTarget] = useState("");
 	const [mergeConfirmation, setMergeConfirmation] = useState("");
 	const [deleteConfirmation, setDeleteConfirmation] = useState("");
+	const transfer = (event: Record<string, unknown>) => {
+		const parties = transferParties(event);
+		return parties ? t("From {from} to {to}", parties) : null;
+	};
 
 	const refresh = useCallback(async () => {
 		setDetail(await getBillingCustomer(projectId, customerId));
@@ -336,6 +343,22 @@ function CustomerDetail({
 		);
 
 	const { customer, customer_info: info } = detail;
+	const spent = detail.total_spent;
+	const transactionRows = detail.transactions.map((row) => ({
+		...row,
+		amount: amountText(
+			{
+				micros: typeof row.price_micros === "number" ? row.price_micros : null,
+				currency: text(row, "currency") || null,
+				displayMicros:
+					typeof row.display_price_micros === "number" ? row.display_price_micros : null,
+				displayCurrency: text(row, "display_currency") || null,
+				rateDate: text(row, "usd_rate_date") || null,
+			},
+			t,
+			locale,
+		),
+	}));
 	const clientContext = sdkContext(customer.attributes);
 	const activeEntitlements = Object.values(info.entitlements).filter(
 		(entitlement) => entitlement.is_active,
@@ -387,6 +410,20 @@ function CustomerDetail({
 							</Fact>
 						);
 					})}
+					{spent && (
+						<Fact label={t("Total spent")}>
+							{formatMoney(spent.amount_micros, spent.currency, locale)}
+							{spent.unconverted_purchases > 0 && (
+								<span className="block text-xs font-normal text-muted-foreground">
+									{spent.unconverted_purchases === 1
+										? t("1 purchase awaiting conversion is not included.")
+										: t("{count} purchases awaiting conversion are not included.", {
+												count: spent.unconverted_purchases.toLocaleString(locale),
+											})}
+								</span>
+							)}
+						</Fact>
+					)}
 					<Fact label={t("First seen")}>{date(customer.first_seen_at)}</Fact>
 					<Fact label={t("Last seen")}>{date(customer.last_seen_at)}</Fact>
 					<Fact label={t("Aliases")}>
@@ -511,8 +548,15 @@ function CustomerDetail({
 				<Section title={t("Financial and paywall history")}>
 					<RecordTable
 						title={t("Transactions")}
-						rows={detail.transactions}
-						columns={["store", "store_transaction_id", "event_type", "status", "created_at"]}
+						rows={transactionRows}
+						columns={[
+							"store",
+							"store_transaction_id",
+							"event_type",
+							"status",
+							"created_at",
+							"amount",
+						]}
 					/>
 					<RecordTable
 						title={t("Paywall events")}
@@ -525,8 +569,8 @@ function CustomerDetail({
 						</summary>
 						<div className="mt-3">
 							<RecordTable
-								rows={detail.events}
-								columns={["event_type", "status", "store", "occurred_at"]}
+								rows={detail.events.map((event) => ({ ...event, details: transfer(event) }))}
+								columns={["event_type", "status", "store", "occurred_at", "details"]}
 							/>
 						</div>
 					</details>
@@ -706,6 +750,21 @@ function sdkContext(attributes?: string | null): Record<string, unknown> {
 		return {};
 	}
 	return {};
+}
+
+function transferParties(event: Record<string, unknown>) {
+	if (event.event_type !== "transferred") return null;
+	try {
+		const payload: unknown = JSON.parse(text(event, "payload") || "{}");
+		if (!payload || typeof payload !== "object") return null;
+		const ids = (value: unknown) =>
+			Array.isArray(value) ? value.filter((id) => typeof id === "string").join(", ") : "";
+		const from = "transferred_from" in payload ? ids(payload.transferred_from) : "";
+		const to = "transferred_to" in payload ? ids(payload.transferred_to) : "";
+		return from && to ? { from, to } : null;
+	} catch {
+		return null;
+	}
 }
 
 function text(record: Record<string, unknown>, key: string) {

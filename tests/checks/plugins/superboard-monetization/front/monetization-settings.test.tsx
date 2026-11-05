@@ -1,7 +1,26 @@
+import type { ReactNode } from "react";
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 
 import MonetizationSettingsPage from "../../../../../packages/plugins/superboard-monetization/src/front/MonetizationSettingsPage.js";
-import { fireEvent, render, screen, within } from "../../../packages/supbrd-front-ui/render.js";
+import {
+	FrontContextProvider,
+	useOptionalFrontContext,
+} from "../../../../../packages/supbrd-front-ui/src/context.js";
+import {
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within,
+} from "../../../packages/supbrd-front-ui/render.js";
+
+function French({ children }: { children: ReactNode }) {
+	const context = useOptionalFrontContext();
+	if (!context) throw new Error("Missing Front context");
+	return (
+		<FrontContextProvider value={{ ...context, locale: "fr" }}>{children}</FrontContextProvider>
+	);
+}
 
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "1-test" } }),
@@ -11,6 +30,8 @@ const billing = vi.hoisted(() => ({
 	getBillingOverview: vi.fn(),
 	updateBillingSettings: vi.fn(),
 	getStripeConnection: vi.fn(),
+	getDisplayCurrency: vi.fn(),
+	updateDisplayCurrency: vi.fn(),
 }));
 vi.mock(
 	"../../../../../packages/plugins/superboard-monetization/src/front/billing/api/billing/billingService.js",
@@ -42,6 +63,10 @@ describe("MonetizationSettingsPage", () => {
 		billing.getBillingOverview.mockResolvedValue({
 			settings: { purchases_enabled: 0, restore_behavior: "block" },
 			credentials: { ios: { configured: false }, android: { configured: false } },
+		});
+		billing.getDisplayCurrency.mockResolvedValue({
+			display_currency: "USD",
+			available_currencies: ["USD", "EUR"],
 		});
 	});
 
@@ -79,6 +104,69 @@ describe("MonetizationSettingsPage", () => {
 		expect(await screen.findByRole("alert")).toHaveTextContent("Could not save billing settings.");
 		expect(enabled).toBeChecked();
 		expect(screen.queryByText("Settings saved.")).not.toBeInTheDocument();
+	});
+
+	it("offers the three restore behaviors and reads the legacy blocking setting as keeping the original App User ID", async () => {
+		billing.updateBillingSettings.mockResolvedValue({});
+		render(<MonetizationSettingsPage />);
+
+		const keep = await screen.findByRole("radio", { name: "Keep with original App User ID" });
+		const transfer = screen.getByRole("radio", { name: "Transfer to new App User ID" });
+		const conditional = screen.getByRole("radio", {
+			name: "Transfer if there are no active subscriptions",
+		});
+		expect(screen.getAllByRole("radio")).toEqual([transfer, conditional, keep]);
+		expect(keep).toBeChecked();
+		expect(screen.getByRole("radiogroup", { name: "Restore behavior" })).toBeVisible();
+		expect(transfer).toHaveAccessibleDescription(/only one customer has access at a time/u);
+		expect(transfer).toHaveAccessibleDescription(/anonymous App User ID .* merged/u);
+		expect(conditional).toHaveAccessibleDescription(/no active subscription/u);
+		expect(keep).toHaveAccessibleDescription(/^Use with caution\..*account before purchasing/u);
+		expect(screen.queryByText("Block purchase transfers between users")).not.toBeInTheDocument();
+
+		billing.getBillingOverview.mockResolvedValue({
+			settings: { purchases_enabled: 0, restore_behavior: "transfer_if_no_active_subscriptions" },
+			credentials: { ios: { configured: false }, android: { configured: false } },
+		});
+		fireEvent.click(conditional);
+		fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+		expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
+		expect(billing.updateBillingSettings).toHaveBeenCalledWith("1-test", {
+			purchases_enabled: false,
+			restore_behavior: "transfer_if_no_active_subscriptions",
+		});
+		expect(conditional).toBeChecked();
+	});
+
+	it("selects the RevenueCat default when no supported restore behavior is stored", async () => {
+		billing.getBillingOverview.mockResolvedValue({
+			settings: { purchases_enabled: 1, restore_behavior: "share_between_ids" },
+			credentials: { ios: { configured: false }, android: { configured: false } },
+		});
+		render(<MonetizationSettingsPage />);
+
+		expect(await screen.findByRole("radio", { name: "Transfer to new App User ID" })).toBeChecked();
+		expect(screen.getByRole("button", { name: "Save settings" })).toBeDisabled();
+	});
+
+	it("describes the restore behaviors in French", async () => {
+		render(<MonetizationSettingsPage />, { wrapper: French });
+
+		expect(
+			await screen.findByRole("radiogroup", { name: "Comportement de restauration" }),
+		).toBeVisible();
+		const transfer = screen.getByRole("radio", { name: "Transférer au nouvel identifiant" });
+		const conditional = screen.getByRole("radio", {
+			name: "Transférer s’il n’y a pas d’abonnement actif",
+		});
+		const keep = screen.getByRole("radio", { name: "Garder l’identifiant d’origine" });
+		expect(keep).toBeChecked();
+		expect(transfer).toHaveAccessibleDescription(/un seul client y a accès à la fois/u);
+		expect(conditional).toHaveAccessibleDescription(/aucun abonnement actif/u);
+		expect(keep).toHaveAccessibleDescription(/^À utiliser avec prudence\./u);
+		for (const english of ["Transfer to new App User ID", "Restore behavior", "Use with caution"])
+			expect(screen.queryByText(english, { exact: false })).not.toBeInTheDocument();
 	});
 
 	afterEach(() => {
@@ -154,6 +242,53 @@ describe("MonetizationSettingsPage", () => {
 			expect(screen.getAllByLabelText(label)).toEqual(fields);
 			expect(fields).toHaveLength(1);
 		}
+	});
+
+	it("saves the display currency of the project from the General tab", async () => {
+		billing.updateDisplayCurrency.mockResolvedValue({
+			display_currency: "EUR",
+			available_currencies: ["USD", "EUR"],
+		});
+		window.history.replaceState(null, "", "/monetization/settings");
+		render(<MonetizationSettingsPage />);
+
+		const select = await screen.findByRole("combobox", { name: "Display currency" });
+		await waitFor(() => {
+			expect(select).toHaveValue("USD");
+		});
+		expect(
+			within(select)
+				.getAllByRole("option")
+				.map((option) => option.textContent),
+		).toEqual(["US dollar (USD)", "Euro (EUR)"]);
+		fireEvent.change(select, { target: { value: "EUR" } });
+
+		expect(await screen.findByText("Display currency saved.")).toBeInTheDocument();
+		expect(billing.updateDisplayCurrency).toHaveBeenCalledWith("1-test", "EUR");
+		expect(select).toHaveValue("EUR");
+	});
+
+	it("restores the previous display currency when saving fails, in French", async () => {
+		billing.updateDisplayCurrency.mockRejectedValue(new Error("Forbidden"));
+		window.history.replaceState(null, "", "/monetization/settings?lang=fr");
+		render(<MonetizationSettingsPage />, { wrapper: French });
+
+		const select = await screen.findByRole("combobox", { name: "Devise d’affichage" });
+		await waitFor(() => {
+			expect(select).toHaveValue("USD");
+		});
+		expect(
+			screen.getByText(/convertis en USD au taux de référence de la BCE du jour de chaque achat/u),
+		).toBeInTheDocument();
+		fireEvent.change(select, { target: { value: "EUR" } });
+
+		expect(
+			await screen.findByText("Impossible d’enregistrer la devise d’affichage."),
+		).toBeInTheDocument();
+		expect(select).toHaveValue("USD");
+		expect(
+			within(select).getByRole("option", { name: "Dollar américain (USD)" }),
+		).toBeInTheDocument();
 	});
 
 	it("opens legacy configuration links on the gateways tab", async () => {

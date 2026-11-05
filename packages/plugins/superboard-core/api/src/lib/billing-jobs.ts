@@ -4,6 +4,7 @@ import {
 	queueCustomerEntitlementChanged,
 	type BillingEnvironment,
 } from "./billing";
+import { currentPurchaseOwner } from "./billing-restore";
 import { readTextLimited } from "./http-limits";
 import { recordGooglePendingRefundReview } from "./refunds";
 import { decryptCredential, hmacSha256 } from "./secrets";
@@ -82,6 +83,8 @@ export async function processAppleBillingNotification(
 ) {
 	try {
 		const result = await verifyAppleNotification(env, params);
+		const owner = result.purchase ? await currentPurchaseOwner(env.DB, result.purchase) : null;
+		if (result.purchase && owner) result.purchase.customerId = owner;
 		if (result.purchase?.customerId) {
 			const customer = await env.DB.prepare(
 				"SELECT id FROM billing_customers WHERE id = ? AND project_id = ?",
@@ -139,6 +142,11 @@ export async function processGoogleBillingNotification(
 		});
 		verified.purchase.eventType = params.eventType;
 		verified.purchase.eventOccurredAt = params.eventOccurredAt;
+		const owner = await currentPurchaseOwner(env.DB, verified.purchase);
+		if (owner) {
+			verified.purchase.customerId = owner;
+			verified.purchase.transfer = false;
+		}
 		if (verified.purchase.customerId) {
 			const customer = await env.DB.prepare(
 				"SELECT id FROM billing_customers WHERE id = ? AND project_id = ?",
@@ -667,7 +675,9 @@ export async function reconcileStoreSubscription(env: BillingEnv, subscriptionId
 				storeProductId: String(row.store_product_id),
 				productType: "subscription",
 				environment,
+				allowTransfer: true,
 			});
+			verified.purchase.transfer = false;
 			verified.purchase.eventType = `RECONCILIATION_${verified.purchase.status.toUpperCase()}`;
 			result = {
 				store: "google",

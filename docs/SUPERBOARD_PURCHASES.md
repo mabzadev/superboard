@@ -20,7 +20,23 @@ SuperBoard is the only Premium authority. Every accepted entitlement change crea
 
 A Queue dispatch failure does not roll back or fail a verified Store purchase because the delivery already exists in D1 and scheduled reconciliation re-enqueues it. Replaying a verified transaction repairs a missing entitlement delivery. Disabled endpoints are closed as `skipped`; terminal failures are quarantined for audited replay. The release gate remains closed while a projection is failed, stale, or quarantined.
 
-Purchase restoration transfers only the verified `original_transaction_id` chain. It never removes the same catalog product from unrelated customers. Entitlements are derived from the union of all current verified subscription and non-consumable sources, so expiration or refund of one source cannot revoke access while another valid source remains active.
+Entitlements are derived from the union of all current verified subscription and non-consumable sources, so expiration or refund of one source cannot revoke access while another valid source remains active.
+
+## Restore behavior
+
+The project's restore behavior decides what happens when a customer restores or buys with a Store purchase that already belongs to another customer. A purchase belongs to the customers recorded on its verified `original_transaction_id` chain. The existing identified customer named in the Apple `appAccountToken` or Google `obfuscatedExternalAccountId` also counts as an owner. Owners choose the behavior in **Monetization → Settings → General**. It applies to every app in the project, to restores, and to SDK purchase receipts.
+
+| Stored value                          | Label                                         | Effect when the purchase belongs to another identified customer                                                                     |
+| ------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `transfer` (default)                  | Transfer to new App User ID                   | The chain moves to the requesting customer. The previous owner loses the access it gave.                                            |
+| `transfer_if_no_active_subscriptions` | Transfer if there are no active subscriptions | The chain moves only if the owner has no active subscription in the same store and environment. Otherwise the request fails.        |
+| `block`                               | Keep with original App User ID                | The request fails. Use it only when customers must create an account before purchasing, and be ready to help them recover accounts. |
+
+A refused request returns HTTP 409 with the code `receipt_already_in_use` and changes nothing. A restore that contains several purchases checks all of them before it applies any of them. A purchase without an owner is assigned to the requesting customer, whatever the behavior.
+
+When the recorded owner is anonymous, the behavior does not apply: the anonymous customer is merged into the requesting customer, with its aliases, purchases and entitlements. A missing or unknown stored value is read as `transfer`. Projects that used the former **Block purchase transfers between users** option keep the value `block`.
+
+Each transfer moves only the chain's transactions and subscription to the new owner; the same catalog product stays with unrelated customers. Billing recomputes both customers' entitlements. It records a `transferred` billing event on both customers, with `transferred_from` and `transferred_to` App User IDs, sends a `TRANSFER` event to the webhook endpoints that accept it, and queues `customer.entitlement.changed` for both customers. Billing's Store notification jobs and reconciliation keep the current owner of a chain; they never move a purchase back to the customer named in the Store token. Erasing a customer clears the transfer events that mention it.
 
 ## Mobile API
 

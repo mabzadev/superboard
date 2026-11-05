@@ -153,6 +153,16 @@ export type ProductStatistics = {
 		currency: string;
 		cancellations: number;
 	}>;
+	display_currency?: string;
+	totals_in_display_currency?: {
+		purchases: number;
+		gross_revenue_micros: number;
+		refunds: number;
+		refunded_micros: number;
+		net_revenue_micros: number;
+		unconverted_purchases: number;
+		unconverted_refunds: number;
+	};
 };
 
 export async function getProducts(projectRef: string) {

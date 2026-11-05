@@ -1170,7 +1170,9 @@ export async function reconcileAppleSubscription(
 		signedTransaction: latest.signedTransactionInfo,
 		environment: params.environment,
 		eventType: "RECONCILIATION",
+		allowTransfer: true,
 	});
+	verified.purchase.transfer = false;
 	verified.purchase.eventType = `RECONCILIATION_${verified.purchase.status.toUpperCase()}`;
 	return verified.purchase;
 }

@@ -32,6 +32,59 @@ Ces concepts correspondent aux [offres RevenueCat](https://www.revenuecat.com/do
 et aux [droits d’accès RevenueCat](https://www.revenuecat.com/docs/getting-started/entitlements).
 Il ne s’agit pas d’une compatibilité avec le protocole ou les SDK RevenueCat.
 
+## Restauration et transfert des achats
+
+**Paramètres → Général** propose les trois comportements de restauration de
+RevenueCat pour tout le projet : transférer au nouvel identifiant (par défaut),
+transférer s’il n’y a pas d’abonnement actif, et garder l’identifiant d’origine.
+Ils s’appliquent aux restaurations et aux achats envoyés par les SDK. Un achat
+appartenant à un identifiant anonyme fusionne cet identifiant avec le nouveau.
+Chaque transfert apparaît dans l’historique des deux fiches client, avec
+l’identifiant d’origine et le nouvel identifiant. Le comportement détaillé est
+décrit dans [Restore behavior](SUPERBOARD_PURCHASES.md#restore-behavior) ;
+la référence est la page
+[Restore Behavior de RevenueCat](https://www.revenuecat.com/docs/projects/restore-behavior).
+
+Le réglage distinct pour le bac à sable, l’ancien mode de partage entre
+identifiants et le transfert manuel depuis la fiche client ne sont pas proposés.
+
+## Devises et devise d’affichage
+
+Comme RevenueCat, chaque achat est converti en USD au taux du jour de l’achat,
+et chaque remboursement au taux du jour de sa demande. Les montants d’origine
+restent stockés et affichés. La source est le taux de référence quotidien de la
+[Banque centrale européenne](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html),
+sans clé d’API. Pour un jour sans cotation (week-end, jour férié), le dernier
+taux publié avant ce jour s’applique, une fois ce jour connu comme non coté.
+
+1. Appliquez la migration API `0073_billing_exchange_rates.sql`. Elle ajoute les
+   colonnes `usd_price_micros` et `usd_rate_date` aux achats du registre et aux
+   transactions vérifiées, `usd_amount_micros` et `usd_rate_date` aux
+   remboursements, ainsi que la table des taux et le réglage d’affichage.
+2. La tâche planifiée de Billing (rapprochement toutes les dix minutes) met en
+   file `billing.exchange_rates.sync`. Ce travail récupère les nouveaux taux au
+   plus une fois par heure, charge l’historique manquant par fenêtres de
+   180 jours, puis convertit les montants en attente par lots bornés. Il reprend
+   là où il s’est arrêté. Une indisponibilité de la BCE est enregistrée sans
+   faire échouer le travail.
+3. Choisissez USD ou EUR dans **Paramètres → Général → Devise d’affichage**.
+   L’euro est obtenu depuis l’USD au taux du même jour. Un montant déjà dans la
+   devise d’affichage est repris tel quel.
+
+Les totaux et la série de la page Achats, le revenu net de la Vue d’ensemble et
+le « Total dépensé » de la fiche client additionnent uniquement les montants
+convertis. Les achats encore sans taux sont comptés à part et signalés à
+l’écran. L’API des statistiques ajoute `display_currency`,
+`totals_in_display_currency` et `series_in_display_currency` ; le paramètre
+facultatif `display_currency` remplace le réglage du projet pour une requête.
+L’export des transactions ajoute `usd_price_micros` et `usd_rate_date`.
+
+Écarts restants avec RevenueCat : le réglage est commun au projet, et non
+propre à chaque compte du tableau de bord ; seules USD et EUR sont proposées ;
+les devises absentes des taux de la BCE (par exemple SAR, AED ou VND) restent
+sans montant converti ; les transactions vérifiées sont converties par le
+travail planifié et non au moment de l’achat.
+
 ## Activer Stripe sur le web
 
 1. Appliquez la migration API `0070_stripe_web_purchases.sql` et la migration

@@ -107,11 +107,16 @@ vi.mock(
 vi.mock(
 	"../../../../../../../packages/plugins/superboard-analytics/src/front/components/layout/section-cards.js",
 	() => ({
-		SectionCards: ({ cards }: { cards: Array<{ title: string; value: number }> }) => (
+		SectionCards: ({
+			cards,
+		}: {
+			cards: Array<{ title: string; value: number; note?: string }>;
+		}) => (
 			<section aria-label="Metrics">
 				{cards.map((card) => (
 					<p key={card.title}>
 						{card.title}: {card.value}
+						{card.note && <small> ({card.note})</small>}
 					</p>
 				))}
 			</section>
@@ -224,6 +229,61 @@ describe("DashboardPageContent", () => {
 		expect(
 			await screen.findByText(`Net revenue: ${money(14.98, "EUR")} · ${money(2, "USD")}`),
 		).toBeInTheDocument();
+	});
+
+	it("shows net revenue in the display currency and the transactions awaiting conversion", async () => {
+		mocks.productStatistics.mockResolvedValue({
+			totals: {
+				purchases: 3,
+				gross_revenue_micros: 18_980_000,
+				refunds: 1,
+				refunded_micros: 2_000_000,
+				net_revenue_micros: 16_980_000,
+				active_subscriptions: 0,
+			},
+			totals_by_currency: [
+				{
+					currency: "EUR",
+					purchases: 2,
+					gross_revenue_micros: 16_980_000,
+					refunds: 1,
+					refunded_micros: 2_000_000,
+				},
+			],
+			display_currency: "EUR",
+			totals_in_display_currency: {
+				purchases: 3,
+				gross_revenue_micros: 17_000_000,
+				refunds: 1,
+				refunded_micros: 2_000_000,
+				net_revenue_micros: 15_000_000,
+				unconverted_purchases: 1,
+				unconverted_refunds: 1,
+			},
+			by_status: [],
+			series: [],
+			by_product_platform: [],
+		});
+		const { unmount } = render(<DashboardPageContent />);
+		const netRevenue = async (label: string) => {
+			await screen.findByText(new RegExp(`^${label}:`, "u"));
+			const metrics = screen.getByRole("region", { name: "Metrics" });
+			return [...metrics.querySelectorAll("p")]
+				.map((card) => card.textContent)
+				.find((text) => text?.startsWith(`${label}:`));
+		};
+		const euros = (value: number, locale: string) =>
+			new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(value);
+
+		expect(await netRevenue("Net revenue")).toBe(
+			`Net revenue: ${euros(15, "en")} (2 transactions awaiting conversion are not included.)`,
+		);
+		unmount();
+
+		render(<DashboardPageContent />, { wrapper: French });
+		expect(await netRevenue("Revenu net")).toBe(
+			`Revenu net: ${euros(15, "fr")} (2 transactions en attente de conversion ne sont pas incluses.)`,
+		);
 	});
 
 	it("aggregates Analytics with the optional Dynamic Links and Products services", async () => {

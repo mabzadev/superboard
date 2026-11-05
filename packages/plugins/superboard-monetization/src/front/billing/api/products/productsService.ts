@@ -68,6 +68,10 @@ export type Purchase = {
 	expires_at?: string | null;
 	purchased_price_micros: number;
 	currency?: string | null;
+	usd_price_micros?: number | null;
+	usd_rate_date?: string | null;
+	display_currency?: string;
+	display_price_micros?: number | null;
 };
 
 export type Refund = {
@@ -77,6 +81,10 @@ export type Refund = {
 	status: "requested" | "processing" | "completed" | "rejected" | "cancelled";
 	amount_micros: number;
 	currency?: string | null;
+	usd_amount_micros?: number | null;
+	usd_rate_date?: string | null;
+	display_currency?: string;
+	display_amount_micros?: number | null;
 	reason?: string | null;
 	requested_at: string;
 	completed_at?: string | null;
@@ -160,6 +168,25 @@ export type ProductStatistics = {
 		revenue_micros: number;
 		currency: string | null;
 		cancellations: number;
+		revenue_in_display_currency_micros?: number;
+		unconverted_purchases?: number;
+	}>;
+	display_currency?: string;
+	totals_in_display_currency?: {
+		purchases: number;
+		gross_revenue_micros: number;
+		refunds: number;
+		refunded_micros: number;
+		net_revenue_micros: number;
+		active_subscriptions: number;
+		unconverted_purchases: number;
+		unconverted_refunds: number;
+	};
+	series_in_display_currency?: Array<{
+		bucket: string;
+		purchases: number;
+		revenue_micros: number;
+		unconverted_purchases: number;
 	}>;
 };
 

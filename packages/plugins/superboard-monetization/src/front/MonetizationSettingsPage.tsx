@@ -4,6 +4,8 @@ import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Checkbox } from "@superboard/front-ui/ui/checkbox.js";
+import { Label } from "@superboard/front-ui/ui/label.js";
+import { RadioGroup, RadioGroupItem } from "@superboard/front-ui/ui/radio-group.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { useEffect, useState } from "react";
 
@@ -13,8 +15,33 @@ import {
 	updateBillingSettings,
 	type BillingOverview,
 } from "./billing/api/billing/billingService.js";
+import DisplayCurrencySetting from "./DisplayCurrencySetting.js";
 import { useMonetizationI18n } from "./i18n.js";
 import StripeSettings from "./StripeSettings.js";
+
+const restoreBehaviors = [
+	{
+		value: "transfer",
+		label: "Transfer to new App User ID",
+		help: "Default. When another App User ID restores or buys with a receipt that is already in use, the purchases move to it, so only one customer has access at a time. Purchases that belong to an anonymous App User ID are merged with the new App User ID instead.",
+	},
+	{
+		value: "transfer_if_no_active_subscriptions",
+		label: "Transfer if there are no active subscriptions",
+		help: "Purchases move to the new App User ID only if the current owner has no active subscription. Otherwise they stay with the current owner and the restore or purchase returns an error. One-time purchases don’t block the transfer.",
+	},
+	{
+		value: "block",
+		label: "Keep with original App User ID",
+		help: "Use with caution. Restoring or buying with a receipt that belongs to another App User ID returns an error. Choose this only if customers must create an account before purchasing, and be ready to help them recover their account.",
+	},
+] as const;
+
+type RestoreBehavior = (typeof restoreBehaviors)[number]["value"];
+
+function storedRestoreBehavior(value: string | undefined): RestoreBehavior {
+	return restoreBehaviors.find((behavior) => behavior.value === value)?.value ?? "transfer";
+}
 
 export default function MonetizationSettingsPage() {
 	const { t, locale } = useMonetizationI18n();
@@ -68,7 +95,7 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 	const { t, locale } = useMonetizationI18n();
 	const [overview, setOverview] = useState<BillingOverview | null>(null);
 	const [enabled, setEnabled] = useState(false);
-	const [blockTransfer, setBlockTransfer] = useState(false);
+	const [restoreBehavior, setRestoreBehavior] = useState<RestoreBehavior>("transfer");
 	const [error, setError] = useState<"load" | "save" | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [saved, setSaved] = useState(false);
@@ -83,7 +110,7 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 				setError(null);
 				setOverview(data);
 				setEnabled(data.settings.purchases_enabled === 1);
-				setBlockTransfer(data.settings.restore_behavior === "block");
+				setRestoreBehavior(storedRestoreBehavior(data.settings.restore_behavior));
 			})
 			.catch(() => {
 				if (active) setError("load");
@@ -95,7 +122,7 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 	const dirty =
 		overview?.settings &&
 		(enabled !== (overview.settings.purchases_enabled === 1) ||
-			blockTransfer !== (overview.settings.restore_behavior === "block"));
+			restoreBehavior !== storedRestoreBehavior(overview.settings.restore_behavior));
 	const save = async () => {
 		setBusy(true);
 		setError(null);
@@ -103,13 +130,13 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 		try {
 			await updateBillingSettings(projectId, {
 				purchases_enabled: enabled,
-				restore_behavior: blockTransfer ? "block" : "transfer",
+				restore_behavior: restoreBehavior,
 			});
 			const persisted = await getBillingOverview(projectId);
 			if (
 				!persisted.settings ||
 				(persisted.settings.purchases_enabled === 1) !== enabled ||
-				(persisted.settings.restore_behavior === "block") !== blockTransfer
+				storedRestoreBehavior(persisted.settings.restore_behavior) !== restoreBehavior
 			)
 				throw new Error("BILLING_SETTINGS_NOT_PERSISTED");
 			setOverview(persisted);
@@ -164,16 +191,46 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 								/>
 								{t("Enable purchases")}
 							</label>
-							<label className="flex items-center gap-2">
-								<Checkbox
-									checked={blockTransfer}
-									onCheckedChange={(value) => {
-										setBlockTransfer(value === true);
+							<div className="space-y-3">
+								<h2 id="restore-behavior-title" className="text-sm font-medium">
+									{t("Restore behavior")}
+								</h2>
+								<p className="text-sm text-muted-foreground">
+									{t(
+										"Applies to every app in this project when another App User ID restores or buys with a receipt that is already in use.",
+									)}
+								</p>
+								<RadioGroup
+									aria-labelledby="restore-behavior-title"
+									value={restoreBehavior}
+									onValueChange={(value) => {
+										setRestoreBehavior(storedRestoreBehavior(value));
 										setSaved(false);
 									}}
-								/>
-								{t("Block purchase transfers between users")}
-							</label>
+								>
+									{restoreBehaviors.map((behavior) => (
+										<div key={behavior.value} className="flex items-start gap-3">
+											<RadioGroupItem
+												id={`restore-behavior-${behavior.value}`}
+												value={behavior.value}
+												aria-describedby={`restore-behavior-${behavior.value}-help`}
+												className="mt-0.5"
+											/>
+											<div className="space-y-1">
+												<Label htmlFor={`restore-behavior-${behavior.value}`}>
+													{t(behavior.label)}
+												</Label>
+												<p
+													id={`restore-behavior-${behavior.value}-help`}
+													className="text-sm text-muted-foreground"
+												>
+													{t(behavior.help)}
+												</p>
+											</div>
+										</div>
+									))}
+								</RadioGroup>
+							</div>
 						</fieldset>
 						{error === "save" && <p role="alert">{t("Could not save billing settings.")}</p>}
 						{saved && <p role="status">{t("Settings saved.")}</p>}
@@ -182,6 +239,7 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 						</Button>
 					</form>
 				)}
+				<DisplayCurrencySetting key={projectId} projectId={projectId} />
 			</TabsContent>
 			<TabsContent className="space-y-5" value="gateways" forceMount hidden={tab !== "gateways"}>
 				<StripeSettings key={projectId} projectId={projectId} />

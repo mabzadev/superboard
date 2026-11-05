@@ -268,6 +268,36 @@ describe("billing customers page", () => {
 			expect(sheet.textContent).not.toContain(raw);
 	});
 
+	it("shows who a purchase was transferred from and to in the customer history", async () => {
+		const detail = await mocks.getBillingCustomer.getMockImplementation()?.();
+		mocks.getBillingCustomer.mockResolvedValue({
+			...detail,
+			events: [
+				{
+					id: "ev-transfer",
+					event_type: "transferred",
+					status: "processed",
+					provider: "google",
+					occurred_at: "2026-11-02T12:00:00.000Z",
+					payload: JSON.stringify({
+						transferred_from: ["previous-user"],
+						transferred_to: ["app-user-1"],
+					}),
+				},
+			],
+		});
+		window.history.replaceState({}, "", "/monetization/customers?customer=cus_1");
+		const { unmount } = render(<BillingCustomersPage />);
+		fireEvent.click(await screen.findByText("All billing events (1)"));
+		expect(row("Transfer")).toHaveTextContent(/From previous-user to app-user-1/u);
+		unmount();
+
+		window.history.replaceState({}, "", "/monetization/customers?lang=fr&customer=cus_1");
+		render(<BillingCustomersPage />, { wrapper: French });
+		fireEvent.click(await screen.findByText("Tous les événements de facturation (1)"));
+		expect(row("Transfert")).toHaveTextContent(/De previous-user vers app-user-1/u);
+	});
+
 	it("shows the customer sheet labels and dates in French", async () => {
 		window.history.replaceState({}, "", "/monetization/customers?lang=fr&customer=cus_1");
 		render(<BillingCustomersPage />, { wrapper: French });
@@ -285,5 +315,60 @@ describe("billing customers page", () => {
 		expect(row("pw_main")).toHaveTextContent(/^Achat commencépw_mainonboarding1 nov\. 2026/u);
 		fireEvent.click(screen.getByText("Tous les événements de facturation (2)"));
 		expect(row("Renouvellement")).toHaveTextContent(/^RenouvellementTraitéApple1 nov\. 2026/u);
+	});
+
+	it("shows the total spent and each transaction amount in the display currency", async () => {
+		const detail = await mocks.getBillingCustomer.getMockImplementation()?.("10-test", "cus_1");
+		const spending = {
+			...detail,
+			display_currency: "EUR",
+			total_spent: {
+				currency: "EUR",
+				purchases: 3,
+				amount_micros: 27_480_000,
+				unconverted_purchases: 1,
+			},
+			transactions: [
+				{
+					...detail.transactions[0],
+					price_micros: 9_990_000,
+					currency: "usd",
+					usd_price_micros: 9_990_000,
+					usd_rate_date: "2026-11-01",
+					display_currency: "EUR",
+					display_price_micros: 9_250_000,
+				},
+				{
+					id: "tx-2",
+					store: "google",
+					store_transaction_id: "google-tx-2",
+					event_type: "PURCHASED",
+					status: "active",
+					created_at: "2026-11-02T12:00:00.000Z",
+					price_micros: 4_990_000,
+					currency: "BRL",
+					usd_price_micros: null,
+					usd_rate_date: null,
+					display_currency: "EUR",
+					display_price_micros: null,
+				},
+			],
+		};
+		mocks.getBillingCustomer.mockResolvedValue(spending);
+		window.history.replaceState({}, "", "/monetization/customers?customer=cus_1");
+		const { unmount } = render(<BillingCustomersPage />);
+		await screen.findByText("apple-tx-1");
+
+		expect(fact("Total spent")).toBe("€27.481 purchase awaiting conversion is not included.");
+		expect(row("apple-tx-1")).toHaveTextContent(/Nov 1, 2026.*\$9\.99 · €9\.25$/u);
+		expect(row("google-tx-2")).toHaveTextContent(/R\$4\.99 · Conversion pending$/u);
+		unmount();
+
+		render(<BillingCustomersPage />, { wrapper: French });
+		await screen.findByText("apple-tx-1");
+		expect(fact("Total dépensé")).toMatch(
+			/^27,48\s€1 achat en attente de conversion n’est pas inclus\.$/u,
+		);
+		expect(row("google-tx-2")).toHaveTextContent(/4,99\sR\$ · Conversion en attente$/u);
 	});
 });

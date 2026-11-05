@@ -497,6 +497,12 @@ const french: Record<string, string> = {
 	"Net revenue": "Revenu net",
 	"Gross purchase revenue after recorded refunds.":
 		"Revenu brut des achats après remboursements enregistrés.",
+	"Gross purchase revenue after recorded refunds, converted at the ECB reference rate of each purchase day.":
+		"Revenu brut des achats après remboursements enregistrés, converti au taux de référence de la BCE du jour de chaque achat.",
+	"1 transaction awaiting conversion is not included.":
+		"1 transaction en attente de conversion n’est pas incluse.",
+	"{count} transactions awaiting conversion are not included.":
+		"{count} transactions en attente de conversion ne sont pas incluses.",
 	"Quick start": "Démarrage rapide",
 	"Create an API key": "Créer une clé d’API",
 	"Authenticate the SDK in the selected project.":

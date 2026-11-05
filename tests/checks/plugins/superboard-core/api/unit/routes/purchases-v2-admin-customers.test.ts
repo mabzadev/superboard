@@ -51,6 +51,14 @@ describe("billing customer administration", () => {
 					},
 				];
 			}
+			if (call.op === "first" && call.sql.includes("COUNT(spent.purchase) AS purchases")) {
+				return {
+					currency: "USD",
+					purchases: 2,
+					amount_micros: 19_980_000,
+					unconverted_purchases: 0,
+				};
+			}
 			if (call.op === "all") return [];
 			return undefined;
 		});
@@ -64,6 +72,8 @@ describe("billing customer administration", () => {
 		expect(response.status).toBe(200);
 		await expect(response.json()).resolves.toMatchObject({
 			customer: { id: "customer-1" },
+			display_currency: "USD",
+			total_spent: { currency: "USD", purchases: 2, amount_micros: 19_980_000 },
 			paywall_events: [
 				{
 					id: "paywall-event-1",
@@ -75,6 +85,8 @@ describe("billing customer administration", () => {
 			(call) => call.op === "all" && call.sql.includes("billing_paywall_events"),
 		);
 		expect(query?.args).toEqual(["20", "customer-1"]);
+		const spent = db.calls.find((call) => call.sql.includes("COUNT(spent.purchase) AS purchases"));
+		expect(spent?.args).toEqual([null, "20", null, "20", "customer-1"]);
 	});
 });
 

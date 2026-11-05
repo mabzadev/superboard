@@ -88,6 +88,7 @@ async function billingJobProjectId(db: D1Database, job: BillingQueueJob): Promis
 				job.exportId,
 			);
 		case "billing.reconcile":
+		case "billing.exchange_rates.sync":
 			return null;
 	}
 }

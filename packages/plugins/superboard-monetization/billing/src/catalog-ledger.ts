@@ -1,3 +1,10 @@
+import {
+	displayAmountJoins,
+	displayAmountSql,
+	displayCurrencySource,
+	isDisplayCurrency,
+	usdConversions,
+} from "@superboard/api-worker/billing-exchange-rates";
 import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
@@ -116,9 +123,9 @@ app.get("/internal/v1/catalog-ledger/purchases", async (c) => {
 	if (from && to && from >= to)
 		throw httpError("purchase_range_invalid", "from must be before to", 422);
 	const rows = await c.env.DB.prepare(
-		`SELECT p.*, fc.external_customer_id, pr.identifier AS product_identifier, pr.display_name AS product_name FROM billing_catalog_purchases p JOIN billing_catalog_financial_customers fc ON fc.id=p.financial_customer_id AND fc.project_id=p.project_id LEFT JOIN billing_catalog_products pr ON pr.id=p.product_id AND pr.project_id=p.project_id WHERE ${clauses.join(" AND ")} ORDER BY p.purchased_at DESC LIMIT 500`,
+		`SELECT p.*, fc.external_customer_id, pr.identifier AS product_identifier, pr.display_name AS product_name, display.currency AS display_currency, ${displayAmountSql({ amount: "p.purchased_price_micros", currency: "p.currency" }, "p.usd_price_micros", "display", "purchase")} AS display_price_micros FROM billing_catalog_purchases p JOIN ${displayCurrencySource("display")} JOIN billing_catalog_financial_customers fc ON fc.id=p.financial_customer_id AND fc.project_id=p.project_id LEFT JOIN billing_catalog_products pr ON pr.id=p.product_id AND pr.project_id=p.project_id ${displayAmountJoins("p.usd_rate_date", "display", "purchase")} WHERE ${clauses.join(" AND ")} ORDER BY p.purchased_at DESC LIMIT 500`,
 	)
-		.bind(...values)
+		.bind(...displayValues(c), ...values)
 		.all();
 	return c.json({ data: rows.results });
 });
@@ -135,7 +142,21 @@ app.post("/internal/v1/catalog-ledger/purchases", async (c) => {
 		.first<{ id: string }>();
 	const customerId = existingCustomer?.id ?? crypto.randomUUID();
 	const id = crypto.randomUUID();
-	const purchase = { id, customer_id: customerId, ...input, updated_at: now() };
+	const [conversion] = await usdConversions(c.env.DB, [
+		{
+			amountMicros: input.purchased_price_micros,
+			currency: input.currency,
+			occurredAt: input.purchased_at,
+		},
+	]);
+	const purchase = {
+		id,
+		customer_id: customerId,
+		...input,
+		usd_price_micros: conversion?.usdMicros ?? null,
+		usd_rate_date: conversion?.rateDate ?? null,
+		updated_at: now(),
+	};
 	const entitlementRows = await c.env.DB.prepare(
 		`SELECT e.id FROM billing_catalog_entitlements e JOIN billing_catalog_entitlement_products ep ON ep.entitlement_id=e.id WHERE e.project_id=? AND e.active=1 AND ep.product_id=?`,
 	)
@@ -150,7 +171,7 @@ app.post("/internal/v1/catalog-ledger/purchases", async (c) => {
 		);
 	statements.push(
 		c.env.DB.prepare(
-			`INSERT INTO billing_catalog_purchases (id, project_id, financial_customer_id, product_id, status, purchased_at, payload_json, store, environment, external_transaction_id, original_transaction_id, purchased_price_micros, currency, expires_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO billing_catalog_purchases (id, project_id, financial_customer_id, product_id, status, purchased_at, payload_json, store, environment, external_transaction_id, original_transaction_id, purchased_price_micros, currency, usd_price_micros, usd_rate_date, expires_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		).bind(
 			id,
 			project(c),
@@ -165,6 +186,8 @@ app.post("/internal/v1/catalog-ledger/purchases", async (c) => {
 			input.original_transaction_id,
 			input.purchased_price_micros,
 			input.currency,
+			purchase.usd_price_micros,
+			purchase.usd_rate_date,
 			input.expires_at,
 			purchase.updated_at,
 		),
@@ -217,17 +240,22 @@ app.post("/internal/v1/catalog-ledger/purchases", async (c) => {
 
 app.get("/internal/v1/catalog-ledger/purchases/:id", async (c) => {
 	const purchaseRow = await owned(c, "purchases", c.req.param("id"), "purchase");
-	const [entitlementRows, refundRows] = await Promise.all([
+	const [entitlementRows, refundRows, displayRow] = await Promise.all([
 		c.env.DB.prepare(
 			`SELECT e.* FROM billing_catalog_entitlements e JOIN billing_catalog_purchase_entitlements pe ON pe.entitlement_id=e.id WHERE pe.purchase_id=? AND e.project_id=?`,
 		)
 			.bind(c.req.param("id"), project(c))
 			.all(),
 		c.env.DB.prepare(
-			"SELECT * FROM billing_catalog_refunds WHERE purchase_id=? AND project_id=? ORDER BY requested_at DESC",
+			`SELECT r.*, display.currency AS display_currency, ${displayAmountSql({ amount: "r.amount_micros", currency: "r.currency" }, "r.usd_amount_micros", "display", "refund")} AS display_amount_micros FROM billing_catalog_refunds r JOIN ${displayCurrencySource("display")} ${displayAmountJoins("r.usd_rate_date", "display", "refund")} WHERE r.purchase_id=? AND r.project_id=? ORDER BY r.requested_at DESC`,
 		)
-			.bind(c.req.param("id"), project(c))
+			.bind(...displayValues(c), c.req.param("id"), project(c))
 			.all(),
+		c.env.DB.prepare(
+			`SELECT display.currency AS display_currency, ${displayAmountSql({ amount: "p.purchased_price_micros", currency: "p.currency" }, "p.usd_price_micros", "display", "purchase")} AS display_price_micros FROM billing_catalog_purchases p JOIN ${displayCurrencySource("display")} ${displayAmountJoins("p.usd_rate_date", "display", "purchase")} WHERE p.id=? AND p.project_id=?`,
+		)
+			.bind(...displayValues(c), c.req.param("id"), project(c))
+			.first<{ display_currency: string; display_price_micros: number | null }>(),
 	]);
 	const customer = await c.env.DB.prepare(
 		"SELECT external_customer_id FROM billing_catalog_financial_customers WHERE id=? AND project_id=?",
@@ -237,6 +265,8 @@ app.get("/internal/v1/catalog-ledger/purchases/:id", async (c) => {
 	return c.json({
 		data: {
 			...purchaseRow,
+			display_currency: displayRow?.display_currency ?? "USD",
+			display_price_micros: displayRow?.display_price_micros ?? null,
 			external_customer_id: customer?.external_customer_id ?? null,
 			entitlements: entitlementRows.results,
 			refunds: refundRows.results,
@@ -257,18 +287,23 @@ app.post("/internal/v1/catalog-ledger/purchases/:id/refunds", async (c) => {
 	const amount = input.amount_micros || purchaseRow.purchased_price_micros;
 	const currencyCode = input.currency || purchaseRow.currency;
 	const completedAt = input.status === "completed" ? (input.completed_at ?? now()) : null;
+	const [conversion] = await usdConversions(c.env.DB, [
+		{ amountMicros: amount, currency: currencyCode, occurredAt: input.requested_at },
+	]);
 	const row = {
 		id,
 		purchase_id: purchaseId,
 		...input,
 		amount_micros: amount,
 		currency: currencyCode,
+		usd_amount_micros: conversion?.usdMicros ?? null,
+		usd_rate_date: conversion?.rateDate ?? null,
 		completed_at: completedAt,
 		updated_at: now(),
 	};
 	const statements = [
 		c.env.DB.prepare(
-			`INSERT INTO billing_catalog_refunds (id, project_id, purchase_id, external_refund_id, status, amount_micros, currency, reason, metadata_json, requested_at, completed_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO billing_catalog_refunds (id, project_id, purchase_id, external_refund_id, status, amount_micros, currency, usd_amount_micros, usd_rate_date, reason, metadata_json, requested_at, completed_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		).bind(
 			id,
 			project(c),
@@ -277,6 +312,8 @@ app.post("/internal/v1/catalog-ledger/purchases/:id/refunds", async (c) => {
 			input.status,
 			amount,
 			currencyCode,
+			row.usd_amount_micros,
+			row.usd_rate_date,
 			input.reason,
 			JSON.stringify(input.metadata),
 			input.requested_at,
@@ -333,15 +370,32 @@ app.put("/internal/v1/catalog-ledger/refunds/:id", async (c) => {
 		"purchase",
 	)) as EntityRow & { original_transaction_id: string };
 	const completedAt = input.status === "completed" ? (input.completed_at ?? now()) : null;
-	const row = { id, ...input, completed_at: completedAt, updated_at: now() };
+	const [conversion] = await usdConversions(c.env.DB, [
+		{
+			amountMicros: input.amount_micros,
+			currency:
+				input.currency ?? (typeof purchaseRow.currency === "string" ? purchaseRow.currency : null),
+			occurredAt: input.requested_at,
+		},
+	]);
+	const row = {
+		id,
+		...input,
+		usd_amount_micros: conversion?.usdMicros ?? null,
+		usd_rate_date: conversion?.rateDate ?? null,
+		completed_at: completedAt,
+		updated_at: now(),
+	};
 	const statements = [
 		c.env.DB.prepare(
-			`UPDATE billing_catalog_refunds SET external_refund_id=?,status=?,amount_micros=?,currency=?,reason=?,metadata_json=?,requested_at=?,completed_at=?,updated_at=? WHERE id=? AND project_id=?`,
+			`UPDATE billing_catalog_refunds SET external_refund_id=?,status=?,amount_micros=?,currency=?,usd_amount_micros=?,usd_rate_date=?,reason=?,metadata_json=?,requested_at=?,completed_at=?,updated_at=? WHERE id=? AND project_id=?`,
 		).bind(
 			input.external_refund_id,
 			input.status,
 			input.amount_micros,
 			input.currency,
+			row.usd_amount_micros,
+			row.usd_rate_date,
 			input.reason,
 			JSON.stringify(input.metadata),
 			input.requested_at,
@@ -535,22 +589,30 @@ app.get("/internal/v1/catalog-ledger/statistics", async (c) => {
 		values.push(storeForPlatform(platform));
 	}
 	const where = clauses.join(" AND ");
-	const [totals, statuses, series, activeSubscriptions] = await Promise.all([
+	const display = displayValues(c);
+	const purchaseAmount = displayAmountSql(
+		{ amount: "p.purchased_price_micros", currency: "p.currency" },
+		"p.usd_price_micros",
+		"display",
+		"purchase",
+	);
+	const purchaseSource = `billing_catalog_purchases p JOIN ${displayCurrencySource("display")} ${displayAmountJoins("p.usd_rate_date", "display", "purchase")}`;
+	const [totals, statuses, series, activeSubscriptions, displayCurrency] = await Promise.all([
 		c.env.DB.prepare(
-			`SELECT p.currency, COUNT(*) AS purchases, COALESCE(SUM(p.purchased_price_micros),0) AS gross_revenue_micros FROM billing_catalog_purchases p WHERE ${where} AND p.status IN ('active','expired','cancelled','refunded') GROUP BY p.currency`,
+			`SELECT p.currency, COUNT(*) AS purchases, COALESCE(SUM(p.purchased_price_micros),0) AS gross_revenue_micros, COALESCE(SUM(${purchaseAmount}),0) AS display_micros, SUM(CASE WHEN ${purchaseAmount} IS NULL THEN 1 ELSE 0 END) AS unconverted FROM ${purchaseSource} WHERE ${where} AND p.status IN ('active','expired','cancelled','refunded') GROUP BY p.currency`,
 		)
-			.bind(...values)
-			.all<PurchaseCurrencyRow>(),
+			.bind(...display, ...values)
+			.all<PurchaseCurrencyRow & DisplayAmountRow>(),
 		c.env.DB.prepare(
 			`SELECT p.status, COUNT(*) AS count FROM billing_catalog_purchases p WHERE ${where} GROUP BY p.status`,
 		)
 			.bind(...values)
 			.all(),
 		c.env.DB.prepare(
-			`SELECT substr(p.purchased_at,1,10) AS bucket, p.currency, COUNT(*) AS purchases, COALESCE(SUM(p.purchased_price_micros),0) AS revenue_micros FROM billing_catalog_purchases p WHERE ${where} GROUP BY bucket, p.currency ORDER BY bucket, p.currency IS NULL, p.currency`,
+			`SELECT substr(p.purchased_at,1,10) AS bucket, p.currency, COUNT(*) AS purchases, COALESCE(SUM(p.purchased_price_micros),0) AS revenue_micros, COALESCE(SUM(${purchaseAmount}),0) AS display_micros, SUM(CASE WHEN ${purchaseAmount} IS NULL THEN 1 ELSE 0 END) AS unconverted FROM ${purchaseSource} WHERE ${where} GROUP BY bucket, p.currency ORDER BY bucket, p.currency IS NULL, p.currency`,
 		)
-			.bind(...values)
-			.all<SeriesCurrencyRow>(),
+			.bind(...display, ...values)
+			.all<SeriesCurrencyRow & DisplayAmountRow>(),
 		c.env.DB.prepare(
 			`SELECT COUNT(*) AS count FROM billing_catalog_subscriptions s WHERE s.project_id=? AND s.status IN ('trialing','active','grace_period') ${c.req.query("product_id") ? "AND s.product_id=?" : ""} ${platform ? "AND s.store=?" : ""}`,
 		)
@@ -560,6 +622,9 @@ app.get("/internal/v1/catalog-ledger/statistics", async (c) => {
 				...(platform ? [storeForPlatform(platform)] : []),
 			)
 			.first<{ count: number }>(),
+		c.env.DB.prepare(`SELECT display.currency FROM ${displayCurrencySource("display")}`)
+			.bind(...display)
+			.first<{ currency: string }>(),
 	]);
 	const refundClauses = ["r.project_id=?", "r.requested_at>=?", "r.requested_at<?"];
 	const refundValues: unknown[] = [project(c), range.from, range.to];
@@ -571,11 +636,17 @@ app.get("/internal/v1/catalog-ledger/statistics", async (c) => {
 		refundClauses.push("p.store=?");
 		refundValues.push(storeForPlatform(platform));
 	}
+	const refundAmount = displayAmountSql(
+		{ amount: "r.amount_micros", currency: "COALESCE(r.currency,p.currency)" },
+		"r.usd_amount_micros",
+		"display",
+		"refund",
+	);
 	const refunds = await c.env.DB.prepare(
-		`SELECT COALESCE(r.currency,p.currency) AS currency, COUNT(*) AS refunds, COALESCE(SUM(r.amount_micros),0) AS refunded_micros FROM billing_catalog_refunds r JOIN billing_catalog_purchases p ON p.id=r.purchase_id AND p.project_id=r.project_id WHERE ${refundClauses.join(" AND ")} AND r.status='completed' GROUP BY COALESCE(r.currency,p.currency)`,
+		`SELECT COALESCE(r.currency,p.currency) AS currency, COUNT(*) AS refunds, COALESCE(SUM(r.amount_micros),0) AS refunded_micros, COALESCE(SUM(${refundAmount}),0) AS display_micros, SUM(CASE WHEN ${refundAmount} IS NULL THEN 1 ELSE 0 END) AS unconverted FROM billing_catalog_refunds r JOIN ${displayCurrencySource("display")} JOIN billing_catalog_purchases p ON p.id=r.purchase_id AND p.project_id=r.project_id ${displayAmountJoins("r.usd_rate_date", "display", "refund")} WHERE ${refundClauses.join(" AND ")} AND r.status='completed' GROUP BY COALESCE(r.currency,p.currency)`,
 	)
-		.bind(...refundValues)
-		.all<RefundCurrencyRow>();
+		.bind(...display, ...refundValues)
+		.all<RefundCurrencyRow & DisplayAmountRow>();
 	const breakdown = await c.env.DB.prepare(
 		`SELECT
        p.product_id,
@@ -592,14 +663,16 @@ app.get("/internal/v1/catalog-ledger/statistics", async (c) => {
            AND (first_purchase.purchased_at<p.purchased_at OR (first_purchase.purchased_at=p.purchased_at AND first_purchase.id<p.id))
        ) THEN 1 ELSE 0 END) AS first_time_purchases,
        COALESCE(SUM(p.purchased_price_micros),0) AS revenue_micros,
-       SUM(CASE WHEN p.status='cancelled' THEN 1 ELSE 0 END) AS cancellations
-     FROM billing_catalog_purchases p
+       SUM(CASE WHEN p.status='cancelled' THEN 1 ELSE 0 END) AS cancellations,
+       COALESCE(SUM(${purchaseAmount}),0) AS revenue_in_display_currency_micros,
+       SUM(CASE WHEN ${purchaseAmount} IS NULL THEN 1 ELSE 0 END) AS unconverted_purchases
+     FROM ${purchaseSource}
      JOIN billing_catalog_products pr ON pr.id=p.product_id AND pr.project_id=p.project_id
      WHERE ${where} AND p.status IN ('active','expired','cancelled','refunded')
      GROUP BY p.product_id,pr.display_name,p.store,p.currency
      ORDER BY revenue_micros DESC,pr.display_name,p.store,p.currency`,
 	)
-		.bind(...values)
+		.bind(...display, ...values)
 		.all();
 	const totalsByCurrency = currencyTotals(totals.results, refunds.results);
 	const sum = (key: "purchases" | "gross_revenue_micros" | "refunds" | "refunded_micros") =>
@@ -631,9 +704,59 @@ app.get("/internal/v1/catalog-ledger/statistics", async (c) => {
 			series: dailySeries(seriesByCurrency),
 			series_by_currency: seriesByCurrency,
 			by_product_platform: breakdown.results,
+			display_currency: displayCurrency?.currency ?? "USD",
+			totals_in_display_currency: displayTotals(
+				totals.results,
+				refunds.results,
+				activeSubscriptions?.count ?? 0,
+			),
+			series_in_display_currency: displaySeries(series.results),
 		},
 	});
 });
+
+type DisplayAmountRow = { display_micros: number; unconverted: number };
+
+function displayTotals(
+	purchases: Array<PurchaseCurrencyRow & DisplayAmountRow>,
+	refunds: Array<RefundCurrencyRow & DisplayAmountRow>,
+	activeSubscriptions: number,
+) {
+	const total = <T>(rows: T[], value: (row: T) => number) =>
+		rows.reduce((sum, row) => sum + Number(value(row) || 0), 0);
+	const gross = total(purchases, (row) => row.display_micros);
+	const refunded = total(refunds, (row) => row.display_micros);
+	return {
+		purchases: total(purchases, (row) => row.purchases),
+		gross_revenue_micros: gross,
+		refunds: total(refunds, (row) => row.refunds),
+		refunded_micros: refunded,
+		net_revenue_micros: gross - refunded,
+		active_subscriptions: activeSubscriptions,
+		unconverted_purchases: total(purchases, (row) => row.unconverted),
+		unconverted_refunds: total(refunds, (row) => row.unconverted),
+	};
+}
+
+function displaySeries(rows: Array<SeriesCurrencyRow & DisplayAmountRow>) {
+	const days = new Map<
+		string,
+		{ bucket: string; purchases: number; revenue_micros: number; unconverted_purchases: number }
+	>();
+	for (const row of rows) {
+		const day = days.get(row.bucket) ?? {
+			bucket: row.bucket,
+			purchases: 0,
+			revenue_micros: 0,
+			unconverted_purchases: 0,
+		};
+		day.purchases += Number(row.purchases);
+		day.revenue_micros += Number(row.display_micros || 0);
+		day.unconverted_purchases += Number(row.unconverted || 0);
+		days.set(row.bucket, day);
+	}
+	return [...days.values()];
+}
 
 type PurchaseCurrencyRow = {
 	currency: string | null;
@@ -889,6 +1012,12 @@ async function owned(
 
 function project(c: WorkerContext): string {
 	return c.get("project").projectId;
+}
+function displayValues(c: WorkerContext): [string | null, string] {
+	const requested = c.req.query("display_currency");
+	if (requested !== undefined && !isDisplayCurrency(requested))
+		throw httpError("display_currency_invalid", "display_currency must be USD or EUR", 422);
+	return [requested ?? null, project(c)];
 }
 function flag(value: boolean): number {
 	return value ? 1 : 0;

@@ -97,6 +97,34 @@ const french: Record<string, string> = {
 	Expires: "Expire le",
 	"Expires {date}": "Expire le {date}",
 	Amount: "Montant",
+	"Amount in {currency}": "Montant en {currency}",
+	"ECB reference rate of {date}": "Taux de référence BCE du {date}",
+	"Conversion pending": "Conversion en attente",
+	"No exchange rate for this currency": "Aucun taux de change pour cette devise",
+	"{count} awaiting conversion": "{count} en attente de conversion",
+	"Amounts in {currency}, converted at the ECB reference rate of each purchase day.":
+		"Montants en {currency}, convertis au taux de référence de la BCE du jour de chaque achat.",
+	"1 purchase awaiting conversion is not included in these totals.":
+		"1 achat en attente de conversion n’est pas inclus dans ces totaux.",
+	"{count} purchases awaiting conversion are not included in these totals.":
+		"{count} achats en attente de conversion ne sont pas inclus dans ces totaux.",
+	"1 refund awaiting conversion is not included in these totals.":
+		"1 remboursement en attente de conversion n’est pas inclus dans ces totaux.",
+	"{count} refunds awaiting conversion are not included in these totals.":
+		"{count} remboursements en attente de conversion ne sont pas inclus dans ces totaux.",
+	"Total spent": "Total dépensé",
+	"1 purchase awaiting conversion is not included.":
+		"1 achat en attente de conversion n’est pas inclus.",
+	"{count} purchases awaiting conversion are not included.":
+		"{count} achats en attente de conversion ne sont pas inclus.",
+	"Display currency": "Devise d’affichage",
+	"Revenue totals, charts and customer spending are converted to USD at the ECB reference rate of each purchase day, then to the display currency at the same day’s rate.":
+		"Les totaux de revenus, les graphiques et les dépenses des clients sont convertis en USD au taux de référence de la BCE du jour de chaque achat, puis dans la devise d’affichage au taux du même jour.",
+	"US dollar (USD)": "Dollar américain (USD)",
+	"Euro (EUR)": "Euro (EUR)",
+	"Display currency saved.": "Devise d’affichage enregistrée.",
+	"Could not save the display currency.": "Impossible d’enregistrer la devise d’affichage.",
+	"Could not load the display currency.": "Impossible de charger la devise d’affichage.",
 	"No purchases match these filters.": "Aucun achat ne correspond à ces filtres.",
 	Refund: "Rembourser",
 	"Purchase detail": "Détail de l’achat",
@@ -335,7 +363,20 @@ const french: Record<string, string> = {
 	"Manage purchase and restore rules and inspect configured store credentials.":
 		"Gérez les règles d’achat et de restauration et consultez la configuration des boutiques.",
 	"Enable purchases": "Activer les achats",
-	"Block purchase transfers between users": "Bloquer le transfert des achats entre utilisateurs",
+	"Restore behavior": "Comportement de restauration",
+	Details: "Détails",
+	"From {from} to {to}": "De {from} vers {to}",
+	"Applies to every app in this project when another App User ID restores or buys with a receipt that is already in use.":
+		"S’applique à toutes les applications du projet lorsqu’un autre identifiant restaure ou achète avec un reçu déjà utilisé.",
+	"Transfer to new App User ID": "Transférer au nouvel identifiant",
+	"Default. When another App User ID restores or buys with a receipt that is already in use, the purchases move to it, so only one customer has access at a time. Purchases that belong to an anonymous App User ID are merged with the new App User ID instead.":
+		"Par défaut. Quand un autre identifiant restaure ou achète avec un reçu déjà utilisé, les achats lui sont transférés : un seul client y a accès à la fois. Les achats d’un identifiant anonyme sont plutôt fusionnés avec le nouvel identifiant.",
+	"Transfer if there are no active subscriptions": "Transférer s’il n’y a pas d’abonnement actif",
+	"Purchases move to the new App User ID only if the current owner has no active subscription. Otherwise they stay with the current owner and the restore or purchase returns an error. One-time purchases don’t block the transfer.":
+		"Les achats sont transférés au nouvel identifiant seulement si le propriétaire actuel n’a aucun abonnement actif. Sinon, ils restent au propriétaire actuel et la restauration ou l’achat renvoie une erreur. Les achats uniques n’empêchent pas le transfert.",
+	"Keep with original App User ID": "Garder l’identifiant d’origine",
+	"Use with caution. Restoring or buying with a receipt that belongs to another App User ID returns an error. Choose this only if customers must create an account before purchasing, and be ready to help them recover their account.":
+		"À utiliser avec prudence. La restauration ou l’achat avec un reçu qui appartient à un autre identifiant renvoie une erreur. Réservez ce choix aux applications qui exigent un compte avant l’achat, et prévoyez d’aider les clients à récupérer leur compte.",
 	"Loading settings…": "Chargement des paramètres…",
 	"Could not load billing settings.": "Impossible de charger les paramètres de facturation.",
 	"Could not save billing settings.": "Impossible d’enregistrer les paramètres de facturation.",

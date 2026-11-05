@@ -48,16 +48,18 @@ try {
 			const purchase = page.getByRole("checkbox", {
 				name: locale === "fr" ? "Activer les achats" : "Enable purchases",
 			});
-			const transfer = page.getByRole("checkbox", {
-				name:
-					locale === "fr"
-						? "Bloquer le transfert des achats entre utilisateurs"
-						: "Block purchase transfers between users",
-			});
+			const [restoreBehavior, restoreLabel] =
+				locale === "fr"
+					? ["block", "Garder l’identifiant d’origine"]
+					: [
+							"transfer_if_no_active_subscriptions",
+							"Transfer if there are no active subscriptions",
+						];
+			const restore = page.getByRole("radio", { name: restoreLabel, exact: true });
 			await purchase.click();
-			await transfer.click();
+			await restore.click();
 			const enabled = await purchase.isChecked();
-			const blocked = await transfer.isChecked();
+			await expect(restore).toBeChecked();
 			await page
 				.getByRole("button", {
 					name: locale === "fr" ? "Enregistrer les paramètres" : "Save settings",
@@ -69,11 +71,11 @@ try {
 			);
 			const billing = await (await context.request.get(billingEndpoint)).json();
 			assert.equal(billing.settings.purchases_enabled, enabled ? 1 : 0);
-			assert.equal(billing.settings.restore_behavior, blocked ? "block" : "transfer");
+			assert.equal(billing.settings.restore_behavior, restoreBehavior);
 			await page.reload();
 			await hydrate();
 			await expect(purchase).toBeChecked({ checked: enabled });
-			await expect(transfer).toBeChecked({ checked: blocked });
+			await expect(restore).toBeChecked();
 			await page.goto(new URL(`/monetization/settings?lang=${locale}&tab=products`, origin).href);
 			await hydrate();
 			const general = page.getByRole("tab", {

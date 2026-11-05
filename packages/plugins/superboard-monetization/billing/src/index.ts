@@ -1,12 +1,9 @@
-import { withRouteManifest } from "@superboard/contracts/route-manifest";
-import { registerRouter } from "@superboard/contracts/route-registry";
+import { identifyCustomer } from "@superboard/api-worker/billing";
 import { parseBillingClientContext } from "@superboard/api-worker/billing-client-context";
+import { applySdkPurchase, restoreVerifiedPurchases } from "@superboard/api-worker/billing-restore";
 import {
 	fetchStoreCatalog,
-	finalizeGooglePurchase,
 	classifyGooglePurchaseEnvironment,
-	verifyAppleTransaction,
-	verifyGooglePurchase,
 } from "@superboard/api-worker/store-verification";
 import {
 	createStripeCheckout,
@@ -14,13 +11,11 @@ import {
 	processStripeWebhook,
 } from "@superboard/api-worker/stripe-billing";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
 import { Hono } from "hono";
 
-import {
-	applyVerifiedPurchase,
-	identifyCustomer,
-} from "../../../superboard-core/api/src/lib/billing";
 import { quarantineBillingDeadLetter } from "../../../superboard-core/api/src/lib/billing-dead-letters";
 import {
 	dispatchBillingJob,
@@ -37,7 +32,6 @@ import {
 	ingestBillingProviderEvent,
 	type BillingProviderIngressRequest,
 } from "../../../superboard-core/api/src/lib/billing-provider-ingress";
-import { restoreVerifiedPurchases } from "../../../superboard-core/api/src/lib/billing-restore";
 import { billingWorkerReadiness } from "../../../superboard-core/api/src/lib/billing-worker-readiness";
 import { readTextLimited } from "../../../superboard-core/api/src/lib/http-limits";
 import { encryptCredential } from "../../../superboard-core/api/src/lib/secrets";
@@ -48,7 +42,13 @@ import catalogLedger from "./catalog-ledger.js";
 import { parseReceiptRequest, publicError } from "./contracts";
 
 type Bindings = Env & BillingEnv;
-const app = registerRouter(new Hono<{ Bindings: Bindings }>(), {"service":"billing","module":"index.app","pluginId":"superboard-billing","surface":"internal","access":"internal"});
+const app = registerRouter(new Hono<{ Bindings: Bindings }>(), {
+	service: "billing",
+	module: "index.app",
+	pluginId: "superboard-billing",
+	surface: "internal",
+	access: "internal",
+});
 
 app.get("/internal/v1/health", async (c) => {
 	return c.json(await billingWorkerReadiness(c.env));
@@ -127,6 +127,12 @@ app.post("/internal/v1/customers/erase", async (c) => {
            attributes = '{}', updated_at = datetime('now')
        WHERE project_id = ? AND id = ?`,
 		).bind(erasedUserId, projectId, customer.id),
+		c.env.DB.prepare(
+			`UPDATE billing_events SET payload = '{}'
+       WHERE project_id = ? AND event_type = 'transferred' AND json_valid(payload)
+         AND (json_extract(payload, '$.to_customer_id') = ?
+           OR EXISTS (SELECT 1 FROM json_each(payload, '$.from_customer_ids') WHERE value = ?))`,
+		).bind(projectId, customer.id, customer.id),
 	]);
 	return c.json({
 		data: {
@@ -184,31 +190,16 @@ app.post("/internal/v1/google/purchases/classify", async (c) => {
 
 app.post("/internal/v1/receipts/verify", async (c) => {
 	const request = parseReceiptRequest(await boundedJson(c.req.raw));
-	let purchase;
-	let finalize: (() => Promise<void>) | null = null;
-	if (request.store === "apple") {
-		purchase = (
-			await verifyAppleTransaction(c.env, {
-				projectId: request.project_id,
-				customerId: request.customer_id,
-				signedTransaction: request.signed_transaction!,
-				environment: request.environment,
-			})
-		).purchase;
-	} else {
-		const verified = await verifyGooglePurchase(c.env, {
-			projectId: request.project_id,
-			customerId: request.customer_id,
-			purchaseToken: request.purchase_token!,
-			storeProductId: request.product_id!,
-			productType: request.product_type,
-			environment: request.environment,
-		});
-		purchase = verified.purchase;
-		finalize = () => finalizeGooglePurchase(verified);
-	}
-	const applied = await applyVerifiedPurchase(c.env, purchase);
-	if (finalize) await finalize();
+	const { purchase, applied } = await applySdkPurchase(c.env, {
+		projectId: request.project_id,
+		customerId: request.customer_id,
+		environment: request.environment,
+		store: request.store,
+		signedTransaction: request.signed_transaction,
+		purchaseToken: request.purchase_token,
+		productId: request.product_id,
+		productType: request.product_type,
+	});
 	return c.json({
 		transaction_id: applied.transactionId,
 		duplicate: applied.duplicate,
@@ -376,7 +367,9 @@ for (const action of ["checkout", "portal", "webhook"] as const) {
 app.route("", catalogLedger);
 app.route("/internal/v1/admin/billing", purchasesAdminRoutes);
 app.route("/internal/v1/admin/purchases/projects", purchasesV2AdminRoutes);
-app.defineRoute({ mount: "extend" }).route("/internal/v1/admin/purchases/projects", purchasesAdminRoutes);
+app
+	.defineRoute({ mount: "extend" })
+	.route("/internal/v1/admin/purchases/projects", purchasesAdminRoutes);
 
 app.onError((error, c) => {
 	const status = Number((error as { status?: number }).status || 500);
@@ -554,4 +547,8 @@ const lifecycleWorker = {
 	},
 } satisfies ExportedHandler<Bindings>;
 
-export default withRouteManifest((withPluginTaskLifecycle("superboard-billing", lifecycleWorker)), [app], {"service":"billing","pluginId":"superboard-billing"});
+export default withRouteManifest(
+	withPluginTaskLifecycle("superboard-billing", lifecycleWorker),
+	[app],
+	{ service: "billing", pluginId: "superboard-billing" },
+);
