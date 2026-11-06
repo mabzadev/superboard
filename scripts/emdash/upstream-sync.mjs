@@ -37,13 +37,37 @@ export function createPathMapper(syncConfig) {
 }
 
 function relativeSpecifier(fromFile, toFile, specifier) {
-	let result = posix.relative(posix.dirname(fromFile), toFile);
+	let result = posix.relative(posix.dirname(fromFile), toFile) || ".";
 	if (!result.startsWith(".")) result = `./${result}`;
 	return specifier.endsWith("/") && !result.endsWith("/") ? `${result}/` : result;
 }
 
-export function rewriteRelativeSpecifiers(text, upstreamPath, localPath, mapPath) {
-	if (upstreamPath === localPath || !SCRIPT_FILE.test(localPath)) return text;
+function privateImportTarget(owner, specifier) {
+	for (const [name, target] of Object.entries(owner.imports)) {
+		if (typeof target !== "string" || !target.startsWith("./")) continue;
+		const star = name.indexOf("*");
+		if (star === -1) {
+			if (name === specifier) return posix.join(owner.directory, target);
+			continue;
+		}
+		const prefix = name.slice(0, star);
+		const suffix = name.slice(star + 1);
+		if (
+			specifier.length >= prefix.length + suffix.length &&
+			specifier.startsWith(prefix) &&
+			specifier.endsWith(suffix)
+		) {
+			const match = specifier.slice(prefix.length, specifier.length - suffix.length);
+			return posix.join(owner.directory, target.replace("*", match));
+		}
+	}
+	return null;
+}
+
+export function rewriteRelativeSpecifiers(text, upstreamPath, localPath, mapPath, owner = null) {
+	if (!SCRIPT_FILE.test(localPath)) return text;
+	const ownerDirectory = owner && posix.dirname(mapPath(`${owner.directory}/package.json`) ?? "");
+	const leavesOwner = Boolean(owner) && !localPath.startsWith(`${ownerDirectory}/`);
 	const ts = toolRequire("typescript");
 	const kind = localPath.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
 	const source = ts.createSourceFile(localPath, text, ts.ScriptTarget.Latest, true, kind);
@@ -61,6 +85,13 @@ export function rewriteRelativeSpecifiers(text, upstreamPath, localPath, mapPath
 	};
 	const consider = (node) => {
 		if (node && ts.isTemplateExpression(node)) return considerTemplate(node);
+		if (leavesOwner && node && ts.isStringLiteralLike(node) && node.text.startsWith("#")) {
+			const target = privateImportTarget(owner, node.text);
+			if (!target) return;
+			const rewritten = relativeSpecifier(localPath, mapPath(target) ?? target, node.text);
+			replacements.push({ start: node.getStart(source) + 1, end: node.end - 1, value: rewritten });
+			return;
+		}
 		if (!node || !ts.isStringLiteralLike(node) || !node.text.startsWith(".")) return;
 		const target = posix.normalize(posix.join(posix.dirname(upstreamPath), node.text));
 		const asDirectory = /\.[a-z0-9]+$/iu.test(posix.basename(target))
@@ -75,6 +106,29 @@ export function rewriteRelativeSpecifiers(text, upstreamPath, localPath, mapPath
 		replacements.push({ start: node.getStart(source) + 1, end: node.end - 1, value: rewritten });
 	};
 	const calleeName = (expression) => expression.getText(source).replace(/\s+/gu, "");
+	const moduleFolders = new Set();
+	const collectModuleFolders = (node) => {
+		if (
+			ts.isVariableDeclaration(node) &&
+			ts.isIdentifier(node.name) &&
+			node.initializer &&
+			MODULE_LOCATION.test(node.initializer.getText(source))
+		) {
+			let relative = false;
+			const findRelative = (child) => {
+				if (ts.isStringLiteralLike(child) && child.text !== "." && child.text !== "./")
+					relative = true;
+				ts.forEachChild(child, findRelative);
+			};
+			findRelative(node.initializer);
+			if (!relative) moduleFolders.add(node.name.text);
+		}
+		ts.forEachChild(node, collectModuleFolders);
+	};
+	collectModuleFolders(source);
+	const isModuleLocation = (argument) =>
+		MODULE_LOCATION.test(argument.getText(source)) ||
+		(ts.isIdentifier(argument) && moduleFolders.has(argument.text));
 	const visit = (node) => {
 		if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node))
 			consider(node.moduleSpecifier);
@@ -84,9 +138,7 @@ export function rewriteRelativeSpecifiers(text, upstreamPath, localPath, mapPath
 			if (node.expression.kind === ts.SyntaxKind.ImportKeyword) consider(node.arguments[0]);
 			else if (SPECIFIER_CALLS.has(calleeName(node.expression))) consider(node.arguments[0]);
 			else if (PATH_CALLS.test(calleeName(node.expression))) {
-				const anchor = node.arguments.findIndex((argument) =>
-					MODULE_LOCATION.test(argument.getText(source)),
-				);
+				const anchor = node.arguments.findIndex(isModuleLocation);
 				if (anchor !== -1) node.arguments.slice(anchor + 1).forEach(consider);
 			}
 		}
@@ -111,6 +163,16 @@ function git(root, args, options = {}) {
 	return execFileSync("git", args, { cwd: root, maxBuffer: 1 << 30, ...options });
 }
 
+export function ensureUpstreamCommit(root, upstream) {
+	const present = spawnSync("git", ["cat-file", "-e", `${upstream.commit}^{commit}`], {
+		cwd: root,
+	});
+	if (present.status !== 0)
+		git(root, ["fetch", "--no-tags", "--depth=1", upstream.remote, upstream.commit]);
+	const object = git(root, ["cat-file", "-t", upstream.commit], { encoding: "utf8" }).trim();
+	if (object !== "commit") throw new Error(`Pinned upstream object is ${object}, expected commit`);
+}
+
 function readTree(root, commit) {
 	const entries = new Map();
 	const output = git(root, ["ls-tree", "-r", "-z", "--full-tree", commit], { encoding: "utf8" });
@@ -127,10 +189,27 @@ function isBinary(buffer) {
 	return buffer.subarray(0, 8000).includes(0);
 }
 
-function normalize(upstreamPath, localPath, buffer, mapPath) {
+function packageOwner(root, tree, upstreamPath, manifests) {
+	for (
+		let directory = posix.dirname(upstreamPath);
+		directory !== ".";
+		directory = posix.dirname(directory)
+	) {
+		const entry = tree.get(`${directory}/package.json`);
+		if (!entry) continue;
+		if (!manifests.has(entry.oid)) {
+			const manifest = JSON.parse(git(root, ["cat-file", "blob", entry.oid], { encoding: "utf8" }));
+			manifests.set(entry.oid, manifest.imports ?? {});
+		}
+		return { directory, imports: manifests.get(entry.oid) };
+	}
+	return null;
+}
+
+function normalize(upstreamPath, localPath, buffer, mapPath, owner) {
 	if (isBinary(buffer)) return { buffer, format: false };
 	const original = buffer.toString("utf8");
-	const rewritten = rewriteRelativeSpecifiers(original, upstreamPath, localPath, mapPath);
+	const rewritten = rewriteRelativeSpecifiers(original, upstreamPath, localPath, mapPath, owner);
 	return {
 		text: rewritten,
 		format: rewritten !== original && FORMATTED_FILE.test(localPath),
@@ -220,13 +299,16 @@ export async function syncUpstream({ root = defaultRoot, base, target, syncConfi
 		work.push({ upstreamPath, localPath, old, next });
 	}
 	const normalized = [];
+	const manifests = new Map();
+	const trees = { old: before, next: after };
 	for (const item of work) {
 		for (const side of ["old", "next"]) {
 			if (!item[side]) continue;
 			const buffer = git(root, ["cat-file", "blob", item[side].oid]);
+			const owner = packageOwner(root, trees[side], item.upstreamPath, manifests);
 			item[side].normalized = {
 				localPath: item.localPath,
-				...normalize(item.upstreamPath, item.localPath, buffer, mapPath),
+				...normalize(item.upstreamPath, item.localPath, buffer, mapPath, owner),
 			};
 			normalized.push(item[side].normalized);
 		}
@@ -312,6 +394,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
 	}
 	const configPath = resolve(defaultRoot, "scripts/config/emdash-integration.json");
 	const config = JSON.parse(readFileSync(configPath, "utf8"));
+	ensureUpstreamCommit(defaultRoot, config.upstream);
 	const target = git(defaultRoot, ["rev-parse", "--verify", `${reference}^{commit}`], {
 		encoding: "utf8",
 	}).trim();
@@ -326,6 +409,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
 		config.upstream.commit = target;
 		config.upstream.version = upstreamVersion(defaultRoot, target);
 		writeFileSync(configPath, `${JSON.stringify(config, null, "\t")}\n`);
+		spawnSync(
+			resolve(defaultRoot, "node_modules/.bin/oxfmt"),
+			["--ignore-path", ".gitignore", configPath],
+			{ cwd: defaultRoot, stdio: "ignore" },
+		);
 	}
 	const reportPath = option("--report");
 	if (reportPath) writeFileSync(resolve(reportPath), `${JSON.stringify(report, null, "\t")}\n`);

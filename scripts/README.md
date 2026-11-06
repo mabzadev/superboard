@@ -29,6 +29,7 @@ Un outil spécifique à un plugin reste dans
 | Vérifier le code                     | `pnpm lint:quick`, `pnpm typecheck`   | `../tests/lints/lint.mjs` et les configurations des packages |
 | Vérifier les déploiements            | `pnpm cloudflare:test:targets`        | `../tests/checks/cloudflare/`                                |
 | Régénérer la configuration racine    | `pnpm emdash:overlay`                 | `emdash/overlay.mjs`                                         |
+| Mettre à jour EmDash                 | `pnpm emdash:upstream-sync`           | `emdash/upstream-sync.mjs`                                   |
 | Régénérer les catalogues des plugins | `pnpm emdash:parity:generate`         | `emdash/parity-generate.mjs`                                 |
 | Vérifier le catalogue des SDK        | `pnpm sdk:catalog:check`              | `clients/sdk-catalog.mjs`                                    |
 | Mesurer les requêtes du CMS          | `pnpm query-counts`                   | `emdash/query-counts.mjs`                                    |
@@ -51,6 +52,64 @@ Les cibles de déploiement résident dans `../infra/targets/`. Les sorties de
 compilation du déploiement et les dumps SQL sont dans `../infra/generated/`.
 Les snapshots du nombre de requêtes restent versionnés auprès de
 `emdash/query-counts.mjs` ; voir [l'analyse des dumps SQL](emdash/query-dumps.md).
+
+## Mettre à jour EmDash
+
+`pnpm emdash:upstream-sync` reporte les changements d'une version d'EmDash
+dans le dépôt. Pour chaque fichier modifié par EmDash depuis le commit épinglé
+dans `config/emdash-integration.json`, la commande fusionne la version
+SuperBoard, la version épinglée et la version cible avec `git merge-file`.
+Les modifications de SuperBoard sont conservées.
+
+La section `upstreamSync` de cette configuration décide de la destination de
+chaque fichier :
+
+- `ignored` liste les expressions des chemins EmDash qui ne sont pas repris,
+  par exemple les workflows GitHub d'EmDash ou les fichiers racine générés par
+  l'overlay ;
+- `relocated` associe une expression à son chemin dans SuperBoard ; la
+  première règle correspondante s'applique. Les tests d'EmDash rejoignent
+  `tests/checks/`, ses parcours navigateur `tests/e2e/` et ses fixtures
+  `tests/fixtures/`.
+
+Lorsqu'un fichier change de dossier, la commande réécrit ses chemins relatifs :
+imports, `vi.mock`, `require`, `new URL(..., import.meta.url)` et appels à
+`resolve` ou `join` fondés sur l'emplacement du module, directement ou par une
+variable qui contient son dossier. Les imports privés de son paquet d'origine,
+comme `#node-sqlite`, deviennent des chemins relatifs lorsqu'il quitte ce
+paquet. Les fichiers restés en place qui désignent un fichier déplacé sont
+réécrits de la même manière.
+
+Pour passer à une nouvelle version, depuis une branche dédiée :
+
+1. Récupérez la version cible d'EmDash :
+
+   ```bash
+   git fetch --no-tags https://github.com/emdash-cms/emdash.git "refs/tags/emdash@1.5.0"
+   ```
+
+2. Lancez la synchronisation sur le commit récupéré :
+
+   ```bash
+   pnpm emdash:upstream-sync --to FETCH_HEAD --report emdash-sync-report.json
+   ```
+
+   La commande écrit les fichiers fusionnés et met à jour `upstream.commit` et
+   `upstream.version`. Avec `--dry-run`, elle n'écrit que le rapport. Elle
+   récupère le commit épinglé s'il manque localement.
+
+3. Résolvez les conflits listés dans le rapport, puis supprimez le rapport. Une
+   fusion en conflit laisse les marqueurs de `git merge-file` dans le fichier.
+   Les autres types de conflit (`deleted-upstream`, `deleted-locally`,
+   `added-on-both-sides`, `binary`, `symbolic-link`) laissent le fichier
+   SuperBoard inchangé.
+4. Régénérez la configuration racine et les dépendances avec
+   `pnpm emdash:overlay` puis `pnpm install`.
+5. Exécutez `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm lint:contracts`,
+   `pnpm emdash:test` et `pnpm superboard:test`.
+
+La commande se termine avec le code 1 tant qu'il reste des conflits. Elle ne
+lance aucune migration et ne déploie aucun service.
 
 ## Développement et déploiement
 
