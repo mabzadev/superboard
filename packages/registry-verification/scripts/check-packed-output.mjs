@@ -19,9 +19,13 @@ if (!packageManagerEntrypoint) {
 const temporaryDirectory = await mkdtemp(join(tmpdir(), "registry-verification-pack-"));
 
 try {
+	// npm_execpath is a JavaScript entrypoint or, for pnpm's standalone build, a native executable.
+	const [command, ...entrypoint] = /\.[cm]?js$/u.test(packageManagerEntrypoint)
+		? [process.execPath, packageManagerEntrypoint]
+		: [packageManagerEntrypoint];
 	const output = execFileSync(
-		process.execPath,
-		[packageManagerEntrypoint, "pack", "--pack-destination", temporaryDirectory, "--json"],
+		command,
+		[...entrypoint, "pack", "--pack-destination", temporaryDirectory, "--json"],
 		{ cwd: new URL("..", import.meta.url), encoding: "utf8" },
 	);
 	const { filename } = JSON.parse(output);
