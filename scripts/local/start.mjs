@@ -239,7 +239,11 @@ async function start() {
 				String(service.localEndpoint.inspectorPort),
 				"--show-interactive-dev-session=false",
 			],
-			{ cwd: root, env: process.env, stdio: ["ignore", log.fd, log.fd] },
+			{
+				cwd: root,
+				env: localProcessEnvironment(process.env, directory),
+				stdio: ["ignore", log.fd, log.fd],
+			},
 		);
 		await log.close();
 		children.push(child);
@@ -281,7 +285,7 @@ async function start() {
 		{
 			cwd: resolve(root, "apps/site"),
 			env: {
-				...process.env,
+				...localProcessEnvironment(process.env, directory),
 				...secrets.site,
 				ASTRO_DEV_BACKGROUND: "1",
 				SUPERBOARD_LOCAL_STATE_DIRECTORY: state,
@@ -333,6 +337,12 @@ async function start() {
 		children.map((child) => new Promise((resolveExit) => child.once("exit", resolveExit))),
 	);
 	await rm(pidPath, { force: true });
+}
+
+// Wrangler and the Site's Vite plugin bundle different Miniflare releases with
+// different default registry locations; one shared path lets them find each other.
+export function localProcessEnvironment(environment, directory) {
+	return { ...environment, CLOUDFLARE_DEV_REGISTRY_PATH: resolve(directory, "dev-registry") };
 }
 
 export function localRuntimeConfiguration(configuration) {

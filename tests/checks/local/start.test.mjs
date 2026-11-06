@@ -1,11 +1,45 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
+import { createRequire, findPackageJSON } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
-import { readLocalConfiguration, waitForLocalListener } from "../../../scripts/local/start.mjs";
+import {
+	localProcessEnvironment,
+	readLocalConfiguration,
+	waitForLocalListener,
+} from "../../../scripts/local/start.mjs";
+
+const repository = new URL("../../../", import.meta.url);
+
+function siteMiniflare() {
+	const site = createRequire(new URL("apps/site/package.json", repository));
+	const vitePlugin = findPackageJSON(
+		"@cloudflare/vite-plugin",
+		pathToFileURL(site.resolve("@astrojs/cloudflare")),
+	);
+	return createRequire(realpathSync(vitePlugin)).resolve("miniflare");
+}
+
+function workerMiniflare() {
+	const root = createRequire(new URL("package.json", repository));
+	return createRequire(root.resolve("wrangler")).resolve("miniflare");
+}
+
+function registryPath(miniflare, expression, environment) {
+	const result = spawnSync(
+		process.execPath,
+		["-e", `console.log(require(${JSON.stringify(miniflare)}).${expression})`],
+		{ encoding: "utf8", env: environment },
+	);
+	assert.equal(result.status, 0, result.stderr);
+	return result.stdout.trim();
+}
 
 test("local startup reads formatted Wrangler JSONC before adding secret requirements", async (t) => {
 	const directory = await mkdtemp(join(tmpdir(), "superboard-local-config-"));
@@ -85,4 +119,18 @@ test("upgrading a legacy local encryption key preserves ciphertext decryption", 
 		() => normalizeLocalEncryptionKey("invalid-local-key"),
 		/Invalid local encryption key/u,
 	);
+});
+
+test("local Workers and the Site find each other in one development registry", () => {
+	const environment = localProcessEnvironment(
+		{ HOME: tmpdir(), PATH: process.env.PATH },
+		"/srv/local",
+	);
+	const workers = registryPath(
+		workerMiniflare(),
+		'resolveDevRegistryPath("/srv/wrangler-registry")',
+		environment,
+	);
+	const site = registryPath(siteMiniflare(), "getDefaultDevRegistryPath()", environment);
+	assert.equal(site, workers);
 });
