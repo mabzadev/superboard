@@ -201,6 +201,14 @@ Les sources amont épinglées et les bundles Yarn ne sont pas réécrits pour
 satisfaire les règles étendues. Le lanceur historique conserve sa couverture
 du runtime SDK Flows importé.
 
+Les fichiers présents dans la version d'EmDash épinglée par
+`scripts/config/emdash-integration.json`, y compris ceux que SuperBoard
+modifie, restent soumis aux règles d'EmDash appliquées par le lanceur
+historique. Les contrôles étendus, Knip et les analyseurs natifs ne les
+inspectent pas. Les contrôles des chemins, des configurations et des
+migrations couvrent tous les fichiers ; une migration publiée ne peut changer
+que pour reprendre le contenu de la version épinglée.
+
 `lints/baseline.json` enregistre les diagnostics existants au moment de
 l'activation, par fichier, règle et empreinte de la ligne concernée. Un
 diagnostic supplémentaire, déplacé dans un autre fichier ou portant sur une

@@ -5,6 +5,7 @@ import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import relocations from "../../scripts/config/superboard-source-relocations.json" with { type: "json" };
+import { upstreamFiles } from "../../scripts/emdash/upstream-files.mjs";
 import { diagnostic, lintRepository, maintainedFile, trackedFiles } from "./repository.mjs";
 
 const historicalPaths = Object.entries(relocations).sort((a, b) => b[1].length - a[1].length);
@@ -29,9 +30,10 @@ const sourcePattern = /(?:\.[cm]?[jt]sx?|\.astro)$/u;
 const fatalPattern =
 	/(?:secret-access:build|tool-failure|parse-error|tsconfig-error|configuration-syntax|duplicate-key|command-path|schema-path|configuration-schema|migration-changed|baseline-expanded|no-focused-tests|test-integrity.*focused)/u;
 
-export function qualitySources(paths) {
+export function qualitySources(paths, upstreamPaths = new Map()) {
 	return paths.filter(
 		(path) =>
+			!upstreamPaths.has(path) &&
 			maintainedFile(path) &&
 			sourcePattern.test(path) &&
 			!path.startsWith("sdks/web/flows/upstream/") &&
@@ -104,7 +106,11 @@ export function captureBaseline(diagnostics) {
 	};
 }
 
-export function lintMigrations(baseRef, workspaceRoot = root) {
+export function lintMigrations(
+	baseRef,
+	workspaceRoot = root,
+	upstream = upstreamFiles(workspaceRoot),
+) {
 	const result = spawnSync(
 		"git",
 		[
@@ -124,6 +130,12 @@ export function lintMigrations(baseRef, workspaceRoot = root) {
 		.filter(Boolean)
 		.flatMap((line) => {
 			const [status, filename] = line.split("\t");
+			if (/\.test\.[cm]?[jt]sx?$/u.test(filename)) return [];
+			if (
+				status === "M" &&
+				upstream?.content(filename)?.equals(readFileSync(resolve(workspaceRoot, filename)))
+			)
+				return [];
 			const destination = relocatedSource(filename);
 			if (
 				status === "D" &&
@@ -371,15 +383,19 @@ export async function lintQuality({
 } = {}) {
 	const diagnostics = [];
 	try {
-		if (knipOnly) diagnostics.push(...lintKnip());
+		const upstream = upstreamFiles(root);
+		const owned = (item) => !upstream?.paths.has(item.filename);
+		if (knipOnly) diagnostics.push(...lintKnip().filter(owned));
 		else {
-			const sources = qualitySources(paths);
+			const sources = qualitySources(paths, upstream?.paths);
 			diagnostics.push(...(await lintSyntax(sources)));
 			diagnostics.push(...lintTyped(sources, quick));
 			diagnostics.push(...lintRepository(root));
-			diagnostics.push(...lintMigrations(process.env.SUPERBOARD_LINT_BASE || "HEAD"));
+			diagnostics.push(
+				...lintMigrations(process.env.SUPERBOARD_LINT_BASE || "HEAD", root, upstream),
+			);
 			diagnostics.push(...lintBaselineChanges(process.env.SUPERBOARD_LINT_BASE || "HEAD"));
-			if (!quick) diagnostics.push(...lintKnip());
+			if (!quick) diagnostics.push(...lintKnip().filter(owned));
 		}
 	} catch (error) {
 		diagnostics.push(diagnostic("tests/lints/quality.mjs", "tool-failure", error.message));
