@@ -31,7 +31,7 @@ jobs:
         check: [local, development, artifact]
     env:
       HUSKY: "0"
-      NODE_OPTIONS: --max-old-space-size=2048
+      NODE_OPTIONS: --max-old-space-size=4096
       GOMAXPROCS: "1"
       GOMEMLIMIT: 768MiB
     steps:
