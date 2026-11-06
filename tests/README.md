@@ -238,6 +238,16 @@ Un outil natif manquant produit un échec explicite. Les règles statiques sur
 les requêtes, les autorisations et le navigateur ne remplacent pas les parcours
 réels, les tests de permissions et la vérification de la version déployée.
 
+Pour les pushs sur `dev` et `main` et les lancements manuels, tous les jobs
+de qualité, de régression des plugins et de menus du front s'exécutent sur les
+runners auto-hébergés étiquetés `superboard`, sauf l'analyse Swift, qui exige
+macOS. Les pull requests, qui peuvent venir de forks de ce dépôt public,
+restent sur les runners GitHub. Sur le serveur, les runners tournent sous le
+compte `superboard-ci` (services `github-runner-superboard@1` et `@2`), dans
+la tranche systemd `superboard-ci.slice` limitée à 8 cœurs et 12 Go. Java 17
+et ShellCheck sont installés par le système et le SDK Android se trouve dans
+`/opt/android-sdk`.
+
 ## Ajouter un test ou un contrôle
 
 Choisissez le propriétaire, puis un nom décrivant le comportement vérifié :

@@ -15,7 +15,9 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pull requests can come from forks of this public repository, so they keep
+    # GitHub's runners; pushes and manual runs use the self-hosted runners.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
     timeout-minutes: 30
     env:
       HUSKY: "0"
@@ -62,7 +64,7 @@ jobs:
 
   source:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
     timeout-minutes: 30
     env:
       HUSKY: "0"
@@ -117,7 +119,7 @@ jobs:
   test:
     name: test (${{ matrix.suite }})
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -155,14 +157,14 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-admin-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - if: matrix.suite == 'emdash' && steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter @emdash-cms/admin exec playwright install --with-deps chromium
+        run: pnpm --filter @emdash-cms/admin exec playwright install ${{ runner.environment == 'github-hosted' && '--with-deps' || '' }} chromium
       - name: Run the ${{ matrix.suite }} test suite
         run: pnpm run "$SUITE:test"
         env:
           SUITE: ${{ matrix.suite }}
 
   automation:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
     timeout-minutes: 15
     env:
       HUSKY: "0"
@@ -179,10 +181,13 @@ jobs:
           key: pnpm-metadata-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-metadata-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Install shell and workflow analyzers
+      - name: Install ShellCheck
+        if: runner.environment == 'github-hosted'
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
+      - name: Install the workflow analyzer
+        run: |
           curl --fail --location --retry 3 https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz -o "$RUNNER_TEMP/actionlint.tar.gz"
           echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/actionlint"
@@ -218,7 +223,7 @@ jobs:
       - run: pnpm lint:swift
 
   dart:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
     timeout-minutes: 20
     env:
       HUSKY: "0"
@@ -254,7 +259,7 @@ jobs:
       - run: pnpm lint:dart
 
   android:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
     timeout-minutes: 25
     env:
       HUSKY: "0"

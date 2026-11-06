@@ -21,7 +21,9 @@ concurrency:
 
 jobs:
   plugin-regressions:
-    runs-on: ubuntu-latest
+    # Pull requests can come from forks of this public repository, so they keep
+    # GitHub's runners; pushes and manual runs use the self-hosted runners.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
