@@ -150,6 +150,9 @@ export default centralTests(
 				"../../../../tests/checks/plugins/superboard-authentification/worker/runtime/apply-migrations.ts",
 			],
 			sequence: { concurrent: false },
+			// Each file applies every D1 migration before its tests, which can take
+			// longer than the default 10 s on a busy runner.
+			hookTimeout: 60_000,
 		},
 	}),
 );
