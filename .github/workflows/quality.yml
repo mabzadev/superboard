@@ -15,9 +15,10 @@ concurrency:
 
 jobs:
   build:
-    # Pull requests can come from forks of this public repository, so they keep
-    # GitHub's runners; pushes and manual runs use the self-hosted runners.
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
+    # Pushes and manual runs use the self-hosted runners only while the repository
+    # variable SUPERBOARD_SELF_HOSTED_RUNNERS is true. Pull requests can come from
+    # forks of this public repository, so they always use GitHub's runners.
+    runs-on: ${{ github.event_name != 'pull_request' && vars.SUPERBOARD_SELF_HOSTED_RUNNERS == 'true' && fromJSON('["self-hosted", "superboard"]') || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
       HUSKY: "0"
@@ -68,7 +69,7 @@ jobs:
 
   source:
     needs: build
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
+    runs-on: ${{ github.event_name != 'pull_request' && vars.SUPERBOARD_SELF_HOSTED_RUNNERS == 'true' && fromJSON('["self-hosted", "superboard"]') || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
       HUSKY: "0"
@@ -125,7 +126,7 @@ jobs:
   test:
     name: test (${{ matrix.suite }})
     needs: build
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
+    runs-on: ${{ github.event_name != 'pull_request' && vars.SUPERBOARD_SELF_HOSTED_RUNNERS == 'true' && fromJSON('["self-hosted", "superboard"]') || 'ubuntu-latest' }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -172,7 +173,7 @@ jobs:
           SUITE: ${{ matrix.suite }}
 
   automation:
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
+    runs-on: ${{ github.event_name != 'pull_request' && vars.SUPERBOARD_SELF_HOSTED_RUNNERS == 'true' && fromJSON('["self-hosted", "superboard"]') || 'ubuntu-latest' }}
     timeout-minutes: 15
     env:
       HUSKY: "0"
@@ -235,7 +236,7 @@ jobs:
       - run: pnpm lint:swift
 
   dart:
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
+    runs-on: ${{ github.event_name != 'pull_request' && vars.SUPERBOARD_SELF_HOSTED_RUNNERS == 'true' && fromJSON('["self-hosted", "superboard"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     env:
       HUSKY: "0"
@@ -273,7 +274,7 @@ jobs:
       - run: pnpm lint:dart
 
   android:
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
+    runs-on: ${{ github.event_name != 'pull_request' && vars.SUPERBOARD_SELF_HOSTED_RUNNERS == 'true' && fromJSON('["self-hosted", "superboard"]') || 'ubuntu-latest' }}
     timeout-minutes: 25
     env:
       HUSKY: "0"

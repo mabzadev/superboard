@@ -21,9 +21,10 @@ concurrency:
 
 jobs:
   plugin-regressions:
-    # Pull requests can come from forks of this public repository, so they keep
-    # GitHub's runners; pushes and manual runs use the self-hosted runners.
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "superboard"]') }}
+    # Pushes and manual runs use the self-hosted runners only while the repository
+    # variable SUPERBOARD_SELF_HOSTED_RUNNERS is true. Pull requests can come from
+    # forks of this public repository, so they always use GitHub's runners.
+    runs-on: ${{ github.event_name != 'pull_request' && vars.SUPERBOARD_SELF_HOSTED_RUNNERS == 'true' && fromJSON('["self-hosted", "superboard"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
