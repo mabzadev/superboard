@@ -1,3 +1,9 @@
+/**
+ * Users management page
+ *
+ * Admin-only route for managing users, roles, and invites.
+ */
+
 import { useLingui } from "@lingui/react/macro";
 import { Trans } from "@lingui/react/macro";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,9 +25,13 @@ import {
 	disableUser,
 	enableUser,
 	inviteUser,
+	fetchManifest,
 	type UpdateUserInput,
 } from "../lib/api";
 
+/**
+ * Debounce hook for search input
+ */
 function useDebounce<T>(value: T, delay: number): T {
 	const [debouncedValue, setDebouncedValue] = React.useState(value);
 
@@ -38,6 +48,7 @@ export function UsersPage() {
 	const { getRoleLabel } = useRolesConfig();
 	const queryClient = useQueryClient();
 
+	// State
 	const [searchQuery, setSearchQuery] = React.useState("");
 	const [roleFilter, setRoleFilter] = React.useState<number | undefined>();
 	const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
@@ -49,7 +60,11 @@ export function UsersPage() {
 	const [inviteError, setInviteError] = React.useState<string | null>(null);
 	const [inviteUrl, setInviteUrl] = React.useState<string | null>(null);
 
+	// Debounced search
 	const debouncedSearch = useDebounce(searchQuery, 300);
+
+	// Queries
+	const { data: manifest } = useQuery({ queryKey: ["manifest"], queryFn: fetchManifest });
 
 	const usersQuery = useInfiniteQuery({
 		queryKey: ["users", debouncedSearch, roleFilter],
@@ -69,6 +84,7 @@ export function UsersPage() {
 		enabled: !!selectedUserId,
 	});
 
+	// Mutations
 	const updateUserMutation = useMutation({
 		mutationFn: ({ id, data }: { id: string; data: UpdateUserInput }) => updateUser(id, data),
 		onSuccess: () => {
@@ -96,6 +112,7 @@ export function UsersPage() {
 	const recoveryMutation = useMutation({
 		mutationFn: (id: string) => sendRecoveryLink(id),
 		onSuccess: () => {
+			// Auto-clear success status after a few seconds
 			setTimeout(() => recoveryMutation.reset(), 4000);
 		},
 	});
@@ -105,10 +122,13 @@ export function UsersPage() {
 		onSuccess: (result) => {
 			setInviteError(null);
 			if (result.inviteUrl) {
+				// No email provider — show copy-link view in the modal
 				setInviteUrl(result.inviteUrl);
 			} else {
+				// Email sent — close modal
 				setIsInviteOpen(false);
 			}
+			// Refresh user list (invite token was created either way)
 			void queryClient.invalidateQueries({ queryKey: ["users"] });
 		},
 		onError: (error: Error) => {
@@ -116,6 +136,7 @@ export function UsersPage() {
 		},
 	});
 
+	// Handlers
 	const handleSelectUser = (id: string) => {
 		setSelectedUserId(id);
 		setIsDetailOpen(true);
@@ -123,12 +144,15 @@ export function UsersPage() {
 
 	const handleCloseDetail = () => {
 		setIsDetailOpen(false);
+		// Keep selectedUserId for a moment to prevent flicker
 		setTimeout(setSelectedUserId, 200, null);
 	};
 
 	const handleSave = (data: UpdateUserInput) => {
 		if (!selectedUserId) return;
 
+		// Check for role demotion — require confirmation.
+		// Guard: only check when user data is loaded (currentRole defined).
 		const currentRole = userDetailQuery.data?.role;
 		if (data.role !== undefined && currentRole !== undefined && data.role < currentRole) {
 			setPendingSaveData(data);
@@ -172,10 +196,12 @@ export function UsersPage() {
 		inviteMutation.mutate({ email, role });
 	};
 
+	// Loading state
 	if (usersQuery.isLoading && !usersQuery.data) {
 		return <UserListSkeleton />;
 	}
 
+	// Error state
 	if (usersQuery.error) {
 		return (
 			<div className="rounded-lg border border-kumo-danger/50 bg-kumo-danger/10 p-6 text-center">
@@ -216,7 +242,8 @@ export function UsersPage() {
 				isSendingRecovery={recoveryMutation.isPending}
 				recoverySent={recoveryMutation.isSuccess}
 				recoveryError={recoveryMutation.error?.message ?? null}
-				currentUserId={undefined}
+				currentUserId={undefined} // Would come from session
+				providerManagedName={manifest?.providerManagedName}
 				onClose={handleCloseDetail}
 				onSave={handleSave}
 				onDisable={handleDisable}
@@ -239,6 +266,7 @@ export function UsersPage() {
 				onInvite={handleInvite}
 			/>
 
+			{/* Disable confirmation */}
 			<ConfirmDialog
 				open={showDisableConfirm}
 				onClose={() => {
@@ -259,6 +287,7 @@ export function UsersPage() {
 				onConfirm={handleConfirmDisable}
 			/>
 
+			{/* Role demotion confirmation */}
 			<ConfirmDialog
 				open={showDemoteConfirm}
 				onClose={() => {

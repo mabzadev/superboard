@@ -13,6 +13,9 @@ import {
 } from "../../../../../packages/admin/src/components/PortableTextEditor";
 import { render } from "../utils/render.tsx";
 
+// The msg macro hashes to the same message id as the corresponding macro call
+// in EditorFooter, so this catalog binds translations for exactly the messages
+// the footer renders.
 const deMessages = {
 	[msg`{words, plural, one {# word} other {# words}}`.id!]:
 		"{words, plural, one {# Wort} other {# Wörter}}",
@@ -30,7 +33,7 @@ afterAll(() => {
 	i18n.loadAndActivate({ locale: "en", messages: {} });
 });
 
-function FooterHarness({ content }: { content: string }) {
+function FooterHarness({ content, variant }: { content: string; variant?: "boxed" | "document" }) {
 	const editor = useEditor({
 		extensions: [StarterKit, CharacterCount.configure({ wordCounter: countWords })],
 		content,
@@ -38,7 +41,7 @@ function FooterHarness({ content }: { content: string }) {
 	});
 
 	if (!editor) return null;
-	return <_EditorFooter editor={editor} />;
+	return <_EditorFooter editor={editor} variant={variant} />;
 }
 
 describe("EditorFooter localization", () => {
@@ -59,5 +62,18 @@ describe("EditorFooter localization", () => {
 			expect(screen.getByText("1 Wort")).toBeTruthy();
 		});
 		expect(screen.getByText("5 Zeichen")).toBeTruthy();
+	});
+});
+
+describe("EditorFooter in the document layout", () => {
+	it("shows the metrics only once the body has text", async () => {
+		const empty = await render(<FooterHarness content="" variant="document" />);
+		expect(empty.container.textContent).toBe("");
+		await empty.unmount();
+
+		void render(<FooterHarness content="<p>Hallo</p>" variant="document" />);
+		await vi.waitFor(() => {
+			expect(screen.getByText("1 Wort")).toBeTruthy();
+		});
 	});
 });

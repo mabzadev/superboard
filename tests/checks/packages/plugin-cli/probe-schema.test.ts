@@ -1,9 +1,20 @@
+/**
+ * Tests for `parseProbedDefault`, the runtime validation the build
+ * pipeline runs against the imported default export of a probed plugin.
+ *
+ * These tests lock in the user-facing error-message contract: plugin
+ * authors and any aggregator that scrapes stderr depend on these
+ * exact strings. Behaviour changes here should be deliberate.
+ */
+
 import { describe, expect, it } from "vitest";
 
 import {
 	BuildPipelineError,
 	parseProbedDefault,
+	validateEditorExtensionRoutes,
 } from "../../../../packages/plugin-cli/src/build/pipeline.js";
+import type { ResolvedPlugin } from "../../../../packages/plugin-cli/src/bundle/types.js";
 
 const PLUGIN_ENTRY = "src/plugin.ts";
 
@@ -65,12 +76,38 @@ describe("parseProbedDefault", () => {
 			expect(result.routes?.ping).toEqual({ handler });
 		});
 
-		it("preserves config-form route fields including public", () => {
+		it("preserves config-form route fields including raw HTTP metadata", () => {
 			const handler = (): void => {};
 			const result = parseProbedDefault(PLUGIN_ENTRY, {
-				routes: { ping: { handler, public: true } },
+				routes: {
+					ping: {
+						handler,
+						methods: ["POST", "PUT"],
+						request: {
+							body: "form-data",
+							maxBytes: 2048,
+							headers: ["content-type", "x-signature"],
+						},
+						response: "raw",
+						public: true,
+						permission: "content:read",
+						cacheControl: "public, max-age=60",
+					},
+				},
 			});
-			expect(result.routes?.ping).toEqual({ handler, public: true });
+			expect(result.routes?.ping).toEqual({
+				handler,
+				methods: ["POST", "PUT"],
+				request: {
+					body: "form-data",
+					maxBytes: 2048,
+					headers: ["content-type", "x-signature"],
+				},
+				response: "raw",
+				public: true,
+				permission: "content:read",
+				cacheControl: "public, max-age=60",
+			});
 		});
 
 		it("passes through unknown extra keys on the default export", () => {
@@ -93,6 +130,9 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("rejects a Date hook entry as the wrong shape", () => {
+			// Only plain objects (`Object.prototype` or null prototype)
+			// reach the per-field validation. Anything with a more
+			// specific prototype is treated as a wrong-shaped entry.
 			const error = expectFailure({ hooks: { h: new Date() } });
 			expect(error.message).toBe(
 				`${PLUGIN_ENTRY}: hook "h" must be a function or { handler: function, ... }. Got object.`,
@@ -107,6 +147,9 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("rejects a Promise hook entry as the wrong shape", () => {
+			// Forgot-to-await mistake: `hooks: { h: makeHandler() }` where
+			// `makeHandler` is async. Caught at the entry-shape level so
+			// the author sees the standard wrong-shape message.
 			const error = expectFailure({ hooks: { h: Promise.resolve(() => {}) } });
 			expect(error.code).toBe("INVALID_PLUGIN_FORMAT");
 			expect(error.message).toBe(
@@ -144,6 +187,8 @@ describe("parseProbedDefault", () => {
 			const error = expectFailure({
 				hooks: { h: { handler: (): void => {}, priority: Infinity } },
 			});
+			// `JSON.stringify(Infinity)` is the string "null" per the JSON
+			// spec; safeStringify passes that through unchanged.
 			expect(error.message).toBe(
 				`${PLUGIN_ENTRY}: hook "h" has invalid priority null (must be a finite number).`,
 			);
@@ -181,6 +226,8 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("renders a BigInt field value as <n>n", () => {
+			// `JSON.stringify` throws on BigInt; safeStringify marshals
+			// it through a JSON replacer that emits the `10n` notation.
 			const error = expectFailure({
 				hooks: { h: { handler: (): void => {}, priority: 10n } },
 			});
@@ -190,6 +237,8 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("renders a function field value as 'function'", () => {
+			// `JSON.stringify(fn)` returns the JS value `undefined`;
+			// safeStringify falls back to `describeShape`.
 			const error = expectFailure({
 				hooks: { h: { handler: (): void => {}, priority: (): void => {} } },
 			});
@@ -208,6 +257,8 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("renders a cyclic-object field value as 'object'", () => {
+			// `JSON.stringify` throws on cyclic structures; safeStringify
+			// catches and falls back to `describeShape`.
 			const cycle: Record<string, unknown> = {};
 			cycle.self = cycle;
 			const error = expectFailure({
@@ -219,6 +270,9 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("displays the whole array when a single element of dependencies is bad", () => {
+			// The issue path is `["hooks","h","dependencies",1]`; the
+			// displayed value is the field as a whole rather than the
+			// offending element. The Zod message names the actual fault.
 			const error = expectFailure({
 				hooks: {
 					h: { handler: (): void => {}, dependencies: ["a", 42, "c"] },
@@ -234,6 +288,8 @@ describe("parseProbedDefault", () => {
 					h: { handler: (): void => {}, priority: "high", errorPolicy: "bogus" },
 				},
 			});
+			// Don't lock in *which* field surfaces first (Zod issue order
+			// is an implementation detail); enforce that only one does.
 			const matches = error.message.match(/has invalid /g);
 			expect(matches).toHaveLength(1);
 			expect(error.message).toMatch(/hook "h" has invalid (priority|errorPolicy)/);
@@ -261,9 +317,34 @@ describe("parseProbedDefault", () => {
 			});
 			expect(error.message).toContain(`route "ping" has invalid public "yes"`);
 		});
+
+		it("rejects unsupported route methods", () => {
+			const error = expectFailure({
+				routes: { ping: { handler: (): void => {}, methods: ["CONNECT"] } },
+			});
+			expect(error.message).toContain(`route "ping" has invalid methods[0] ["CONNECT"]`);
+		});
+
+		it("rejects forbidden request headers", () => {
+			const error = expectFailure({
+				routes: {
+					ping: {
+						handler: (): void => {},
+						request: { body: "json", headers: ["cookie"] },
+					},
+				},
+			});
+			expect(error.message).toContain(
+				`route "ping" has invalid request.headers[0] {"body":"json","headers":["cookie"]}`,
+			);
+			expect(error.message).toContain("cannot be exposed to a sandboxed route");
+		});
 	});
 
 	describe("non-record collection coercion", () => {
+		// A malformed `hooks` / `routes` outer collection harvests no
+		// entries but doesn't fail the build. Entries themselves are
+		// still strictly validated.
 		it("treats an array hooks field as empty", () => {
 			const result = parseProbedDefault(PLUGIN_ENTRY, { hooks: [] });
 			expect(result.hooks).toEqual({});
@@ -288,5 +369,50 @@ describe("parseProbedDefault", () => {
 			const result = parseProbedDefault(PLUGIN_ENTRY, { routes: 42 });
 			expect(result.routes).toEqual({});
 		});
+	});
+});
+
+describe("validateEditorExtensionRoutes", () => {
+	function pluginWithRoute(route: ResolvedPlugin["routes"][string] | undefined): ResolvedPlugin {
+		return {
+			id: "content-guard",
+			version: "1.0.0",
+			capabilities: [],
+			allowedHosts: [],
+			storage: {},
+			hooks: {},
+			routes: route ? { health: route } : {},
+			admin: {
+				editorPanels: [{ id: "health", title: "Health", route: "health" }],
+			},
+		};
+	}
+
+	it("accepts an extension backed by a private route", () => {
+		expect(() =>
+			validateEditorExtensionRoutes(pluginWithRoute({ handler: () => undefined })),
+		).not.toThrow();
+	});
+
+	it.each([
+		["missing", undefined],
+		["public", { public: true, handler: () => undefined }],
+		["raw response", { response: "raw", handler: () => undefined }],
+		["GET-only", { methods: ["GET"], handler: () => undefined }],
+		["form-data", { request: { body: "form-data" }, handler: () => undefined }],
+	])("rejects a %s extension route", (_label, route) => {
+		expect(() => validateEditorExtensionRoutes(pluginWithRoute(route))).toThrow(BuildPipelineError);
+	});
+
+	it.each([
+		{ response: "raw" as const },
+		{ methods: ["GET"] as const },
+		{ request: { body: "none" as const } },
+		{ request: { body: "form-data" as const } },
+	])("rejects an incompatible explicit Block Kit admin route %#", (route) => {
+		const plugin = pluginWithRoute(undefined);
+		plugin.routes.admin = { ...route, handler: () => undefined };
+		plugin.admin.pages = [{ path: "/overview", label: "Overview" }];
+		expect(() => validateEditorExtensionRoutes(plugin)).toThrow(BuildPipelineError);
 	});
 });

@@ -1,3 +1,12 @@
+/**
+ * Integration test for MCP OAuth discovery against a real Astro dev server.
+ *
+ * Uses the MCP SDK's own discovery functions with real fetch() so we test
+ * the actual Astro route registration, not just the handler logic. This
+ * catches mismatches between the paths we register in routes.ts and the
+ * paths the SDK constructs per RFC 8414 / RFC 9728.
+ */
+
 import {
 	discoverOAuthProtectedResourceMetadata,
 	discoverAuthorizationServerMetadata,
@@ -31,11 +40,15 @@ describe("MCP OAuth Discovery (real server)", () => {
 	});
 
 	it("discovers authorization server metadata via the RFC 8414 path", async () => {
+		// Step 1: get the authorization server URL from protected resource metadata
 		const resourceMeta = await discoverOAuthProtectedResourceMetadata(
 			`${ctx.baseUrl}/_emdash/api/mcp`,
 		);
 		const authServerUrl = resourceMeta.authorization_servers![0]!;
 
+		// Step 2: the SDK constructs /.well-known/oauth-authorization-server/_emdash
+		// per RFC 8414 (path component appended after well-known prefix).
+		// This must resolve to a real route, not 404.
 		const metadata = await discoverAuthorizationServerMetadata(authServerUrl);
 
 		expect(metadata).toBeDefined();
@@ -48,6 +61,7 @@ describe("MCP OAuth Discovery (real server)", () => {
 	});
 
 	it("MCP endpoint returns 401 with resource_metadata in WWW-Authenticate", async () => {
+		// Unauthenticated POST to MCP should return 401 with the discovery hint
 		const res = await fetch(`${ctx.baseUrl}/_emdash/api/mcp`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },

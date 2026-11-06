@@ -1,42 +1,85 @@
+/**
+ * EmDashRuntime - Core runtime for EmDash CMS
+ *
+ * Manages database, storage, plugins (trusted + sandboxed), hooks, and
+ * provides handlers for content/media operations.
+ *
+ * Created once per worker lifetime, cached and reused across requests.
+ */
+
+import { getLocaleDir, resolveLocale } from "@emdash-cms/admin/locales";
 import { Permissions } from "@emdash-cms/auth";
 import type { Element } from "@emdash-cms/blocks";
+import {
+	normalizePluginPagePath,
+	validateBlockResponse,
+	validateContentEditorActionResponse,
+	type BlockValidationPolicy,
+	type PluginUiContext,
+} from "@emdash-cms/blocks/server";
+import { isJsonPostRouteContract } from "@emdash-cms/plugin-types";
 import { Kysely, type Dialect } from "kysely";
 import virtualConfig from "virtual:emdash/config";
 import { z } from "zod";
 
-import { assertMediaUsageActivationWriteAllowed } from "./api/media-usage-write-fence.js";
+import { ErrorCode } from "./api/errors.js";
+import { buildManifestCollections } from "./api/handlers/manifest.js";
+import {
+	handleMediaUpload as uploadMedia,
+	type MediaUploadInput,
+} from "./api/handlers/media-upload.js";
+import { resolveReferenceSelection } from "./api/handlers/relations.js";
+import {
+	liveReferenceSelection,
+	mergeStagedReferenceBaselines,
+	mergeStagedReferences,
+	STAGED_REFERENCES_BASELINE_KEY,
+	STAGED_REFERENCES_KEY,
+	type StagedReferenceBaselines,
+	type StagedReferences,
+} from "./api/handlers/staged-references.js";
 import { validateRev } from "./api/rev.js";
+import { getSiteBaseUrl, resolveSiteOrigin } from "./api/site-url.js";
 import type {
 	EmDashConfig,
 	PluginAdminPage,
 	PluginDashboardWidget,
 } from "./astro/integration/runtime.js";
-import type { EmDashManifest, ManifestCollection } from "./astro/types.js";
+import type { EmDashManifest } from "./astro/types.js";
 import { getAuthMode } from "./auth/mode.js";
 import { getTrustedProxyHeaders } from "./auth/trusted-proxy.js";
+import { lookupContentAuthor, sendCommentNotification } from "./comments/notifications.js";
 import type { ContentFieldFilters } from "./content-list-query.js";
+import { keepKnownFields, staleStoredKeys } from "./content/known-fields.js";
 import { isSqlite } from "./database/dialect-helpers.js";
 import { kyselyLogOption } from "./database/instrumentation.js";
 import {
 	enforceRuntimeMigrationPolicy,
-	PendingMigrationsError,
 	type RuntimeMigrationMode,
 } from "./database/migrations/policy.js";
 import {
-	ConcurrentMigrationTimeoutError,
 	MIGRATION_RACE_WAIT_MS,
+	MigrationFailedError,
+	MigrationLockHeldError,
+	MigrationRowLimitError,
 } from "./database/migrations/runner.js";
 import { AuditRepository } from "./database/repositories/audit.js";
+import { CommentRepository } from "./database/repositories/comment.js";
+import type { CommentStatus } from "./database/repositories/comment.js";
 import { ContentRepository } from "./database/repositories/content.js";
 import { RevisionRepository } from "./database/repositories/revision.js";
+import { selectTaxonomyDefs } from "./database/repositories/taxonomy-def.js";
 import { ContentMutationConflictError } from "./database/repositories/types.js";
 import type {
 	ContentItem as ContentItemInternal,
 	ContentDateField,
 } from "./database/repositories/types.js";
-import { getI18nConfig } from "./i18n/config.js";
+import type { ImageValue } from "./fields/types.js";
+import { getI18nConfig, resolveContentCreateLocale } from "./i18n/config.js";
 import { repairLocaleCasing } from "./i18n/repair-locale-casing.js";
 import { warnAboutUnconfiguredTaxonomyLocales } from "./i18n/taxonomy-locale-diagnostic.js";
+import { safeJsonSchemaToZod } from "./mcp/json-schema.js";
+import { pluginToolName } from "./mcp/plugin-tool-name.js";
 import { normalizeMediaValue } from "./media/normalize.js";
 import type { MediaProvider, MediaProviderCapabilities } from "./media/types.js";
 import { activateMediaUsageCapture } from "./media/usage/activation.js";
@@ -47,6 +90,17 @@ import {
 	refreshContentMediaUsageAfterWrite,
 } from "./media/usage/content-refresh.js";
 import { processMediaUsageWorkAfterWrite } from "./media/usage/work-processor.js";
+import {
+	scheduledPolicyRejectionKey,
+	type ScheduledPolicyRejection,
+} from "./plugins/content-policy.js";
+import { createCommentAccess, createTaxonomyAccessWithWrite } from "./plugins/context.js";
+import type { ContentActionCallbacks, ContentWriteGuard } from "./plugins/context.js";
+import type { PluginContentCacheInvalidator } from "./plugins/routes.js";
+import {
+	createSandboxedPluginProxy,
+	getSandboxSaveRejectionDetails,
+} from "./plugins/sandbox/proxy.js";
 import { createSandboxRunnerOptions } from "./plugins/sandbox/runner-options.js";
 import { getSandboxRouteErrorDetails } from "./plugins/sandbox/types.js";
 import type {
@@ -55,12 +109,19 @@ import type {
 	SandboxRunnerFactory,
 } from "./plugins/sandbox/types.js";
 import type {
+	ActorInfo,
+	ContentActionOrigin,
+	ContentSaveHookDetails,
+	ContentItem as PluginContentItem,
 	ResolvedPlugin,
 	MediaItem,
+	MediaMetadataPatch,
 	PluginManifest,
 	PluginCapability,
 	PluginStorageConfig,
 	PluginMcpManifestConfig,
+	PluginEditorAction,
+	PluginEditorPanel,
 	PublicPageContext,
 	PageMetadataContribution,
 	PageFragmentContribution,
@@ -68,9 +129,21 @@ import type {
 	FieldWidgetConfig,
 	SettingField,
 	UserInfo,
+	CollectionCommentSettings,
+	ModerationDecision,
+	PluginComment,
+	PluginCommentStatus,
+	ContentWriteInput,
+	PluginContentCreateCallback,
+	VersionedContentItem,
 } from "./plugins/types.js";
+import { normalizePluginCapabilities, warnDeprecatedPluginCapabilities } from "./plugins/types.js";
 import { recordSchedulerHeartbeatSafely } from "./scheduler-health.js";
-import { MAX_COLLECTION_LIST_COLUMNS, type FieldType } from "./schema/types.js";
+import { inferBlockTypes } from "./schema/block-values.js";
+import { primeRegisteredCollections } from "./schema/collection-slugs-cache.js";
+import { isStoragelessField, isStoragelessFieldRow } from "./schema/types.js";
+import type { CollectionWithFields } from "./schema/types.js";
+import { AUTO_SEED_COMPLETE_OPTION } from "./seed/ownership.js";
 import { isMissingTableError } from "./utils/db-errors.js";
 import { hashString } from "./utils/hash.js";
 import { createInitLock, type InitLock, initWithLock } from "./utils/init-lock.js";
@@ -79,12 +152,33 @@ import { COMMIT, VERSION } from "./version.js";
 
 const LEADING_SLASH_PATTERN = /^\//;
 const LOCALE_CASING_REPAIR_OPTION = "emdash:repair_locale_casing";
+const SETUP_COMPLETE_OPTION = "emdash:setup_complete";
+
+const PLUGIN_COMMENT_STATUSES = new Set<string>(["approved", "pending", "spam"]);
+
+function assertPluginCommentStatus(
+	value: string,
+	name: "status" | "expectedStatus",
+): asserts value is PluginCommentStatus {
+	if (!PLUGIN_COMMENT_STATUSES.has(value)) {
+		throw Object.assign(new Error(`${name} must be one of: approved, pending, spam`), {
+			code: "COMMENT_STATUS_INVALID",
+		});
+	}
+}
 
 function getLocaleCasingRepairVersion(locales: readonly string[]): string | null {
 	if (locales.length === 0) return null;
 	return `1:${locales.toSorted().join(",")}`;
 }
 
+/**
+ * Parse a JSON column expected to contain an array of strings.
+ *
+ * Throws on malformed JSON rather than returning []; callers are responsible
+ * for deciding how to handle/log the error. Empty string / null inputs return
+ * [] (they represent "no value"). Non-string array entries are filtered out.
+ */
 function parseStringArray(raw: string | null | undefined): string[] {
 	if (!raw) return [];
 	const parsed: unknown = JSON.parse(raw);
@@ -92,51 +186,41 @@ function parseStringArray(raw: string | null | undefined): string[] {
 	return parsed.filter((v): v is string => typeof v === "string");
 }
 
+function isModerationDecision(value: unknown): value is ModerationDecision {
+	if (typeof value !== "object" || value === null || !("status" in value)) return false;
+	if (value.status !== "pending" && value.status !== "approved" && value.status !== "spam") {
+		return false;
+	}
+	return !("reason" in value) || value.reason === undefined || typeof value.reason === "string";
+}
+
+/** Combined result from a single-pass page contribution collection */
 interface PageContributions {
 	metadata: PageMetadataContribution[];
 	fragments: PageFragmentContribution[];
 }
 
-const VALID_METADATA_KINDS = new Set(["meta", "property", "link", "jsonld"]);
-
-const VALID_LINK_REL = new Set([
-	"canonical",
-	"alternate",
-	"author",
-	"license",
-	"nlweb",
-	"site.standard.document",
-]);
-
-function isValidMetadataContribution(c: unknown): c is PageMetadataContribution {
-	if (!c || typeof c !== "object" || !("kind" in c)) return false;
-	const obj = c as Record<string, unknown>;
-	if (typeof obj.kind !== "string" || !VALID_METADATA_KINDS.has(obj.kind)) return false;
-
-	switch (obj.kind) {
-		case "meta":
-			return typeof obj.name === "string" && typeof obj.content === "string";
-		case "property":
-			return typeof obj.property === "string" && typeof obj.content === "string";
-		case "link":
-			return (
-				typeof obj.href === "string" && typeof obj.rel === "string" && VALID_LINK_REL.has(obj.rel)
-			);
-		case "jsonld":
-			return obj.graph != null && typeof obj.graph === "object";
-		default:
-			return false;
-	}
-}
-
 import { after } from "./after.js";
 import { maybeRunScheduledBackup } from "./api/handlers/backup.js";
+import { changedStoragelessDataKeys, storagelessDataKeyError } from "./api/handlers/content.js";
 import { loadBundleFromR2 } from "./api/handlers/marketplace.js";
-import { runSystemCleanup } from "./cleanup.js";
+import {
+	runSystemCleanup,
+	shouldRunSystemCleanup as shouldRunSystemCleanupNow,
+} from "./cleanup.js";
 import {
 	DEFAULT_COMMENT_MODERATOR_PLUGIN_ID,
 	defaultCommentModerate,
 } from "./comments/moderator.js";
+import { submitPublicComment } from "./comments/public-submission.js";
+import {
+	CommentStatusConflictError,
+	createComment,
+	moderateComment,
+	type CommentCreateInput,
+	type CommentCreateResult,
+	type CommentHookRunner,
+} from "./comments/service.js";
 import { validateEncryptionKeyAtStartup } from "./config/secrets.js";
 import { OptionsRepository } from "./database/repositories/options.js";
 import {
@@ -156,6 +240,7 @@ import {
 	handleContentUnpublish,
 	handleContentSchedule,
 	handleContentUnschedule,
+	handleScheduledPolicyRejection,
 	handleContentCountScheduled,
 	handleContentDiscardDraft,
 	handleContentCompare,
@@ -163,12 +248,17 @@ import {
 	handleMediaList,
 	handleMediaGet,
 	handleMediaCreate,
+	handleMediaRegisterUpload,
 	handleMediaUpdate,
+	handleMediaReplaceMetadata,
 	handleMediaDelete,
 	handleRevisionList,
 	handleRevisionGet,
 	handleRevisionRestore,
 	SchemaRegistry,
+	SchemaError,
+	normalizeBlocksData,
+	resolveBlockTypes,
 	type Database,
 	type Storage,
 } from "./index.js";
@@ -180,11 +270,16 @@ import { DEV_CONSOLE_EMAIL_PLUGIN_ID, devConsoleEmailDeliver } from "./plugins/e
 import { EmailPipeline } from "./plugins/email.js";
 import {
 	createHookPipeline,
+	EXCLUSIVE_HOOK_KEY_PREFIX,
+	getActiveContentSaveHookName,
 	resolveExclusiveHooks as resolveExclusiveHooksShared,
 	type HookPipeline,
 } from "./plugins/hooks.js";
-import { normalizeManifestRoute } from "./plugins/manifest-schema.js";
+import { disableRuntimePlugin, enableRuntimePlugin } from "./plugins/lifecycle.js";
+import { HOOK_NAMES, normalizeManifestRoute } from "./plugins/manifest-schema.js";
+import { updatePluginMediaMetadata } from "./plugins/media.js";
 import { extractRequestMeta, sanitizeHeadersForSandbox } from "./plugins/request-meta.js";
+import { PluginRouteRequestError } from "./plugins/route-wire.js";
 import {
 	buildRouteMeta,
 	parseRouteInput,
@@ -193,48 +288,59 @@ import {
 	type RouteCallerInput,
 	type RouteMeta,
 } from "./plugins/routes.js";
+import { isContentSaveRejection } from "./plugins/save-rejection.js";
 import type { CronScheduler } from "./plugins/scheduler/types.js";
-import { isPluginStateEnabled, PluginStateRepository } from "./plugins/state.js";
+import { isPluginStateEnabled, PluginStateRepository, rowToPluginState } from "./plugins/state.js";
+import type { PluginState } from "./plugins/state.js";
 import { syncDeclaredStorageIndexes } from "./plugins/storage-indexes.js";
-import { normalizeRegistryConfig } from "./registry/config.js";
+import { getRegistryConfigInput, resolveManifestRegistryConfig } from "./registry/config.js";
 import { requestCached } from "./request-cache.js";
 import { getRequestContext } from "./request-context.js";
 import { publishDueContent, type PublishedRef } from "./scheduled-publish.js";
 import { FTSManager } from "./search/fts-manager.js";
 import { invalidateSiteSettingsCache } from "./settings/index.js";
+import { assertSiteWriteAllowed } from "./transfer/fence.js";
 
-const FIELD_TYPE_TO_KIND: Record<FieldType, string> = {
-	string: "string",
-	slug: "string",
-	url: "url",
-	text: "richText",
-	number: "number",
-	integer: "number",
-	boolean: "boolean",
-	datetime: "datetime",
-	select: "select",
-	multiSelect: "multiSelect",
-	portableText: "portableText",
-	image: "image",
-	file: "file",
-	reference: "reference",
-	json: "json",
-	repeater: "repeater",
-};
-
-const DRAFT_ONLY_UPDATE_KEYS = new Set(["data", "slug", "locale", "skipRevision"]);
-const MAX_DRAFT_STAGE_ATTEMPTS = 32;
-
-const LIST_COLUMN_FIELD_TYPES: ReadonlySet<FieldType> = new Set([
-	"string",
-	"number",
-	"integer",
-	"boolean",
-	"datetime",
-	"select",
-	"multiSelect",
+const DRAFT_ONLY_UPDATE_KEYS = new Set([
+	"data",
+	"slug",
+	"locale",
+	"skipRevision",
+	"references",
+	"actor",
+	"migrateBlocks",
+	"replaceBlocks",
 ]);
 
+/** Field types whose schema is an array, so a stored blank string can never validate. */
+const ARRAY_FIELD_TYPES = new Set<string>(["portableText", "multiSelect", "repeater"]);
+const MAX_DRAFT_STAGE_ATTEMPTS = 32;
+const PLUGIN_INVOCATION_RELEASE_GRACE_MS = 60_000;
+
+type ContentPolicyHookName =
+	| "content:beforePublish"
+	| "content:beforeSchedule"
+	| "content:beforeUnpublish";
+
+interface ContentPolicyMutationOptions {
+	_rev?: string;
+	actor?: ActorInfo;
+	origin?: ContentActionOrigin;
+	pluginInvocationId?: string;
+}
+
+type ContentPolicyCheck =
+	| { allowed: true; revision: string }
+	| {
+			allowed: false;
+			revision: string;
+			error: { code: string; message: string };
+			cancellation?: { pluginId: string; reason: string };
+	  };
+
+/**
+ * Sandboxed plugin entry from virtual module
+ */
 export interface SandboxedPluginEntry {
 	id: string;
 	version: string;
@@ -244,55 +350,161 @@ export interface SandboxedPluginEntry {
 	lifecycleDisablePath?: string;
 	options: Record<string, unknown>;
 	code: string;
+	/** Capabilities the plugin requests */
 	capabilities: PluginCapability[];
+	/** Allowed hosts for network:fetch */
 	allowedHosts: string[];
+	/** Declared storage collections */
 	storage: PluginStorageConfig;
+	/** Serialized MCP declarations emitted at plugin build time. */
 	mcp?: PluginMcpManifestConfig;
+	/** Route declarations (name + public/permission/cacheControl), used for route auth decisions */
 	routes?: PluginManifest["routes"];
+	/** Hook declarations this plugin implements */
 	hooks?: PluginManifest["hooks"];
-	adminPages?: Array<{ path: string; label?: string; icon?: string }>;
+	/** Admin pages */
+	adminPages?: Array<{ path: string; label?: string; icon?: string; group?: string }>;
+	/** Dashboard widgets */
 	adminWidgets?: Array<{ id: string; title?: string; size?: string }>;
+	/** Saved-entry Block Kit panels. */
+	editorPanels?: PluginManifest["admin"]["editorPanels"];
+	/** Saved-entry host-rendered actions. */
+	editorActions?: PluginManifest["admin"]["editorActions"];
+	/** Settings schema for the auto-generated admin settings form */
 	settingsSchema?: Record<string, SettingField>;
+	/** Portable Text block types contributed to the editor (declarative Block Kit) */
 	portableTextBlocks?: PortableTextBlockConfig[];
+	/** Field widget types contributed for schema-field editing UIs */
 	fieldWidgets?: FieldWidgetConfig[];
+	/** Admin entry module */
 	adminEntry?: string;
+	/**
+	 * Exclusive hooks this plugin should be auto-selected for.
+	 * Weaker than an existing admin DB selection — config order wins when no selection exists.
+	 */
 	preferred?: string[];
 }
 
+export type ResolvedPluginEditorExtension =
+	| {
+			kind: "panel";
+			extension: PluginEditorPanel;
+			policy: BlockValidationPolicy;
+			capabilities: readonly PluginCapability[];
+	  }
+	| {
+			kind: "action";
+			extension: PluginEditorAction;
+			policy: BlockValidationPolicy;
+			capabilities: readonly PluginCapability[];
+	  };
+
+export interface PluginEditorExtensionDispatch {
+	ui: PluginUiContext;
+	kind: "panel" | "action";
+	policy: BlockValidationPolicy;
+}
+
+/**
+ * Media provider entry from virtual module
+ */
 export interface MediaProviderEntry {
 	id: string;
 	name: string;
 	icon?: string;
 	capabilities: MediaProviderCapabilities;
+	/** Factory function to create the provider instance */
 	createProvider: (ctx: MediaProviderContext) => MediaProvider;
 }
 
+/**
+ * Context passed to media provider factory functions
+ */
 export interface MediaProviderContext {
 	db: Kysely<Database>;
+	/**
+	 * Resolver for the live connection, preferred over `db` by providers that
+	 * query EmDash's database. Resolves the current request/event-scoped
+	 * connection from ALS so connection-backed adapters (Postgres over
+	 * Hyperdrive) don't reuse the per-isolate singleton's socket across events.
+	 * Providers should resolve per operation rather than capturing `db` once.
+	 * Omitted-safe: falls back to `db` for stateless adapters (D1, Node SQLite).
+	 */
 	getDb?: () => Kysely<Database>;
 	storage: Storage | null;
 }
 
+/**
+ * Builds the timer-based scheduler that drives cron ticks and maintenance.
+ * Injected via `virtual:emdash/scheduler` so the platform — not core — decides
+ * whether a long-lived heartbeat exists.
+ */
 export type CreateSchedulerFn = (executor: CronExecutor) => CronScheduler;
 
+/**
+ * Dependencies injected from virtual modules (middleware reads these)
+ */
 export interface RuntimeDependencies {
 	config: EmDashConfig;
+	/** Effective migration mode, resolved once by the runtime entrypoint. */
 	migrationMode?: RuntimeMigrationMode;
 	plugins: ResolvedPlugin[];
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	createDialect: (config: any) => Dialect;
+	/**
+	 * Factory for a dialect that batches same-turn reads into one round trip
+	 * ({@link EmDashRuntime.create} uses it for the cold-start read phase).
+	 * Present only on batching backends (D1, DO); absent backends fall back to
+	 * the singleton. Returns a fresh connection each call — it must never be the
+	 * long-lived singleton, whose coalescing buffer would be shared across
+	 * requests.
+	 */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	createCoalescingDialect?: (config: any) => Dialect | null;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	createStorage: ((config: any) => Storage) | null;
 	sandboxEnabled: boolean;
+	/** sandbox: false escape hatch - load sandboxed plugins in-process */
 	sandboxBypassed?: boolean;
+	/**
+	 * Factory for the timer-based cron/maintenance heartbeat. Supplied by the
+	 * generated `virtual:emdash/scheduler` module: a `NodeCronScheduler` factory
+	 * on long-lived runtimes (Node/Bun), or `null` on serverless adapters where
+	 * an external driver (e.g. the Cloudflare Worker's `scheduled()` Cron
+	 * Trigger) calls `runScheduledTasks()` instead. When absent or null, the
+	 * runtime starts no scheduler. Keeping the platform decision in the
+	 * integration means core has no adapter-specific runtime checks.
+	 */
 	createScheduler?: CreateSchedulerFn | null;
+	/** Media provider entries from virtual module */
 	mediaProviderEntries?: MediaProviderEntry[];
 	sandboxedPluginEntries: SandboxedPluginEntry[];
+	/** Factory function supplied by the active platform adapter. */
 	createSandboxRunner: SandboxRunnerFactory | null;
+	/** Clock used by cron scheduling, task execution, and scheduled publishing. */
+	now?: () => Date;
+	/** Site values supplied by hosts that do not load Astro's virtual config. */
+	siteInfo?: {
+		name?: string;
+		url?: string;
+		locale?: string;
+		trailingSlash?: "always" | "never" | "ignore";
+	};
 }
 
+/**
+ * Constructor parameters for `EmDashRuntime`.
+ *
+ * Production code should use `EmDashRuntime.create()` which discovers and
+ * loads all parts (database, plugins, hooks, cron, etc.) and then calls the
+ * constructor. Direct construction is supported for callers that already
+ * have all the dependencies in hand — for example, integration tests that
+ * supply a pre-migrated database and an empty plugin set.
+ *
+ * Every field corresponds 1:1 to internal state set on the runtime — none of
+ * these are derived. If you don't have a value for one, see what `create()`
+ * passes for that field as the canonical default.
+ */
 export interface EmDashRuntimeParts {
 	db: Kysely<Database>;
 	storage: Storage | null;
@@ -312,8 +524,17 @@ export interface EmDashRuntimeParts {
 	pipelineFactoryOptions: {
 		db: Kysely<Database>;
 		getDb?: () => Kysely<Database>;
-		beforeContentWrite?: () => Promise<void>;
+		beforeContentWrite?: ContentWriteGuard;
+		contentCreate?: PluginContentCreateCallback;
+		contentActions?: ContentActionCallbacks;
+		now?: () => Date;
 		storage?: Storage;
+		commentModerate?: (
+			pluginId: string,
+			id: string,
+			status: PluginCommentStatus,
+			expectedStatus: PluginCommentStatus,
+		) => Promise<PluginComment>;
 		siteInfo?: {
 			siteName?: string;
 			siteUrl?: string;
@@ -325,17 +546,98 @@ export interface EmDashRuntimeParts {
 	pipelineRef: { current: HookPipeline };
 }
 
+/**
+ * A `ContentSaveRejectedError` carries a message the plugin wrote for the
+ * editor; every other exception stays internal and is replaced by a generic
+ * message so hook internals cannot leak through the API.
+ */
+function beforeSaveFailure(error: unknown) {
+	if (isContentSaveRejection(error)) {
+		const sandbox = getSandboxSaveRejectionDetails(error);
+		if (sandbox) {
+			return {
+				success: false as const,
+				error: {
+					code: ErrorCode.SAVE_REJECTED,
+					message: error.message,
+					details: sandbox,
+				},
+			};
+		}
+		return {
+			success: false as const,
+			error: { code: ErrorCode.SAVE_REJECTED, message: error.message },
+		};
+	}
+	console.error("EmDash: content:beforeSave hook failed:", error);
+	return {
+		success: false as const,
+		error: {
+			code: ErrorCode.CONTENT_HOOK_ERROR,
+			message: "A plugin hook failed while saving content",
+		},
+	};
+}
+
+/**
+ * Convert a ContentItem to Record<string, unknown> for hook consumption.
+ * Hooks receive the full item as a flat record.
+ */
 function contentItemToRecord(item: ContentItemInternal): Record<string, unknown> {
 	return { ...item };
 }
 
+function toPluginContentItem(item: ContentItemInternal): PluginContentItem {
+	return {
+		id: item.id,
+		type: item.type,
+		slug: item.slug,
+		status: item.status,
+		locale: item.locale,
+		data: item.data,
+		createdAt: item.createdAt,
+		updatedAt: item.updatedAt,
+		publishedAt: item.publishedAt,
+		scheduledAt: item.scheduledAt,
+		authorId: item.authorId,
+		translationGroup: item.translationGroup,
+		liveRevisionId: item.liveRevisionId,
+		draftRevisionId: item.draftRevisionId,
+		version: item.version,
+		...(item.seo === undefined ? {} : { seo: item.seo }),
+	};
+}
+
+/**
+ * Db init lock reclaim deadline. Derived from the migration race wait so
+ * they can't drift apart: a healthy init can legitimately block for the
+ * full MIGRATION_RACE_WAIT_MS inside waitForConcurrentMigrator, plus cold
+ * connect and migrator work, before it should be presumed dead. The outer
+ * runtime init lock (middleware.ts) must use a strictly larger deadline —
+ * it wraps create() → getDatabase() → this lock, and equal deadlines would
+ * let the outer reclaim while the inner is legitimately still working.
+ */
 export const DB_INIT_DEADLINE_MS = MIGRATION_RACE_WAIT_MS + 20_000;
 
+/**
+ * Db cache + its init lock live on globalThis behind a Symbol: the bundler
+ * can duplicate this module across SSR chunks (same reasoning as
+ * request-cache.ts), and a duplicated cache/lock would mean concurrent
+ * independent db inits — and duplicate migrators — per isolate.
+ */
 const DB_HOLDER_KEY = Symbol.for("emdash:db-cache");
 interface DbHolder {
 	cache: Map<string, Kysely<Database>>;
 	lock: InitLock;
-	failures: Map<string, { at: number; message: string }>;
+	/**
+	 * Recent migration failures, keyed like `cache`. A failed migration is
+	 * near-certain to fail again immediately (schema conflict, broken
+	 * migration), and without this every request in a warm isolate would
+	 * re-attempt it — on Workers with Postgres that stampedes the database
+	 * through the migration advisory lock (#1744). Entries expire after
+	 * DB_INIT_FAILURE_BACKOFF_MS; a successful init clears them.
+	 */
+	failures: Map<string, { at: number; message: string; cause?: unknown }>;
 }
 const globalSymbolStore = globalThis as Record<symbol, unknown>;
 function getDbHolder(): DbHolder {
@@ -349,12 +651,45 @@ function getDbHolder(): DbHolder {
 		};
 		globalSymbolStore[DB_HOLDER_KEY] = holder;
 	}
+	// A holder created by an older copy of this module (dev-server HMR keeps
+	// globalThis across reloads) may predate the failures map.
 	holder.failures ??= new Map();
 	return holder;
 }
 
+/**
+ * After a database init fails (migrations threw), skip re-attempting for
+ * this long. Cold isolates still get one attempt each, so a transient
+ * failure heals on its own; a persistently failing migration is retried at
+ * most once per backoff window per isolate instead of on every request.
+ */
 const DB_INIT_FAILURE_BACKOFF_MS = 30_000;
 
+/**
+ * The most content rows auto mode migrates inside a deployed Worker request.
+ * Datetime normalization (079) issues about one statement per row it changes,
+ * a paid Worker invocation stops at 10,000 subrequests and 30 s of CPU by
+ * default, and the migrations around it need some of that budget too.
+ */
+const WORKER_AUTO_MIGRATION_CONTENT_ROW_LIMIT = 5_000;
+
+/** Local development enforces no Worker limits, and Node has none. */
+function autoMigrationContentRowLimit(): number | undefined {
+	if (import.meta.env.DEV) return undefined;
+	const onWorkers =
+		typeof navigator !== "undefined" &&
+		typeof navigator.userAgent === "string" &&
+		navigator.userAgent.includes("Cloudflare-Workers");
+	return onWorkers ? WORKER_AUTO_MIGRATION_CONTENT_ROW_LIMIT : undefined;
+}
+
+/**
+ * Auto-seed runs at most once per isolate per database. Its lock + "done" set
+ * live on globalThis (same bundler-duplication reasoning as the db cache) so a
+ * reclaimed-and-rerun `create()` can't seed a second time concurrently. The
+ * lock polls rather than sharing a promise, so it is safe to await across a
+ * cancelled owner in workerd.
+ */
 const SEED_HOLDER_KEY = Symbol.for("emdash:seed-state");
 interface SeedHolder {
 	done: Set<string>;
@@ -371,8 +706,20 @@ function getSeedHolder(): SeedHolder {
 }
 const storageCache = new Map<string, Storage>();
 const sandboxedPluginCache = new Map<string, SandboxedPluginInstance>();
+const sandboxedManifestCache = new Map<string, PluginManifest>();
+/**
+ * Per-tier sets of `${pluginId}:${version}` keys present in
+ * `sandboxedPluginCache`. Used during sync to know which entries belong
+ * to which install source so we can invalidate only what belongs to the
+ * tier currently being synced.
+ */
 const marketplacePluginKeys = new Set<string>();
 const registryPluginKeys = new Set<string>();
+/**
+ * Manifest metadata for runtime-installed sandboxed plugins (marketplace
+ * and registry both). Keyed by `pluginId`; readers don't care which
+ * source the plugin came from. Named `marketplace*` for legacy reasons.
+ */
 const marketplaceManifestCache = new Map<
 	string,
 	{
@@ -382,20 +729,60 @@ const marketplaceManifestCache = new Map<
 			pages?: PluginAdminPage[];
 			widgets?: PluginDashboardWidget[];
 			settingsSchema?: Record<string, SettingField>;
+			editorPanels?: PluginManifest["admin"]["editorPanels"];
+			editorActions?: PluginManifest["admin"]["editorActions"];
 		};
 		mcp?: PluginMcpManifestConfig;
 		storage?: PluginManifest["storage"];
+		allowedHosts?: string[];
+		capabilities?: PluginCapability[];
 	}
 >();
+/** Route metadata for sandboxed plugins: pluginId -> routeName -> RouteMeta */
 const sandboxedRouteMetaCache = new Map<string, Map<string, RouteMeta>>();
 let sandboxRunner: SandboxRunner | null = null;
 
+function allowedBrowserImageHosts(
+	capabilities: readonly PluginCapability[],
+	allowedHosts: readonly string[],
+): readonly string[] {
+	if (
+		capabilities.includes("network:request:unrestricted") ||
+		capabilities.includes("network:fetch:any")
+	) {
+		return ["*"];
+	}
+	if (capabilities.includes("network:request") || capabilities.includes("network:fetch")) {
+		return allowedHosts;
+	}
+	return [];
+}
+
+/**
+ * EmDashRuntime - singleton per worker
+ */
 export class EmDashRuntime {
+	/**
+	 * The singleton database instance (worker-lifetime cached).
+	 * Use the `db` getter instead — it checks the request context first
+	 * for per-request overrides (D1 read replica sessions, DO multi-site).
+	 */
 	private readonly _db: Kysely<Database>;
 	readonly storage: Storage | null;
 	readonly configuredPlugins: ResolvedPlugin[];
 	readonly sandboxedPlugins: Map<string, SandboxedPluginInstance>;
 	readonly sandboxedPluginEntries: SandboxedPluginEntry[];
+	/**
+	 * Schema registry bound to the current request/event-scoped connection.
+	 * Built per access (SchemaRegistry just wraps a db) against `this.db`, the
+	 * ALS-aware getter — never a captured snapshot of the singleton. On a
+	 * connection-backed adapter (Postgres over Hyperdrive) a captured singleton
+	 * would query a socket opened by an earlier event and trip workerd's
+	 * cross-request I/O guard; the catch in handlers like handleContentUpdate
+	 * would then silently treat a revision-enabled collection as non-revisioned
+	 * and write draft edits to live columns. Same reasoning as the per-call
+	 * registry in _buildManifest().
+	 */
 	get schemaRegistry(): SchemaRegistry {
 		return new SchemaRegistry(this.db);
 	}
@@ -408,21 +795,53 @@ export class EmDashRuntime {
 
 	private cronScheduler: CronScheduler | null;
 	private enabledPlugins: Set<string>;
+	/** Plugins whose activation hooks ran in this runtime. */
+	private readonly activatedPlugins = new Set<string>();
 	private pluginStates: Map<string, string>;
+	private readonly activePluginContentActions = new Map<string, number>();
+	private readonly pendingPluginAfterHooks = new Map<string, Array<() => Promise<void>>>();
+	private readonly activePluginInvocations = new Set<string>();
+	/** Timed-out sandbox invocations whose later actions must schedule hooks without another flush. */
+	private readonly releasedPluginInvocations = new Set<string>();
+	private readonly pluginInvocationCacheInvalidators = new Map<
+		string,
+		PluginContentCacheInvalidator
+	>();
+	private pluginContentCacheInvalidator?: PluginContentCacheInvalidator;
 
+	/**
+	 * Isolate-lifetime guard so FTS indexes are verified at most once per
+	 * worker rather than on every admin request. See ensureSearchHealthy().
+	 * Uses the poison-immune single-flight cache (never a shared awaitable
+	 * promise) so a cancelled first caller can't wedge later ones.
+	 */
 	private readonly _searchHealthCache = createSingleFlightCache<void>();
 
+	/** Current hook pipeline. Use the `hooks` getter for external access. */
 	get hooks(): HookPipeline {
 		return this._hooks;
 	}
 
+	/** All plugins eligible for the hook pipeline (includes built-in plugins).
+	 *  Stored so we can rebuild the pipeline when plugins are enabled/disabled. */
 	private allPipelinePlugins: ResolvedPlugin[];
+	/** Guards the once-per-process plugin storage-index sync. */
 	private storageIndexesSynced = false;
+	/** Factory options for the hook pipeline context factory */
 	private pipelineFactoryOptions: {
 		db: Kysely<Database>;
 		getDb?: () => Kysely<Database>;
-		beforeContentWrite?: () => Promise<void>;
+		beforeContentWrite?: ContentWriteGuard;
+		contentCreate?: PluginContentCreateCallback;
+		contentActions?: ContentActionCallbacks;
+		now?: () => Date;
 		storage?: Storage;
+		commentModerate?: (
+			pluginId: string,
+			id: string,
+			status: PluginCommentStatus,
+			expectedStatus: PluginCommentStatus,
+		) => Promise<PluginComment>;
 		siteInfo?: {
 			siteName?: string;
 			siteUrl?: string;
@@ -430,9 +849,19 @@ export class EmDashRuntime {
 			trailingSlash?: "always" | "never" | "ignore";
 		};
 	};
+	/** Dependencies needed for exclusive hook resolution */
 	private runtimeDeps: RuntimeDependencies;
+	/** Mutable ref for the cron invokeCronHook closure to read the current pipeline */
 	private pipelineRef!: { current: HookPipeline };
+	private readonly commentModerationInProgress = new Set<string>();
 
+	/**
+	 * Get the database instance for the current request.
+	 *
+	 * Checks the ALS-based request context first — middleware sets a
+	 * per-request Kysely instance there for D1 read replica sessions
+	 * or DO preview databases. Falls back to the singleton instance.
+	 */
 	get db(): Kysely<Database> {
 		const ctx = getRequestContext();
 		if (ctx?.db) {
@@ -440,6 +869,13 @@ export class EmDashRuntime {
 			return ctx.db as Kysely<Database>;
 		}
 		return this._db;
+	}
+
+	/** Bind the platform cache provider used by plugin actions, including request-less cron hooks. */
+	setPluginContentCacheInvalidator(
+		invalidateContentCache: PluginContentCacheInvalidator | undefined,
+	): void {
+		this.pluginContentCacheInvalidator = invalidateContentCache;
 	}
 
 	constructor(parts: EmDashRuntimeParts) {
@@ -463,14 +899,27 @@ export class EmDashRuntime {
 		this.pipelineRef = parts.pipelineRef;
 	}
 
+	/**
+	 * Get the sandbox runner instance (for marketplace install/update)
+	 */
 	getSandboxRunner(): SandboxRunner | null {
 		return sandboxRunner;
 	}
 
+	/**
+	 * Whether the sandbox bypass mode (sandbox: false) is active.
+	 * Marketplace install/update handlers use this to skip the
+	 * SANDBOX_NOT_AVAILABLE gate, since the bypass path loads
+	 * marketplace plugins in-process via syncMarketplacePlugins().
+	 */
 	isSandboxBypassed(): boolean {
 		return this.runtimeDeps.sandboxBypassed === true;
 	}
 
+	/**
+	 * Publish any content whose scheduled time has passed.
+	 * Returns the items promoted so callers can invalidate their cache tags.
+	 */
 	async publishScheduled(): Promise<PublishedRef[]> {
 		return this.publishScheduledWithFence();
 	}
@@ -478,21 +927,62 @@ export class EmDashRuntime {
 	private async publishScheduledWithFence(
 		onPublished?: (refs: PublishedRef[]) => Promise<void>,
 	): Promise<PublishedRef[]> {
-		await assertMediaUsageActivationWriteAllowed(this.db);
-		return publishDueContent(this.db, {
-			publish: (collection, id, options) => this.handleContentPublish(collection, id, options),
+		const recordWrite = await assertSiteWriteAllowed(this.db);
+		const currentTime = this.runtimeDeps.now?.() ?? new Date();
+		const published = await publishDueContent(this.db, {
+			publish: (collection, id, options) =>
+				this.handleContentPublish(collection, id, {
+					...options,
+					origin: { source: "scheduler" },
+				}),
 			onPublished,
+			currentTime,
 		});
+		if (published.length > 0) await recordWrite();
+		return published;
 	}
 
+	/**
+	 * Run the scheduled-maintenance batch: cron tasks, scheduled publishing,
+	 * and hourly system cleanup. For request-less drivers — the Cloudflare
+	 * `scheduled()` handler invokes this from a Cron Trigger. (On Node the
+	 * timer-based scheduler drives the same work itself.)
+	 *
+	 * Full cleanup runs only on the top of the hour so per-minute work stays
+	 * proportional to what is due; the heartbeat and scheduled publish sweep
+	 * still run every tick.
+	 *
+	 * Each step is independent and non-fatal. Returns the content promoted
+	 * by the publishing sweep so the caller can purge edge-cache tags.
+	 *
+	 * `onPublished` (optional) is awaited after each collection's batch so a
+	 * request-less driver can invalidate edge-cache tags incrementally rather
+	 * than only after the whole sweep — bounding stale-cache exposure if the
+	 * runtime is killed mid-sweep.
+	 */
 	async runScheduledTasks(
 		options: {
 			onPublished?: (refs: PublishedRef[]) => Promise<void>;
+			invalidateContentCache?: PluginContentCacheInvalidator;
 		} = {},
 	): Promise<{ published: PublishedRef[] }> {
+		const { published } = await this.runScheduledTasksWithStats(options);
+		return { published };
+	}
+
+	async runScheduledTasksWithStats(
+		options: {
+			onPublished?: (refs: PublishedRef[]) => Promise<void>;
+			invalidateContentCache?: PluginContentCacheInvalidator;
+		} = {},
+	): Promise<{ processed: number; published: PublishedRef[] }> {
+		if (options.invalidateContentCache) {
+			this.pluginContentCacheInvalidator = options.invalidateContentCache;
+		}
+		let processed = 0;
 		if (this.cronExecutor) {
 			try {
-				await this.cronExecutor.tick();
+				processed = await this.cronExecutor.tick();
 			} catch (error) {
 				console.error("[cron] Tick failed:", error);
 			}
@@ -503,6 +993,26 @@ export class EmDashRuntime {
 			}
 		}
 
+		const currentTime = this.runtimeDeps.now?.() ?? new Date();
+		const { published } = await this.runScheduledMaintenanceTick(options, currentTime);
+
+		return { processed, published };
+	}
+
+	/**
+	 * Time-gated maintenance pass shared by Cloudflare `scheduled()` and the
+	 * Node timer scheduler. Scheduled publishing and the heartbeat run every
+	 * tick; the heavier bookkeeping cleanups run only on the top of the hour so
+	 * per-minute work stays proportional to what is actually due. This keeps the
+	 * cold-start CPU budget on Workers Free from being consumed by cleanup
+	 * queries on every quiet-hours tick.
+	 */
+	private async runScheduledMaintenanceTick(
+		options: {
+			onPublished?: (refs: PublishedRef[]) => Promise<void>;
+		},
+		currentTime: Date,
+	): Promise<{ published: PublishedRef[] }> {
 		let published: PublishedRef[] = [];
 		try {
 			published = await this.publishScheduledWithFence(options.onPublished);
@@ -510,11 +1020,7 @@ export class EmDashRuntime {
 			console.error("[scheduled-publish] Sweep failed:", error);
 		}
 
-		try {
-			await runSystemCleanup(this.db, this.storage ?? undefined);
-		} catch (error) {
-			console.error("[cleanup] System cleanup failed:", error);
-		}
+		await this.runSystemCleanupIfDue(currentTime);
 
 		try {
 			await this.syncPluginStorageIndexesOnce();
@@ -522,60 +1028,123 @@ export class EmDashRuntime {
 			console.error("[plugins] Storage index sync failed:", error);
 		}
 
+		// Never throws; no-op unless scheduled backups are enabled and due.
 		await maybeRunScheduledBackup(this.db, this.storage ?? undefined);
-		await recordSchedulerHeartbeatSafely(this.db);
+		await recordSchedulerHeartbeatSafely(this.db, currentTime);
 
 		return { published };
 	}
 
+	private lastSystemCleanupAt: Date | null = null;
+
+	private shouldRunSystemCleanup(currentTime: Date): boolean {
+		return shouldRunSystemCleanupNow(currentTime, this.lastSystemCleanupAt);
+	}
+
+	private async runSystemCleanupIfDue(currentTime: Date): Promise<void> {
+		if (!this.shouldRunSystemCleanup(currentTime)) return;
+		this.lastSystemCleanupAt = currentTime;
+		try {
+			await runSystemCleanup(this.db, this.storage ?? undefined);
+		} catch (error) {
+			console.error("[cleanup] System cleanup failed:", error);
+		}
+	}
+
+	/**
+	 * Materialize plugin-declared storage indexes, once per process.
+	 *
+	 * Called from the scheduler path, not from request handlers — configured
+	 * plugins have no install handler, so the tick is their only sync moment.
+	 */
 	async syncPluginStorageIndexesOnce(): Promise<void> {
 		if (this.storageIndexesSynced) return;
 		this.storageIndexesSynced = true;
+		// Sandboxed marketplace/registry plugins never join allPipelinePlugins;
+		// their manifests are cached at bundle load. Without them, plugins
+		// installed before this feature shipped would never get their indexes.
 		await syncDeclaredStorageIndexes(this.db, [
 			...this.allPipelinePlugins,
 			...marketplaceManifestCache.values(),
 		]);
 	}
 
+	/**
+	 * Stop the cron scheduler gracefully.
+	 * Call during worker shutdown or hot-reload.
+	 */
 	async stopCron(): Promise<void> {
 		if (this.cronScheduler) {
 			await this.cronScheduler.stop();
 		}
 	}
 
+	/** Stop background work and discard loaded sandbox isolates. */
+	async shutdown(): Promise<void> {
+		await this.stopCron();
+		sandboxRunner?.setCommentModerate?.(null);
+		await sandboxRunner?.terminateAll();
+		sandboxRunner = null;
+		sandboxedPluginCache.clear();
+		sandboxedManifestCache.clear();
+		sandboxedRouteMetaCache.clear();
+		marketplaceManifestCache.clear();
+		marketplacePluginKeys.clear();
+		registryPluginKeys.clear();
+	}
+
+	/**
+	 * Update in-memory plugin status and rebuild the hook pipeline.
+	 *
+	 * Rebuilding the pipeline ensures disabled plugins' hooks stop firing
+	 * and re-enabled plugins' hooks start firing again without a restart.
+	 * Exclusive hook selections are re-resolved after each rebuild.
+	 */
 	async setPluginStatus(pluginId: string, status: "active" | "inactive"): Promise<void> {
 		const wasEnabled = this.enabledPlugins.has(pluginId);
 		const previousStatus = this.pluginStates.get(pluginId);
-		if (previousStatus === status && wasEnabled === (status === "active")) {
+		const unchanged =
+			status === "active"
+				? previousStatus === "active" && wasEnabled && this.activatedPlugins.has(pluginId)
+				: previousStatus === "inactive" && !wasEnabled;
+		if (unchanged) {
 			await setCronTasksEnabled(this.db, pluginId, status === "active");
 			return;
 		}
-		try {
-			if (status === "active") {
-				this.enabledPlugins.add(pluginId);
-				await this.rebuildHookPipeline();
-				const failed = (await this._hooks.runPluginActivate(pluginId)).find(
-					(result) => !result.success,
-				);
-				if (failed) throw failed.error ?? new Error(`Plugin activation failed: ${pluginId}`);
-			} else {
-				const failed = (await this._hooks.runPluginDeactivate(pluginId)).find(
-					(result) => !result.success,
-				);
-				if (failed) throw failed.error ?? new Error(`Plugin deactivation failed: ${pluginId}`);
+		if (status === "inactive") {
+			this.pluginStates.set(pluginId, status);
+			try {
+				// Deactivate hooks retain access until their cleanup has finished.
+				await this._hooks.runPluginDeactivate(pluginId);
+			} finally {
+				this.activatedPlugins.delete(pluginId);
+				this.setSandboxedPluginActive(pluginId, false);
 				this.enabledPlugins.delete(pluginId);
 				await this.rebuildHookPipeline();
+				await setCronTasksEnabled(this.db, pluginId, false);
 			}
-			await setCronTasksEnabled(this.db, pluginId, status === "active");
+			return;
+		}
+		try {
+			this.setSandboxedPluginActive(pluginId, true);
+			this.enabledPlugins.add(pluginId);
+			await this.rebuildHookPipeline();
+			const failed = (await this._hooks.runPluginActivate(pluginId)).find(
+				(result) => !result.success,
+			);
+			if (failed) throw failed.error ?? new Error(`Plugin activation failed: ${pluginId}`);
+			await setCronTasksEnabled(this.db, pluginId, true);
 			this.pluginStates.set(pluginId, status);
+			this.activatedPlugins.add(pluginId);
 		} catch (error) {
 			let cleanupError: Error | undefined;
-			if (status === "active" && !wasEnabled) {
+			if (!wasEnabled) {
 				const failed = (await this._hooks.runPluginDeactivate(pluginId)).find(
 					(result) => !result.success,
 				);
 				cleanupError = failed?.error;
 			}
+			this.setSandboxedPluginActive(pluginId, wasEnabled);
 			if (wasEnabled) this.enabledPlugins.add(pluginId);
 			else this.enabledPlugins.delete(pluginId);
 			if (previousStatus === undefined) this.pluginStates.delete(pluginId);
@@ -593,31 +1162,167 @@ export class EmDashRuntime {
 		}
 	}
 
+	private setSandboxedPluginActive(pluginId: string, active: boolean): void {
+		for (const [key, plugin] of this.sandboxedPlugins) {
+			if (key.slice(0, key.lastIndexOf(":")) === pluginId) {
+				plugin.setActive?.(active);
+			}
+		}
+	}
+
+	async handlePluginEnable(pluginId: string) {
+		return enableRuntimePlugin(this, pluginId);
+	}
+
+	async handlePluginDisable(pluginId: string) {
+		return disableRuntimePlugin(this, pluginId);
+	}
+
+	/** Dispatch teardown lifecycle while the runtime-installed isolate is still loaded. */
+	async runPluginUninstallLifecycle(pluginId: string, deleteData: boolean): Promise<void> {
+		const active = this.isPluginEnabled(pluginId);
+		if (active) {
+			try {
+				await this._hooks.runPluginDeactivate(pluginId);
+			} catch (error) {
+				console.error(`EmDash: Plugin ${pluginId} deactivate hook failed during uninstall:`, error);
+			}
+		}
+
+		try {
+			const results = await this._hooks.runPluginUninstall(pluginId, deleteData);
+			if (results.length > 0) return;
+			await this.findSandboxedPlugin(pluginId)?.invokeHook("plugin:uninstall", { deleteData });
+		} catch (error) {
+			console.error(`EmDash: Plugin ${pluginId} uninstall hook failed:`, error);
+		}
+	}
+
+	async runPluginInstallLifecycle(pluginId: string): Promise<void> {
+		await this._hooks.runPluginInstall(pluginId);
+		await this._hooks.runPluginActivate(pluginId);
+	}
+
+	async runPluginActivateLifecycle(pluginId: string): Promise<void> {
+		await this._hooks.runPluginActivate(pluginId);
+	}
+
+	/**
+	 * Run install → activate once for each native plugin registered in the
+	 * integration config that has no `_plugin_state` row.
+	 *
+	 * Only the isolate whose insert creates the row runs the hooks. A plugin
+	 * whose hooks fail is recorded as inactive rather than retried on later
+	 * boots; re-enabling it from the admin runs `plugin:activate`.
+	 */
+	private async installUnrecordedConfigPlugins(
+		configPlugins: ResolvedPlugin[],
+		recordedStates: ReadonlyMap<string, string>,
+	): Promise<void> {
+		const stateRepo = new PluginStateRepository(this.db);
+		const failed: ResolvedPlugin[] = [];
+		const recordFailure = (plugin: ResolvedPlugin, hook: string, error: Error | undefined) => {
+			console.error(
+				`EmDash: ${hook} failed for config plugin "${plugin.id}"; disabling it:`,
+				error,
+			);
+			failed.push(plugin);
+		};
+
+		for (const plugin of configPlugins) {
+			if (recordedStates.has(plugin.id)) continue;
+
+			try {
+				if (!(await stateRepo.createActiveIfAbsent(plugin.id, plugin.version, "config"))) continue;
+				this.pluginStates.set(plugin.id, "active");
+
+				const install = await this._hooks.runPluginInstall(plugin.id);
+				const installFailure = install.find((result) => !result.success);
+				if (installFailure) {
+					recordFailure(plugin, "plugin:install", installFailure.error);
+					continue;
+				}
+
+				const activate = await this._hooks.runPluginActivate(plugin.id);
+				const activateFailure = activate.find((result) => !result.success);
+				if (activateFailure) {
+					recordFailure(plugin, "plugin:activate", activateFailure.error);
+				}
+			} catch (error) {
+				console.error(`EmDash: Config plugin "${plugin.id}" install/activate failed:`, error);
+			}
+		}
+
+		if (failed.length === 0) return;
+		for (const plugin of failed) {
+			try {
+				await stateRepo.disable(plugin.id, plugin.version);
+				await setCronTasksEnabled(this.db, plugin.id, false);
+			} catch (error) {
+				console.error(`EmDash: Failed to record config plugin "${plugin.id}" as disabled:`, error);
+			}
+			this.pluginStates.set(plugin.id, "inactive");
+			this.enabledPlugins.delete(plugin.id);
+		}
+		await this.rebuildHookPipeline();
+	}
+
+	/**
+	 * Rebuild the hook pipeline from the current set of enabled plugins.
+	 *
+	 * Filters `allPipelinePlugins` to only those in `enabledPlugins`,
+	 * creates a fresh HookPipeline, re-resolves exclusive hook selections,
+	 * and re-wires the context factory so existing references (cron
+	 * callbacks, email pipeline) use the new pipeline.
+	 */
 	private async rebuildHookPipeline(): Promise<void> {
 		const enabledList = this.allPipelinePlugins.filter((p) => this.enabledPlugins.has(p.id));
 		const newPipeline = createHookPipeline(enabledList, this.pipelineFactoryOptions);
 
+		// Re-resolve exclusive hooks against the new pipeline
 		await EmDashRuntime.resolveExclusiveHooks(newPipeline, this.db, this.runtimeDeps);
 
+		// Carry over context factory options from the old pipeline so that
+		// email, cron reschedule, and other wired-in options are preserved.
+		// The old pipeline's contextFactoryOptions were built up incrementally
+		// via setContextFactory calls during create(). We replay them here.
 		if (this.email) {
+			// db/getDb are already wired by createHookPipeline above (they live in
+			// pipelineFactoryOptions), so the merge only adds emailPipeline.
 			newPipeline.setContextFactory({ emailPipeline: this.email });
 		}
 		newPipeline.setContextFactory({
+			// Plugin schedules remain database-backed when no in-process scheduler
+			// exists; an external trigger is responsible for invoking due tasks.
 			cronReschedule: () => this.cronScheduler?.reschedule(),
 		});
 
+		// Update the email pipeline to use the new hook pipeline
 		if (this.email) {
 			this.email.setPipeline(newPipeline);
 		}
 
+		// Update the mutable ref so the cron closure dispatches through
+		// the new pipeline without needing to reconstruct the CronExecutor.
 		this.pipelineRef.current = newPipeline;
 
 		this._hooks = newPipeline;
 	}
 
+	/**
+	 * Synchronize marketplace plugin runtime state with DB + storage.
+	 *
+	 * Ensures install/update/uninstall changes take effect immediately in the
+	 * current worker: loads newly active plugins and removes uninstalled ones.
+	 */
 	async syncMarketplacePlugins(): Promise<void> {
 		if (!this.config.marketplace) return;
 
+		// In sandbox bypass mode (sandbox: false), the noop runner reports
+		// unavailable but we still want admin metadata for newly installed
+		// marketplace plugins to refresh in-process. Hooks/routes still won't
+		// execute (matches the cold-start bypass behavior), but Configure
+		// links and admin pages appear immediately.
 		if (this.runtimeDeps.sandboxBypassed) {
 			await this.syncMarketplacePluginsBypassed();
 			return;
@@ -626,16 +1331,33 @@ export class EmDashRuntime {
 		await this.syncSandboxedSourcePlugins("marketplace");
 	}
 
+	/**
+	 * Synchronize registry plugin runtime state with DB + storage.
+	 *
+	 * Mirrors {@link syncMarketplacePlugins} for plugins installed via the
+	 * experimental decentralized plugin registry. Called after install,
+	 * update, and uninstall handlers complete.
+	 */
 	async syncRegistryPlugins(): Promise<void> {
-		if (!this.config.experimental?.registry) return;
+		if (!getRegistryConfigInput(this.config.registry)) return;
 		await this.syncSandboxedSourcePlugins("registry");
 	}
 
+	/**
+	 * Internal: reconcile in-memory sandboxed-plugin state with the
+	 * `_plugin_state` table for the given source tier. Shared
+	 * implementation behind {@link syncMarketplacePlugins} and
+	 * {@link syncRegistryPlugins}.
+	 *
+	 * Each source tier has its own key set in `${source}PluginKeys` so a
+	 * sync for one tier doesn't invalidate the other.
+	 */
 	private async syncSandboxedSourcePlugins(source: "marketplace" | "registry"): Promise<void> {
 		if (!this.storage) return;
 		if (!sandboxRunner || !sandboxRunner.isAvailable()) return;
 
 		const keySet = source === "marketplace" ? marketplacePluginKeys : registryPluginKeys;
+		let pipelineChanged = false;
 
 		try {
 			const stateRepo = new PluginStateRepository(this.db);
@@ -653,11 +1375,14 @@ export class EmDashRuntime {
 					this.enabledPlugins.delete(state.pluginId);
 				}
 				if (state.status !== "active") continue;
+				// Marketplace plugins use `marketplaceVersion` when present;
+				// registry plugins always use `version`.
 				const desiredVersion =
 					source === "marketplace" ? (state.marketplaceVersion ?? state.version) : state.version;
 				desired.set(state.pluginId, desiredVersion);
 			}
 
+			// Remove uninstalled or no-longer-active plugins from memory.
 			const keysToRemove: string[] = [];
 			for (const key of keySet) {
 				const [pluginId] = key.split(":");
@@ -686,14 +1411,18 @@ export class EmDashRuntime {
 				}
 
 				sandboxedPluginCache.delete(key);
+				sandboxedManifestCache.delete(key);
 				this.sandboxedPlugins.delete(key);
+				this.removePluginFromLists(pluginId);
 				keySet.delete(key);
+				pipelineChanged = true;
 				if (pluginId) {
 					sandboxedRouteMetaCache.delete(pluginId);
 					marketplaceManifestCache.delete(pluginId);
 				}
 			}
 
+			// Load newly active plugins.
 			for (const [pluginId, version] of desired) {
 				const key = `${pluginId}:${version}`;
 				if (sandboxedPluginCache.has(key)) {
@@ -709,17 +1438,24 @@ export class EmDashRuntime {
 
 				const loaded = await sandboxRunner.load(bundle.manifest, bundle.backendCode);
 				sandboxedPluginCache.set(key, loaded);
+				sandboxedManifestCache.set(key, bundle.manifest);
 				this.sandboxedPlugins.set(key, loaded);
+				this.allPipelinePlugins.push(createSandboxedPluginProxy(bundle.manifest, loaded));
 				keySet.add(key);
+				pipelineChanged = true;
 
+				// Cache manifest admin config for getManifest()
 				marketplaceManifestCache.set(pluginId, {
 					id: bundle.manifest.id,
 					version: bundle.manifest.version,
 					admin: bundle.manifest.admin,
 					mcp: bundle.manifest.mcp,
 					storage: bundle.manifest.storage,
+					allowedHosts: bundle.manifest.allowedHosts,
+					capabilities: bundle.manifest.capabilities,
 				});
 
+				// Cache route metadata from manifest for auth decisions
 				if (bundle.manifest.routes.length > 0) {
 					const routeMetaMap = new Map<string, RouteMeta>();
 					for (const entry of bundle.manifest.routes) {
@@ -731,11 +1467,19 @@ export class EmDashRuntime {
 					sandboxedRouteMetaCache.delete(pluginId);
 				}
 			}
+
+			if (pipelineChanged) {
+				await this.rebuildHookPipeline();
+			}
 		} catch (error) {
 			console.error(`EmDash: Failed to sync ${source} plugins:`, error);
 		}
 	}
 
+	/**
+	 * Remove a plugin from the in-memory pipeline lists by ID.
+	 * Mutates allPipelinePlugins and configuredPlugins in place.
+	 */
 	private removePluginFromLists(pluginId: string): void {
 		const allIdx = this.allPipelinePlugins.findIndex((p) => p.id === pluginId);
 		if (allIdx !== -1) this.allPipelinePlugins.splice(allIdx, 1);
@@ -743,6 +1487,24 @@ export class EmDashRuntime {
 		if (configIdx !== -1) this.configuredPlugins.splice(configIdx, 1);
 	}
 
+	/**
+	 * Sync marketplace plugin metadata in sandbox: false bypass mode.
+	 *
+	 * In bypass mode the noop runner can't load plugins, but admin pages,
+	 * widgets, and route metadata still need to refresh in-process when an
+	 * admin installs/updates/uninstalls a marketplace plugin. Otherwise the
+	 * admin UI shows stale data until the server restarts.
+	 *
+	 * Hooks and routes still won't execute under bypass (matches the
+	 * cold-start bypass behavior in loadMarketplacePluginsBypassed).
+	 *
+	 * Known limitation: bypass plugins are loaded via `import(dataUrl)`,
+	 * which Node's ESM cache keys on the full URL. Updates create fresh
+	 * module objects, but old ones remain cached for the worker's lifetime.
+	 * In practice this is a few KB per update — only matters for sites with
+	 * very frequent marketplace updates running long-lived processes. The
+	 * fix would be vm.SourceTextModule for explicit lifecycle management.
+	 */
 	private async syncMarketplacePluginsBypassed(): Promise<void> {
 		if (!this.storage) return;
 		try {
@@ -761,11 +1523,13 @@ export class EmDashRuntime {
 				desired.set(state.pluginId, state.marketplaceVersion ?? state.version);
 			}
 
+			// Drop metadata for plugins no longer active.
 			const toRemove: string[] = [];
 			for (const pluginId of marketplaceManifestCache.keys()) {
 				if (!desired.has(pluginId)) toRemove.push(pluginId);
 			}
 			for (const pluginId of toRemove) {
+				// Fire plugin:deactivate hook before removal
 				const resolved = this.allPipelinePlugins.find((p) => p.id === pluginId);
 				if (resolved) {
 					try {
@@ -774,6 +1538,10 @@ export class EmDashRuntime {
 							const handler =
 								typeof deactivateHook === "function" ? deactivateHook : deactivateHook.handler;
 							if (typeof handler === "function") {
+								// Sandbox-bypass cleanup: the plugin context isn't constructable
+								// here (no DB binding, no media, etc.), but well-behaved
+								// deactivate hooks should be no-op safe. If a hook does require
+								// ctx, it throws and the surrounding catch logs it.
 								// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- best-effort cleanup; see comment above
 								await handler({ pluginId }, {} as never);
 							}
@@ -784,10 +1552,13 @@ export class EmDashRuntime {
 				}
 				marketplaceManifestCache.delete(pluginId);
 				sandboxedRouteMetaCache.delete(pluginId);
+				// Remove from pipeline lists too (mutate in place since the
+				// arrays are readonly references but mutable contents)
 				this.removePluginFromLists(pluginId);
 				this.enabledPlugins.delete(pluginId);
 			}
 
+			// Load plugin code, adapt as trusted plugins, and add to pipeline lists
 			const { adaptSandboxEntry } = await import("./plugins/adapt-sandbox-entry.js");
 			const newPlugins: ResolvedPlugin[] = [];
 			for (const [pluginId, version] of desired) {
@@ -802,6 +1573,8 @@ export class EmDashRuntime {
 					admin: bundle.manifest.admin,
 					mcp: bundle.manifest.mcp,
 					storage: bundle.manifest.storage,
+					allowedHosts: bundle.manifest.allowedHosts,
+					capabilities: bundle.manifest.capabilities,
 				});
 				if (bundle.manifest.routes.length > 0) {
 					const routeMetaMap = new Map<string, RouteMeta>();
@@ -814,15 +1587,20 @@ export class EmDashRuntime {
 					sandboxedRouteMetaCache.delete(pluginId);
 				}
 
+				// Skip if already in the pipeline at this version
 				const existing = this.allPipelinePlugins.find((p) => p.id === pluginId);
 				if (existing && existing.version === bundle.manifest.version) continue;
 
+				// Remove any older version
 				if (existing) {
 					this.removePluginFromLists(pluginId);
 				}
 
 				try {
 					const dataUrl = `data:text/javascript;base64,${Buffer.from(bundle.backendCode).toString("base64")}`;
+					// Dynamic data: import returns `any` from a base64-encoded module.
+					// We trust the bundle to be shaped like a plugin (built by plugin-cli);
+					// adaptSandboxEntry then validates fields it cares about.
 					// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- dynamic module from trusted bundle
 					const pluginModule = (await import(/* @vite-ignore */ dataUrl)) as Record<
 						string,
@@ -847,6 +1625,9 @@ export class EmDashRuntime {
 								w.size === "full" || w.size === "half" || w.size === "third" ? w.size : undefined,
 						})),
 						settingsSchema: bundle.manifest.admin?.settingsSchema,
+						editorPanels: bundle.manifest.admin?.editorPanels,
+						editorActions: bundle.manifest.admin?.editorActions,
+						mcp: bundle.manifest.mcp,
 					});
 					newPlugins.push(adapted);
 					this.allPipelinePlugins.push(adapted);
@@ -860,6 +1641,8 @@ export class EmDashRuntime {
 				}
 			}
 
+			// If anything changed, rebuild the hook pipeline so new/removed
+			// plugins take effect immediately without a server restart.
 			if (toRemove.length > 0 || newPlugins.length > 0) {
 				await this.rebuildHookPipeline();
 			}
@@ -868,10 +1651,17 @@ export class EmDashRuntime {
 		}
 	}
 
+	/**
+	 * Create and initialize the runtime
+	 */
 	static async create(
 		deps: RuntimeDependencies,
 		timings?: Array<{ name: string; dur: number; desc?: string }>,
 	): Promise<EmDashRuntime> {
+		// Helper: time a phase and push into the shared timings array when
+		// provided. Uses performance.now() — monotonic across async boundaries.
+		// No-op when `timings` wasn't passed (preserves backwards compatibility
+		// with callers that don't care about per-phase breakdown).
 		const phase = async <T>(name: string, desc: string, fn: () => Promise<T>): Promise<T> => {
 			if (!timings) return fn();
 			const t0 = performance.now();
@@ -882,21 +1672,43 @@ export class EmDashRuntime {
 			}
 		};
 
+		// Initialize the database and enforce its configured migration policy.
 		const db = await phase("rt.db", "DB init + migration policy", () =>
 			EmDashRuntime.getDatabase(deps),
 		);
 
+		// Resolver for the live connection, mirroring the `get db()` getter
+		// below (which can't be used here — the runtime instance doesn't exist
+		// yet). Long-lived subsystems built during create() (cron executor,
+		// plugin context factory, media providers) capture this resolver rather
+		// than the `db` snapshot, so a connection-backed adapter (Postgres over
+		// Hyperdrive) serves their queries from the current request/event-scoped
+		// connection in ALS instead of the per-isolate singleton — whose socket
+		// belongs to an earlier request and would trip workerd's cross-request
+		// I/O guard. Stateless adapters (D1, Node SQLite) set no ALS db on most
+		// paths, so this falls back to the singleton: unchanged behavior.
 		const resolveDb = (): Kysely<Database> => {
 			const ctx = getRequestContext();
 			// eslint-disable-next-line typescript/no-unsafe-type-assertion -- ALS db is typed unknown to avoid a circular import; middleware always sets a Kysely<Database>
 			return (ctx?.db as Kysely<Database> | undefined) ?? db;
 		};
 
+		// Validate EMDASH_ENCRYPTION_KEY once here so a malformed value
+		// surfaces in startup logs. Plugin secret-setting operations re-read
+		// the key and fail closed at their own boundary, so validation here
+		// does not block unrelated request paths.
 		await phase("rt.secrets", "Validate encryption key", () => validateEncryptionKeyAtStartup());
 
+		// FTS verify/repair is deferred off the cold-start hot path.
+		// See EmDashRuntime.ensureSearchHealthy().
+
+		// Initialize storage (sync)
 		const storage = EmDashRuntime.getStorage(deps);
 
 		let pluginStates: Map<string, string> = new Map();
+		let pluginStatesRead = false;
+		let installedPluginStates: PluginState[] = [];
+		let exclusiveHookSelections: Map<string, string | undefined> | undefined;
 		const configuredLocales: string[] =
 			virtualConfig?.i18n?.locales ?? getI18nConfig()?.locales ?? [];
 		const localeCasingRepairVersion = getLocaleCasingRepairVersion(configuredLocales);
@@ -909,11 +1721,25 @@ export class EmDashRuntime {
 					trailingSlash?: "always" | "never" | "ignore";
 			  }
 			| undefined;
-		let seedGate = { collectionCount: 1, setupDone: true };
+		// "Already complete" by default so a read failure (e.g. tables absent on a
+		// pre-migration db) skips seeding rather than seeding a half-built db.
+		let seedComplete = true;
+		let setupDone = true;
+		let seedCollectionsReadable = false;
 
+		// Seeding must only touch the configured singleton, never a borrowed
+		// per-request db (playground / DO preview) or the loader-fallback db.
 		const reqCtx = getRequestContext();
 		const ownsConfiguredDb = !!deps.config.database && !(reqCtx?.dbIsIsolated && reqCtx.db);
 
+		// Run the init reads on a coalescing connection so the concurrent
+		// same-turn reads flush as one batch() round trip. The singleton can't:
+		// its plain SqliteAdapter reports supportsMultipleConnections=false, so
+		// Kysely's connection mutex serializes concurrent reads into N round
+		// trips. The connection is per-init and discarded — the long-lived
+		// singleton must never coalesce or one request's reads could land in
+		// another's batch. Backends without a coalescing dialect (Node/SQLite)
+		// fall back to the singleton, where serialization costs nothing.
 		let readDb = db;
 		let readDbDisposable: Kysely<Database> | undefined;
 		const disposeReadDb = async () => {
@@ -922,7 +1748,9 @@ export class EmDashRuntime {
 			if (!disposable) return;
 			try {
 				await disposable.destroy();
-			} catch {}
+			} catch {
+				// Non-fatal — the underlying binding is shared and needs no teardown.
+			}
 		};
 		if (ownsConfiguredDb && deps.createCoalescingDialect && deps.config.database) {
 			try {
@@ -944,31 +1772,50 @@ export class EmDashRuntime {
 		};
 
 		const readSiteInfo = async () => {
-			const siteOpts = await optionsRepo.getMany<string>([
+			const siteOpts = await optionsRepo.getMany([
 				"emdash:site_title",
+				"site:url",
 				"emdash:site_url",
 				"emdash:locale",
 				LOCALE_CASING_REPAIR_OPTION,
+				AUTO_SEED_COMPLETE_OPTION,
+				SETUP_COMPLETE_OPTION,
 			]);
-			storedLocaleCasingRepairVersion = siteOpts.get(LOCALE_CASING_REPAIR_OPTION);
+			const siteTitle = siteOpts.get("emdash:site_title");
+			const siteUrl = resolveSiteOrigin(
+				deps.config,
+				siteOpts.get("site:url"),
+				siteOpts.get("emdash:site_url"),
+			);
+			const locale = siteOpts.get("emdash:locale");
+			const repairVersion = siteOpts.get(LOCALE_CASING_REPAIR_OPTION);
+			storedLocaleCasingRepairVersion =
+				typeof repairVersion === "string" ? repairVersion : undefined;
+			seedComplete = siteOpts.get(AUTO_SEED_COMPLETE_OPTION) === true;
+			setupDone = siteOpts.get(SETUP_COMPLETE_OPTION) === true;
 			return {
-				siteName: siteOpts.get("emdash:site_title") ?? undefined,
-				siteUrl: siteOpts.get("emdash:site_url") ?? undefined,
-				locale: siteOpts.get("emdash:locale") ?? undefined,
-				trailingSlash: virtualConfig?.trailingSlash,
+				siteName: deps.siteInfo?.name ?? (typeof siteTitle === "string" ? siteTitle : undefined),
+				siteUrl: deps.siteInfo?.url ?? siteUrl,
+				locale: deps.siteInfo?.locale ?? (typeof locale === "string" ? locale : undefined),
+				// trailingSlash is a build-time Astro routing decision, not a
+				// user-editable setting, so it comes from the Astro config
+				// (virtual:emdash/config), not the options table.
+				trailingSlash: deps.siteInfo?.trailingSlash ?? virtualConfig?.trailingSlash,
 			};
 		};
 
 		const coldStartReads: Array<Promise<void>> = [
 			phase("rt.plugins", "Plugin states", async () => {
 				try {
-					const states = await readDb
-						.selectFrom("_plugin_state")
-						.select(["plugin_id", "status"])
-						.execute();
+					const states = await readDb.selectFrom("_plugin_state").selectAll().execute();
 					pluginStates = new Map(states.map((s) => [s.plugin_id, s.status]));
+					pluginStatesRead = true;
+					installedPluginStates = states
+						.filter((s) => s.source === "marketplace" || s.source === "registry")
+						.map(rowToPluginState);
 				} catch (error) {
 					captureMissingManualSchema(error);
+					// _plugin_state may not exist yet on a pre-migration db.
 				}
 			}),
 			phase("rt.site", "Site info options", async () => {
@@ -976,6 +1823,30 @@ export class EmDashRuntime {
 					siteInfo = await readSiteInfo();
 				} catch (error) {
 					captureMissingManualSchema(error);
+					// options may not exist yet on a pre-migration db.
+				}
+			}),
+			phase("rt.hookselections", "Exclusive hook selections", async () => {
+				// Built-in and sandboxed providers register after these reads, so
+				// only configured plugins' hooks and the always-present
+				// comment:moderate are known here. Hook resolution reads the rest.
+				const keys = Array.from(
+					new Set([
+						"comment:moderate",
+						...deps.plugins.flatMap((plugin) =>
+							Object.entries(plugin.hooks)
+								.filter(([, hook]) => hook?.exclusive)
+								.map(([name]) => name),
+						),
+					]),
+					(name) => `${EXCLUSIVE_HOOK_KEY_PREFIX}${name}`,
+				);
+				try {
+					const stored = await optionsRepo.getMany<string>(keys);
+					exclusiveHookSelections = new Map(keys.map((key) => [key, stored.get(key)]));
+				} catch (error) {
+					captureMissingManualSchema(error);
+					// Hook resolution reads the selections itself when this fails.
 				}
 			}),
 		];
@@ -984,27 +1855,19 @@ export class EmDashRuntime {
 			coldStartReads.push(
 				phase("rt.seedcheck", "Auto-seed gate", async () => {
 					try {
-						const [collectionCount, setupOption] = await Promise.all([
-							readDb
-								.selectFrom("_emdash_collections")
-								.select((eb) => eb.fn.countAll<number>().as("count"))
-								.executeTakeFirstOrThrow(),
-							readDb
-								.selectFrom("options")
-								.select("value")
-								.where("name", "=", "emdash:setup_complete")
-								.executeTakeFirst(),
-						]);
-						const setupDone = (() => {
-							try {
-								return !!setupOption && JSON.parse(setupOption.value) === true;
-							} catch {
-								return false;
-							}
-						})();
-						seedGate = { collectionCount: collectionCount.count, setupDone };
+						// Selecting the slugs instead of COUNT(*) costs the same
+						// round trip and primes the registered-collections cache,
+						// so the first render on this isolate skips its own lookup.
+						const collectionRows = await readDb
+							.selectFrom("_emdash_collections")
+							.select("slug")
+							.execute();
+						primeRegisteredCollections(collectionRows.map((row) => row.slug));
+						seedCollectionsReadable = true;
 					} catch (error) {
 						captureMissingManualSchema(error);
+						// Leave collections unreadable so a read failure never triggers
+						// a seed onto a half-built db.
 					}
 				}),
 			);
@@ -1030,7 +1893,11 @@ export class EmDashRuntime {
 			});
 		}
 
-		if (seedGate.collectionCount === 0 && !seedGate.setupDone) {
+		// Auto-seed the default schema for a first load that skipped the setup
+		// wizard (the wizard and dev-bypass apply seeds explicitly). Run under a
+		// per-isolate lock keyed by the configured db so a reclaimed-and-rerun
+		// create() can't apply the seed a second time concurrently.
+		if (seedCollectionsReadable && !seedComplete && !setupDone) {
 			try {
 				const activation = await activateMediaUsageCapture(db, { writersDrained: true });
 				if (activation.outcome !== "active") {
@@ -1053,21 +1920,35 @@ export class EmDashRuntime {
 
 						const seed = await loadSeed();
 						const validation = validateSeed(seed);
-						if (validation.valid) {
-							await applySeed(db, seed, { onConflict: "skip" });
-							console.log("Auto-seeded default collections");
+						if (!validation.valid) return false;
+
+						const seedResult = await applySeed(db, seed, { onConflict: "skip" });
+						await new OptionsRepository(db).set(AUTO_SEED_COMPLETE_OPTION, true);
+						console.log("Auto-seeded default collections");
+						if (seedResult.taxonomies.skipped > 0) {
+							console.warn(
+								`[auto-seed] Kept ${seedResult.taxonomies.skipped} existing taxonomy definition(s) instead of the seed's. Edit them in the admin, or run \`emdash seed <file> --on-conflict update\` to replace them (this also overwrites other seeded records).`,
+							);
 						}
 						seedHolder.done.add(seedKey);
 						return true;
 					},
 					{ deadlineMs: DB_INIT_DEADLINE_MS, anchor: (promise) => after(() => promise) },
 				);
+				// The site-info read ran before the seed wrote its defaults, so
+				// refresh the snapshot the plugin context sees.
 				try {
 					siteInfo = await readSiteInfo();
-				} catch {}
-			} catch {}
+				} catch {
+					// Non-fatal — plugin context falls back to undefined fields.
+				}
+			} catch {
+				// Non-fatal — a failed seed (e.g. missing seed module) leaves the
+				// site un-seeded; a later request retries.
+			}
 		}
 
+		// The read connection is single-use; everything below uses the singleton.
 		await disposeReadDb();
 
 		const enabledPlugins = new Set<string>();
@@ -1078,10 +1959,20 @@ export class EmDashRuntime {
 			}
 		}
 
+		// Build the full list of pipeline-eligible plugins: all configured
+		// plugins (regardless of current enabled status) plus built-in plugins.
+		// rebuildHookPipeline() filters this to only enabled plugins.
 		const allPipelinePlugins: ResolvedPlugin[] = [...deps.plugins];
 
+		// Collected bypassed plugins (sandbox: false escape hatch).
+		// These need to be added to BOTH the pipeline (for hooks) AND the
+		// configuredPlugins list (for route dispatch).
 		const bypassedPluginsList: ResolvedPlugin[] = [];
 
+		// In dev mode, register a built-in console email provider.
+		// It participates in exclusive hook resolution like any other plugin —
+		// auto-selected when it's the sole provider, overridden when a real one is configured.
+		// Gated by import.meta.env.DEV to prevent silent email loss in production.
 		if (import.meta.env.DEV) {
 			try {
 				const devConsolePlugin = definePlugin({
@@ -1096,12 +1987,17 @@ export class EmDashRuntime {
 					},
 				});
 				allPipelinePlugins.push(devConsolePlugin);
+				// Built-in plugins are always enabled
 				enabledPlugins.add(devConsolePlugin.id);
 			} catch (error) {
 				console.warn("[email] Failed to register dev console email provider:", error);
 			}
 		}
 
+		// Register built-in default comment moderator.
+		// Always present as a fallback: exclusive hook resolution selects a
+		// single plugin moderator (e.g. AI moderation) over it unless the site
+		// has already stored a comment:moderate selection.
 		try {
 			const defaultModeratorPlugin = definePlugin({
 				id: DEFAULT_COMMENT_MODERATOR_PLUGIN_ID,
@@ -1115,11 +2011,16 @@ export class EmDashRuntime {
 				},
 			});
 			allPipelinePlugins.push(defaultModeratorPlugin);
+			// Built-in plugins are always enabled
 			enabledPlugins.add(defaultModeratorPlugin.id);
 		} catch (error) {
 			console.warn("[comments] Failed to register default moderator:", error);
 		}
 
+		// sandbox: false escape hatch - load sandboxed plugin entries in-process
+		// as trusted plugins (no isolation) so they participate in the hook pipeline.
+		// Block this on Cloudflare Workers where dynamic import(dataUrl) is not
+		// available and running untrusted code in-process is a security risk.
 		if (deps.sandboxBypassed && deps.sandboxedPluginEntries.length > 0) {
 			const isCfWorkers =
 				typeof navigator !== "undefined" &&
@@ -1139,6 +2040,8 @@ export class EmDashRuntime {
 			for (const plugin of bypassedPlugins) {
 				allPipelinePlugins.push(plugin);
 				bypassedPluginsList.push(plugin);
+				// Respect plugin state: only enable if active or no record exists.
+				// Plugins an admin previously disabled should stay disabled.
 				const status = pluginStates.get(plugin.id);
 				const configured = deps.sandboxedPluginEntries.find((entry) => entry.id === plugin.id);
 				if (isPluginStateEnabled(status, configured?.defaultEnabled)) {
@@ -1147,8 +2050,14 @@ export class EmDashRuntime {
 			}
 		}
 
+		// In bypass mode, also load marketplace plugins from R2 as trusted
+		// in-process plugins BEFORE pipeline creation. They need to be in the
+		// pipeline to participate in hook dispatch.
 		if (deps.sandboxBypassed && deps.config.marketplace && storage) {
-			const marketplaceBypassed = await EmDashRuntime.loadMarketplacePluginsBypassed(db, storage);
+			const marketplaceBypassed = await EmDashRuntime.loadMarketplacePluginsBypassed(
+				storage,
+				installedPluginStates,
+			);
 			for (const plugin of marketplaceBypassed) {
 				allPipelinePlugins.push(plugin);
 				bypassedPluginsList.push(plugin);
@@ -1159,21 +2068,22 @@ export class EmDashRuntime {
 			}
 		}
 
-		const enabledPluginList = allPipelinePlugins.filter((p) => enabledPlugins.has(p.id));
-
-		const pipelineFactoryOptions = {
-			db,
-			getDb: resolveDb,
-			beforeContentWrite: () => assertMediaUsageActivationWriteAllowed(resolveDb()),
-			storage: storage ?? undefined,
-			siteInfo,
-		};
-		const pipeline = createHookPipeline(enabledPluginList, pipelineFactoryOptions);
-
-		const sandboxedPlugins = await phase("rt.sandbox", "Sandboxed plugins", () =>
+		// Load sandboxed plugins (build-time, sandbox runner path)
+		const sandboxedPluginPool = await phase("rt.sandbox", "Sandboxed plugins", () =>
 			EmDashRuntime.loadSandboxedPlugins(deps, db, storage, siteInfo),
 		);
+		for (const [key, plugin] of sandboxedPluginPool) {
+			const pluginId = key.slice(0, key.lastIndexOf(":"));
+			const status = pluginStates.get(pluginId);
+			const configured = deps.sandboxedPluginEntries.find((entry) => entry.id === pluginId);
+			plugin.setActive?.(isPluginStateEnabled(status, configured?.defaultEnabled));
+		}
 
+		// Cold-start: load marketplace- and registry-installed plugins from
+		// site R2 via the sandbox runner. The two tiers only depend on the
+		// sandbox phase above, not on each other, so when both are enabled
+		// they run concurrently instead of paying two sequential loads.
+		// In bypass mode marketplace plugins were already handled above.
 		const installedTierPhases: Promise<void>[] = [];
 		if (deps.config.marketplace && storage && !deps.sandboxBypassed) {
 			installedTierPhases.push(
@@ -1183,14 +2093,16 @@ export class EmDashRuntime {
 						db,
 						storage,
 						deps,
-						sandboxedPlugins,
+						sandboxedPluginPool,
+						installedPluginStates,
 						siteInfo,
 					),
 				),
 			);
 		}
 
-		if (deps.config.experimental?.registry && storage) {
+		// Cold-start: load registry-installed plugins from site R2
+		if (getRegistryConfigInput(deps.config.registry) && storage) {
 			installedTierPhases.push(
 				phase("rt.registry", "Registry plugins", () =>
 					EmDashRuntime.loadInstalledSandboxedPlugins(
@@ -1198,7 +2110,8 @@ export class EmDashRuntime {
 						db,
 						storage,
 						deps,
-						sandboxedPlugins,
+						sandboxedPluginPool,
+						installedPluginStates,
 						siteInfo,
 					),
 				),
@@ -1208,6 +2121,114 @@ export class EmDashRuntime {
 			await Promise.all(installedTierPhases);
 		}
 
+		const configuredSandboxIds = new Set(deps.sandboxedPluginEntries.map((entry) => entry.id));
+		const sandboxedPlugins = new Map(
+			[...sandboxedPluginPool].filter(([pluginKey]) => {
+				const pluginId = pluginKey.slice(0, pluginKey.lastIndexOf(":"));
+				return configuredSandboxIds.has(pluginId) || pluginStates.get(pluginId) === "active";
+			}),
+		);
+
+		// Add isolate-backed proxies to the same host pipeline as trusted
+		// plugins. The proxy carries only manifest metadata and RPC handlers;
+		// plugin code remains inside the configured runner.
+		for (const [pluginKey, instance] of sandboxedPlugins) {
+			const manifest = sandboxedManifestCache.get(pluginKey);
+			if (!manifest) continue;
+			allPipelinePlugins.push(createSandboxedPluginProxy(manifest, instance));
+			const status = pluginStates.get(manifest.id);
+			if (status === undefined || status === "active") enabledPlugins.add(manifest.id);
+		}
+
+		// Create hook pipeline. getDb travels here (not just via the email
+		// setContextFactory call below) so it survives rebuildHookPipeline(),
+		// which reconstructs the factory from pipelineFactoryOptions. Without it,
+		// toggling a plugin on an email-less deployment would silently revert
+		// plugin contexts to the singleton db — re-breaking connection-backed
+		// adapters. See #1622.
+		const runtimeRef: { current: EmDashRuntime | null } = { current: null };
+		const requireRuntime = (): EmDashRuntime => {
+			if (!runtimeRef.current) throw new Error("EmDash runtime is not ready");
+			return runtimeRef.current;
+		};
+		const contentActions: ContentActionCallbacks = {
+			begin: (pluginId, invocationId, invalidateContentCache) =>
+				requireRuntime().beginPluginInvocation(pluginId, invocationId, invalidateContentCache),
+			flush: (pluginId, invocationId, final) =>
+				requireRuntime().flushPluginAfterHooks(pluginId, invocationId, final),
+			getVersioned: (pluginId, collection, id) =>
+				requireRuntime().pluginGetVersioned(pluginId, collection, id),
+			publish: (pluginId, collection, id, options, invocationId, invalidateContentCache) =>
+				requireRuntime().pluginPublish(
+					pluginId,
+					collection,
+					id,
+					options,
+					invocationId,
+					invalidateContentCache,
+				),
+			unpublish: (pluginId, collection, id, options, invocationId, invalidateContentCache) =>
+				requireRuntime().pluginUnpublish(
+					pluginId,
+					collection,
+					id,
+					options,
+					invocationId,
+					invalidateContentCache,
+				),
+			schedule: (pluginId, collection, id, options, invocationId, invalidateContentCache) =>
+				requireRuntime().pluginSchedule(
+					pluginId,
+					collection,
+					id,
+					options,
+					invocationId,
+					invalidateContentCache,
+				),
+			unschedule: (pluginId, collection, id, options, invocationId, invalidateContentCache) =>
+				requireRuntime().pluginUnschedule(
+					pluginId,
+					collection,
+					id,
+					options,
+					invocationId,
+					invalidateContentCache,
+				),
+			getTrashedVersioned: (pluginId, collection, id) =>
+				requireRuntime().pluginGetTrashedVersioned(pluginId, collection, id),
+			restore: (pluginId, collection, id, options, invocationId, invalidateContentCache) =>
+				requireRuntime().pluginRestore(
+					pluginId,
+					collection,
+					id,
+					options,
+					invocationId,
+					invalidateContentCache,
+				),
+		};
+		const pipelineFactoryOptions = {
+			db,
+			getDb: resolveDb,
+			beforeContentWrite: () => assertSiteWriteAllowed(resolveDb()),
+			contentActions,
+			now: deps.now,
+			storage: storage ?? undefined,
+			siteInfo,
+			commentModerate: (
+				pluginId: string,
+				id: string,
+				status: PluginCommentStatus,
+				expectedStatus: PluginCommentStatus,
+			) => {
+				const current = runtimeRef.current;
+				if (!current) throw new Error("Comment moderation is unavailable during runtime startup");
+				return current.handlePluginCommentModerate(pluginId, id, status, expectedStatus);
+			},
+		};
+		const enabledPluginList = allPipelinePlugins.filter((p) => enabledPlugins.has(p.id));
+		const pipeline = createHookPipeline(enabledPluginList, pipelineFactoryOptions);
+
+		// Initialize media providers
 		const mediaProviders = new Map<string, MediaProvider>();
 		const mediaProviderEntries = deps.mediaProviderEntries ?? [];
 		const providerContext: MediaProviderContext = { db, storage, getDb: resolveDb };
@@ -1221,16 +2242,27 @@ export class EmDashRuntime {
 			}
 		}
 
+		// Resolve exclusive hooks — auto-select providers and sync with DB
 		await phase("rt.hooks", "Exclusive hook resolution", () =>
-			EmDashRuntime.resolveExclusiveHooks(pipeline, db, deps),
+			EmDashRuntime.resolveExclusiveHooks(pipeline, db, deps, exclusiveHookSelections),
 		);
 
+		// ── Email pipeline ───────────────────────────────────────────────
+		// The email pipeline orchestrates beforeSend → deliver → afterSend.
+		// The dev console provider was registered above and will be auto-selected
+		// by resolveExclusiveHooks if it's the sole email:deliver provider.
 		const emailPipeline = new EmailPipeline(pipeline);
 
+		// Wire email send into sandbox runner (created earlier but without
+		// email pipeline since it didn't exist yet)
 		if (sandboxRunner) {
 			sandboxRunner.setEmailSend((message, pluginId) => emailPipeline.send(message, pluginId));
 		}
 
+		// ── Cron system ──────────────────────────────────────────────────
+		// Create executor with a hook dispatch function that uses the pipeline.
+		// The callback reads from a mutable ref so that rebuildHookPipeline()
+		// can swap the pipeline without reconstructing the CronExecutor.
 		const pipelineRef = { current: pipeline };
 		const invokeCronHook: InvokeCronHookFn = async (pluginId, event) => {
 			const result = await pipelineRef.current.invokeCronHook(pluginId, event);
@@ -1239,19 +2271,34 @@ export class EmDashRuntime {
 			}
 		};
 
+		// Wire email pipeline into context factory (independent of cron —
+		// must not be inside the cron try/catch or ctx.email breaks when cron fails).
+		// db/getDb were already set via pipelineFactoryOptions above; merge only
+		// adds emailPipeline.
 		pipeline.setContextFactory({ emailPipeline });
 
 		let cronExecutor: CronExecutor | null = null;
 		let cronScheduler: CronScheduler | null = null;
-		const runtimeRef: { current: EmDashRuntime | null } = { current: null };
-
+		// Populated with the constructed runtime just before this method returns,
+		// so the timer scheduler's cleanup can route scheduled publishing through
+		// the runtime wrapper (firing content:afterPublish hooks). The first tick
+		// is ≥1s out, well after the synchronous assignment below.
 		await phase("rt.cron", "Cron init (recovery deferred post-response)", async () => {
 			try {
-				cronExecutor = new CronExecutor(resolveDb, invokeCronHook);
+				cronExecutor = new CronExecutor(resolveDb, invokeCronHook, deps.now);
+				// Plugin schedules are always database-backed. On long-lived runtimes this
+				// callback also wakes the timer; on Cloudflare the external Cron Trigger
+				// drives execution, so rescheduling is intentionally a no-op.
 				pipeline.setContextFactory({
 					cronReschedule: () => cronScheduler?.reschedule(),
 				});
 
+				// Recover stale locks from previous crashes. Pure bookkeeping
+				// against the _emdash_cron_tasks table — no request needs the
+				// result — so we defer it past the response via after(). On
+				// Cloudflare this goes into waitUntil (extending the worker
+				// lifetime); on Node it's fire-and-forget (the process stays
+				// up anyway). Saves one cold-start write per D1 isolate.
 				const executorForRecovery = cronExecutor;
 				after(async () => {
 					try {
@@ -1260,49 +2307,53 @@ export class EmDashRuntime {
 							console.log(`[cron] Recovered ${recovered} stale task lock(s)`);
 						}
 					} catch (error) {
+						// Keep the `[cron]` prefix so a failure is easy to trace back
+						// rather than surfacing as a generic deferred-task error.
 						console.error("[cron] Failed to recover stale task locks:", error);
 					}
 				});
 
+				// The platform decides whether a long-lived timer heartbeat exists.
+				// `createScheduler` is injected by the generated virtual:emdash/scheduler
+				// module: a NodeCronScheduler factory on Node/Bun, or null on serverless
+				// adapters (e.g. Cloudflare) where the Worker's `scheduled()` handler
+				// drives runScheduledTasks() instead. No adapter check lives here.
 				if (deps.createScheduler) {
 					const scheduler = deps.createScheduler(cronExecutor);
 					cronScheduler = scheduler;
 
+					// Run scheduled publishing and system cleanup alongside each tick.
+					// The heavier bookkeeping cleanup is time-gated to once per hour;
+					// per-minute work stays limited to publishing, cron tasks, and the
+					// heartbeat so cold isolates on tight CPU budgets don't pay for
+					// full cleanup on every quiet-hours tick.
 					scheduler.setSystemCleanup(async () => {
+						const runtime = runtimeRef.current;
+						if (!runtime) return;
+						const currentTime = deps.now?.() ?? new Date();
 						try {
-							const runtime = runtimeRef.current;
-							if (runtime) {
-								await runtime.publishScheduled();
-							} else {
-								await assertMediaUsageActivationWriteAllowed(db);
-								await publishDueContent(db);
-							}
+							await runtime.runScheduledMaintenanceTick({}, currentTime);
 						} catch (error) {
-							console.error("[scheduled-publish] Sweep failed:", error);
+							console.error("[scheduled] Maintenance tick failed:", error);
 						}
-						try {
-							await runSystemCleanup(db, storage ?? undefined);
-						} catch (error) {
-							console.error("[cleanup] System cleanup failed:", error);
-						}
-						try {
-							await runtimeRef.current?.syncPluginStorageIndexesOnce();
-						} catch (error) {
-							console.error("[plugins] Storage index sync failed:", error);
-						}
-						await maybeRunScheduledBackup(db, storage ?? undefined);
-						await recordSchedulerHeartbeatSafely(db);
 					});
+					// start() is void on the timer scheduler but the interface
+					// allows a promise (alarm-backed schedulers); we don't block on it.
 					void scheduler.start();
 				}
 			} catch (error) {
 				console.warn("[cron] Failed to initialize cron system:", error);
+				// Non-fatal — CMS works without cron
 			}
 		});
+		sandboxRunner?.setCronReschedule?.(() => cronScheduler?.reschedule());
 
 		const runtime = new EmDashRuntime({
 			db,
 			storage,
+			// Include bypassed sandboxed plugins in configuredPlugins so route
+			// dispatch can find them under sandbox: false (they're treated as
+			// trusted plugins for the duration of the bypass).
 			configuredPlugins: [...deps.plugins, ...bypassedPluginsList],
 			sandboxedPlugins,
 			sandboxedPluginEntries: deps.sandboxedPluginEntries,
@@ -1320,14 +2371,66 @@ export class EmDashRuntime {
 			runtimeDeps: deps,
 			pipelineRef,
 		});
+		const contentCreate: PluginContentCreateCallback = async (
+			_pluginId,
+			collection,
+			input,
+			options,
+		) => {
+			const { seo, ...data } = input;
+			const result = await runtime.handleContentCreate(
+				collection,
+				{
+					data,
+					seo,
+					locale: resolveContentCreateLocale(options?.locale),
+					translationOf: options?.translationOf,
+				},
+				{
+					skipSaveHooks: options?.sandboxOrigin
+						? options.originHook !== undefined
+						: getActiveContentSaveHookName() != null,
+					excludeAfterSavePluginId: _pluginId,
+				},
+			);
+			if (!result.success) {
+				throw Object.assign(new Error(result.error.message), {
+					name: result.error.code,
+					code: result.error.code,
+				});
+			}
+			return result.data.item;
+		};
+		runtime.pipelineFactoryOptions.contentCreate = contentCreate;
+		pipeline.setContextFactory({ contentCreate });
+		sandboxRunner?.setContentCreate?.(contentCreate);
+		// Hand the constructed instance to the scheduler-cleanup closure so the
+		// timer-driven sweep can fire publish hooks (see runtimeRef above).
 		runtimeRef.current = runtime;
+		sandboxRunner?.setCommentModerate?.((pluginId, id, status, expectedStatus) =>
+			runtime.handlePluginCommentModerate(pluginId, id, status, expectedStatus),
+		);
+		sandboxRunner?.setContentActions?.(contentActions);
+
+		if (ownsConfiguredDb && pluginStatesRead) {
+			await phase("rt.lifecycle", "Config plugin install/activate", () =>
+				runtime.installUnrecordedConfigPlugins(deps.plugins, new Map(pluginStates)),
+			);
+		}
+
 		return runtime;
 	}
 
+	/**
+	 * Get a media provider by ID
+	 */
 	getMediaProvider(providerId: string): MediaProvider | undefined {
 		return this.mediaProviders.get(providerId);
 	}
 
+	/**
+	 * Get all media provider entries (for admin UI)
+	 */
 	getMediaProviderList(): Array<{
 		id: string;
 		name: string;
@@ -1342,7 +2445,16 @@ export class EmDashRuntime {
 		}));
 	}
 
+	/**
+	 * Get or create database instance
+	 */
 	private static async getDatabase(deps: RuntimeDependencies): Promise<Kysely<Database>> {
+		// Only use the per-request `ctx.db` when it's an isolated instance
+		// (playground / DO preview). Plain D1 Sessions set `ctx.db` on every
+		// anonymous request — if we captured one of those session-bound
+		// Kyselys into the cached runtime, every request would accidentally
+		// share one request's session. The configured `deps.createDialect`
+		// path gives us a fresh singleton instead.
 		const ctx = getRequestContext();
 		if (ctx?.dbIsIsolated && ctx.db) {
 			// eslint-disable-next-line typescript/no-unsafe-type-assertion -- db in context is typed as unknown to avoid circular deps
@@ -1351,6 +2463,7 @@ export class EmDashRuntime {
 
 		const dbConfig = deps.config.database;
 
+		// If no database configured in integration, try to get from loader
 		if (!dbConfig) {
 			try {
 				return await getDb();
@@ -1363,6 +2476,14 @@ export class EmDashRuntime {
 
 		const cacheKey = dbConfig.entrypoint;
 
+		// Waiters poll the cache rather than sharing the initializing request's
+		// promise: if the request that owns the init is cancelled mid-await
+		// (e.g. client disconnect during cold migrations), a shared promise
+		// never settles — and the owner's `finally` that would clear it never
+		// runs — deadlocking every later request in the isolate. Prevention:
+		// the in-flight init is anchored via after()/waitUntil so a cancelled
+		// owner's init still completes and populates the cache. Net: a stale
+		// lock is reclaimed after a deadline.
 		const holder = getDbHolder();
 
 		const throwIfBackingOff = () => {
@@ -1371,8 +2492,10 @@ export class EmDashRuntime {
 			if (Date.now() - failure.at < DB_INIT_FAILURE_BACKOFF_MS) {
 				throw new Error(
 					`Database initialization is backing off after a recent migration failure: ${failure.message}`,
+					{ cause: failure.cause },
 				);
 			}
+			// Expired — drop it so the map only ever holds active backoffs.
 			holder.failures.delete(cacheKey);
 		};
 		throwIfBackingOff();
@@ -1381,28 +2504,60 @@ export class EmDashRuntime {
 			holder.lock,
 			() => holder.cache.get(cacheKey),
 			async (isCurrentClaim) => {
+				// Re-check under the lock: a request that entered the wait loop
+				// before the failure was recorded must not immediately re-run
+				// the failing migration when the lock frees up.
 				throwIfBackingOff();
 
 				const dialect = deps.createDialect(dbConfig.config);
 				const db = new Kysely<Database>({ dialect, log: kyselyLogOption() });
 
 				try {
-					await enforceRuntimeMigrationPolicy(db, deps.migrationMode ?? "auto");
+					await enforceRuntimeMigrationPolicy(db, deps.migrationMode ?? "auto", {
+						contentRowLimit: autoMigrationContentRowLimit(),
+					});
 				} catch (error) {
+					// Only a failed migration run, a lock its holder left behind, or
+					// content migrations too large for a request back off. Waiting
+					// behind a slow concurrent migrator, pending migrations in check
+					// mode, and errors from the applied-migration check on an
+					// up-to-date database (a lost connection, an unavailable replica)
+					// stay retryable, so the next request tries again.
 					if (
-						!(error instanceof ConcurrentMigrationTimeoutError) &&
-						!(error instanceof PendingMigrationsError)
+						error instanceof MigrationFailedError ||
+						error instanceof MigrationLockHeldError ||
+						error instanceof MigrationRowLimitError
 					) {
 						holder.failures.set(cacheKey, {
 							at: Date.now(),
-							message: error instanceof Error ? error.message : String(error),
+							message: error.message,
+							cause: error,
 						});
 					}
+					// Every attempt builds a fresh dialect/pool; close it or each
+					// failed init leaks its connection(s) (#1744 observed these
+					// piling up as idle Postgres connections).
 					await db.destroy().catch(() => {});
 					throw error;
 				}
 				holder.failures.delete(cacheKey);
 
+				// Note: legacy installs may carry a stray `emdash:manifest_cache`
+				// row in the options table from versions that persisted a JSON
+				// manifest. The runtime no longer reads or writes it. We do not
+				// proactively delete it: the row is a few hundred bytes of dead
+				// weight and is never on the read path, whereas a one-shot
+				// cleanup-flag check costs an extra `options.get()` on every
+				// isolate cold boot forever. Cheaper to leave it.
+
+				// This returns a migrated but possibly unseeded db; create() runs
+				// the seed gate and applies the seed, batched with its other init
+				// reads.
+
+				// Publish only while still the current owner: a reclaimed slow
+				// init must not flip the cached Kysely identity back after the
+				// reclaimer has published its own. The unpublished instance is
+				// still returned and fully valid for the request that built it.
 				if (isCurrentClaim()) {
 					holder.cache.set(cacheKey, db);
 				}
@@ -1415,7 +2570,10 @@ export class EmDashRuntime {
 		);
 	}
 
-	private static getStorage(deps: RuntimeDependencies): Storage | null {
+	/**
+	 * Get or create storage instance
+	 */
+	static getStorage(deps: RuntimeDependencies): Storage | null {
 		const storageConfig = deps.config.storage;
 		if (!storageConfig || !deps.createStorage) {
 			return null;
@@ -1432,6 +2590,14 @@ export class EmDashRuntime {
 		return storage;
 	}
 
+	/**
+	 * Load sandboxed plugin entries as trusted in-process plugins.
+	 * Used by the sandbox: false debugging escape hatch.
+	 *
+	 * Imports each plugin's bundled ESM code via a data URL, adapts it
+	 * with adaptSandboxEntry, and returns ResolvedPlugin objects ready
+	 * to be merged into the pipeline plugin list.
+	 */
 	private static async loadBypassedPlugins(
 		entries: SandboxedPluginEntry[],
 	): Promise<ResolvedPlugin[]> {
@@ -1445,11 +2611,23 @@ export class EmDashRuntime {
 				const pluginDef = (pluginModule.default ?? pluginModule) as Parameters<
 					typeof adaptSandboxEntry
 				>[0];
+				// PluginDescriptor.storage's TypeScript type is narrower than what
+				// adaptSandboxEntry actually accepts at runtime — it copies indexes
+				// through to PluginStorageConfig which supports composite indexes
+				// (string[][]). Pass the raw entry.storage with a structural cast
+				// to preserve composite index declarations.
 				// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- adaptSandboxEntry copies storage through to PluginStorageConfig which supports composite indexes
+				// Preserve admin metadata so plugin-management APIs can derive
+				// hasAdminPages / hasDashboardWidgets correctly. Without this,
+				// the admin UI hides Configure links and dashboard widgets for
+				// bypassed plugins even though they declared them.
+				// SandboxedPluginEntry uses looser types than PluginDescriptor
+				// (label?, size: string), so coerce to the descriptor shape.
 				const adminPages = entry.adminPages?.map((p) => ({
 					path: p.path,
 					label: p.label ?? p.path,
 					icon: p.icon,
+					group: p.group,
 				}));
 				const adminWidgets:
 					| Array<{
@@ -1475,6 +2653,9 @@ export class EmDashRuntime {
 					settingsSchema: entry.settingsSchema,
 					portableTextBlocks: entry.portableTextBlocks,
 					fieldWidgets: entry.fieldWidgets,
+					editorPanels: entry.editorPanels,
+					editorActions: entry.editorActions,
+					mcp: entry.mcp,
 				});
 				plugins.push(resolved);
 				console.log(
@@ -1487,6 +2668,9 @@ export class EmDashRuntime {
 		return plugins;
 	}
 
+	/**
+	 * Load sandboxed plugins using SandboxRunner
+	 */
 	private static async loadSandboxedPlugins(
 		deps: RuntimeDependencies,
 		db: Kysely<Database>,
@@ -1498,20 +2682,20 @@ export class EmDashRuntime {
 			trailingSlash?: "always" | "never" | "ignore";
 		},
 	): Promise<Map<string, SandboxedPluginInstance>> {
-		if (sandboxedPluginCache.size > 0) {
-			return sandboxedPluginCache;
-		}
-
+		// Check if sandboxing is enabled
 		if (!deps.sandboxEnabled) {
 			return sandboxedPluginCache;
 		}
 
+		// Create sandbox runner if not exists
 		if (!sandboxRunner && deps.createSandboxRunner) {
 			sandboxRunner = deps.createSandboxRunner(
 				createSandboxRunnerOptions(
 					{
 						db,
-						beforeContentWrite: () => assertMediaUsageActivationWriteAllowed(db),
+						beforeContentWrite: () => assertSiteWriteAllowed(db),
+						taxonomyWrite: createTaxonomyAccessWithWrite(db),
+						now: deps.now,
 						mediaStorage: mediaStorage
 							? {
 									upload: (opts) =>
@@ -1520,6 +2704,7 @@ export class EmDashRuntime {
 											body: opts.body,
 											contentType: opts.contentType,
 										}),
+									download: (key) => mediaStorage.download(key),
 									delete: (key) => mediaStorage.delete(key),
 								}
 							: undefined,
@@ -1533,11 +2718,18 @@ export class EmDashRuntime {
 			return sandboxedPluginCache;
 		}
 
+		// Check if the runner is actually available (has required bindings).
+		// Warn regardless of whether there are plugins to load, so operators
+		// see the issue even if no marketplace plugins are installed yet.
 		if (!sandboxRunner.isAvailable()) {
+			const reason = sandboxRunner.unavailableReason?.();
 			console.warn(
-				"EmDash: Plugin sandbox is configured but not available on this platform. " +
-					"Sandboxed plugins will not be loaded. " +
-					"If using @emdash-cms/sandbox-workerd/sandbox, ensure workerd is installed.",
+				reason
+					? `EmDash: Plugin sandbox is configured but not available on this platform: ${reason}. ` +
+							"Sandboxed plugins will not be loaded."
+					: "EmDash: Plugin sandbox is configured but not available on this platform. " +
+							"Sandboxed plugins will not be loaded. " +
+							"If using @emdash-cms/sandbox-workerd/sandbox, ensure workerd is installed.",
 			);
 			return sandboxedPluginCache;
 		}
@@ -1546,10 +2738,14 @@ export class EmDashRuntime {
 			return sandboxedPluginCache;
 		}
 
+		// sandbox: false escape hatch is handled separately (before pipeline
+		// creation) via loadBypassedPlugins. If we somehow reach here with the
+		// flag set, just return — the plugins are already in the trusted pipeline.
 		if (deps.sandboxBypassed) {
 			return sandboxedPluginCache;
 		}
 
+		// Load each sandboxed plugin via sandbox runner
 		for (const entry of deps.sandboxedPluginEntries) {
 			const pluginKey = `${entry.id}:${entry.version}`;
 			if (sandboxedPluginCache.has(pluginKey)) {
@@ -1557,20 +2753,51 @@ export class EmDashRuntime {
 			}
 
 			try {
+				const adminPages = entry.adminPages?.map((page) => ({
+					path: page.path,
+					label: page.label ?? page.path,
+					icon: page.icon,
+					group: page.group,
+				}));
+				const adminWidgets: PluginDashboardWidget[] | undefined = entry.adminWidgets?.map(
+					(widget) => ({
+						id: widget.id,
+						title: widget.title,
+						size:
+							widget.size === "full" || widget.size === "half" || widget.size === "third"
+								? widget.size
+								: undefined,
+					}),
+				);
+				warnDeprecatedPluginCapabilities(entry.id, entry.capabilities ?? []);
+				const capabilities = normalizePluginCapabilities(entry.capabilities ?? []);
+
+				// Build manifest from entry's declared config
 				const manifest: PluginManifest = {
 					id: entry.id,
 					version: entry.version,
-					capabilities: entry.capabilities ?? [],
+					capabilities,
 					allowedHosts: entry.allowedHosts ?? [],
 					storage: entry.storage ?? {},
-					hooks: entry.hooks ?? [],
+					// Descriptors built before hook metadata was emitted must keep
+					// working. Invoking an absent hook is a no-op in both runners.
+					hooks: entry.hooks ?? [...HOOK_NAMES],
 					routes: entry.routes ?? [],
-					admin: {},
+					admin: {
+						pages: adminPages,
+						widgets: adminWidgets,
+						settingsSchema: entry.settingsSchema,
+						portableTextBlocks: entry.portableTextBlocks,
+						fieldWidgets: entry.fieldWidgets,
+						editorPanels: entry.editorPanels,
+						editorActions: entry.editorActions,
+					},
 					mcp: entry.mcp,
 				};
 
 				const plugin = await sandboxRunner.load(manifest, entry.code);
 				sandboxedPluginCache.set(pluginKey, plugin);
+				sandboxedManifestCache.set(pluginKey, manifest);
 				console.log(
 					`EmDash: Loaded sandboxed plugin ${pluginKey} with capabilities: [${manifest.capabilities.join(", ")}]`,
 				);
@@ -1593,12 +2820,22 @@ export class EmDashRuntime {
 		return sandboxedPluginCache;
 	}
 
+	/**
+	 * Cold-start load of all active sandboxed plugins for one install
+	 * tier (marketplace or registry) from site-local R2.
+	 *
+	 * Mirrors {@link syncSandboxedSourcePlugins} but runs once at runtime
+	 * creation, before request traffic arrives; the sync method runs on
+	 * demand after install / update / uninstall handlers. `states` are the
+	 * `_plugin_state` rows read in the cold-start batch.
+	 */
 	private static async loadInstalledSandboxedPlugins(
 		source: "marketplace" | "registry",
 		db: Kysely<Database>,
 		storage: Storage,
 		deps: RuntimeDependencies,
 		cache: Map<string, SandboxedPluginInstance>,
+		states: readonly PluginState[],
 		siteInfo?: {
 			siteName?: string;
 			siteUrl?: string;
@@ -1606,12 +2843,16 @@ export class EmDashRuntime {
 			trailingSlash?: "always" | "never" | "ignore";
 		},
 	): Promise<void> {
+		// Ensure sandbox runner exists with media storage wired up.
+		// (storage here is the media Storage adapter from the runtime.)
 		if (!sandboxRunner && deps.createSandboxRunner) {
 			sandboxRunner = deps.createSandboxRunner(
 				createSandboxRunnerOptions(
 					{
 						db,
-						beforeContentWrite: () => assertMediaUsageActivationWriteAllowed(db),
+						beforeContentWrite: () => assertSiteWriteAllowed(db),
+						taxonomyWrite: createTaxonomyAccessWithWrite(db),
+						now: deps.now,
 						mediaStorage: {
 							upload: (opts) =>
 								storage.upload({
@@ -1619,6 +2860,7 @@ export class EmDashRuntime {
 									body: opts.body,
 									contentType: opts.contentType,
 								}),
+							download: (key) => storage.download(key),
 							delete: (key) => storage.delete(key),
 						},
 					},
@@ -1626,6 +2868,8 @@ export class EmDashRuntime {
 				),
 			);
 		}
+		// In sandbox bypass mode, marketplace plugins are loaded in-process
+		// BEFORE pipeline creation by EmDashRuntime.create(). Skip here.
 		if (deps.sandboxBypassed) return;
 
 		if (!sandboxRunner || !sandboxRunner.isAvailable()) {
@@ -1634,150 +2878,169 @@ export class EmDashRuntime {
 
 		const keySet = source === "marketplace" ? marketplacePluginKeys : registryPluginKeys;
 
-		try {
-			const stateRepo = new PluginStateRepository(db);
-			const plugins =
-				source === "marketplace"
-					? await stateRepo.getMarketplacePlugins()
-					: await stateRepo.getRegistryPlugins();
+		for (const plugin of states.filter((state) => state.source === source)) {
+			if (plugin.status !== "active") continue;
 
-			for (const plugin of plugins) {
-				if (plugin.status !== "active") continue;
+			// Marketplace plugins record the live version in
+			// `marketplaceVersion`; registry plugins use `version` directly.
+			const version =
+				source === "marketplace" ? (plugin.marketplaceVersion ?? plugin.version) : plugin.version;
+			const pluginKey = `${plugin.pluginId}:${version}`;
 
-				const version =
-					source === "marketplace" ? (plugin.marketplaceVersion ?? plugin.version) : plugin.version;
-				const pluginKey = `${plugin.pluginId}:${version}`;
+			// Skip if already loaded (shouldn't happen, but guard)
+			if (cache.has(pluginKey)) continue;
 
-				if (cache.has(pluginKey)) continue;
-
-				try {
-					const bundle = await loadBundleFromR2(storage, plugin.pluginId, version, source);
-					if (!bundle) {
-						console.warn(`EmDash: ${source} plugin ${plugin.pluginId}@${version} not found in R2`);
-						continue;
-					}
-
-					const loaded = await sandboxRunner.load(bundle.manifest, bundle.backendCode);
-					cache.set(pluginKey, loaded);
-					keySet.add(pluginKey);
-
-					marketplaceManifestCache.set(plugin.pluginId, {
-						id: bundle.manifest.id,
-						version: bundle.manifest.version,
-						admin: bundle.manifest.admin,
-						mcp: bundle.manifest.mcp,
-						storage: bundle.manifest.storage,
-					});
-
-					if (bundle.manifest.routes.length > 0) {
-						const routeMeta = new Map<string, RouteMeta>();
-						for (const entry of bundle.manifest.routes) {
-							const normalized = normalizeManifestRoute(entry);
-							routeMeta.set(normalized.name, buildRouteMeta(normalized));
-						}
-						sandboxedRouteMetaCache.set(plugin.pluginId, routeMeta);
-					}
-
-					console.log(
-						`EmDash: Loaded ${source} plugin ${pluginKey} with capabilities: [${bundle.manifest.capabilities.join(", ")}]`,
-					);
-				} catch (error) {
-					console.error(`EmDash: Failed to load ${source} plugin ${plugin.pluginId}:`, error);
+			try {
+				const bundle = await loadBundleFromR2(storage, plugin.pluginId, version, source);
+				if (!bundle) {
+					console.warn(`EmDash: ${source} plugin ${plugin.pluginId}@${version} not found in R2`);
+					continue;
 				}
+
+				const loaded = await sandboxRunner.load(bundle.manifest, bundle.backendCode);
+				cache.set(pluginKey, loaded);
+				sandboxedManifestCache.set(pluginKey, bundle.manifest);
+				keySet.add(pluginKey);
+
+				// Cache manifest admin config for getManifest()
+				marketplaceManifestCache.set(plugin.pluginId, {
+					id: bundle.manifest.id,
+					version: bundle.manifest.version,
+					admin: bundle.manifest.admin,
+					mcp: bundle.manifest.mcp,
+					storage: bundle.manifest.storage,
+					allowedHosts: bundle.manifest.allowedHosts,
+					capabilities: bundle.manifest.capabilities,
+				});
+
+				// Cache route metadata from manifest for auth decisions
+				if (bundle.manifest.routes.length > 0) {
+					const routeMeta = new Map<string, RouteMeta>();
+					for (const entry of bundle.manifest.routes) {
+						const normalized = normalizeManifestRoute(entry);
+						routeMeta.set(normalized.name, buildRouteMeta(normalized));
+					}
+					sandboxedRouteMetaCache.set(plugin.pluginId, routeMeta);
+				}
+
+				console.log(
+					`EmDash: Loaded ${source} plugin ${pluginKey} with capabilities: [${bundle.manifest.capabilities.join(", ")}]`,
+				);
+			} catch (error) {
+				console.error(`EmDash: Failed to load ${source} plugin ${plugin.pluginId}:`, error);
 			}
-		} catch {}
+		}
 	}
 
+	/**
+	 * Cold-start: load marketplace plugins in bypass mode (sandbox: false).
+	 *
+	 * Each active marketplace bundle is read, evaluated via data URL, adapted
+	 * with adaptSandboxEntry, and returned as a ResolvedPlugin. The caller is
+	 * responsible for merging these into allPipelinePlugins / configuredPlugins
+	 * BEFORE the hook pipeline is created, so hooks and routes register in
+	 * the trusted pipeline.
+	 *
+	 * Also caches manifest and route metadata so admin UI / getManifest() work.
+	 *
+	 * Returns ResolvedPlugins to be merged into the pipeline.
+	 */
 	private static async loadMarketplacePluginsBypassed(
-		db: Kysely<Database>,
 		storage: Storage,
+		states: readonly PluginState[],
 	): Promise<ResolvedPlugin[]> {
 		const resolved: ResolvedPlugin[] = [];
-		try {
-			const stateRepo = new PluginStateRepository(db);
-			const marketplacePlugins = await stateRepo.getMarketplacePlugins();
-			if (marketplacePlugins.length === 0) return resolved;
+		const marketplacePlugins = states.filter((state) => state.source === "marketplace");
+		if (marketplacePlugins.length === 0) return resolved;
 
-			console.info(
-				"EmDash: Sandbox disabled (sandbox: false). " +
-					"Marketplace plugins will run in-process without isolation.",
-			);
+		console.info(
+			"EmDash: Sandbox disabled (sandbox: false). " +
+				"Marketplace plugins will run in-process without isolation.",
+		);
 
-			const { adaptSandboxEntry } = await import("./plugins/adapt-sandbox-entry.js");
+		const { adaptSandboxEntry } = await import("./plugins/adapt-sandbox-entry.js");
 
-			for (const plugin of marketplacePlugins) {
-				if (plugin.status !== "active") continue;
-				const version = plugin.marketplaceVersion ?? plugin.version;
-				try {
-					const bundle = await loadBundleFromR2(storage, plugin.pluginId, version);
-					if (!bundle) {
-						console.warn(
-							`EmDash: Marketplace plugin ${plugin.pluginId}@${version} not found in R2`,
-						);
-						continue;
-					}
-
-					marketplaceManifestCache.set(plugin.pluginId, {
-						id: bundle.manifest.id,
-						version: bundle.manifest.version,
-						admin: bundle.manifest.admin,
-						mcp: bundle.manifest.mcp,
-						storage: bundle.manifest.storage,
-					});
-					if (bundle.manifest.routes.length > 0) {
-						const routeMeta = new Map<string, RouteMeta>();
-						for (const entry of bundle.manifest.routes) {
-							const normalized = normalizeManifestRoute(entry);
-							routeMeta.set(normalized.name, buildRouteMeta(normalized));
-						}
-						sandboxedRouteMetaCache.set(plugin.pluginId, routeMeta);
-					}
-
-					const dataUrl = `data:text/javascript;base64,${Buffer.from(bundle.backendCode).toString("base64")}`;
-					// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- dynamic module from trusted bundle (built by plugin-cli); adaptSandboxEntry validates required fields.
-					const pluginModule = (await import(/* @vite-ignore */ dataUrl)) as Record<
-						string,
-						unknown
-					>;
-					const pluginDef = (pluginModule.default ?? pluginModule) as Parameters<
-						typeof adaptSandboxEntry
-					>[0];
-					const adapted = adaptSandboxEntry(pluginDef, {
-						id: bundle.manifest.id,
-						version: bundle.manifest.version,
-						entrypoint: "",
-						capabilities: bundle.manifest.capabilities ?? [],
-						allowedHosts: bundle.manifest.allowedHosts ?? [],
-						// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- adaptSandboxEntry copies storage through
-						storage: (bundle.manifest.storage ?? {}) as never,
-						adminPages: bundle.manifest.admin?.pages,
-						adminWidgets: bundle.manifest.admin?.widgets?.map((w) => ({
-							id: w.id,
-							title: w.title,
-							size:
-								w.size === "full" || w.size === "half" || w.size === "third" ? w.size : undefined,
-						})),
-						settingsSchema: bundle.manifest.admin?.settingsSchema,
-					});
-					resolved.push(adapted);
-					console.log(
-						`EmDash: Loaded marketplace plugin ${plugin.pluginId}@${version} in-process (sandbox bypassed)`,
-					);
-				} catch (error) {
-					console.error(
-						`EmDash: Failed to load marketplace plugin ${plugin.pluginId} in-process:`,
-						error,
-					);
+		for (const plugin of marketplacePlugins) {
+			if (plugin.status !== "active") continue;
+			const version = plugin.marketplaceVersion ?? plugin.version;
+			try {
+				const bundle = await loadBundleFromR2(storage, plugin.pluginId, version);
+				if (!bundle) {
+					console.warn(`EmDash: Marketplace plugin ${plugin.pluginId}@${version} not found in R2`);
+					continue;
 				}
+
+				// Cache manifest and route metadata for admin UI and route auth
+				marketplaceManifestCache.set(plugin.pluginId, {
+					id: bundle.manifest.id,
+					version: bundle.manifest.version,
+					admin: bundle.manifest.admin,
+					mcp: bundle.manifest.mcp,
+					storage: bundle.manifest.storage,
+					allowedHosts: bundle.manifest.allowedHosts,
+					capabilities: bundle.manifest.capabilities,
+				});
+				if (bundle.manifest.routes.length > 0) {
+					const routeMeta = new Map<string, RouteMeta>();
+					for (const entry of bundle.manifest.routes) {
+						const normalized = normalizeManifestRoute(entry);
+						routeMeta.set(normalized.name, buildRouteMeta(normalized));
+					}
+					sandboxedRouteMetaCache.set(plugin.pluginId, routeMeta);
+				}
+
+				// Evaluate the bundled ESM and adapt it as a trusted plugin
+				const dataUrl = `data:text/javascript;base64,${Buffer.from(bundle.backendCode).toString("base64")}`;
+				// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- dynamic module from trusted bundle (built by plugin-cli); adaptSandboxEntry validates required fields.
+				const pluginModule = (await import(/* @vite-ignore */ dataUrl)) as Record<string, unknown>;
+				const pluginDef = (pluginModule.default ?? pluginModule) as Parameters<
+					typeof adaptSandboxEntry
+				>[0];
+				const adapted = adaptSandboxEntry(pluginDef, {
+					id: bundle.manifest.id,
+					version: bundle.manifest.version,
+					entrypoint: "",
+					capabilities: bundle.manifest.capabilities ?? [],
+					allowedHosts: bundle.manifest.allowedHosts ?? [],
+					// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- adaptSandboxEntry copies storage through
+					storage: (bundle.manifest.storage ?? {}) as never,
+					adminPages: bundle.manifest.admin?.pages,
+					adminWidgets: bundle.manifest.admin?.widgets?.map((w) => ({
+						id: w.id,
+						title: w.title,
+						size: w.size === "full" || w.size === "half" || w.size === "third" ? w.size : undefined,
+					})),
+					settingsSchema: bundle.manifest.admin?.settingsSchema,
+					editorPanels: bundle.manifest.admin?.editorPanels,
+					editorActions: bundle.manifest.admin?.editorActions,
+					mcp: bundle.manifest.mcp,
+				});
+				resolved.push(adapted);
+				console.log(
+					`EmDash: Loaded marketplace plugin ${plugin.pluginId}@${version} in-process (sandbox bypassed)`,
+				);
+			} catch (error) {
+				console.error(
+					`EmDash: Failed to load marketplace plugin ${plugin.pluginId} in-process:`,
+					error,
+				);
 			}
-		} catch {}
+		}
 		return resolved;
 	}
 
+	/**
+	 * Resolve exclusive hook selections on startup.
+	 *
+	 * Delegates to the shared resolveExclusiveHooks() in hooks.ts.
+	 * The runtime version considers all pipeline providers as "active" since
+	 * the pipeline was already built from only active/enabled plugins.
+	 */
 	private static async resolveExclusiveHooks(
 		pipeline: HookPipeline,
 		db: Kysely<Database>,
 		deps: RuntimeDependencies,
+		storedSelections?: ReadonlyMap<string, string | undefined>,
 	): Promise<void> {
 		const exclusiveHookNames = pipeline.getRegisteredExclusiveHooks();
 		if (exclusiveHookNames.length === 0) return;
@@ -1786,9 +3049,10 @@ export class EmDashRuntime {
 		try {
 			optionsRepo = new OptionsRepository(db);
 		} catch {
-			return;
+			return; // Options table may not exist yet
 		}
 
+		// Build preferred hints from sandboxed plugin entries
 		const preferredHints = new Map<string, string[]>();
 		for (const entry of deps.sandboxedPluginEntries) {
 			if (entry.preferred && entry.preferred.length > 0) {
@@ -1796,107 +3060,73 @@ export class EmDashRuntime {
 			}
 		}
 
+		// The pipeline was created from only enabled plugins, so all providers
+		// in it are active. The isActive check always returns true.
 		await resolveExclusiveHooksShared({
 			pipeline,
 			isActive: () => true,
 			getOption: (key) => optionsRepo.get<string>(key),
-			getOptions: (keys) => optionsRepo.getMany<string>(keys),
+			getOptions: async (keys) => {
+				const unread = keys.filter((key) => !storedSelections?.has(key));
+				const selections =
+					unread.length > 0 ? await optionsRepo.getMany<string>(unread) : new Map<string, string>();
+				for (const key of keys) {
+					const value = storedSelections?.get(key);
+					if (value !== undefined) selections.set(key, value);
+				}
+				return selections;
+			},
 			setOption: (key, value) => optionsRepo.set(key, value),
 			deleteOption: async (key) => {
 				await optionsRepo.delete(key);
 			},
 			preferredHints,
+			fallbackProviders: new Set([DEFAULT_COMMENT_MODERATOR_PLUGIN_ID]),
 		});
 	}
 
+	// =========================================================================
+	// Manifest
+	// =========================================================================
+
+	/**
+	 * Build the admin manifest from the live database.
+	 *
+	 * Used by the admin UI (sidebar collections, content editor field
+	 * dispatch, manifest endpoint) and by WordPress import — it's never
+	 * read on a public request, so this isn't on any anonymous hot path.
+	 *
+	 * No cross-request cache. The previous worker-isolate cache produced
+	 * a class of cross-isolate staleness bugs (#776, #873, #876, #877)
+	 * because Cloudflare Workers keeps multiple warm isolates per region
+	 * and there's no fan-out primitive to invalidate them in step. The
+	 * cache existed to amortize an N+1 schema query pattern; now that
+	 * `listCollectionsWithFields()` does the same work in two queries,
+	 * the rebuild is fast enough to pay on every admin request.
+	 *
+	 * Within a single request, `requestCached` deduplicates concurrent
+	 * callers (the manifest endpoint and an admin SSR template, say).
+	 */
 	getManifest(): Promise<EmDashManifest> {
 		return requestCached("emdash:manifest", () => this._buildManifest());
 	}
 
+	/**
+	 * Build the manifest from the database.
+	 *
+	 * Constant query shapes via `listCollectionsWithFields()` — one query
+	 * for collections, one batched query for fields (chunked at
+	 * `SQL_BATCH_SIZE` collection IDs to stay under D1's bound-parameter
+	 * limit). Typical sites stay well under the chunk threshold, so this
+	 * is two queries in practice; never N+1.
+	 */
 	private async _buildManifest(): Promise<EmDashManifest> {
-		const manifestCollections: Record<string, ManifestCollection> = {};
-		try {
-			const registry = new SchemaRegistry(this.db);
-			const dbCollections = await registry.listCollectionsWithFields();
-			for (const collection of dbCollections) {
-				const fields: Record<
-					string,
-					{
-						kind: string;
-						label?: string;
-						required?: boolean;
-						widget?: string;
-						options?: Array<{ value: string; label: string }> | Record<string, unknown>;
-						id?: string;
-						validation?: Record<string, unknown>;
-					}
-				> = {};
+		// Build collections from the live database.
+		// Use this.db (ALS-aware getter) so playground mode picks up the
+		// per-session DO database instead of the hardcoded singleton.
+		const manifestCollections = await buildManifestCollections({}, this.db);
 
-				for (const field of collection.fields) {
-					const entry: (typeof fields)[string] = {
-						kind: FIELD_TYPE_TO_KIND[field.type] ?? "string",
-						label: field.label,
-						required: field.required,
-					};
-					entry.id = field.id;
-					if (field.widget) entry.widget = field.widget;
-					if (field.options) {
-						entry.options = field.options;
-					}
-					if (field.validation?.options) {
-						entry.options = field.validation.options.map((v) => ({
-							value: v,
-							label: v.charAt(0).toUpperCase() + v.slice(1),
-						}));
-					}
-					if (
-						(field.type === "repeater" || field.type === "file" || field.type === "image") &&
-						field.validation
-					) {
-						entry.validation = { ...field.validation };
-					}
-					fields[field.slug] = entry;
-				}
-
-				const configuredListColumns = collection.admin?.listColumns ?? [];
-				const fieldTypes = new Map(collection.fields.map((field) => [field.slug, field.type]));
-				const listColumns: string[] = [];
-				for (const slug of configuredListColumns) {
-					if (listColumns.includes(slug)) continue;
-					const fieldType = fieldTypes.get(slug);
-					if (!fieldType || !LIST_COLUMN_FIELD_TYPES.has(fieldType)) {
-						console.warn(
-							`EmDash: Ignoring unsupported or unknown list column "${slug}" in collection "${collection.slug}".`,
-						);
-						continue;
-					}
-					if (listColumns.length >= MAX_COLLECTION_LIST_COLUMNS) {
-						console.warn(
-							`EmDash: Collection "${collection.slug}" declares more than ${MAX_COLLECTION_LIST_COLUMNS} list columns; extra columns are ignored.`,
-						);
-						break;
-					}
-					listColumns.push(slug);
-				}
-
-				manifestCollections[collection.slug] = {
-					label: collection.label,
-					labelSingular: collection.labelSingular || collection.label,
-					supports: collection.supports || [],
-					hasSeo: collection.hasSeo,
-					urlPattern: collection.urlPattern,
-					routable: collection.routable !== false,
-					titleField: collection.titleField,
-					dateField: collection.dateField,
-					...(collection.hidden ? { hidden: true } : {}),
-					listColumns: listColumns.length > 0 ? listColumns : undefined,
-					fields,
-				};
-			}
-		} catch (error) {
-			console.debug("EmDash: Could not load database collections:", error);
-		}
-
+		// Build plugins manifest
 		const manifestPlugins: Record<
 			string,
 			{
@@ -1904,7 +3134,7 @@ export class EmDashRuntime {
 				enabled?: boolean;
 				sandboxed?: boolean;
 				adminMode?: "react" | "blocks" | "none";
-				adminPages?: Array<{ path: string; label?: string; icon?: string }>;
+				adminPages?: Array<{ path: string; label?: string; icon?: string; group?: string }>;
 				dashboardWidgets?: Array<{
 					id: string;
 					title?: string;
@@ -1925,6 +3155,8 @@ export class EmDashRuntime {
 					fieldTypes: string[];
 					elements?: Element[];
 				}>;
+				editorPanels?: PluginManifest["admin"]["editorPanels"];
+				editorActions?: PluginManifest["admin"]["editorActions"];
 			}
 		> = {};
 
@@ -1932,13 +3164,17 @@ export class EmDashRuntime {
 			const status = this.pluginStates.get(plugin.id);
 			const enabled = status === undefined || status === "active";
 
+			// Determine admin mode: has admin entry → react, has pages/widgets → blocks, else none
 			const hasAdminEntry = !!plugin.admin?.entry;
 			const hasAdminPages = (plugin.admin?.pages?.length ?? 0) > 0;
 			const hasWidgets = (plugin.admin?.widgets?.length ?? 0) > 0;
+			const hasEditorExtensions =
+				(plugin.admin?.editorPanels?.length ?? 0) > 0 ||
+				(plugin.admin?.editorActions?.length ?? 0) > 0;
 			let adminMode: "react" | "blocks" | "none" = "none";
 			if (hasAdminEntry) {
 				adminMode = "react";
-			} else if (hasAdminPages || hasWidgets) {
+			} else if (hasAdminPages || hasWidgets || hasEditorExtensions) {
 				adminMode = "blocks";
 			}
 
@@ -1950,29 +3186,42 @@ export class EmDashRuntime {
 				dashboardWidgets: plugin.admin?.widgets ?? [],
 				portableTextBlocks: plugin.admin?.portableTextBlocks,
 				fieldWidgets: plugin.admin?.fieldWidgets,
+				editorPanels: plugin.admin?.editorPanels,
+				editorActions: plugin.admin?.editorActions,
 			};
 		}
 
+		// Add sandboxed plugins (use entries for admin config)
 		for (const entry of this.sandboxedPluginEntries) {
 			const status = this.pluginStates.get(entry.id);
 			const enabled = isPluginStateEnabled(status, entry.defaultEnabled);
 
 			const hasAdminPages = (entry.adminPages?.length ?? 0) > 0;
 			const hasWidgets = (entry.adminWidgets?.length ?? 0) > 0;
+			const hasEditorExtensions =
+				(entry.editorPanels?.length ?? 0) > 0 || (entry.editorActions?.length ?? 0) > 0;
 
 			manifestPlugins[entry.id] = {
 				version: entry.version,
 				enabled,
 				sandboxed: true,
-				adminMode: hasAdminPages || hasWidgets ? "blocks" : "none",
+				// `adminMode` reflects only admin pages/widgets. A plugin can
+				// contribute portableTextBlocks/fieldWidgets with adminMode "none" —
+				// the admin reads those from the manifest regardless, so don't gate
+				// admin contributions on `adminMode`.
+				adminMode: hasAdminPages || hasWidgets || hasEditorExtensions ? "blocks" : "none",
 				adminPages: entry.adminPages ?? [],
 				dashboardWidgets: entry.adminWidgets ?? [],
 				portableTextBlocks: entry.portableTextBlocks,
 				fieldWidgets: entry.fieldWidgets,
+				editorPanels: entry.editorPanels,
+				editorActions: entry.editorActions,
 			};
 		}
 
+		// Add marketplace-installed plugins (dynamically loaded from R2)
 		for (const [pluginId, meta] of marketplaceManifestCache) {
+			// Skip if already included from build-time config
 			if (manifestPlugins[pluginId]) continue;
 
 			const status = this.pluginStates.get(pluginId);
@@ -1982,17 +3231,22 @@ export class EmDashRuntime {
 			const widgets = meta.admin?.widgets;
 			const hasAdminPages = (pages?.length ?? 0) > 0;
 			const hasWidgets = (widgets?.length ?? 0) > 0;
+			const hasEditorExtensions =
+				(meta.admin?.editorPanels?.length ?? 0) > 0 || (meta.admin?.editorActions?.length ?? 0) > 0;
 
 			manifestPlugins[pluginId] = {
 				version: meta.version,
 				enabled,
 				sandboxed: true,
-				adminMode: hasAdminPages || hasWidgets ? "blocks" : "none",
+				adminMode: hasAdminPages || hasWidgets || hasEditorExtensions ? "blocks" : "none",
 				adminPages: pages ?? [],
 				dashboardWidgets: widgets ?? [],
+				editorPanels: meta.admin?.editorPanels,
+				editorActions: meta.admin?.editorActions,
 			};
 		}
 
+		// Build taxonomies from database
 		let manifestTaxonomies: Array<{
 			id: string;
 			name: string;
@@ -2005,11 +3259,7 @@ export class EmDashRuntime {
 		}> = [];
 		let taxonomyDefinitionLocales: string[] = [];
 		try {
-			const rows = await this.db
-				.selectFrom("_emdash_taxonomy_defs")
-				.selectAll()
-				.orderBy("name")
-				.execute();
+			const rows = await selectTaxonomyDefs(this.db).orderBy("d.name").execute();
 			taxonomyDefinitionLocales = rows.map((row) => row.locale);
 			manifestTaxonomies = rows.map((row) => ({
 				id: row.id,
@@ -2036,22 +3286,36 @@ export class EmDashRuntime {
 			console.warn("[i18n] taxonomy locale diagnostic failed:", error);
 		}
 
+		// Build manifest hash
 		const manifestHash = await hashString(
 			JSON.stringify(manifestCollections) +
 				JSON.stringify(manifestPlugins) +
 				JSON.stringify(manifestTaxonomies),
 		);
 
+		// Determine auth mode
 		const authMode = getAuthMode(this.config);
 		const authModeValue = authMode.type === "external" ? authMode.providerType : "passkey";
 
+		// Include i18n config if enabled (read from virtual module to avoid SSR module singleton mismatch)
 		const i18nConfig = virtualConfig?.i18n ?? getI18nConfig();
 		const i18n =
 			i18nConfig && i18nConfig.locales && i18nConfig.locales.length > 1
-				? { defaultLocale: i18nConfig.defaultLocale, locales: i18nConfig.locales }
+				? {
+						defaultLocale: i18nConfig.defaultLocale,
+						locales: i18nConfig.locales,
+						prefixDefaultLocale: i18nConfig.prefixDefaultLocale,
+					}
 				: undefined;
 
-		const registry = normalizeRegistryConfig(this.config.experimental?.registry) ?? undefined;
+		const { registry, error: registryConfigurationError } = resolveManifestRegistryConfig(
+			getRegistryConfigInput(this.config.registry),
+		);
+		if (registryConfigurationError) {
+			console.error(
+				`EmDash registry configuration error in ${registryConfigurationError.field} (${registryConfigurationError.code})`,
+			);
+		}
 
 		return {
 			version: VERSION,
@@ -2068,11 +3332,40 @@ export class EmDashRuntime {
 				implicit: i18nConfig === null,
 			},
 			marketplace: !!this.config.marketplace,
+			sandboxEnabled: this.runtimeDeps.sandboxEnabled && this.runtimeDeps.sandboxBypassed !== true,
 			registry,
+			registryConfigurationError,
 		};
 	}
 
+	/**
+	 * Verify and repair FTS indexes on demand. Runs at most once per worker
+	 * lifetime.
+	 *
+	 * Originally called from `EmDashRuntime.create()`, but on a busy D1 link
+	 * (e.g. SIN replica ~80-150ms per query) it added ~1.5s to every cold
+	 * start for a modest-sized site — more than every other init phase
+	 * combined. Anonymous public reads never touch the search write path,
+	 * so the cost isn't paid back for the vast majority of requests.
+	 *
+	 * Instead, search endpoints call this lazily: the first request that
+	 * actually needs the index pays the verify cost (usually fast — no
+	 * rebuild needed), everyone else runs cold-free.
+	 *
+	 * Uses the runtime's singleton database (`this._db`) rather than the
+	 * request-scoped DB. Verify reads only, but `rebuildIndex` writes, and
+	 * a GET search request on D1 carries a `first-unconstrained` session
+	 * that's free to route at a read replica — unsafe for writes. The
+	 * singleton always goes through the default binding, which the D1
+	 * adapter will promote to `first-primary` for write statements.
+	 *
+	 * Safe to call concurrently: repeated callers share the same in-flight
+	 * promise. Errors are swallowed internally so callers don't need to
+	 * defend against FTS not existing yet (pre-setup).
+	 */
 	async ensureSearchHealthy(): Promise<void> {
+		// Non-SQLite has no FTS to verify; the check is a cheap synchronous
+		// branch, no need to cache it.
 		if (!isSqlite(this._db)) return;
 		try {
 			await singleFlightCached(
@@ -2084,17 +3377,30 @@ export class EmDashRuntime {
 						if (repaired > 0) {
 							console.log(`Repaired ${repaired} corrupted FTS index(es)`);
 						}
-					} catch {}
+					} catch {
+						// FTS tables may not exist yet (pre-setup). Non-fatal — cache
+						// the "checked" state regardless so we don't re-scan.
+					}
 				},
 				{ anchor: (promise) => after(() => promise), ownerTimeoutMs: 30_000 },
 			);
-		} catch {}
+		} catch {
+			// This check is best-effort and must never fail the calling request.
+			// The inner body already swallows verify errors; this guards the
+			// outer failure modes (owner timeout, waiter give-up) so a slow FTS
+			// scan degrades to "unverified", not a 500 on admin/search routes.
+		}
 	}
+
+	// =========================================================================
+	// Content Handlers
+	// =========================================================================
 
 	async handleContentList(
 		collection: string,
 		params: {
 			cursor?: string;
+			page?: number;
 			limit?: number;
 			status?: string;
 			orderBy?: string;
@@ -2118,8 +3424,13 @@ export class EmDashRuntime {
 		return handleContentAuthors(this.db, collection);
 	}
 
-	async handleContentGet(collection: string, id: string, locale?: string) {
-		const result = await handleContentGet(this.db, collection, id, locale);
+	async handleContentGet(
+		collection: string,
+		id: string,
+		locale?: string,
+		referenceOptions?: { includeDrafts: boolean },
+	) {
+		const result = await handleContentGet(this.db, collection, id, locale, referenceOptions);
 		return this.hydrateDraftData(result);
 	}
 
@@ -2128,7 +3439,20 @@ export class EmDashRuntime {
 		return this.hydrateDraftData(result);
 	}
 
-	private async hydrateDraftData<T>(result: T): Promise<T> {
+	/**
+	 * If the response item has a `draftRevisionId`, replace `item.data` with
+	 * the draft revision's data and expose the original published values as
+	 * `liveData`. This makes the content_get / content_update round-trip
+	 * intuitive — read returns the latest content the caller has saved
+	 * (their pending draft), with the previously-published values still
+	 * accessible for compare-style flows.
+	 *
+	 * No-op when no draft exists or the response is an error.
+	 */
+	private async hydrateDraftData<T>(
+		result: T,
+		options: { includeStagedSlug?: boolean; strict?: boolean } = {},
+	): Promise<T> {
 		if (!result || typeof result !== "object") return result;
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- shape probed below
 		const r = result as {
@@ -2141,26 +3465,51 @@ export class EmDashRuntime {
 		if (!draftRevisionId) return result;
 		try {
 			const revision = await new RevisionRepository(this.db).findById(draftRevisionId);
-			if (!revision) return result;
+			if (!revision) {
+				if (options.strict) throw new Error(`Draft revision not found: ${draftRevisionId}`);
+				return result;
+			}
 			const liveData =
 				item.data && typeof item.data === "object"
 					? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed to object above
 						(item.data as Record<string, unknown>)
 					: {};
+			// Strip leading-underscore keys (`_slug`, `_rev`, etc.) from the
+			// revision data — those are handler-internal markers and don't
+			// belong in the surfaced `data` field. Match syncDataColumns at
+			// content.ts:~1119.
 			const revisionData: Record<string, unknown> = {};
 			for (const [key, value] of Object.entries(revision.data)) {
 				if (!key.startsWith("_")) revisionData[key] = value;
 			}
 			const mergedData = { ...liveData, ...revisionData };
+			// Return a clone rather than mutating in place. The response
+			// object isn't retained by the runtime today, but a future
+			// request-cache layer would observe stale-after-mutation bugs;
+			// cloning closes that footgun.
+			// `r.data` was narrowed to `{ item?: ... }` at the top of this
+			// method; spread its other keys (e.g. `_rev`) alongside the
+			// hydrated item without going back through `unknown`.
 			return {
 				...result,
 				// eslint-disable-next-line typescript/no-unsafe-type-assertion -- shape preserved; result has been narrowed to the {success,data:{item}} envelope
 				data: {
 					...r.data,
-					item: { ...item, data: mergedData, liveData },
+					item: {
+						...item,
+						...(options.includeStagedSlug && typeof revision.data._slug === "string"
+							? { slug: revision.data._slug }
+							: {}),
+						data: mergedData,
+						liveData,
+					},
 				},
 			};
 		} catch (error) {
+			if (options.strict) throw error;
+			// Non-fatal — fall back to the unhydrated response. Log so the
+			// failure isn't completely silent (the response will look stale
+			// to the caller but no error is raised).
 			console.error("[emdash] draft hydration failed:", error);
 			return result;
 		}
@@ -2170,6 +3519,7 @@ export class EmDashRuntime {
 		collection: string,
 		body: {
 			data: Record<string, unknown>;
+			seo?: ContentWriteInput["seo"];
 			slug?: string | null;
 			status?: string;
 			authorId?: string;
@@ -2177,18 +3527,150 @@ export class EmDashRuntime {
 			locale?: string;
 			translationOf?: string;
 			taxonomies?: Record<string, string[]>;
+			references?: Record<string, string[]>;
+			actor?: ActorInfo;
+			migrateBlocks?: boolean;
+			replaceBlocks?: boolean;
 		},
+		options: { skipSaveHooks?: boolean; excludeAfterSavePluginId?: string } = {},
 	) {
-		let processedData = body.data;
-		if (this.hooks.hasHooks("content:beforeSave")) {
-			const hookResult = await this.hooks.runContentBeforeSave(body.data, collection, true);
-			processedData = hookResult.content;
+		const actor = body.actor ? { ...body.actor } : undefined;
+		let locale: string;
+		try {
+			locale = resolveContentCreateLocale(body.locale);
+		} catch (error) {
+			return {
+				success: false as const,
+				error: {
+					code: "VALIDATION_ERROR",
+					message: error instanceof Error ? error.message : "Invalid locale",
+				},
+			};
 		}
 
-		processedData = await this.runSandboxedBeforeSave(processedData, collection, true);
+		let translationSource: ContentItemInternal | null = null;
+		let sharedFieldSlugs: string[] = [];
+		if (body.translationOf) {
+			const repo = new ContentRepository(this.db);
+			const source = await repo.findById(collection, body.translationOf);
+			if (!source) {
+				return {
+					success: false as const,
+					error: { code: "NOT_FOUND", message: "Translation source content not found" },
+				};
+			}
+			translationSource = source;
+			sharedFieldSlugs = (
+				await this.db
+					.selectFrom("_emdash_fields as field")
+					.innerJoin("_emdash_collections as collection", "collection.id", "field.collection_id")
+					.select(["field.slug", "field.type", "field.validation"])
+					.where("collection.slug", "=", collection)
+					.where("field.translatable", "=", 0)
+					.execute()
+			)
+				// A storage-less field has nothing in `data` worth sharing: its
+				// selection is keyed by translation group, so every translation
+				// already reads the same edges. What the source row does carry under
+				// that slug is the frozen column a field bound after the fact left
+				// behind, and copying it would send a key `data` no longer accepts.
+				.filter((field) => !isStoragelessFieldRow(field))
+				.map((field) => field.slug);
+			const siblings = await repo.findTranslations(
+				collection,
+				source.translationGroup ?? source.id,
+			);
+			if (siblings.some((sibling) => sibling.locale?.toLowerCase() === locale.toLowerCase())) {
+				return {
+					success: false as const,
+					error: {
+						code: "CONFLICT",
+						message: `Translation already exists in locale "${locale}" for this content item`,
+					},
+				};
+			}
+		}
 
-		processedData = await this.normalizeMediaFields(collection, processedData);
+		const saveHookDetails = {
+			locale,
+			...(body.translationOf ? { translationOf: body.translationOf } : {}),
+		};
 
+		const collectionInfo = await this.schemaRegistry
+			.getCollectionWithFields(collection)
+			.catch(() => null);
+
+		// Run beforeSave hooks (trusted plugins)
+		let processedData = body.data;
+		if (!options.skipSaveHooks && this.hooks.hasHooks("content:beforeSave")) {
+			const hookData = collectionInfo
+				? await inferBlockTypes(collectionInfo, body.data, () =>
+						Promise.resolve(translationSource?.data),
+					)
+				: body.data;
+			try {
+				const hookResult = await this.hooks.runContentBeforeSave(
+					hookData,
+					collection,
+					true,
+					undefined,
+					actor,
+					saveHookDetails,
+				);
+				processedData = hookResult.content;
+			} catch (error) {
+				return beforeSaveFailure(error);
+			}
+		}
+
+		if (translationSource) {
+			processedData = { ...processedData };
+			for (const slug of sharedFieldSlugs) {
+				if (Object.hasOwn(translationSource.data, slug)) {
+					processedData[slug] = translationSource.data[slug];
+				} else {
+					delete processedData[slug];
+				}
+			}
+		}
+		const resolvedBlockTypes = collectionInfo?.fields.some((field) => field.type === "blocks")
+			? await resolveBlockTypes(this.db)
+			: undefined;
+		if (collectionInfo) {
+			try {
+				processedData = await normalizeBlocksData(
+					this.db,
+					collectionInfo,
+					processedData,
+					translationSource?.data,
+					{
+						migrateBlocks: body.migrateBlocks,
+						replaceBlocks: body.replaceBlocks,
+					},
+					false,
+					resolvedBlockTypes,
+				);
+			} catch (error) {
+				if (error instanceof SchemaError) {
+					return {
+						success: false as const,
+						error: { code: error.code, message: error.message, details: error.details },
+					};
+				}
+				throw error;
+			}
+		}
+
+		processedData = await this.normalizeFieldValues(
+			collection,
+			processedData,
+			collectionInfo,
+			resolvedBlockTypes,
+		);
+
+		// Validate against the collection schema. Hook output is validated
+		// rather than `body.data` so plugins that mutate field values can't
+		// sneak invalid data past.
 		const { validateContentData } = await import("./api/handlers/validation.js");
 		const validation = await validateContentData(this.db, collection, processedData, {
 			partial: false,
@@ -2200,9 +3682,17 @@ export class EmDashRuntime {
 			};
 		}
 
+		// Create the content
+		const {
+			actor: _discardedActor,
+			migrateBlocks: _discardedMigrateBlocks,
+			replaceBlocks: _discardedReplaceBlocks,
+			...contentBody
+		} = body;
 		const result = await handleContentCreate(this.db, collection, {
-			...body,
+			...contentBody,
 			data: processedData,
+			locale,
 			authorId: body.authorId,
 			bylines: body.bylines,
 		});
@@ -2210,8 +3700,16 @@ export class EmDashRuntime {
 			await this.refreshContentUsageAfterSuccessfulWrite(collection, [result.data.item.id]);
 		}
 
-		if (result.success && result.data) {
-			this.runAfterSaveHooks(contentItemToRecord(result.data.item), collection, true);
+		// Run afterSave hooks (fire-and-forget)
+		if (!options.skipSaveHooks && result.success && result.data) {
+			this.runAfterSaveHooks(
+				contentItemToRecord(result.data.item),
+				collection,
+				true,
+				actor,
+				options.excludeAfterSavePluginId,
+				{ ...saveHookDetails, locale: result.data.item.locale ?? locale },
+			);
 		}
 
 		return result;
@@ -2234,16 +3732,32 @@ export class EmDashRuntime {
 				noIndex?: boolean;
 			};
 			taxonomies?: Record<string, string[]>;
+			references?: Record<string, string[]>;
 			publishedAt?: string | null;
 			locale?: string;
+			/** Replace the previous autosave revision after staging this save. */
 			skipRevision?: boolean;
 			_rev?: string;
+			/**
+			 * Acting user for this save. Used for revision attribution and
+			 * passed to content hooks; never changes entry ownership.
+			 */
+			actor?: ActorInfo;
+			migrateBlocks?: boolean;
+			replaceBlocks?: boolean;
 		},
 	) {
+		const actor = body.actor ? { ...body.actor } : undefined;
+
+		// Resolve slug → ID if needed (before any lookups)
 		const repo = new ContentRepository(this.db);
 		const resolvedItem = await repo.findByIdOrSlug(collection, id, body.locale);
 		const resolvedId = resolvedItem?.id ?? id;
 
+		// Validate _rev early — before draft revision writes which modify the version.
+		// The token is checked again against the row the draft UPDATE is conditioned
+		// on, and reaches the column handler only when no draft revision was staged,
+		// since staging advances the version the token encodes.
 		if (body._rev) {
 			if (!resolvedItem) {
 				return {
@@ -2259,43 +3773,191 @@ export class EmDashRuntime {
 				};
 			}
 		}
-		const { _rev: _discardedRev, ...bodyWithoutRev } = body;
+		const {
+			_rev: _discardedRev,
+			actor: _discardedActor,
+			migrateBlocks,
+			replaceBlocks,
+			...bodyWithoutRev
+		} = body;
+		const blockWriteOptions = { migrateBlocks, replaceBlocks };
 
+		// Loaded once and threaded through normalization, the stale-key drop and the draft
+		// merge below: each of those needs the field list and the registry does not cache.
+		// A save carrying only a reference selection reaches the draft merge without any
+		// data, so it needs the collection loaded just the same.
+		const collectionInfo =
+			bodyWithoutRev.data || bodyWithoutRev.references
+				? await this.schemaRegistry.getCollectionWithFields(collection).catch(() => null)
+				: null;
+		const knownFieldSlugs = new Set((collectionInfo?.fields ?? []).map((f) => f.slug));
+
+		// A collection that keeps drafts merges `data` into a revision instead of
+		// writing columns, so a reference field's slug would land in the revision
+		// JSON and never reach the check the column writer's own path makes. Both
+		// operands are already in hand here, so the check costs nothing.
+		if (bodyWithoutRev.data && collectionInfo) {
+			const storageless = new Set(
+				collectionInfo.fields.filter(isStoragelessField).map((field) => field.slug),
+			);
+			const changed = changedStoragelessDataKeys(
+				storageless,
+				bodyWithoutRev.data,
+				resolvedItem?.data ?? {},
+			);
+			if (changed.length > 0) return storagelessDataKeyError(changed);
+		}
+
+		// Run beforeSave hooks if data is provided
 		let processedData = bodyWithoutRev.data;
+		let resolvedBlockTypes: Awaited<ReturnType<typeof resolveBlockTypes>> | undefined;
 		if (bodyWithoutRev.data) {
 			if (this.hooks.hasHooks("content:beforeSave")) {
-				const hookResult = await this.hooks.runContentBeforeSave(
-					bodyWithoutRev.data,
-					collection,
-					false,
-				);
-				processedData = hookResult.content;
+				const hookData = collectionInfo
+					? await inferBlockTypes(collectionInfo, bodyWithoutRev.data, async () => {
+							if (resolvedItem?.draftRevisionId && collectionInfo.supports?.includes("revisions")) {
+								const draft = await new RevisionRepository(this.db).findById(
+									resolvedItem.draftRevisionId,
+								);
+								return draft?.data ?? resolvedItem.data;
+							}
+							return resolvedItem?.data;
+						})
+					: bodyWithoutRev.data;
+				try {
+					const hookResult = await this.hooks.runContentBeforeSave(
+						hookData,
+						collection,
+						false,
+						resolvedItem?.id,
+						actor,
+						resolvedItem?.locale ? { locale: resolvedItem.locale } : {},
+					);
+					processedData = hookResult.content;
+				} catch (error) {
+					return beforeSaveFailure(error);
+				}
 			}
 
-			processedData = await this.runSandboxedBeforeSave(processedData!, collection, false);
+			processedData = await this.normalizeFieldValues(
+				collection,
+				processedData!,
+				collectionInfo,
+				undefined,
+				false,
+			);
 
-			processedData = await this.normalizeMediaFields(collection, processedData);
+			// Drop unknown field keys the entry already stores (e.g. a deleted field
+			// stranded in a draft revision) before validation, while still rejecting
+			// unknown keys the entry has never stored.
+			if (collectionInfo?.fields) {
+				processedData = await this.dropUnknownKeysAlreadyStored(
+					processedData,
+					resolvedItem,
+					knownFieldSlugs,
+				);
+			}
+			if (
+				collectionInfo?.fields.some(
+					(field) => field.type === "blocks" && Object.hasOwn(processedData!, field.slug),
+				)
+			) {
+				resolvedBlockTypes = await resolveBlockTypes(this.db);
+			}
 
-			const { validateContentData } = await import("./api/handlers/validation.js");
-			const validation = await validateContentData(this.db, collection, processedData, {
-				partial: true,
-			});
-			if (!validation.ok) {
-				return {
-					success: false as const,
-					error: validation.error,
-				};
+			if (!collectionInfo?.supports?.includes("revisions")) {
+				if (collectionInfo) {
+					try {
+						processedData = await normalizeBlocksData(
+							this.db,
+							collectionInfo,
+							processedData,
+							resolvedItem?.data,
+							blockWriteOptions,
+							true,
+							resolvedBlockTypes,
+						);
+						processedData = await this.normalizeFieldValues(
+							collection,
+							processedData,
+							collectionInfo,
+							resolvedBlockTypes,
+						);
+					} catch (error) {
+						if (error instanceof SchemaError) {
+							return {
+								success: false as const,
+								error: { code: error.code, message: error.message, details: error.details },
+							};
+						}
+						throw error;
+					}
+				}
+				const { validateContentData } = await import("./api/handlers/validation.js");
+				const validation = await validateContentData(this.db, collection, processedData, {
+					partial: true,
+				});
+				if (!validation.ok) {
+					return {
+						success: false as const,
+						error: validation.error,
+					};
+				}
 			}
 		}
 
+		// Draft-aware revision handling (if collection supports revisions)
+		// Content table columns = published data (never written by saves).
+		// Draft data lives only in the revisions table.
 		let usesDraftRevisions = false;
 		let draftStorageChanged = false;
-		if (processedData) {
-			const collectionInfo = await this.schemaRegistry.getCollectionWithFields(collection);
+		if (processedData || bodyWithoutRev.references) {
 			if (collectionInfo?.supports?.includes("revisions")) {
 				usesDraftRevisions = true;
+
+				// Resolve a pending selection to translation groups before it is
+				// staged, so a bad id or an over-long selection fails this save the
+				// way a direct link write would, and publication has nothing left to
+				// resolve.
+				let stagedReferences: StagedReferences | undefined;
+				let stagedReferenceBaselines: StagedReferenceBaselines | undefined;
+				if (bodyWithoutRev.references) {
+					stagedReferences = {};
+					let entryGroup: string | undefined;
+					for (const [fieldSlug, selectedIds] of Object.entries(bodyWithoutRev.references)) {
+						const resolved = await resolveReferenceSelection(
+							this.db,
+							collection,
+							resolvedId,
+							fieldSlug,
+							selectedIds,
+						);
+						if (!resolved.success) {
+							return { success: false as const, error: resolved.error };
+						}
+						stagedReferences[fieldSlug] = resolved.data.groups;
+						entryGroup = resolved.data.entryGroup;
+					}
+					if (entryGroup) {
+						const liveSelection = await liveReferenceSelection(this.db, collection, entryGroup);
+						stagedReferenceBaselines = {};
+						for (const fieldSlug of Object.keys(stagedReferences)) {
+							stagedReferenceBaselines[fieldSlug] = liveSelection[fieldSlug] ?? [];
+						}
+					}
+				}
+
 				const revisionRepo = new RevisionRepository(this.db);
 				let existing = await repo.findById(collection, resolvedId);
+				if (body._rev && existing) {
+					const revCheck = validateRev(body._rev, existing);
+					if (!revCheck.valid) {
+						return {
+							success: false as const,
+							error: { code: "CONFLICT", message: revCheck.message },
+						};
+					}
+				}
 
 				for (let attempt = 0; existing && attempt < MAX_DRAFT_STAGE_ATTEMPTS; attempt++) {
 					let baseData: Record<string, unknown>;
@@ -2305,17 +3967,64 @@ export class EmDashRuntime {
 					} else {
 						baseData = existing.data;
 					}
+					let attemptData = processedData ?? {};
+					try {
+						attemptData = await normalizeBlocksData(
+							this.db,
+							collectionInfo,
+							attemptData,
+							baseData,
+							blockWriteOptions,
+							true,
+							resolvedBlockTypes,
+						);
+						attemptData = await this.normalizeFieldValues(
+							collection,
+							attemptData,
+							collectionInfo,
+							resolvedBlockTypes,
+						);
+					} catch (error) {
+						if (error instanceof SchemaError) {
+							return {
+								success: false as const,
+								error: { code: error.code, message: error.message, details: error.details },
+							};
+						}
+						throw error;
+					}
+					const { validateContentData } = await import("./api/handlers/validation.js");
+					const validation = await validateContentData(this.db, collection, attemptData, {
+						partial: true,
+					});
+					if (!validation.ok) {
+						return { success: false as const, error: validation.error };
+					}
 
-					const mergedData = { ...baseData, ...processedData };
+					// Written without the keys the collection has no field for, so an entry
+					// carrying a deleted field's value sheds it on its next save instead of
+					// carrying it through every revision that follows.
+					const mergedData = collectionInfo?.fields
+						? keepKnownFields({ ...baseData, ...attemptData }, knownFieldSlugs)
+						: { ...baseData, ...attemptData };
 					if (bodyWithoutRev.slug !== undefined) {
 						mergedData._slug = bodyWithoutRev.slug;
+					}
+					if (stagedReferences) {
+						mergedData[STAGED_REFERENCES_KEY] = mergeStagedReferences(baseData, stagedReferences);
+					}
+					if (stagedReferenceBaselines) {
+						mergedData[STAGED_REFERENCES_BASELINE_KEY] = mergeStagedReferenceBaselines(
+							baseData,
+							stagedReferenceBaselines,
+						);
 					}
 
 					const revision = await revisionRepo.create({
 						collection,
 						entryId: resolvedId,
 						data: mergedData,
-						authorId: bodyWithoutRev.authorId ?? undefined,
+						authorId: actor?.id,
 					});
 
 					let staged: boolean;
@@ -2354,6 +4063,7 @@ export class EmDashRuntime {
 					}
 
 					draftStorageChanged = true;
+					processedData = attemptData;
 
 					if (bodyWithoutRev.skipRevision && existing.draftRevisionId) {
 						try {
@@ -2385,54 +4095,52 @@ export class EmDashRuntime {
 			}
 		}
 
+		// Public HTML comes from live columns / SEO / taxonomies, not draft revisions.
 		const liveMetaTouched = Object.entries(bodyWithoutRev).some(
 			([key, value]) => value !== undefined && !DRAFT_ONLY_UPDATE_KEYS.has(key),
 		);
 
+		// Update the content table:
+		// - If collection uses draft revisions: only update metadata (no data fields, no slug)
+		// - Otherwise: update everything as before
 		const result =
 			usesDraftRevisions && !liveMetaTouched
 				? await handleContentGet(this.db, collection, resolvedId)
 				: await handleContentUpdate(this.db, collection, resolvedId, {
 						...bodyWithoutRev,
+						_rev: draftStorageChanged ? undefined : body._rev,
 						data: usesDraftRevisions ? undefined : processedData,
 						slug: usesDraftRevisions ? undefined : bodyWithoutRev.slug,
+						references: usesDraftRevisions ? undefined : bodyWithoutRev.references,
 						authorId: bodyWithoutRev.authorId,
 						bylines: bodyWithoutRev.bylines,
 					});
 
 		const liveContentChanged = usesDraftRevisions
 			? liveMetaTouched
-			: Boolean(processedData || bodyWithoutRev.slug !== undefined || liveMetaTouched);
+			: Boolean(
+					processedData ||
+					bodyWithoutRev.slug !== undefined ||
+					bodyWithoutRev.references ||
+					liveMetaTouched,
+				);
 
+		// Hydrate draft data BEFORE firing afterSave hooks so the hook sees
+		// the same effective data the response surfaces — for revision-
+		// supporting collections, that's the just-saved draft, not the live
+		// columns.
 		const hydrated = await this.hydrateDraftData(result);
 		if (hydrated.success && hydrated.data) {
 			const contentIdsToRefresh = [resolvedId];
 			if (!usesDraftRevisions && processedData) {
-				try {
-					contentIdsToRefresh.push(
-						...(await findNonTranslatableSiblingContentIds(
-							this.db,
-							collection,
-							resolvedId,
-							hydrated.data.item.translationGroup,
-							processedData,
-						)),
-					);
-				} catch (error) {
-					console.error(
-						`[media-usage] Failed to discover synced i18n siblings for ${collection}/${resolvedId}:`,
-						error,
-					);
-					try {
-						await markContentMediaUsageCollectionStale(
-							this.db,
-							collection,
-							"CONTENT_USAGE_REFRESH_ERROR",
-						);
-					} catch (staleError) {
-						console.error(`[media-usage] Failed to mark ${collection} stale:`, staleError);
-					}
-				}
+				contentIdsToRefresh.push(
+					...(await this.findSyncedSiblingsForUsageRefresh(
+						collection,
+						resolvedId,
+						hydrated.data.item.translationGroup,
+						processedData,
+					)),
+				);
 			}
 			await this.refreshContentUsageAfterSuccessfulWrite(collection, contentIdsToRefresh);
 		} else if (draftStorageChanged) {
@@ -2443,8 +4151,17 @@ export class EmDashRuntime {
 			}
 		}
 
+		// Run afterSave hooks (fire-and-forget)
 		if (hydrated.success && hydrated.data) {
-			this.runAfterSaveHooks(contentItemToRecord(hydrated.data.item), collection, false);
+			const savedLocale = hydrated.data.item.locale;
+			this.runAfterSaveHooks(
+				contentItemToRecord(hydrated.data.item),
+				collection,
+				false,
+				actor,
+				undefined,
+				savedLocale ? { locale: savedLocale } : {},
+			);
 		}
 
 		if (hydrated.success) {
@@ -2454,6 +4171,7 @@ export class EmDashRuntime {
 	}
 
 	async handleContentDelete(collection: string, id: string) {
+		// Run beforeDelete hooks (trusted plugins)
 		if (this.hooks.hasHooks("content:beforeDelete")) {
 			const { allowed } = await this.hooks.runContentBeforeDelete(id, collection);
 			if (!allowed) {
@@ -2467,22 +4185,16 @@ export class EmDashRuntime {
 			}
 		}
 
-		const sandboxAllowed = await this.runSandboxedBeforeDelete(id, collection);
-		if (!sandboxAllowed) {
-			return {
-				success: false,
-				error: {
-					code: "DELETE_BLOCKED",
-					message: "Delete blocked by sandboxed plugin hook",
-				},
-			};
-		}
+		const policyRejectionRevision = await this.getScheduledPolicyRejectionRevision(collection, id);
 
+		// Delete the content
 		const result = await handleContentDelete(this.db, collection, id);
 		if (result.success) {
+			await this.clearScheduledPolicyRejection(collection, result.data.id, policyRejectionRevision);
 			await this.refreshContentUsageAfterSuccessfulWrite(collection, [result.data.id]);
 		}
 
+		// Run afterDelete hooks (deferred past the response via after())
 		if (result.success) {
 			this.runAfterDeleteHooks(id, collection, false);
 		}
@@ -2490,32 +4202,53 @@ export class EmDashRuntime {
 		return result;
 	}
 
+	// =========================================================================
+	// Trash Handlers
+	// =========================================================================
+
 	async handleContentListTrashed(
 		collection: string,
-		params: { cursor?: string; limit?: number } = {},
+		params: { cursor?: string; page?: number; limit?: number; locale?: string } = {},
 	) {
 		return handleContentListTrashed(this.db, collection, params);
 	}
 
-	async handleContentRestore(collection: string, id: string) {
-		const result = await handleContentRestore(this.db, collection, id);
+	async handleContentRestore(
+		collection: string,
+		id: string,
+		options: {
+			_rev?: string;
+			origin?: ContentActionOrigin;
+			pluginInvocationId?: string;
+		} = {},
+	) {
+		const result = await handleContentRestore(this.db, collection, id, { _rev: options._rev });
 		if (result.success && result.data) {
 			await this.refreshContentUsageAfterSuccessfulWrite(collection, [result.data.item.id]);
 		}
 
+		// Run afterRestore hooks (fire-and-forget)
 		if (result.success) {
-			this.runAfterRestoreHooks(contentItemToRecord(result.data.item), collection);
+			this.runAfterRestoreHooks(
+				contentItemToRecord(result.data.item),
+				collection,
+				options.origin?.source === "plugin" ? options.origin.pluginId : undefined,
+				options.pluginInvocationId,
+			);
 		}
 
 		return result;
 	}
 
 	async handleContentPermanentDelete(collection: string, id: string) {
+		const policyRejectionRevision = await this.getScheduledPolicyRejectionRevision(collection, id);
 		const result = await handleContentPermanentDelete(this.db, collection, id);
 		if (result.success) {
+			await this.clearScheduledPolicyRejection(collection, result.data.id, policyRejectionRevision);
 			await this.deleteContentUsageAfterSuccessfulPermanentDelete(collection, result.data.id);
 		}
 
+		// Run afterDelete hooks so plugins (e.g. AI Search) can clean up
 		if (result.success) {
 			this.runAfterDeleteHooks(id, collection, true);
 		}
@@ -2523,8 +4256,8 @@ export class EmDashRuntime {
 		return result;
 	}
 
-	async handleContentCountTrashed(collection: string) {
-		return handleContentCountTrashed(this.db, collection);
+	async handleContentCountTrashed(collection: string, params: { locale?: string } = {}) {
+		return handleContentCountTrashed(this.db, collection, params);
 	}
 
 	async handleContentDuplicate(collection: string, id: string, authorId?: string) {
@@ -2535,6 +4268,390 @@ export class EmDashRuntime {
 		return result;
 	}
 
+	// =========================================================================
+	// Publishing & Scheduling Handlers
+	// =========================================================================
+
+	private pluginVersionedResult(
+		result:
+			| { success: true; data: { item: ContentItemInternal; _rev?: string } }
+			| { success: false; error: { code: string; message: string } },
+	): VersionedContentItem {
+		if (!result.success) {
+			throw Object.assign(new Error(result.error.message), { code: result.error.code });
+		}
+		if (!result.data._rev) throw new Error("Content action returned no revision");
+		return { item: toPluginContentItem(result.data.item), _rev: result.data._rev };
+	}
+
+	private async runPluginContentAction<T>(
+		pluginId: string,
+		action: string,
+		collection: string,
+		id: string,
+		fn: (resolvedId: string) => Promise<T>,
+		invocationId?: string,
+		invalidateContentCache?: PluginContentCacheInvalidator,
+	): Promise<T> {
+		let invocationInvalidator: PluginContentCacheInvalidator | undefined;
+		if (invocationId) {
+			const invocationKey = this.pluginInvocationKey(pluginId, invocationId);
+			if (
+				!this.activePluginInvocations.has(invocationKey) &&
+				!this.releasedPluginInvocations.has(invocationKey)
+			) {
+				throw Object.assign(new Error("Plugin content action invocation has expired"), {
+					code: "CONTENT_ACTION_INVOCATION_EXPIRED",
+				});
+			}
+			invocationInvalidator = this.pluginInvocationCacheInvalidators.get(invocationKey);
+		}
+		const recordWrite = await assertSiteWriteAllowed(this.db);
+		const repo = new ContentRepository(this.db);
+		const item =
+			action === "restore"
+				? await repo.findByIdOrSlugIncludingTrashed(collection, id)
+				: await repo.findByIdOrSlug(collection, id);
+		const resolvedId = item?.id ?? id;
+		const key = this.pluginContentActionKey(collection, resolvedId);
+		if ((this.activePluginContentActions.get(key) ?? 0) > 0) {
+			throw Object.assign(new Error("Plugin content action re-entered itself"), {
+				code: "CONTENT_ACTION_REENTRANT",
+			});
+		}
+		this.retainPluginContentAction(key);
+		try {
+			const result = await fn(resolvedId);
+			await recordWrite();
+			const invalidator =
+				invalidateContentCache ?? invocationInvalidator ?? this.pluginContentCacheInvalidator;
+			if (invalidator) {
+				try {
+					await invalidator([collection, resolvedId]);
+				} catch (error) {
+					console.error(
+						`[plugin-content-action] Cache invalidation failed for ${collection}/${resolvedId}:`,
+						error,
+					);
+				}
+			}
+			return result;
+		} finally {
+			this.releasePluginContentAction(key);
+		}
+	}
+
+	private pluginContentActionKey(collection: string, id: string): string {
+		return JSON.stringify([collection, id]);
+	}
+
+	private retainPluginContentAction(key: string): void {
+		this.activePluginContentActions.set(key, (this.activePluginContentActions.get(key) ?? 0) + 1);
+	}
+
+	private releasePluginContentAction(key: string): void {
+		const remaining = (this.activePluginContentActions.get(key) ?? 1) - 1;
+		if (remaining > 0) this.activePluginContentActions.set(key, remaining);
+		else this.activePluginContentActions.delete(key);
+	}
+
+	private async pluginGetVersioned(
+		_pluginId: string,
+		collection: string,
+		id: string,
+	): Promise<VersionedContentItem | null> {
+		const result = await this.handleContentGet(collection, id);
+		if (!result.success) {
+			if (result.error.code === "NOT_FOUND") return null;
+			throw Object.assign(new Error(result.error.message), { code: result.error.code });
+		}
+		if (!result.data._rev) throw new Error("Content read returned no revision");
+		return { item: toPluginContentItem(result.data.item), _rev: result.data._rev };
+	}
+
+	private async pluginGetTrashedVersioned(
+		_pluginId: string,
+		collection: string,
+		id: string,
+	): Promise<VersionedContentItem | null> {
+		const result = await this.handleContentGetIncludingTrashed(collection, id);
+		if (!result.success) {
+			if (result.error.code === "NOT_FOUND") return null;
+			throw Object.assign(new Error(result.error.message), { code: result.error.code });
+		}
+		if (!(await new ContentRepository(this.db).isTrashed(collection, result.data.item.id))) {
+			return null;
+		}
+		if (!result.data._rev) throw new Error("Trashed content read returned no revision");
+		return { item: toPluginContentItem(result.data.item), _rev: result.data._rev };
+	}
+
+	private pluginPublish(
+		pluginId: string,
+		collection: string,
+		id: string,
+		options: { _rev: string },
+		invocationId?: string,
+		invalidateContentCache?: PluginContentCacheInvalidator,
+	): Promise<VersionedContentItem> {
+		return this.runPluginContentAction(
+			pluginId,
+			"publish",
+			collection,
+			id,
+			async (resolvedId) =>
+				this.pluginVersionedResult(
+					await this.handleContentPublish(collection, resolvedId, {
+						_rev: options._rev,
+						origin: { source: "plugin", pluginId },
+						pluginInvocationId: invocationId,
+					}),
+				),
+			invocationId,
+			invalidateContentCache,
+		);
+	}
+
+	private pluginUnpublish(
+		pluginId: string,
+		collection: string,
+		id: string,
+		options: { _rev: string },
+		invocationId?: string,
+		invalidateContentCache?: PluginContentCacheInvalidator,
+	): Promise<VersionedContentItem> {
+		return this.runPluginContentAction(
+			pluginId,
+			"unpublish",
+			collection,
+			id,
+			async (resolvedId) =>
+				this.pluginVersionedResult(
+					await this.handleContentUnpublish(collection, resolvedId, {
+						_rev: options._rev,
+						origin: { source: "plugin", pluginId },
+						pluginInvocationId: invocationId,
+					}),
+				),
+			invocationId,
+			invalidateContentCache,
+		);
+	}
+
+	private pluginSchedule(
+		pluginId: string,
+		collection: string,
+		id: string,
+		options: { scheduledAt: string; _rev: string },
+		invocationId?: string,
+		invalidateContentCache?: PluginContentCacheInvalidator,
+	): Promise<VersionedContentItem> {
+		return this.runPluginContentAction(
+			pluginId,
+			"schedule",
+			collection,
+			id,
+			async (resolvedId) =>
+				this.pluginVersionedResult(
+					await this.handleContentSchedule(collection, resolvedId, options.scheduledAt, {
+						_rev: options._rev,
+						origin: { source: "plugin", pluginId },
+						pluginInvocationId: invocationId,
+					}),
+				),
+			invocationId,
+			invalidateContentCache,
+		);
+	}
+
+	private pluginUnschedule(
+		pluginId: string,
+		collection: string,
+		id: string,
+		options: { _rev: string },
+		invocationId?: string,
+		invalidateContentCache?: PluginContentCacheInvalidator,
+	): Promise<VersionedContentItem> {
+		return this.runPluginContentAction(
+			pluginId,
+			"unschedule",
+			collection,
+			id,
+			async (resolvedId) =>
+				this.pluginVersionedResult(
+					await this.handleContentUnschedule(collection, resolvedId, {
+						...options,
+						origin: { source: "plugin", pluginId },
+						pluginInvocationId: invocationId,
+					}),
+				),
+			invocationId,
+			invalidateContentCache,
+		);
+	}
+
+	private pluginRestore(
+		pluginId: string,
+		collection: string,
+		id: string,
+		options: { _rev: string },
+		invocationId?: string,
+		invalidateContentCache?: PluginContentCacheInvalidator,
+	): Promise<VersionedContentItem> {
+		return this.runPluginContentAction(
+			pluginId,
+			"restore",
+			collection,
+			id,
+			async (resolvedId) =>
+				this.pluginVersionedResult(
+					await this.handleContentRestore(collection, resolvedId, {
+						...options,
+						origin: { source: "plugin", pluginId },
+						pluginInvocationId: invocationId,
+					}),
+				),
+			invocationId,
+			invalidateContentCache,
+		);
+	}
+
+	private async checkContentPolicy(
+		name: ContentPolicyHookName,
+		collection: string,
+		id: string,
+		options: ContentPolicyMutationOptions,
+		rejectionCode: "PUBLISH_REJECTED" | "SCHEDULE_REJECTED" | "UNPUBLISH_REJECTED",
+		failureCode: "CONTENT_PUBLISH_ERROR" | "CONTENT_SCHEDULE_ERROR" | "CONTENT_UNPUBLISH_ERROR",
+		scheduledAt?: string,
+	): Promise<ContentPolicyCheck> {
+		let current = await handleContentGet(this.db, collection, id);
+		if (!current.success) {
+			return {
+				allowed: false,
+				revision: options._rev ?? "",
+				error: current.error,
+			};
+		}
+
+		const revision = current.data._rev;
+		if (!revision) {
+			return {
+				allowed: false,
+				revision: options._rev ?? "",
+				error: { code: failureCode, message: "Failed to read content revision" },
+			};
+		}
+		if (options._rev !== undefined && options._rev !== revision) {
+			return {
+				allowed: false,
+				revision,
+				error: { code: "CONFLICT", message: "Revision precondition did not match" },
+			};
+		}
+
+		if (!this.hooks.hasHooks(name)) return { allowed: true, revision };
+		if (name !== "content:beforeUnpublish") {
+			try {
+				current = await this.hydrateDraftData(current, {
+					includeStagedSlug: true,
+					strict: true,
+				});
+			} catch (error) {
+				console.error(`[content-policy] ${name} draft hydration failed:`, error);
+				return {
+					allowed: false,
+					revision,
+					error: { code: failureCode, message: `Failed to read content for ${name} policy` },
+				};
+			}
+		}
+
+		const origin = options.origin ?? { source: "system" };
+		const actor =
+			options.actor &&
+			(origin.source === "api" || origin.source === "mcp" || origin.source === "visual-editor")
+				? { ...options.actor, source: origin.source }
+				: undefined;
+		try {
+			const decision = await this.hooks.runContentPolicy(name, {
+				content: contentItemToRecord(current.data.item),
+				collection,
+				origin,
+				actor,
+				...(scheduledAt === undefined ? {} : { scheduledAt }),
+			});
+			if (decision.cancellation) {
+				return {
+					allowed: false,
+					revision,
+					error: { code: rejectionCode, message: decision.cancellation.reason },
+					cancellation: decision.cancellation,
+				};
+			}
+			return { allowed: true, revision };
+		} catch (error) {
+			console.error(`[content-policy] ${name} failed:`, error);
+			return {
+				allowed: false,
+				revision,
+				error: { code: failureCode, message: `Failed to run ${name} policy` },
+			};
+		}
+	}
+
+	private async getScheduledPolicyRejectionRevision(
+		collection: string,
+		id: string,
+	): Promise<string | undefined> {
+		try {
+			return (
+				await new OptionsRepository(this.db).getVersioned(
+					scheduledPolicyRejectionKey(collection, id),
+				)
+			)?.revision;
+		} catch (error) {
+			console.error(
+				`[content-policy] Failed to read scheduled rejection for ${collection}/${id}:`,
+				error,
+			);
+			return undefined;
+		}
+	}
+
+	private async clearScheduledPolicyRejection(
+		collection: string,
+		id: string,
+		expectedRevision: string | undefined,
+	): Promise<void> {
+		if (expectedRevision === undefined) return;
+		try {
+			await new OptionsRepository(this.db).compareAndDelete(
+				scheduledPolicyRejectionKey(collection, id),
+				expectedRevision,
+			);
+		} catch (error) {
+			console.error(
+				`[content-policy] Failed to clear scheduled rejection for ${collection}/${id}:`,
+				error,
+			);
+		}
+	}
+
+	private createScheduledPolicyRejection(
+		collection: string,
+		id: string,
+		cancellation: { pluginId: string; reason: string },
+	): ScheduledPolicyRejection {
+		return {
+			collection,
+			id,
+			pluginId: cancellation.pluginId,
+			reason: cancellation.reason,
+			rejectedAt: (this.runtimeDeps.now?.() ?? new Date()).toISOString(),
+		};
+	}
+
 	async handleContentPublish(
 		collection: string,
 		id: string,
@@ -2542,54 +4659,179 @@ export class EmDashRuntime {
 			publishedAt?: string;
 			requireScheduledDue?: boolean;
 			expectedScheduledAt?: string;
+			_rev?: string;
+			currentTime?: Date;
+			actor?: ActorInfo;
+			origin?: ContentActionOrigin;
+			pluginInvocationId?: string;
 		} = {},
 	) {
-		const result = await handleContentPublish(this.db, collection, id, options);
+		const policy = await this.checkContentPolicy(
+			"content:beforePublish",
+			collection,
+			id,
+			options,
+			"PUBLISH_REJECTED",
+			"CONTENT_PUBLISH_ERROR",
+		);
+		if (!policy.allowed) {
+			if (policy.cancellation && options.origin?.source === "scheduler") {
+				const unscheduled = await handleScheduledPolicyRejection(this.db, collection, id, {
+					_rev: policy.revision,
+					rejection: this.createScheduledPolicyRejection(collection, id, policy.cancellation),
+				});
+				if (!unscheduled.success) return unscheduled;
+				await this.refreshContentUsageAfterSuccessfulWrite(collection, [unscheduled.data.item.id]);
+				this.runAfterUnscheduleHooks(contentItemToRecord(unscheduled.data.item), collection);
+			}
+			return { success: false as const, error: policy.error };
+		}
+		const policyRejectionRevision = await this.getScheduledPolicyRejectionRevision(collection, id);
+		const {
+			actor: _actor,
+			origin: _origin,
+			pluginInvocationId: _pluginInvocationId,
+			...handlerOptions
+		} = options;
+		const result = await handleContentPublish(this.db, collection, id, {
+			...handlerOptions,
+			_rev: policy.revision,
+		});
 		if (result.success && result.data) {
-			await this.refreshContentUsageAfterSuccessfulWrite(collection, [result.data.item.id]);
+			await this.clearScheduledPolicyRejection(
+				collection,
+				result.data.item.id,
+				policyRejectionRevision,
+			);
+			const { item } = result.data;
+			await this.refreshContentUsageAfterSuccessfulWrite(collection, [
+				item.id,
+				...(await this.findSyncedSiblingsForUsageRefresh(
+					collection,
+					item.id,
+					item.translationGroup,
+					item.data,
+					{ absentAsCleared: true },
+				)),
+			]);
 		}
 
+		// Run afterPublish hooks (fire-and-forget)
 		if (result.success && result.data) {
-			this.runAfterPublishHooks(contentItemToRecord(result.data.item), collection);
+			this.runAfterPublishHooks(
+				contentItemToRecord(result.data.item),
+				collection,
+				options.origin?.source === "plugin" ? options.origin.pluginId : undefined,
+				options.pluginInvocationId,
+			);
 		}
 
 		return result;
 	}
 
-	async handleContentUnpublish(collection: string, id: string) {
-		const result = await handleContentUnpublish(this.db, collection, id);
+	async handleContentUnpublish(
+		collection: string,
+		id: string,
+		options: ContentPolicyMutationOptions = {},
+	) {
+		const policy = await this.checkContentPolicy(
+			"content:beforeUnpublish",
+			collection,
+			id,
+			options,
+			"UNPUBLISH_REJECTED",
+			"CONTENT_UNPUBLISH_ERROR",
+		);
+		if (!policy.allowed) return { success: false as const, error: policy.error };
+		const result = await handleContentUnpublish(this.db, collection, id, {
+			_rev: policy.revision,
+		});
 		if (result.success && result.data) {
 			await this.refreshContentUsageAfterSuccessfulWrite(collection, [result.data.item.id]);
 		}
 
+		// Run afterUnpublish hooks (deferred past the response via after())
 		if (result.success && result.data) {
-			this.runAfterUnpublishHooks(contentItemToRecord(result.data.item), collection);
+			this.runAfterUnpublishHooks(
+				contentItemToRecord(result.data.item),
+				collection,
+				options.origin?.source === "plugin" ? options.origin.pluginId : undefined,
+				options.pluginInvocationId,
+			);
 		}
 
 		return result;
 	}
 
-	async handleContentSchedule(collection: string, id: string, scheduledAt: string) {
-		const result = await handleContentSchedule(this.db, collection, id, scheduledAt);
+	async handleContentSchedule(
+		collection: string,
+		id: string,
+		scheduledAt: string,
+		options: ContentPolicyMutationOptions = {},
+	) {
+		const policy = await this.checkContentPolicy(
+			"content:beforeSchedule",
+			collection,
+			id,
+			options,
+			"SCHEDULE_REJECTED",
+			"CONTENT_SCHEDULE_ERROR",
+			scheduledAt,
+		);
+		if (!policy.allowed) return { success: false as const, error: policy.error };
+		const policyRejectionRevision = await this.getScheduledPolicyRejectionRevision(collection, id);
+		const result = await handleContentSchedule(
+			this.db,
+			collection,
+			id,
+			scheduledAt,
+			this.runtimeDeps.now?.() ?? new Date(),
+			policy.revision,
+		);
 		if (result.success && result.data) {
+			await this.clearScheduledPolicyRejection(
+				collection,
+				result.data.item.id,
+				policyRejectionRevision,
+			);
 			await this.refreshContentUsageAfterSuccessfulWrite(collection, [result.data.item.id]);
 		}
 
+		// Run afterSchedule hooks (fire-and-forget)
 		if (result.success && result.data) {
-			this.runAfterScheduleHooks(contentItemToRecord(result.data.item), collection);
+			this.runAfterScheduleHooks(
+				contentItemToRecord(result.data.item),
+				collection,
+				options.origin?.source === "plugin" ? options.origin.pluginId : undefined,
+				options.pluginInvocationId,
+			);
 		}
 
 		return result;
 	}
 
-	async handleContentUnschedule(collection: string, id: string) {
-		const result = await handleContentUnschedule(this.db, collection, id);
+	async handleContentUnschedule(
+		collection: string,
+		id: string,
+		options: {
+			_rev?: string;
+			origin?: ContentActionOrigin;
+			pluginInvocationId?: string;
+		} = {},
+	) {
+		const result = await handleContentUnschedule(this.db, collection, id, { _rev: options._rev });
 		if (result.success && result.data) {
 			await this.refreshContentUsageAfterSuccessfulWrite(collection, [result.data.item.id]);
 		}
 
+		// Run afterUnschedule hooks (fire-and-forget)
 		if (result.success && result.data) {
-			this.runAfterUnscheduleHooks(contentItemToRecord(result.data.item), collection);
+			this.runAfterUnscheduleHooks(
+				contentItemToRecord(result.data.item),
+				collection,
+				options.origin?.source === "plugin" ? options.origin.pluginId : undefined,
+				options.pluginInvocationId,
+			);
 		}
 
 		return result;
@@ -2599,8 +4841,8 @@ export class EmDashRuntime {
 		return handleContentCountScheduled(this.db, collection);
 	}
 
-	async handleContentDiscardDraft(collection: string, id: string) {
-		const result = await handleContentDiscardDraft(this.db, collection, id);
+	async handleContentDiscardDraft(collection: string, id: string, options: { _rev?: string } = {}) {
+		const result = await handleContentDiscardDraft(this.db, collection, id, options);
 		if (result.success && result.data) {
 			await this.refreshContentUsageAfterSuccessfulWrite(collection, [result.data.item.id]);
 		}
@@ -2614,6 +4856,10 @@ export class EmDashRuntime {
 	async handleContentTranslations(collection: string, id: string) {
 		return handleContentTranslations(this.db, collection, id);
 	}
+
+	// =========================================================================
+	// Media Handlers
+	// =========================================================================
 
 	async handleMediaList(params: {
 		cursor?: string;
@@ -2630,18 +4876,74 @@ export class EmDashRuntime {
 		return handleMediaGet(this.db, id);
 	}
 
+	async handleMediaUpload(input: MediaUploadInput) {
+		if (!this.storage) {
+			return {
+				success: false as const,
+				error: { code: "NO_STORAGE", message: "Storage not configured" },
+			};
+		}
+		const result = await uploadMedia(this.db, this.storage, input, {
+			beforeUpload: async (file) => {
+				if (!this.hooks.hasHooks("media:beforeUpload")) return file;
+				return (await this.hooks.runMediaBeforeUpload(file)).file;
+			},
+		});
+		if (result.success && !result.data.deduplicated && this.hooks.hasHooks("media:afterUpload")) {
+			const item = result.data.item;
+			await this.hooks.runMediaAfterUpload({
+				id: item.id,
+				filename: item.filename,
+				mimeType: item.mimeType,
+				size: item.size,
+				url: item.url,
+				createdAt: item.createdAt,
+			});
+		}
+		return result;
+	}
+
+	async handleMediaRegisterUpload(input: { storageKey: string; authorId?: string }) {
+		if (!this.storage) {
+			return {
+				success: false as const,
+				error: { code: "NO_STORAGE", message: "Storage not configured" },
+			};
+		}
+		const result = await handleMediaRegisterUpload(this.db, this.storage, input);
+
+		if (result.success && this.hooks.hasHooks("media:afterUpload")) {
+			const item = result.data.item;
+			const mediaItem: MediaItem = {
+				id: item.id,
+				filename: item.filename,
+				mimeType: item.mimeType,
+				size: item.size,
+				url: `/media/${item.id}/${item.filename}`,
+				createdAt: item.createdAt,
+			};
+			this.runMediaAfterUploadHook(mediaItem);
+		}
+
+		return result;
+	}
+
 	async handleMediaCreate(input: {
 		filename: string;
 		mimeType: string;
 		size?: number;
 		width?: number;
 		height?: number;
+		alt?: string;
+		caption?: string;
 		storageKey: string;
 		contentHash?: string;
 		blurhash?: string;
 		dominantColor?: string;
 		authorId?: string;
+		folderId?: string | null;
 	}) {
+		// Run beforeUpload hooks
 		let processedInput = input;
 		if (this.hooks.hasHooks("media:beforeUpload")) {
 			const hookResult = await this.hooks.runMediaBeforeUpload({
@@ -2657,6 +4959,7 @@ export class EmDashRuntime {
 			};
 		}
 
+		// Create the media record
 		const result = await handleMediaCreate(this.db, processedInput);
 
 		if (result.success && this.hooks.hasHooks("media:afterUpload")) {
@@ -2669,9 +4972,7 @@ export class EmDashRuntime {
 				url: `/media/${item.id}/${item.filename}`,
 				createdAt: item.createdAt,
 			};
-			this.hooks
-				.runMediaAfterUpload(mediaItem)
-				.catch((err) => console.error("EmDash afterUpload hook error:", err));
+			this.runMediaAfterUploadHook(mediaItem);
 		}
 
 		return result;
@@ -2690,6 +4991,28 @@ export class EmDashRuntime {
 		},
 	) {
 		const result = await handleMediaUpdate(this.db, id, input);
+		// Resolved media references in site settings (`logo`, `favicon`,
+		// `seo.defaultOgImage`) bake in the media row's `contentType`,
+		// `width`, and `height`. A metadata edit invalidates that snapshot
+		// for every entry point: REST routes, MCP tools, plugin code, and
+		// any future caller of `handleMediaUpdate`. Cross-isolate staleness
+		// remains bounded by isolate lifetime.
+		if (result.success) {
+			invalidateSiteSettingsCache();
+		}
+		return result;
+	}
+
+	async handlePluginMediaMetadataUpdate(id: string, patch: MediaMetadataPatch) {
+		return updatePluginMediaMetadata(this.db, id, patch);
+	}
+
+	async handleMediaReplaceMetadata(
+		id: string,
+		expectedStorageKey: string,
+		input: { size: number; width: number; height: number; contentHash: string },
+	) {
+		const result = await handleMediaReplaceMetadata(this.db, id, expectedStorageKey, input);
 		if (result.success) {
 			invalidateSiteSettingsCache();
 		}
@@ -2697,12 +5020,181 @@ export class EmDashRuntime {
 	}
 
 	async handleMediaDelete(id: string) {
-		const result = await handleMediaDelete(this.db, id);
+		const result = await handleMediaDelete(this.db, id, this.storage);
+		// Same reasoning as `handleMediaUpdate`: if the deleted media row
+		// was referenced by a setting, the cached resolved URL now points
+		// at a 404. Invalidation is unconditional on success — cheaper than
+		// querying which settings reference the id.
 		if (result.success) {
 			invalidateSiteSettingsCache();
 		}
 		return result;
 	}
+
+	private commentHooks(): CommentHookRunner {
+		return {
+			runBeforeCreate: (event) => this.hooks.runCommentBeforeCreate(event),
+			runModerate: async (event) => {
+				const result = await this.hooks.invokeExclusiveHook("comment:moderate", event);
+				if (!result) return { status: "pending", reason: "No moderator configured" };
+				if (result.error) {
+					console.error(`[comments] Moderation error (${result.pluginId}):`, result.error.message);
+					return { status: "pending", reason: "Moderation error" };
+				}
+				if (!isModerationDecision(result.result)) {
+					return { status: "pending", reason: "Invalid moderation result" };
+				}
+				return result.result;
+			},
+			fireAfterCreate: (event) => {
+				// Deferred through after() so the host's waitUntil keeps the hooks
+				// alive past the response (see comments/public-submission.ts).
+				after(() =>
+					this.hooks
+						.runCommentAfterCreate(event)
+						.catch((error) =>
+							console.error(
+								"[comments] afterCreate error:",
+								error instanceof Error ? error.message : error,
+							),
+						),
+				);
+			},
+			fireAfterModerate: (event) => {
+				return this.hooks
+					.runCommentAfterModerate(event)
+					.catch((error) =>
+						console.error(
+							"[comments] afterModerate error:",
+							error instanceof Error ? error.message : error,
+						),
+					);
+			},
+		};
+	}
+
+	async handleCommentCreate(
+		input: CommentCreateInput,
+		settings: CollectionCommentSettings,
+		contentInfo?: Parameters<typeof createComment>[4],
+	): Promise<CommentCreateResult | null> {
+		return createComment(this.db, input, settings, this.commentHooks(), contentInfo);
+	}
+
+	async handlePublicCommentSubmission(
+		collection: string,
+		contentId: string,
+		request: Request,
+		user?: UserInfo,
+	): Promise<Response> {
+		return submitPublicComment(this, collection, contentId, request, user);
+	}
+
+	private async sendCommentApproval(
+		comment: Awaited<ReturnType<CommentRepository["findById"]>>,
+		request?: Request,
+	) {
+		if (!comment || !this.email) return;
+		try {
+			const adminBaseUrl = await getSiteBaseUrl(
+				this.db,
+				request ?? new Request("https://plugin.invalid/"),
+				this.config,
+			);
+			const content = await lookupContentAuthor(this.db, comment.collection, comment.contentId);
+			if (content?.author) {
+				await sendCommentNotification({
+					email: this.email,
+					comment,
+					contentAuthor: content.author,
+					adminBaseUrl,
+				});
+			}
+		} catch (error) {
+			console.error(
+				"[comments] notification error:",
+				error instanceof Error ? error.message : error,
+			);
+		}
+	}
+
+	private async moderateCommentWithOrigin(
+		id: string,
+		status: CommentStatus,
+		expectedStatus: CommentStatus,
+		origin:
+			| { source: "admin"; userId: string; name: string | null }
+			| { source: "plugin"; pluginId: string },
+		request?: Request,
+	) {
+		if (this.commentModerationInProgress.has(id)) {
+			const current = await new CommentRepository(this.db).findById(id);
+			if (current && current.status !== expectedStatus) {
+				throw new CommentStatusConflictError(current.status);
+			}
+			throw Object.assign(new Error("Comment moderation is already in progress"), {
+				code: "COMMENT_MODERATION_IN_PROGRESS",
+			});
+		}
+		this.commentModerationInProgress.add(id);
+		try {
+			return await moderateComment(
+				this.db,
+				id,
+				status,
+				expectedStatus,
+				origin,
+				this.commentHooks(),
+				(comment) => this.sendCommentApproval(comment, request),
+			);
+		} finally {
+			this.commentModerationInProgress.delete(id);
+		}
+	}
+
+	async handleCommentModerate(
+		id: string,
+		status: CommentStatus,
+		moderator: { id: string; name: string | null },
+		expectedStatus?: CommentStatus,
+		request?: Request,
+	) {
+		let expected = expectedStatus;
+		if (!expected) {
+			const current = await new CommentRepository(this.db).findById(id);
+			if (!current || current.status === "trash") return null;
+			expected = current.status;
+		}
+		return this.moderateCommentWithOrigin(
+			id,
+			status,
+			expected,
+			{ source: "admin", userId: moderator.id, name: moderator.name },
+			request,
+		);
+	}
+
+	async handlePluginCommentModerate(
+		pluginId: string,
+		id: string,
+		status: PluginCommentStatus,
+		expectedStatus: PluginCommentStatus,
+	): Promise<PluginComment> {
+		assertPluginCommentStatus(status, "status");
+		assertPluginCommentStatus(expectedStatus, "expectedStatus");
+		const updated = await this.moderateCommentWithOrigin(id, status, expectedStatus, {
+			source: "plugin",
+			pluginId,
+		});
+		if (!updated) throw new Error(`Comment not found: ${id}`);
+		const result = await createCommentAccess(this.db).get(id);
+		if (!result) throw new Error(`Comment not found: ${id}`);
+		return result;
+	}
+
+	// =========================================================================
+	// Revision Handlers
+	// =========================================================================
 
 	async handleRevisionList(collection: string, entryId: string, params: { limit?: number } = {}) {
 		return handleRevisionList(this.db, collection, entryId, params);
@@ -2713,6 +5205,8 @@ export class EmDashRuntime {
 	}
 
 	async handleRevisionRestore(revisionId: string, callerUserId: string) {
+		// Discover the parent entry up front so we can branch on whether
+		// the collection uses draft revisions.
 		const revisionRepo = new RevisionRepository(this.db);
 		const revision = await revisionRepo.findById(revisionId);
 		if (!revision) {
@@ -2728,6 +5222,9 @@ export class EmDashRuntime {
 		const collectionInfo = await this.schemaRegistry.getCollectionWithFields(revision.collection);
 		const usesDraftRevisions = collectionInfo?.supports?.includes("revisions") ?? false;
 
+		// Non-revision collections: keep the legacy behavior of writing the
+		// revision's data straight onto the live row. This preserves
+		// behavior for collections that opt out of the draft model.
 		if (!usesDraftRevisions) {
 			const result = await handleRevisionRestore(this.db, revisionId, callerUserId);
 			if (result.success) {
@@ -2736,10 +5233,25 @@ export class EmDashRuntime {
 			return this.hydrateDraftData(result);
 		}
 
+		// Revision-capable collections: restore is "make this revision the
+		// current draft". The live row's data columns are left untouched
+		// (only `draft_revision_id` changes — no `updated_at` stamp, since
+		// restoring to draft is the same kind of draft-only staging as
+		// Save/Autosave and must not register a phantom modification for
+		// sitemap <lastmod> / JSON-LD dateModified, #2143). The caller
+		// must then `content_publish` to promote the restored draft to
+		// live, matching the documented tool contract.
 		try {
 			const contentRepo = new ContentRepository(this.db);
-			const existing = await contentRepo.findById(revision.collection, revision.entryId);
-			if (!existing) {
+			const restoredData = { ...revision.data };
+			delete restoredData[STAGED_REFERENCES_BASELINE_KEY];
+			const newDraftId = await contentRepo.restoreDraftRevision(
+				revision.collection,
+				revision.entryId,
+				restoredData,
+				callerUserId,
+			);
+			if (!newDraftId) {
 				return {
 					success: false as const,
 					error: {
@@ -2749,43 +5261,12 @@ export class EmDashRuntime {
 				};
 			}
 
-			const newDraft = await revisionRepo.create({
-				collection: revision.collection,
-				entryId: revision.entryId,
-				data: revision.data,
-				authorId: callerUserId,
-			});
-
-			try {
-				const staged = await contentRepo.replaceDraftRevision(
-					revision.collection,
-					revision.entryId,
-					newDraft.id,
-					existing,
-				);
-				if (!staged) throw new ContentMutationConflictError();
-			} catch (error) {
-				try {
-					await revisionRepo.deleteIfUnreferenced(
-						revision.collection,
-						revision.entryId,
-						newDraft.id,
-					);
-				} catch (cleanupError) {
-					console.error(
-						`[emdash] Failed to clean up unrestored revision ${newDraft.id}:`,
-						cleanupError,
-					);
-				}
-				throw error;
-			}
-
 			after(async () => {
 				try {
 					await revisionRepo.pruneQueuedEntry(
 						revision.collection,
 						revision.entryId,
-						newDraft.id,
+						newDraftId,
 						50,
 					);
 				} catch (error) {
@@ -2796,6 +5277,10 @@ export class EmDashRuntime {
 				}
 			});
 
+			// Return the freshly-fetched item with the new draft hydrated
+			// onto `data`. Without this the response would echo the live
+			// columns and the next `content_get` would surface different
+			// values (the bug that motivated this rewrite).
 			const refetched = await handleContentGet(this.db, revision.collection, revision.entryId);
 			const hydrated = await this.hydrateDraftData(refetched);
 			if (hydrated.success) {
@@ -2817,6 +5302,40 @@ export class EmDashRuntime {
 					message: "Failed to restore revision",
 				},
 			};
+		}
+	}
+
+	private async findSyncedSiblingsForUsageRefresh(
+		collection: string,
+		contentId: string,
+		translationGroup: string | null | undefined,
+		data: Record<string, unknown>,
+		options: { absentAsCleared?: boolean } = {},
+	): Promise<string[]> {
+		try {
+			return await findNonTranslatableSiblingContentIds(
+				this.db,
+				collection,
+				contentId,
+				translationGroup,
+				data,
+				options,
+			);
+		} catch (error) {
+			console.error(
+				`[media-usage] Failed to discover synced i18n siblings for ${collection}/${contentId}:`,
+				error,
+			);
+			try {
+				await markContentMediaUsageCollectionStale(
+					this.db,
+					collection,
+					"CONTENT_USAGE_REFRESH_ERROR",
+				);
+			} catch (staleError) {
+				console.error(`[media-usage] Failed to mark ${collection} stale:`, staleError);
+			}
+			return [];
 		}
 	}
 
@@ -2860,11 +5379,246 @@ export class EmDashRuntime {
 		}
 	}
 
+	// =========================================================================
+	// Plugin Routes
+	// =========================================================================
+
+	private getSandboxedAdminDefinition(pluginId: string): {
+		pages: string[];
+		widgets: string[];
+		policy: BlockValidationPolicy;
+	} | null {
+		const entry = this.sandboxedPluginEntries.find((candidate) => candidate.id === pluginId);
+		if (entry) {
+			const pages = (entry.adminPages ?? []).map((page) => normalizePluginPagePath(page.path));
+			const imageHosts = allowedBrowserImageHosts(entry.capabilities, entry.allowedHosts);
+			return {
+				pages,
+				widgets: (entry.adminWidgets ?? []).map((widget) => widget.id),
+				policy: { pluginPagePaths: pages, allowedImageHosts: imageHosts },
+			};
+		}
+
+		const manifest = marketplaceManifestCache.get(pluginId);
+		if (!manifest) return null;
+		const pages = (manifest.admin?.pages ?? []).map((page) => normalizePluginPagePath(page.path));
+		const imageHosts = allowedBrowserImageHosts(
+			manifest.capabilities ?? [],
+			manifest.allowedHosts ?? [],
+		);
+		return {
+			pages,
+			widgets: (manifest.admin?.widgets ?? []).map((widget) => widget.id),
+			policy: { pluginPagePaths: pages, allowedImageHosts: imageHosts },
+		};
+	}
+
+	private resolvePluginUiContext(
+		definition: { pages: string[]; widgets: string[] },
+		body: unknown,
+		request: Request,
+	): { context?: PluginUiContext; error?: { code: string; message: string } } {
+		if (typeof body !== "object" || body === null || !("page" in body)) return {};
+		const page = body.page;
+		if (typeof page !== "string") {
+			return {
+				error: { code: "INVALID_PLUGIN_UI_CONTEXT", message: "Plugin UI page must be a string" },
+			};
+		}
+
+		let surface: PluginUiContext["surface"];
+		if (page.startsWith("widget:")) {
+			if (!definition.widgets.includes(page.slice("widget:".length))) {
+				return {
+					error: {
+						code: "INVALID_PLUGIN_UI_CONTEXT",
+						message: "Plugin dashboard widget is not declared",
+					},
+				};
+			}
+			surface = "dashboard-widget";
+		} else {
+			if (!definition.pages.includes(normalizePluginPagePath(page))) {
+				return {
+					error: {
+						code: "INVALID_PLUGIN_UI_CONTEXT",
+						message: "Plugin admin page is not declared",
+					},
+				};
+			}
+			surface = "admin-page";
+		}
+
+		const locale = resolveLocale(request);
+		return { context: { surface, locale, direction: getLocaleDir(locale) } };
+	}
+
+	/**
+	 * UI context for a configured plugin's Block Kit page or widget. An
+	 * undeclared surface yields no context and no error: configured plugins
+	 * are not held to their declarations, so rejecting here would break
+	 * configured plugins that serve undeclared pages.
+	 */
+	private resolveTrustedUiContext(
+		plugin: ResolvedPlugin,
+		routeKey: string,
+		body: unknown,
+		request: Request,
+	): PluginUiContext | undefined {
+		if (routeKey !== "admin") return undefined;
+		const surfaces = {
+			pages: (plugin.admin.pages ?? []).map((page) => normalizePluginPagePath(page.path)),
+			widgets: (plugin.admin.widgets ?? []).map((widget) => widget.id),
+		};
+		return this.resolvePluginUiContext(surfaces, body, request).context;
+	}
+
+	private validateSandboxedAdminResponse(
+		pluginId: string,
+		definition: { policy: BlockValidationPolicy },
+		result: {
+			success: boolean;
+			data?: unknown;
+			error?: { code: string; message: string };
+			status?: number;
+		},
+	) {
+		if (!result.success) return result;
+		const validation = validateBlockResponse(result.data, definition.policy);
+		if (validation.valid) return result;
+
+		console.error(
+			`EmDash: Sandboxed plugin ${pluginId} returned invalid Block Kit content:`,
+			validation.errors,
+		);
+		return {
+			success: false,
+			status: 502,
+			error: {
+				code: "INVALID_BLOCK_RESPONSE",
+				message: "Plugin returned invalid Block Kit content",
+			},
+		};
+	}
+
+	getPluginEditorExtension(
+		pluginId: string,
+		kind: "panel" | "action",
+		extensionId: string,
+		collection: string,
+	): ResolvedPluginEditorExtension | null {
+		if (!this.isPluginEnabled(pluginId)) return null;
+
+		let panels: PluginEditorPanel[] | undefined;
+		let actions: PluginEditorAction[] | undefined;
+		let pages: string[] = [];
+		let capabilities: readonly PluginCapability[] = [];
+		let allowedHosts: readonly string[] = [];
+
+		const configured = this.configuredPlugins.find((plugin) => plugin.id === pluginId);
+		if (configured) {
+			if (configured.admin.entry) return null;
+			panels = configured.admin.editorPanels;
+			actions = configured.admin.editorActions;
+			pages = (configured.admin.pages ?? []).map((page) => page.path);
+			capabilities = configured.capabilities;
+			allowedHosts = configured.allowedHosts;
+		} else {
+			const entry = this.sandboxedPluginEntries.find((candidate) => candidate.id === pluginId);
+			if (entry) {
+				panels = entry.editorPanels;
+				actions = entry.editorActions;
+				pages = (entry.adminPages ?? []).map((page) => page.path);
+				capabilities = entry.capabilities;
+				allowedHosts = entry.allowedHosts;
+			} else {
+				const manifest = marketplaceManifestCache.get(pluginId);
+				if (!manifest) return null;
+				panels = manifest.admin?.editorPanels;
+				actions = manifest.admin?.editorActions;
+				pages = (manifest.admin?.pages ?? []).map((page) => page.path);
+				capabilities = manifest.capabilities ?? [];
+				allowedHosts = manifest.allowedHosts ?? [];
+			}
+		}
+
+		const normalizedCapabilities = normalizePluginCapabilities(capabilities);
+		const policy = {
+			pluginPagePaths: pages,
+			allowedImageHosts: allowedBrowserImageHosts(capabilities, allowedHosts),
+		};
+		if (kind === "panel") {
+			const matches = panels?.filter((panel) => panel.id === extensionId) ?? [];
+			const extension = matches[0];
+			if (
+				matches.length !== 1 ||
+				!extension ||
+				(extension.collections && !extension.collections.includes(collection))
+			) {
+				return null;
+			}
+			return { kind, extension, policy, capabilities: normalizedCapabilities };
+		}
+		const matches = actions?.filter((action) => action.id === extensionId) ?? [];
+		const extension = matches[0];
+		if (
+			matches.length !== 1 ||
+			!extension ||
+			(extension.collections && !extension.collections.includes(collection)) ||
+			(extension.style === "danger" && !extension.confirm)
+		) {
+			return null;
+		}
+		return { kind, extension, policy, capabilities: normalizedCapabilities };
+	}
+
+	async getPluginEditorDraftSchema(collection: string) {
+		return this.schemaRegistry.getCollectionWithFields(collection);
+	}
+
+	private validatePluginEditorExtensionResponse(
+		pluginId: string,
+		dispatch: PluginEditorExtensionDispatch,
+		result: {
+			success: boolean;
+			data?: unknown;
+			error?: { code: string; message: string };
+			status?: number;
+		},
+	) {
+		if (!result.success) return result;
+		const validation =
+			dispatch.kind === "panel"
+				? validateBlockResponse(result.data, dispatch.policy)
+				: validateContentEditorActionResponse(result.data, dispatch.policy);
+		if (validation.valid) return result;
+
+		console.error(
+			`EmDash: Plugin ${pluginId} returned an invalid content editor ${dispatch.kind} response:`,
+			validation.errors,
+		);
+		return {
+			success: false,
+			status: 502,
+			error: {
+				code:
+					dispatch.kind === "panel" ? "INVALID_BLOCK_RESPONSE" : "INVALID_EDITOR_ACTION_RESPONSE",
+				message: "Plugin returned an invalid editor extension response",
+			},
+		};
+	}
+
+	/**
+	 * Get route metadata for a plugin route without invoking the handler.
+	 * Used by the catch-all route to decide auth before dispatch.
+	 * Returns null if the plugin or route doesn't exist.
+	 */
 	getPluginRouteMeta(pluginId: string, path: string): RouteMeta | null {
 		if (!this.isPluginEnabled(pluginId)) return null;
 
 		const routeKey = path.replace(LEADING_SLASH_PATTERN, "");
 
+		// Check trusted plugins first
 		const trustedPlugin = this.configuredPlugins.find((p) => p.id === pluginId);
 		if (trustedPlugin) {
 			const route = trustedPlugin.routes[routeKey];
@@ -2872,23 +5626,30 @@ export class EmDashRuntime {
 			return buildRouteMeta(route);
 		}
 
+		// Check sandboxed plugin route metadata cache
 		const meta = sandboxedRouteMetaCache.get(pluginId);
 		if (meta) {
 			const routeMeta = meta.get(routeKey);
 			if (routeMeta) return routeMeta;
 		}
 
+		// The "admin" route is implicitly available for any sandboxed plugin
+		// that declares admin pages or widgets. This handles plugins installed
+		// from bundles that predate the explicit admin route requirement.
 		if (routeKey === "admin") {
 			const manifestMeta = marketplaceManifestCache.get(pluginId);
 			if (manifestMeta?.admin?.pages?.length || manifestMeta?.admin?.widgets?.length) {
 				return { public: false };
 			}
+			// Also check build-time sandboxed entries
 			const entry = this.sandboxedPluginEntries.find((e) => e.id === pluginId);
 			if (entry?.adminPages?.length || entry?.adminWidgets?.length) {
 				return { public: false };
 			}
 		}
 
+		// Fallback: if the plugin exists in the sandbox cache, allow the route.
+		// The sandbox runner will return an error if the route doesn't actually exist.
 		if (this.findSandboxedPlugin(pluginId)) {
 			return { public: false };
 		}
@@ -2896,6 +5657,12 @@ export class EmDashRuntime {
 		return null;
 	}
 
+	/**
+	 * Resolve the settings schema for a runtime-installed (marketplace or
+	 * registry) plugin from its cached manifest. Returns `{}` for a known
+	 * plugin without a schema and `null` for unknown plugins, matching the
+	 * contract of `getPluginSettingsSchema` for build-time plugins.
+	 */
 	getRuntimePluginSettingsSchema(pluginId: string): Record<string, SettingField> | null {
 		const meta = marketplaceManifestCache.get(pluginId);
 		if (!meta) return null;
@@ -2904,10 +5671,12 @@ export class EmDashRuntime {
 
 	async handlePluginApiRoute(
 		pluginId: string,
-		_method: string,
+		method: string,
 		path: string,
 		request: Request,
 		user?: RouteCallerInput | null,
+		invalidateContentCache?: PluginContentCacheInvalidator,
+		editorDispatch?: PluginEditorExtensionDispatch,
 	) {
 		if (!this.isPluginEnabled(pluginId)) {
 			return {
@@ -2915,8 +5684,25 @@ export class EmDashRuntime {
 				error: { code: "NOT_FOUND", message: `Plugin not enabled: ${pluginId}` },
 			};
 		}
+		const normalizedMethod = method.toUpperCase();
+		const routeMeta = this.getPluginRouteMeta(pluginId, path);
+		if (routeMeta?.methods && !routeMeta.methods.some((allowed) => allowed === normalizedMethod)) {
+			return {
+				success: false,
+				status: 405,
+				error: { code: "METHOD_NOT_ALLOWED", message: "Method not allowed" },
+			};
+		}
 
-		return this.dispatchPluginApiRoute(pluginId, path, request, user);
+		return this.dispatchPluginApiRoute(
+			pluginId,
+			path,
+			request,
+			routeMeta,
+			user,
+			invalidateContentCache,
+			editorDispatch,
+		);
 	}
 
 	async inspectPluginHealth(pluginId: string, request: Request, user?: RouteCallerInput | null) {
@@ -2927,6 +5713,7 @@ export class EmDashRuntime {
 				new URL(`/_emdash/api/plugins/${encodeURIComponent(pluginId)}/health`, request.url),
 				{ method: "GET" },
 			),
+			this.getPluginRouteMeta(pluginId, "/health"),
 			user,
 		);
 	}
@@ -2935,30 +5722,83 @@ export class EmDashRuntime {
 		pluginId: string,
 		path: string,
 		request: Request,
+		routeMeta: RouteMeta | null,
 		user?: RouteCallerInput | null,
+		invalidateContentCache?: PluginContentCacheInvalidator,
+		editorDispatch?: PluginEditorExtensionDispatch,
 	) {
+		// Authenticated caller for `ctx.user`. Undefined for public routes
+		// (the catch-all only forwards the caller after private-route auth)
+		// and for machine tokens with no bound user.
 		const caller = user ? toRouteCallerInfo(user) : undefined;
+		let body: unknown;
+		try {
+			body = await parseRouteInput(request, routeMeta?.request);
+		} catch (error) {
+			if (error instanceof PluginRouteRequestError) {
+				return {
+					success: false,
+					status: error.status,
+					error: { code: "INVALID_PLUGIN_REQUEST", message: error.message },
+				};
+			}
+			throw error;
+		}
+		const routeKey = path.replace(LEADING_SLASH_PATTERN, "");
+		const adminDefinition =
+			!editorDispatch && routeKey === "admin" ? this.getSandboxedAdminDefinition(pluginId) : null;
+		const uiResult = adminDefinition
+			? this.resolvePluginUiContext(adminDefinition, body, request)
+			: {};
+		if (uiResult.error) return { success: false, status: 400, error: uiResult.error };
 
+		// Check trusted (configured) plugins first — this must match the
+		// resolution order in getPluginRouteMeta to avoid auth/execution mismatches.
 		const trustedPlugin = this.configuredPlugins.find((p) => p.id === pluginId);
 		if (trustedPlugin) {
 			const routeRegistry = new PluginRouteRegistry({
 				...this.pipelineFactoryOptions,
+				contentActions: this.contentActionsWithInvalidator(invalidateContentCache),
 				emailPipeline: this.email ?? undefined,
 				cronReschedule: () => this.cronScheduler?.reschedule(),
 				trustedProxyHeaders: getTrustedProxyHeaders(this.config),
 			});
 			routeRegistry.register(trustedPlugin);
 
-			const routeKey = path.replace(LEADING_SLASH_PATTERN, "");
-
-			const body = await parseRouteInput(request);
-
-			return routeRegistry.invoke(pluginId, routeKey, { request, body, user: caller });
+			const result = await routeRegistry.invoke(pluginId, routeKey, {
+				request,
+				body,
+				user: caller,
+				ui:
+					editorDispatch?.ui ??
+					uiResult.context ??
+					this.resolveTrustedUiContext(trustedPlugin, routeKey, body, request),
+			});
+			return editorDispatch
+				? this.validatePluginEditorExtensionResponse(pluginId, editorDispatch, result)
+				: adminDefinition
+					? this.validateSandboxedAdminResponse(pluginId, adminDefinition, result)
+					: result;
 		}
 
+		// Check sandboxed (marketplace) plugins second
 		const sandboxedPlugin = this.findSandboxedPlugin(pluginId);
 		if (sandboxedPlugin) {
-			return this.handleSandboxedRoute(sandboxedPlugin, path, request, caller);
+			const result = await this.handleSandboxedRoute(
+				sandboxedPlugin,
+				path,
+				request,
+				body,
+				routeMeta ?? { public: false },
+				caller,
+				editorDispatch?.ui ?? uiResult.context,
+				invalidateContentCache,
+			);
+			return editorDispatch
+				? this.validatePluginEditorExtensionResponse(pluginId, editorDispatch, result)
+				: adminDefinition
+					? this.validateSandboxedAdminResponse(pluginId, adminDefinition, result)
+					: result;
 		}
 
 		return {
@@ -2967,10 +5807,33 @@ export class EmDashRuntime {
 		};
 	}
 
+	private contentActionsWithInvalidator(
+		invalidateContentCache?: PluginContentCacheInvalidator,
+	): ContentActionCallbacks | undefined {
+		const actions = this.pipelineFactoryOptions.contentActions;
+		if (!actions || !invalidateContentCache) return actions;
+		return {
+			...actions,
+			begin: (pluginId, invocationId, invocationInvalidator) =>
+				actions.begin?.(pluginId, invocationId, invocationInvalidator ?? invalidateContentCache),
+			publish: (pluginId, collection, id, options, invocationId) =>
+				actions.publish(pluginId, collection, id, options, invocationId, invalidateContentCache),
+			unpublish: (pluginId, collection, id, options, invocationId) =>
+				actions.unpublish(pluginId, collection, id, options, invocationId, invalidateContentCache),
+			schedule: (pluginId, collection, id, options, invocationId) =>
+				actions.schedule(pluginId, collection, id, options, invocationId, invalidateContentCache),
+			unschedule: (pluginId, collection, id, options, invocationId) =>
+				actions.unschedule(pluginId, collection, id, options, invocationId, invalidateContentCache),
+			restore: (pluginId, collection, id, options, invocationId) =>
+				actions.restore(pluginId, collection, id, options, invocationId, invalidateContentCache),
+		};
+	}
+
 	async getPluginMcpTools(pluginId?: string) {
 		const tools: Array<{
 			pluginId: string;
 			name: string;
+			mcpName: string;
 			description: string;
 			route: string;
 			permission: string;
@@ -2984,7 +5847,14 @@ export class EmDashRuntime {
 			if (pluginId && plugin.id !== pluginId) continue;
 			for (const [name, tool] of Object.entries(plugin.mcp?.tools ?? {})) {
 				const route = plugin.routes[tool.route];
-				if (!route || route.public || !route.permission || !(route.permission in Permissions))
+				if (
+					!route ||
+					route.public ||
+					route.response === "raw" ||
+					!isJsonPostRouteContract(route) ||
+					!route.permission ||
+					!Object.hasOwn(Permissions, route.permission)
+				)
 					continue;
 				const key = `${plugin.id}__${name}`;
 				if (seen.has(key)) continue;
@@ -2992,6 +5862,7 @@ export class EmDashRuntime {
 				tools.push({
 					pluginId: plugin.id,
 					name,
+					mcpName: pluginToolName(plugin.id, name),
 					description: tool.description,
 					route: tool.route,
 					permission: route.permission,
@@ -3011,8 +5882,10 @@ export class EmDashRuntime {
 					seen.has(key) ||
 					!routeMeta ||
 					routeMeta.public ||
+					routeMeta.response === "raw" ||
+					!isJsonPostRouteContract(routeMeta) ||
 					routeMeta.permission !== tool.permission ||
-					!(tool.permission in Permissions)
+					!Object.hasOwn(Permissions, tool.permission)
 				) {
 					continue;
 				}
@@ -3020,12 +5893,17 @@ export class EmDashRuntime {
 				tools.push({
 					pluginId: id,
 					name: tool.name,
+					mcpName: pluginToolName(id, tool.name),
 					description: tool.description,
 					route: tool.route,
 					permission: tool.permission,
 					destructive: tool.destructive,
-					inputSchema: z.fromJSONSchema({ ...tool.inputSchema }),
-					outputSchema: tool.outputSchema ? z.fromJSONSchema({ ...tool.outputSchema }) : undefined,
+					inputSchema:
+						safeJsonSchemaToZod({ ...tool.inputSchema }, `${id}/${tool.name}`, "input") ??
+						z.record(z.string(), z.unknown()),
+					outputSchema: tool.outputSchema
+						? safeJsonSchemaToZod({ ...tool.outputSchema }, `${id}/${tool.name}`, "output")
+						: undefined,
 				});
 			}
 		};
@@ -3086,6 +5964,7 @@ export class EmDashRuntime {
 		actorId: string,
 		request: Request,
 		caller?: RouteCallerInput | null,
+		invalidateContentCache?: PluginContentCacheInvalidator,
 	) {
 		const requestMeta = extractRequestMeta(request, getTrustedProxyHeaders(this.config));
 		const audit = new AuditRepository(this.db);
@@ -3103,6 +5982,7 @@ export class EmDashRuntime {
 			route,
 			internalRequest,
 			caller,
+			invalidateContentCache,
 		);
 		await audit.log({
 			actorId,
@@ -3136,6 +6016,10 @@ export class EmDashRuntime {
 		});
 	}
 
+	// =========================================================================
+	// Sandboxed Plugin Helpers
+	// =========================================================================
+
 	private findSandboxedPlugin(pluginId: string): SandboxedPluginInstance | undefined {
 		for (const [key, plugin] of this.sandboxedPlugins) {
 			if (key.startsWith(pluginId + ":")) {
@@ -3145,39 +6029,105 @@ export class EmDashRuntime {
 		return undefined;
 	}
 
-	private async normalizeMediaFields(
+	/**
+	 * Drop incoming keys that have no matching collection field when the entry
+	 * already stores them in its live data or current draft revision.
+	 *
+	 * Draft revisions keep the full `data` JSON, so deleting a field can strand
+	 * the old value; this lets a read-then-write save succeed without allowing
+	 * genuinely unknown keys.
+	 */
+	private async dropUnknownKeysAlreadyStored(
+		data: Record<string, unknown>,
+		existing: { data: Record<string, unknown>; draftRevisionId?: string | null } | null,
+		knownFieldSlugs: ReadonlySet<string>,
+	): Promise<Record<string, unknown>> {
+		if (!existing) return data;
+
+		let stored: Record<string, unknown> = existing.data ?? {};
+		if (existing.draftRevisionId) {
+			const draft = await new RevisionRepository(this.db)
+				.findById(existing.draftRevisionId)
+				.catch(() => null);
+			// A retired key may survive in the published row while the draft
+			// revision has already shed it, so the baseline has to cover both.
+			if (draft?.data) stored = { ...stored, ...draft.data };
+		}
+
+		const stale = staleStoredKeys(data, stored, knownFieldSlugs);
+		if (stale.length === 0) return data;
+
+		const result = { ...data };
+		for (const key of stale) delete result[key];
+		return result;
+	}
+
+	/**
+	 * Normalize field values in content data before validation.
+	 * Turns a blank string in an array-valued field into `null`, and fills
+	 * missing image/file dimensions, storageKey, mimeType, and filename from providers.
+	 */
+	private async normalizeFieldValues(
 		collection: string,
 		data: Record<string, unknown>,
+		preloaded?: CollectionWithFields | null,
+		preloadedBlockTypes?: Awaited<ReturnType<typeof resolveBlockTypes>>,
+		includeBlocks = true,
 	): Promise<Record<string, unknown>> {
-		let collectionInfo;
-		try {
-			collectionInfo = await this.schemaRegistry.getCollectionWithFields(collection);
-		} catch {
-			return data;
+		let collectionInfo = preloaded;
+		if (collectionInfo === undefined) {
+			try {
+				collectionInfo = await this.schemaRegistry.getCollectionWithFields(collection);
+			} catch {
+				return data;
+			}
 		}
 		if (!collectionInfo?.fields) return data;
+
+		const result = { ...data };
+		for (const field of collectionInfo.fields) {
+			const value = result[field.slug];
+			if (ARRAY_FIELD_TYPES.has(field.type) && typeof value === "string" && !value.trim()) {
+				result[field.slug] = null;
+			}
+		}
 
 		const imageFields = collectionInfo.fields.filter(
 			(f) => f.type === "image" || f.type === "file",
 		);
+		// Repeater fields can contain image sub-fields, whose values need the same normalization
+		// (a bare media id posted inside a repeater item would otherwise be stored verbatim and
+		// render as "Image not found" in the admin).
 		const repeaterFields = collectionInfo.fields.filter(
 			(f) => f.type === "repeater" && Array.isArray(f.validation?.subFields),
 		);
-		if (imageFields.length === 0 && repeaterFields.length === 0) return data;
+		const blockFields = includeBlocks
+			? collectionInfo.fields.filter((field) => field.type === "blocks")
+			: [];
+		if (imageFields.length === 0 && repeaterFields.length === 0 && blockFields.length === 0) {
+			return result;
+		}
 
 		const getProvider = (id: string) => this.getMediaProvider(id);
-		const result = { ...data };
 
 		for (const field of imageFields) {
 			const value = result[field.slug];
 			if (value == null) continue;
 
 			try {
-				const normalized = await normalizeMediaValue(value, getProvider);
+				// Only image fields carry a dark variant.
+				const normalized =
+					field.type === "image"
+						? await normalizeImageValue(value, getProvider)
+						: await normalizeMediaValue(value, getProvider);
 				if (normalized) {
 					result[field.slug] = normalized;
+				} else if (isBlankString(value)) {
+					result[field.slug] = null;
 				}
-			} catch {}
+			} catch {
+				// Don't fail the save if normalization fails for a single field
+			}
 		}
 
 		for (const field of repeaterFields) {
@@ -3198,108 +6148,119 @@ export class EmDashRuntime {
 						const subValue = normalizedItem[slug];
 						if (subValue == null) continue;
 						try {
-							const normalized = await normalizeMediaValue(subValue, getProvider);
+							const normalized = await normalizeImageValue(subValue, getProvider);
 							if (normalized) {
 								normalizedItem[slug] = normalized;
+							} else if (isBlankString(subValue)) {
+								normalizedItem[slug] = null;
 							}
-						} catch {}
+						} catch {
+							// Don't fail the save if normalization fails for a single sub-field
+						}
 					}
 					return normalizedItem;
 				}),
 			);
 		}
 
-		return result;
-	}
-
-	private async runSandboxedBeforeSave(
-		content: Record<string, unknown>,
-		collection: string,
-		isNew: boolean,
-	): Promise<Record<string, unknown>> {
-		let result = content;
-
-		for (const [pluginKey, plugin] of this.sandboxedPlugins) {
-			const [id] = pluginKey.split(":");
-			if (!id || !this.isPluginEnabled(id)) continue;
-
-			try {
-				const hookResult = await plugin.invokeHook("content:beforeSave", {
-					content: result,
-					collection,
-					isNew,
-				});
-				if (hookResult && typeof hookResult === "object" && !Array.isArray(hookResult)) {
-					const record: Record<string, unknown> = {};
-					for (const [k, v] of Object.entries(hookResult)) {
-						record[k] = v;
-					}
-					result = record;
-				}
-			} catch (error) {
-				console.error(`EmDash: Sandboxed plugin ${id} beforeSave hook error:`, error);
+		if (blockFields.length > 0) {
+			const blockTypes = preloadedBlockTypes ?? (await resolveBlockTypes(this.db));
+			for (const field of blockFields) {
+				const value = result[field.slug];
+				if (!Array.isArray(value)) continue;
+				result[field.slug] = await Promise.all(
+					value.map(async (block) => {
+						if (!isRecord(block) || typeof block._type !== "string") return block;
+						const type = blockTypes.get(block._type);
+						const version = type?.versions.find(
+							(candidate) => candidate.version === block._version,
+						);
+						if (!version || version.unsupportedTypes?.length) return block;
+						const normalizedBlock: Record<string, unknown> = { ...block };
+						for (const nestedField of version.fields) {
+							const nestedValue = normalizedBlock[nestedField.slug];
+							if (nestedValue == null) continue;
+							try {
+								if (nestedField.type === "image" || nestedField.type === "file") {
+									const normalized =
+										nestedField.type === "image"
+											? await normalizeImageValue(nestedValue, getProvider)
+											: await normalizeMediaValue(nestedValue, getProvider);
+									if (normalized) {
+										normalizedBlock[nestedField.slug] = normalized;
+									} else if (isBlankString(nestedValue)) {
+										normalizedBlock[nestedField.slug] = null;
+									}
+								} else if (nestedField.type === "repeater" && Array.isArray(nestedValue)) {
+									const imageSlugs = (nestedField.validation?.subFields ?? [])
+										.filter((subField) => subField.type === "image")
+										.map((subField) => subField.slug);
+									normalizedBlock[nestedField.slug] = await Promise.all(
+										nestedValue.map(async (item) => {
+											if (!isRecord(item)) return item;
+											const normalizedItem = { ...item };
+											for (const slug of imageSlugs) {
+												try {
+													const normalized = await normalizeImageValue(
+														normalizedItem[slug],
+														getProvider,
+													);
+													if (normalized) {
+														normalizedItem[slug] = normalized;
+													} else if (isBlankString(normalizedItem[slug])) {
+														normalizedItem[slug] = null;
+													}
+												} catch {
+													continue;
+												}
+											}
+											return normalizedItem;
+										}),
+									);
+								}
+							} catch {
+								continue;
+							}
+						}
+						return normalizedBlock;
+					}),
+				);
 			}
 		}
 
 		return result;
-	}
-
-	private async runSandboxedBeforeDelete(id: string, collection: string): Promise<boolean> {
-		for (const [pluginKey, plugin] of this.sandboxedPlugins) {
-			const [pluginId] = pluginKey.split(":");
-			if (!pluginId || !this.isPluginEnabled(pluginId)) continue;
-
-			try {
-				const result = await plugin.invokeHook("content:beforeDelete", {
-					id,
-					collection,
-				});
-				if (result === false) {
-					return false;
-				}
-			} catch (error) {
-				console.error(`EmDash: Sandboxed plugin ${pluginId} beforeDelete hook error:`, error);
-			}
-		}
-
-		return true;
 	}
 
 	private runAfterSaveHooks(
 		content: Record<string, unknown>,
 		collection: string,
 		isNew: boolean,
+		actor?: ActorInfo,
+		excludePluginId?: string,
+		details?: ContentSaveHookDetails,
 	): void {
 		after(async () => {
+			// Trusted plugins
 			if (this.hooks.hasHooks("content:afterSave")) {
 				try {
-					await this.hooks.runContentAfterSave(content, collection, isNew);
+					await this.hooks.runContentAfterSave(
+						content,
+						collection,
+						isNew,
+						actor,
+						excludePluginId,
+						details,
+					);
 				} catch (err) {
 					console.error("EmDash afterSave hook error:", err);
 				}
 			}
-
-			const tasks: Promise<void>[] = [];
-			for (const [pluginKey, plugin] of this.sandboxedPlugins) {
-				const [id] = pluginKey.split(":");
-				if (!id || !this.isPluginEnabled(id)) continue;
-
-				tasks.push(
-					(async () => {
-						try {
-							await plugin.invokeHook("content:afterSave", { content, collection, isNew });
-						} catch (err) {
-							console.error(`EmDash: Sandboxed plugin ${id} afterSave error:`, err);
-						}
-					})(),
-				);
-			}
-			await Promise.allSettled(tasks);
 		});
 	}
 
 	private runAfterDeleteHooks(id: string, collection: string, permanent: boolean): void {
 		after(async () => {
+			// Trusted plugins
 			if (this.hooks.hasHooks("content:afterDelete")) {
 				try {
 					await this.hooks.runContentAfterDelete(id, collection, permanent);
@@ -3307,23 +6268,16 @@ export class EmDashRuntime {
 					console.error("EmDash afterDelete hook error:", err);
 				}
 			}
+		});
+	}
 
-			const tasks: Promise<void>[] = [];
-			for (const [pluginKey, plugin] of this.sandboxedPlugins) {
-				const [pluginId] = pluginKey.split(":");
-				if (!pluginId || !this.isPluginEnabled(pluginId)) continue;
-
-				tasks.push(
-					(async () => {
-						try {
-							await plugin.invokeHook("content:afterDelete", { id, collection, permanent });
-						} catch (err) {
-							console.error(`EmDash: Sandboxed plugin ${pluginId} afterDelete error:`, err);
-						}
-					})(),
-				);
+	private runMediaAfterUploadHook(mediaItem: MediaItem): void {
+		after(async () => {
+			try {
+				await this.hooks.runMediaAfterUpload(mediaItem);
+			} catch (err) {
+				console.error("EmDash afterUpload hook error:", err);
 			}
-			await Promise.allSettled(tasks);
 		});
 	}
 
@@ -3336,10 +6290,13 @@ export class EmDashRuntime {
 			| "content:afterUnschedule",
 		content: Record<string, unknown>,
 		collection: string,
+		afterPluginId?: string,
+		pluginInvocationId?: string,
 	): void {
 		const label = name.slice("content:".length);
 
-		after(async () => {
+		const invoke = async () => {
+			// Trusted plugins
 			if (this.hooks.hasHooks(name)) {
 				try {
 					switch (name) {
@@ -3363,51 +6320,160 @@ export class EmDashRuntime {
 					console.error(`EmDash ${label} hook error:`, err);
 				}
 			}
-
-			const tasks: Promise<void>[] = [];
-			for (const [pluginKey, plugin] of this.sandboxedPlugins) {
-				const [pluginId] = pluginKey.split(":");
-				if (!pluginId || !this.isPluginEnabled(pluginId)) continue;
-
-				tasks.push(
-					(async () => {
-						try {
-							await plugin.invokeHook(name, { content, collection });
-						} catch (err) {
-							console.error(`EmDash: Sandboxed plugin ${pluginId} ${label} error:`, err);
-						}
-					})(),
-				);
+		};
+		const contentId = typeof content.id === "string" ? content.id : undefined;
+		const guardKey =
+			afterPluginId && contentId ? this.pluginContentActionKey(collection, contentId) : undefined;
+		const invokeWithGuard = async () => {
+			if (guardKey) this.retainPluginContentAction(guardKey);
+			try {
+				await invoke();
+			} finally {
+				if (guardKey) this.releasePluginContentAction(guardKey);
 			}
-			await Promise.allSettled(tasks);
-		});
+		};
+		if (afterPluginId && pluginInvocationId && this.findSandboxedPlugin(afterPluginId)) {
+			const key = this.pluginInvocationKey(afterPluginId, pluginInvocationId);
+			if (!this.activePluginInvocations.has(key) || this.releasedPluginInvocations.has(key)) {
+				after(invokeWithGuard);
+				return;
+			}
+			const pending = this.pendingPluginAfterHooks.get(key) ?? [];
+			pending.push(invokeWithGuard);
+			this.pendingPluginAfterHooks.set(key, pending);
+			return;
+		}
+		after(invokeWithGuard);
 	}
 
-	private runAfterPublishHooks(content: Record<string, unknown>, collection: string): void {
-		this.runDeferredContentHook("content:afterPublish", content, collection);
+	private pluginInvocationKey(pluginId: string, invocationId: string): string {
+		return JSON.stringify([pluginId, invocationId]);
 	}
 
-	private runAfterUnpublishHooks(content: Record<string, unknown>, collection: string): void {
-		this.runDeferredContentHook("content:afterUnpublish", content, collection);
+	private beginPluginInvocation(
+		pluginId: string,
+		invocationId: string,
+		invalidateContentCache?: PluginContentCacheInvalidator,
+	): void {
+		const key = this.pluginInvocationKey(pluginId, invocationId);
+		this.pendingPluginAfterHooks.delete(key);
+		this.releasedPluginInvocations.delete(key);
+		if (invalidateContentCache)
+			this.pluginInvocationCacheInvalidators.set(key, invalidateContentCache);
+		else this.pluginInvocationCacheInvalidators.delete(key);
+		this.activePluginInvocations.add(key);
 	}
 
-	private runAfterRestoreHooks(content: Record<string, unknown>, collection: string): void {
-		this.runDeferredContentHook("content:afterRestore", content, collection);
+	private flushPluginAfterHooks(
+		pluginId: string,
+		invocationId?: string,
+		final = true,
+	): Promise<void> {
+		if (!invocationId) return Promise.resolve();
+		const key = this.pluginInvocationKey(pluginId, invocationId);
+		this.releasedPluginInvocations.add(key);
+		const pending = this.pendingPluginAfterHooks.get(key) ?? [];
+		this.pendingPluginAfterHooks.delete(key);
+		for (const invoke of pending) after(invoke);
+		if (final) {
+			this.releasedPluginInvocations.delete(key);
+			this.activePluginInvocations.delete(key);
+			this.pluginInvocationCacheInvalidators.delete(key);
+		} else {
+			const timer = setTimeout(() => {
+				this.releasedPluginInvocations.delete(key);
+				this.activePluginInvocations.delete(key);
+				this.pluginInvocationCacheInvalidators.delete(key);
+			}, PLUGIN_INVOCATION_RELEASE_GRACE_MS);
+			if (typeof timer === "object") timer.unref();
+		}
+		return Promise.resolve();
 	}
 
-	private runAfterScheduleHooks(content: Record<string, unknown>, collection: string): void {
-		this.runDeferredContentHook("content:afterSchedule", content, collection);
+	private runAfterPublishHooks(
+		content: Record<string, unknown>,
+		collection: string,
+		afterPluginId?: string,
+		pluginInvocationId?: string,
+	): void {
+		this.runDeferredContentHook(
+			"content:afterPublish",
+			content,
+			collection,
+			afterPluginId,
+			pluginInvocationId,
+		);
 	}
 
-	private runAfterUnscheduleHooks(content: Record<string, unknown>, collection: string): void {
-		this.runDeferredContentHook("content:afterUnschedule", content, collection);
+	private runAfterUnpublishHooks(
+		content: Record<string, unknown>,
+		collection: string,
+		afterPluginId?: string,
+		pluginInvocationId?: string,
+	): void {
+		this.runDeferredContentHook(
+			"content:afterUnpublish",
+			content,
+			collection,
+			afterPluginId,
+			pluginInvocationId,
+		);
+	}
+
+	private runAfterRestoreHooks(
+		content: Record<string, unknown>,
+		collection: string,
+		afterPluginId?: string,
+		pluginInvocationId?: string,
+	): void {
+		this.runDeferredContentHook(
+			"content:afterRestore",
+			content,
+			collection,
+			afterPluginId,
+			pluginInvocationId,
+		);
+	}
+
+	private runAfterScheduleHooks(
+		content: Record<string, unknown>,
+		collection: string,
+		afterPluginId?: string,
+		pluginInvocationId?: string,
+	): void {
+		this.runDeferredContentHook(
+			"content:afterSchedule",
+			content,
+			collection,
+			afterPluginId,
+			pluginInvocationId,
+		);
+	}
+
+	private runAfterUnscheduleHooks(
+		content: Record<string, unknown>,
+		collection: string,
+		afterPluginId?: string,
+		pluginInvocationId?: string,
+	): void {
+		this.runDeferredContentHook(
+			"content:afterUnschedule",
+			content,
+			collection,
+			afterPluginId,
+			pluginInvocationId,
+		);
 	}
 
 	private async handleSandboxedRoute(
 		plugin: SandboxedPluginInstance,
 		path: string,
 		request: Request,
+		body: unknown,
+		routeMeta: RouteMeta,
 		user?: UserInfo,
+		ui?: PluginUiContext,
+		invalidateContentCache?: PluginContentCacheInvalidator,
 	): Promise<{
 		success: boolean;
 		data?: unknown;
@@ -3416,20 +6482,32 @@ export class EmDashRuntime {
 	}> {
 		const routeName = path.replace(LEADING_SLASH_PATTERN, "");
 
-		const body = await parseRouteInput(request);
-
 		try {
-			const headers = sanitizeHeadersForSandbox(request.headers);
+			const declaredHeaders = routeMeta.request ? (routeMeta.request.headers ?? []) : undefined;
+			const headers = sanitizeHeadersForSandbox(request.headers, declaredHeaders);
 			const meta = extractRequestMeta(request, this.config);
-			const result = await plugin.invokeRoute(routeName, body, {
-				url: request.url,
-				method: request.method,
-				headers,
-				meta,
-				user,
-			});
+			const result = await plugin.invokeRoute(
+				routeName,
+				body,
+				{
+					url: request.url,
+					method: request.method,
+					headers,
+					meta,
+					user,
+					ui,
+				},
+				{ invalidateContentCache },
+			);
 			return { success: true, data: result };
 		} catch (error) {
+			if (error instanceof PluginRouteRequestError) {
+				return {
+					success: false,
+					status: error.status,
+					error: { code: "INVALID_PLUGIN_REQUEST", message: error.message },
+				};
+			}
 			console.error(`EmDash: Sandboxed plugin route error:`, error);
 			const sandboxRouteError = getSandboxRouteErrorDetails(error);
 			if (sandboxRouteError) {
@@ -3452,8 +6530,22 @@ export class EmDashRuntime {
 		}
 	}
 
+	// =========================================================================
+	// Public Page Contributions
+	// =========================================================================
+
+	/**
+	 * Cache for page contributions. Uses a WeakMap keyed on the PublicPageContext
+	 * object so results are collected once per page context per request, even when
+	 * multiple render components (EmDashHead, EmDashBodyStart, EmDashBodyEnd)
+	 * request contributions from the same page.
+	 */
 	private pageContributionCache = new WeakMap<PublicPageContext, Promise<PageContributions>>();
 
+	/**
+	 * Collect all page contributions (metadata + fragments) in a single pass.
+	 * Results are cached by page context object identity.
+	 */
 	async collectPageContributions(page: PublicPageContext): Promise<PageContributions> {
 		const cached = this.pageContributionCache.get(page);
 		if (cached) return cached;
@@ -3467,6 +6559,7 @@ export class EmDashRuntime {
 		const metadata: PageMetadataContribution[] = [];
 		const fragments: PageFragmentContribution[] = [];
 
+		// Trusted plugins via HookPipeline — both metadata and fragments
 		if (this.hooks.hasHooks("page:metadata")) {
 			const results = await this.hooks.runPageMetadata({ page });
 			for (const r of results) {
@@ -3481,33 +6574,22 @@ export class EmDashRuntime {
 			}
 		}
 
-		for (const [pluginKey, plugin] of this.sandboxedPlugins) {
-			const [id] = pluginKey.split(":");
-			if (!id || !this.isPluginEnabled(id)) continue;
-
-			try {
-				const result = await plugin.invokeHook("page:metadata", { page });
-				if (result != null) {
-					const items = Array.isArray(result) ? result : [result];
-					for (const item of items) {
-						if (isValidMetadataContribution(item)) {
-							metadata.push(item);
-						}
-					}
-				}
-			} catch (error) {
-				console.error(`EmDash: Sandboxed plugin ${id} page:metadata error:`, error);
-			}
-		}
-
 		return { metadata, fragments };
 	}
 
+	/**
+	 * Collect page metadata contributions from trusted and sandboxed plugins.
+	 * Delegates to the single-pass collector and returns the metadata portion.
+	 */
 	async collectPageMetadata(page: PublicPageContext): Promise<PageMetadataContribution[]> {
 		const { metadata } = await this.collectPageContributions(page);
 		return metadata;
 	}
 
+	/**
+	 * Collect page fragment contributions from trusted plugins only.
+	 * Delegates to the single-pass collector and returns the fragments portion.
+	 */
 	async collectPageFragments(page: PublicPageContext): Promise<PageFragmentContribution[]> {
 		const { fragments } = await this.collectPageContributions(page);
 		return fragments;
@@ -3520,4 +6602,42 @@ export class EmDashRuntime {
 		)?.defaultEnabled;
 		return isPluginStateEnabled(status, defaultEnabled);
 	}
+}
+
+function isBlankString(value: unknown): boolean {
+	return typeof value === "string" && value.trim() === "";
+}
+
+/**
+ * Normalize an image field value together with its `darkVariant`. The media
+ * normalizer only keeps the media item's own keys, so the variant is normalized
+ * separately and reattached.
+ */
+async function normalizeImageValue(
+	value: unknown,
+	getProvider: (id: string) => MediaProvider | undefined,
+): Promise<ImageValue | null> {
+	const primary = await normalizePrimaryImageValue(value, getProvider);
+	if (!primary || !isRecord(value) || value.darkVariant == null) return primary;
+	const darkVariant = await normalizeMediaValue(value.darkVariant, getProvider);
+	return darkVariant ? { ...primary, darkVariant } : primary;
+}
+
+/**
+ * Normalize the primary image of an image field value.
+ *
+ * A legacy string URL that the admin upgraded to `{ id: "", src: url }` so it
+ * can carry a dark variant still has to normalize as a string: as an object it
+ * counts as local media, which strips `src` and leaves nothing behind. The
+ * upgrade outlives the variant — an editor can add one and remove it again —
+ * so the shape decides, not the presence of `darkVariant`.
+ */
+async function normalizePrimaryImageValue(
+	value: unknown,
+	getProvider: (id: string) => MediaProvider | undefined,
+): Promise<ImageValue | null> {
+	if (isRecord(value) && !value.id && typeof value.src === "string" && !value.provider) {
+		return normalizeMediaValue(value.src, getProvider);
+	}
+	return normalizeMediaValue(value, getProvider);
 }

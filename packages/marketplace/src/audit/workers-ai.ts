@@ -131,6 +131,9 @@ export function createWorkersAIAuditor(ai: Ai): Auditor {
 				};
 			} catch (err) {
 				console.error("Error during AI audit:", String(err));
+				// Fail-closed: an audit that couldn't complete must not produce a
+				// passing result.  Returning "fail" ensures block-mode enforcement
+				// rejects the version rather than silently publishing it.
 				return {
 					verdict: "fail",
 					riskScore: 100,

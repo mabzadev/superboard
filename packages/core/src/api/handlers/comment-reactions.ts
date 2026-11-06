@@ -1,3 +1,10 @@
+/**
+ * Comment reaction handlers (Tier 1 of the best-in-class comments RFC).
+ *
+ * Business logic for toggling reactions and reading aggregate counts. Route
+ * files stay thin wrappers; these return `ApiResult<T>`.
+ */
+
 import type { Kysely } from "kysely";
 
 import {
@@ -9,23 +16,38 @@ import type { Database } from "#db/types.js";
 import { invalidateCommentObjectCache } from "../../object-cache/index.js";
 import type { ApiResult } from "../types.js";
 
+/** Max reactions a single voter may register per window before throttling. */
 const REACTION_RATE_LIMIT = 30;
 const REACTION_RATE_WINDOW_MINUTES = 10;
 
+/**
+ * Reactions the system accepts. Positive-only for now (matches the shipped
+ * widget); kept as an allowlist so a voter can't spam arbitrary reaction
+ * strings and bloat a comment's count map. Extend (or make configurable) as
+ * the UI grows.
+ */
 const ALLOWED_REACTIONS: ReadonlySet<string> = new Set(["like"]);
 
 export interface ReactionToggleResult {
 	commentId: string;
 	reaction: string;
+	/** true if the reaction was added, false if an existing one was removed */
 	reacted: boolean;
+	/** updated counts for this comment after the toggle */
 	counts: ReactionCounts;
 }
 
 export interface ReactionCountsResult {
+	/** comment id -> reaction counts */
 	reactions: Record<string, ReactionCounts>;
+	/** comment id -> reactions the current voter has active (omitted if anonymous) */
 	viewer?: Record<string, string[]>;
 }
 
+/**
+ * Toggle a reaction for a voter on an approved comment belonging to the given
+ * content item. Rate-limited per voter.
+ */
 export async function handleReactionToggle(
 	db: Kysely<Database>,
 	params: {
@@ -46,6 +68,7 @@ export async function handleReactionToggle(
 			};
 		}
 
+		// The comment must exist, be approved, and belong to this content item.
 		const comment = await db
 			.selectFrom("_emdash_comments")
 			.select(["id", "status"])
@@ -77,6 +100,8 @@ export async function handleReactionToggle(
 		const { reacted } = await repo.toggle({ commentId, reaction, voterHash });
 		const countsMap = await repo.countsForComments([commentId]);
 
+		// Reaction counts (and `best` ordering) are folded into cached getComments
+		// reads, so a toggle must orphan them.
 		invalidateCommentObjectCache();
 
 		return {
@@ -91,6 +116,10 @@ export async function handleReactionToggle(
 	}
 }
 
+/**
+ * Read aggregate reaction counts for every approved comment on a content item,
+ * plus (optionally) which reactions the current voter has active.
+ */
 export async function handleReactionCounts(
 	db: Kysely<Database>,
 	collection: string,

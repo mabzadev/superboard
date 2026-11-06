@@ -41,11 +41,13 @@ describe("Revision Handlers", () => {
 		it("should return revisions for a content entry", async () => {
 			const content = await contentRepo.create(createPostFixture());
 
+			// Create some revisions with small delay to ensure distinct ULIDs
 			await revisionRepo.create({
 				collection: "post",
 				entryId: content.id,
 				data: { title: "Version 1", content: "First version" },
 			});
+			// Small delay to ensure ULID timestamp differs
 			await new Promise((resolve) => setTimeout(resolve, 2));
 			await revisionRepo.create({
 				collection: "post",
@@ -58,6 +60,7 @@ describe("Revision Handlers", () => {
 			expect(result.success).toBe(true);
 			expect(result.data?.items).toHaveLength(2);
 			expect(result.data?.total).toBe(2);
+			// Should be newest first
 			expect(result.data?.items[0].data.title).toBe("Version 2");
 			expect(result.data?.items[1].data.title).toBe("Version 1");
 		});
@@ -65,6 +68,7 @@ describe("Revision Handlers", () => {
 		it("should respect limit parameter", async () => {
 			const content = await contentRepo.create(createPostFixture());
 
+			// Create 5 revisions
 			for (let i = 1; i <= 5; i++) {
 				await revisionRepo.create({
 					collection: "post",
@@ -79,7 +83,7 @@ describe("Revision Handlers", () => {
 
 			expect(result.success).toBe(true);
 			expect(result.data?.items).toHaveLength(3);
-			expect(result.data?.total).toBe(5);
+			expect(result.data?.total).toBe(5); // Total still reflects all revisions
 		});
 
 		it("should not return revisions from other entries", async () => {
@@ -141,16 +145,19 @@ describe("Revision Handlers", () => {
 				data: { title: "Original", content: "Original content" },
 			});
 
+			// Create a revision with the original state
 			const originalRevision = await revisionRepo.create({
 				collection: "post",
 				entryId: content.id,
 				data: { title: "Original", content: "Original content" },
 			});
 
+			// Update the content
 			await contentRepo.update("post", content.id, {
 				data: { title: "Updated", content: "Updated content" },
 			});
 
+			// Restore to original revision
 			const result = await handleRevisionRestore(db, originalRevision.id, callerUserId);
 
 			expect(result.success).toBe(true);
@@ -187,6 +194,7 @@ describe("Revision Handlers", () => {
 
 			await handleRevisionRestore(db, revision.id, callerUserId);
 
+			// The newest revision (restore record) should be attributed to the caller
 			const latestRevision = await revisionRepo.findLatest("post", content.id);
 			expect(latestRevision).not.toBeNull();
 			expect(latestRevision!.authorId).toBe(callerUserId);
@@ -198,6 +206,7 @@ describe("Revision Handlers", () => {
 				data: { title: "Original" },
 			});
 
+			// Revision data includes _slug (added by runtime when slug changes)
 			const revision = await revisionRepo.create({
 				collection: "post",
 				entryId: content.id,

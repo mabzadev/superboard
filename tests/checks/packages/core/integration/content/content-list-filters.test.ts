@@ -15,6 +15,10 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
+// #1288: bring richer filtering into the admin content list — filter by
+// author, by date range (timeframe), and by publish status. Status filtering
+// already existed; these tests cover the new author + date-range support and
+// the supporting authors endpoint.
 describeEachDialect("content list filters (#1288)", (dialect) => {
 	let ctx: DialectTestContext;
 	let aliceId: string;
@@ -38,6 +42,7 @@ describeEachDialect("content list filters (#1288)", (dialect) => {
 		aliceId = alice.id;
 		bobId = bob.id;
 
+		// Three posts across 2023/2024/2025, two by Alice and one by Bob.
 		const seed = [
 			{
 				slug: "y2023",
@@ -89,6 +94,7 @@ describeEachDialect("content list filters (#1288)", (dialect) => {
 		const slugs = slugsOf(result).toSorted();
 		expect(slugs).toEqual(["y2023", "y2025"]);
 		if (!result.success) throw new Error("list failed");
+		// total must reflect the filter, not the full collection.
 		expect(result.data.total).toBe(2);
 	});
 
@@ -176,7 +182,17 @@ describeEachDialect("content list filters (#1288)", (dialect) => {
 		expect(slugsOf(result)).toEqual(["y2024"]);
 	});
 
+	it("normalizes offset-bearing date bounds before comparing canonical storage", async () => {
+		const result = await handleContentList(ctx.db, "posts", {
+			dateField: "createdAt",
+			dateFrom: "2024-06-01T21:00:00+09:00",
+			dateTo: "2024-06-01T08:00:00-04:00",
+		});
+		expect(slugsOf(result)).toEqual(["y2024"]);
+	});
+
 	it("includes a boundary timestamp when the upper bound is end-of-day", async () => {
+		// The 2025 post is at 12:00; an end-of-day upper bound must include it.
 		const result = await handleContentList(ctx.db, "posts", {
 			dateField: "createdAt",
 			dateFrom: "2025-06-01T00:00:00.000Z",
@@ -186,6 +202,9 @@ describeEachDialect("content list filters (#1288)", (dialect) => {
 	});
 
 	it("treats a date-only upper bound as inclusive of the whole day", async () => {
+		// Regression: a bare `YYYY-MM-DD` upper bound must be widened to the
+		// end of the day server-side, otherwise the 2024 post at 12:00 would
+		// be excluded (since `2024-06-01T12:00:00Z` sorts after `2024-06-01`).
 		const result = await handleContentList(ctx.db, "posts", {
 			dateField: "createdAt",
 			dateFrom: "2024-06-01",
@@ -212,6 +231,8 @@ describeEachDialect("content list filters (#1288)", (dialect) => {
 	});
 
 	it("ignores a date range with no field", async () => {
+		// Half-specified filter (from/to without a field) must not silently
+		// drop every row — it should behave as if no date filter was set.
 		const result = await handleContentList(ctx.db, "posts", {
 			dateFrom: "2024-01-01T00:00:00.000Z",
 		});
@@ -219,6 +240,8 @@ describeEachDialect("content list filters (#1288)", (dialect) => {
 	});
 
 	it("a publishedAt range excludes never-published rows", async () => {
+		// None of the seeded posts are published, so a publishedAt range
+		// returns nothing (their published_at is NULL).
 		const result = await handleContentList(ctx.db, "posts", {
 			dateField: "publishedAt",
 			dateFrom: "2000-01-01T00:00:00.000Z",
@@ -235,6 +258,7 @@ describeEachDialect("content list filters (#1288)", (dialect) => {
 	});
 
 	it("excludes authors with no live content", async () => {
+		// Carol exists as a user but has authored nothing.
 		const users = new UserRepository(ctx.db);
 		await users.create({ email: "carol@example.com", name: "Carol" });
 

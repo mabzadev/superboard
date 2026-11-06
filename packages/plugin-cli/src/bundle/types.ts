@@ -1,3 +1,18 @@
+/**
+ * Local-only types for the bundling pipeline.
+ *
+ * The cross-package manifest contract (capabilities, manifest shape, hook
+ * entries, etc.) lives in `@emdash-cms/plugin-types` and is re-exported from
+ * here for convenience so the bundling internals only need one import.
+ *
+ * The only type that doesn't go upstream is `ResolvedPlugin`: it's the
+ * loose internal shape the bundler reads from a user plugin's compiled
+ * `createPlugin()` / descriptor-factory output. Core has its own canonical,
+ * tightly-typed `ResolvedPlugin` that we don't want to depend on (it pulls
+ * in Astro / blocks / schema). Both sides exist in service of the same
+ * manifest contract; they don't need to share the runtime shape.
+ */
+
 export {
 	CAPABILITY_RENAMES,
 	capabilitiesToDeclaredAccess,
@@ -13,6 +28,7 @@ export {
 	type PluginAdminConfig,
 	type PluginCapability,
 	type PluginManifest,
+	type RouteOptions,
 	type PluginStorageConfig,
 	type StorageCollectionConfig,
 } from "@emdash-cms/plugin-types";
@@ -21,6 +37,7 @@ import type {
 	PluginAdminConfig,
 	PluginCapability,
 	PluginStorageConfig,
+	RouteOptions,
 } from "@emdash-cms/plugin-types";
 
 export interface ResolvedMcpTool {
@@ -31,6 +48,13 @@ export interface ResolvedMcpTool {
 	destructive?: boolean;
 }
 
+/**
+ * The bundler's view of a "resolved" plugin -- whatever the user's plugin
+ * module exposes after we build + import it. Loose by design: the third-party
+ * code we're loading may follow several formats (native `createPlugin`,
+ * descriptor factory, default object), and we extract a manifest from any of
+ * them. Treat field absence as "not declared".
+ */
 export interface ResolvedPlugin {
 	id: string;
 	version: string;
@@ -51,10 +75,9 @@ export interface ResolvedPlugin {
 	>;
 	routes: Record<
 		string,
-		{
+		RouteOptions & {
 			handler?: unknown;
-			public?: boolean;
-			permission?: string;
+			input?: unknown;
 		}
 	>;
 	mcp?: { tools: Record<string, ResolvedMcpTool> };

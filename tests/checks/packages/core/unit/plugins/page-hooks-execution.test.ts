@@ -1,7 +1,21 @@
-import Database from "better-sqlite3";
+/**
+ * Page Hooks Execution Tests
+ *
+ * Tests that page:metadata and page:fragments hooks fire correctly through
+ * the HookPipeline, returning plugin contributions that EmDashHead,
+ * EmDashBodyStart, and EmDashBodyEnd render into HTML.
+ *
+ * Bug context: The middleware's anonymous fast-path skipped runtime init,
+ * so collectPageMetadata/collectPageFragments were never available to
+ * anonymous visitors. These tests verify the hook pipeline actually runs
+ * plugin handlers and collects their contributions — the path that was
+ * broken before the fix.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { HookPipeline } from "../../../../../../packages/core/src/plugins/hooks.js";
 import type {
 	ResolvedPlugin,
@@ -10,6 +24,10 @@ import type {
 	PageFragmentHandler,
 	PublicPageContext,
 } from "../../../../../../packages/core/src/plugins/types.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlugin {
 	return {
@@ -57,6 +75,10 @@ function createPageContext(overrides: Partial<PublicPageContext> = {}): PublicPa
 	};
 }
 
+// ---------------------------------------------------------------------------
+// DB setup (required for PluginContextFactory)
+// ---------------------------------------------------------------------------
+
 let db: Kysely<any>;
 let sqlite: InstanceType<typeof Database>;
 
@@ -69,6 +91,10 @@ afterEach(async () => {
 	await db.destroy();
 	sqlite.close();
 });
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe("page:metadata hook execution", () => {
 	it("runs page:metadata handler and collects contributions", async () => {
@@ -204,6 +230,7 @@ describe("page:metadata hook execution", () => {
 		const pipeline = new HookPipeline([badPlugin, goodPlugin], { db });
 		const page = createPageContext();
 
+		// Should not throw — errors are logged, not propagated
 		const results = await pipeline.runPageMetadata({ page });
 
 		expect(results).toHaveLength(1);

@@ -1,3 +1,13 @@
+/**
+ * Integration tests using WordPress Theme Unit Test data
+ *
+ * Tests the full WordPress migration pipeline against the official
+ * WordPress Theme Unit Test dataset. The test data is downloaded from
+ * GitHub on first run and cached locally.
+ *
+ * @see https://github.com/WordPress/theme-test-data
+ */
+
 import { createReadStream, existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -8,6 +18,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 
 import { parseWxr } from "../../../../../../packages/core/src/cli/wxr/parser.js";
 
+// Test regex patterns
 const PARAGRAPH_WITH_TEXT_REGEX = /<p[^>]*>[^<]+<\/p>/;
 
 const TEST_DATA_PATH = join(tmpdir(), "emdash-theme-unit-test", "themeunittestdata.wordpress.xml");
@@ -15,6 +26,9 @@ const TEST_DATA_PATH = join(tmpdir(), "emdash-theme-unit-test", "themeunittestda
 const TEST_DATA_URL =
 	"https://raw.githubusercontent.com/WordPress/theme-test-data/master/themeunittestdata.wordpress.xml";
 
+/**
+ * Download the WordPress theme unit test data if it doesn't exist locally.
+ */
 async function ensureTestData(): Promise<void> {
 	if (existsSync(TEST_DATA_PATH)) return;
 
@@ -46,6 +60,7 @@ describe("WordPress Theme Unit Test Migration", () => {
 		});
 
 		it("parses all posts", () => {
+			// Theme Unit Test has many posts covering different scenarios
 			expect(wxrData.posts.length).toBeGreaterThan(50);
 		});
 
@@ -57,6 +72,7 @@ describe("WordPress Theme Unit Test Migration", () => {
 		it("parses categories with hierarchy", () => {
 			expect(wxrData.categories.length).toBeGreaterThan(20);
 
+			// Check for parent-child relationships
 			const parentCategory = wxrData.categories.find((c) => c.nicename === "parent-category");
 			expect(parentCategory).toBeDefined();
 
@@ -68,6 +84,7 @@ describe("WordPress Theme Unit Test Migration", () => {
 		it("parses tags", () => {
 			expect(wxrData.tags.length).toBeGreaterThan(50);
 
+			// Check for specific tags
 			const wpTag = wxrData.tags.find((t) => t.slug === "wordpress");
 			expect(wpTag).toBeDefined();
 			expect(wpTag?.name).toBe("WordPress");
@@ -86,6 +103,7 @@ describe("WordPress Theme Unit Test Migration", () => {
 		});
 
 		it("parses post categories and tags", () => {
+			// Find a post with both categories and tags
 			const postsWithTaxonomies = wxrData.posts.filter(
 				(p) => p.categories.length > 0 || p.tags.length > 0,
 			);
@@ -111,6 +129,7 @@ describe("WordPress Theme Unit Test Migration", () => {
 
 			const result = gutenbergToPortableText(post!.content || "");
 
+			// Should have h2 headings
 			const headings = result.filter(
 				(b) => b._type === "block" && (b as any).style?.startsWith("h"),
 			);
@@ -118,6 +137,7 @@ describe("WordPress Theme Unit Test Migration", () => {
 		});
 
 		it("converts list blocks", () => {
+			// Find a post with list content
 			const post = wxrData.posts.find((p) => p.content?.includes("wp:list"));
 			expect(post).toBeDefined();
 
@@ -158,13 +178,18 @@ describe("WordPress Theme Unit Test Migration", () => {
 			expect(post).toBeDefined();
 
 			const result = gutenbergToPortableText(post!.content || "");
+			// Groups should be flattened - no group type in output
 			const groups = result.filter((b) => b._type === "group");
 			expect(groups.length).toBe(0);
 
+			// But their content should still be present
 			expect(result.length).toBeGreaterThan(0);
 		});
 
 		it("handles classic editor content (no block markers)", () => {
+			// A classic-category post with no Gutenberg block comments, so this
+			// genuinely exercises the classic-HTML fallback path in the converter
+			// rather than passing on whatever happens to be in the category.
 			const classicPost = wxrData.posts.find(
 				(p) =>
 					p.categories.includes("classic") &&
@@ -187,6 +212,7 @@ describe("WordPress Theme Unit Test Migration", () => {
 			const blocksWithMarks = result.filter(
 				(b) => b._type === "block" && (b as any).children?.some((c: any) => c.marks?.length > 0),
 			);
+			// Inline <strong>/<em> must survive as Portable Text marks.
 			expect(blocksWithMarks.length).toBeGreaterThan(0);
 		});
 
@@ -196,21 +222,26 @@ describe("WordPress Theme Unit Test Migration", () => {
 		});
 
 		it("handles malformed blocks gracefully", () => {
+			// Test with incomplete block markers
 			const malformed = "<!-- wp:paragraph --><p>Test<!-- /wp:paragraph";
 			const result = gutenbergToPortableText(malformed);
+			// Should not throw, may produce partial output or fallback
 			expect(Array.isArray(result)).toBe(true);
 		});
 	});
 
 	describe("Edge Cases", () => {
 		it("handles posts with special characters in title", () => {
+			// Find posts with special characters
 			const specialPosts = wxrData.posts.filter(
 				(p) => p.title?.includes("&") || p.title?.includes("<") || p.title?.includes('"'),
 			);
+			// The fixture contains such titles, and they must parse without being dropped.
 			expect(specialPosts.length).toBeGreaterThan(0);
 		});
 
 		it("handles posts with very long content", () => {
+			// Find the longest post
 			const longestPost = wxrData.posts.reduce((longest, current) => {
 				const currentLength = current.content?.length || 0;
 				const longestLength = longest?.content?.length || 0;
@@ -224,6 +255,7 @@ describe("WordPress Theme Unit Test Migration", () => {
 		});
 
 		it("handles deeply nested blocks", () => {
+			// Find posts with nested structures (columns, groups)
 			const nestedPost = wxrData.posts.find(
 				(p) => p.content?.includes("wp:columns") || p.content?.includes("wp:group"),
 			);
@@ -234,6 +266,9 @@ describe("WordPress Theme Unit Test Migration", () => {
 		});
 
 		it("handles posts with embeds", () => {
+			// The theme-unit-test fixture predates block embeds and contains none, so
+			// feed a known wp:embed block directly to verify the converter emits an
+			// embed node rather than silently skipping.
 			const content = `<!-- wp:embed {"url":"https://www.youtube.com/watch?v=abc123","type":"video","providerNameSlug":"youtube"} -->
 <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube"><div class="wp-block-embed__wrapper">
 https://www.youtube.com/watch?v=abc123
@@ -248,6 +283,7 @@ https://www.youtube.com/watch?v=abc123
 
 	describe("Content Integrity", () => {
 		it("preserves all text content through conversion", () => {
+			// Take a sample of posts and verify text isn't lost
 			const samplePosts = wxrData.posts.slice(0, 10);
 			let assertedCount = 0;
 
@@ -256,6 +292,7 @@ https://www.youtube.com/watch?v=abc123
 
 				const result = gutenbergToPortableText(post.content);
 
+				// Extract all text from result
 				const extractedText = result
 					.map((block) => {
 						if (block._type === "block" && (block as any).children) {
@@ -269,7 +306,10 @@ https://www.youtube.com/watch?v=abc123
 					.join(" ")
 					.trim();
 
+				// If there was content, we should have extracted some text
+				// (unless it was all images/embeds)
 				if (post.content.includes("<p>") || post.content.includes("wp:paragraph")) {
+					// Only check if there was actual text content
 					const hasTextContent = PARAGRAPH_WITH_TEXT_REGEX.test(post.content);
 					if (hasTextContent) {
 						expect(extractedText.length).toBeGreaterThan(0);
@@ -278,6 +318,7 @@ https://www.youtube.com/watch?v=abc123
 				}
 			}
 
+			// Guard against the loop silently asserting nothing.
 			expect(assertedCount).toBeGreaterThan(0);
 		});
 	});
@@ -306,6 +347,7 @@ https://www.youtube.com/watch?v=abc123
 				}
 			}
 
+			// Log statistics (visible in test output with --reporter=verbose)
 			console.log("\n=== WordPress Migration Statistics ===");
 			console.log(`Total posts: ${totalPosts}`);
 			console.log(`Successful: ${successfulConversions}`);
@@ -317,6 +359,7 @@ https://www.youtube.com/watch?v=abc123
 			}
 			console.log("=====================================\n");
 
+			// All conversions should succeed
 			expect(failedConversions).toBe(0);
 			expect(successfulConversions).toBe(totalPosts);
 		});

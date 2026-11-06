@@ -1,8 +1,20 @@
+/**
+ * Locale-aware term resolution for content entries (issue #1218).
+ *
+ * `content_taxonomies` stores translation groups for both content and terms.
+ * Resolving the terms for an entry must still scope to the entry's own locale,
+ * otherwise every locale variant of the term is returned.
+ *
+ * The bug was that the admin content-editor terms route
+ * (`/content/:collection/:id/terms/:taxonomy`) never passed a locale, so a
+ * French post showed both the English and French variants of its tag.
+ */
+
 import { Role, type RoleLevel } from "@emdash-cms/auth";
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
 import { ulid } from "ulidx";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { handleContentGet } from "../../../../../../packages/core/src/api/handlers/content.js";
 import {
@@ -43,6 +55,7 @@ async function seedLocalizedTags(db: Kysely<Database>): Promise<TermFixture> {
 	const contentRepo = new ContentRepository(db);
 	const taxRepo = new TaxonomyRepository(db);
 
+	// Two content rows: EN + FR, same translation group.
 	const enContent = await contentRepo.create({
 		type: "post",
 		slug: "hello",
@@ -57,6 +70,7 @@ async function seedLocalizedTags(db: Kysely<Database>): Promise<TermFixture> {
 		translationOf: enContent.id,
 	});
 
+	// One tag with an EN + FR translation (shared translation_group).
 	const enTag = await taxRepo.create({
 		name: "tags",
 		slug: "news",
@@ -71,6 +85,7 @@ async function seedLocalizedTags(db: Kysely<Database>): Promise<TermFixture> {
 		translationOf: enTag.id,
 	});
 
+	// One group assignment covers both content translations.
 	await taxRepo.attachToEntry("post", enContent.id, enTag.id);
 
 	return {
@@ -89,9 +104,17 @@ const adminUser = {
 	role: Role.ADMIN as RoleLevel,
 };
 
+const subscriberUser = {
+	id: "u-subscriber",
+	email: "s@example.com",
+	name: "Subscriber",
+	role: Role.SUBSCRIBER as RoleLevel,
+};
+
 function buildGetContext(
 	db: Kysely<Database>,
 	params: { collection: string; id: string; taxonomy: string },
+	user: { id: string; role: RoleLevel } = adminUser,
 ): APIContext {
 	const url = new URL(
 		`http://localhost/_emdash/api/content/${params.collection}/${params.id}/terms/${params.taxonomy}`,
@@ -106,7 +129,7 @@ function buildGetContext(
 				handleContentGet: (collection: string, id: string, locale?: string) =>
 					handleContentGet(db, collection, id, locale),
 			},
-			user: adminUser,
+			user,
 		},
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- minimal stub for tests
 	} as unknown as APIContext;
@@ -241,6 +264,82 @@ describeEachDialect("content terms route locale-awareness (#1218)", (dialect) =>
 		expect(term.locale).toBe("zh-TW");
 	});
 
+	it("rejects a parent when creating a term in a flat taxonomy", async () => {
+		setI18nConfig({ defaultLocale: "en", locales: ["en", "fr"] });
+		const source = await handleTaxonomyCreate(ctx.db, {
+			name: "tags",
+			label: "Tags",
+			hierarchical: false,
+		});
+		if (!source.success) throw new Error(source.error.message);
+		const translated = await handleTaxonomyCreate(ctx.db, {
+			name: "tags",
+			label: "Étiquettes",
+			locale: "fr",
+			translationOf: source.data.taxonomy.id,
+		});
+		if (!translated.success) throw new Error(translated.error.message);
+		const parent = await unwrap(
+			handleTermCreate(ctx.db, "tags", { slug: "actualites", label: "Actualités", locale: "fr" }),
+		);
+
+		const result = await handleTermCreate(ctx.db, "tags", {
+			slug: "locales",
+			label: "Locales",
+			locale: "fr",
+			parentId: parent.id,
+		});
+
+		expect(result).toEqual({
+			success: false,
+			error: {
+				code: "VALIDATION_ERROR",
+				message: "Taxonomy 'tags' is not hierarchical and cannot have parent terms",
+			},
+		});
+	});
+
+	it("rejects a new parent when updating a term in a flat taxonomy", async () => {
+		setI18nConfig({ defaultLocale: "en", locales: ["en", "fr"] });
+		const source = await handleTaxonomyCreate(ctx.db, {
+			name: "tags",
+			label: "Tags",
+			hierarchical: false,
+		});
+		if (!source.success) throw new Error(source.error.message);
+		const translated = await handleTaxonomyCreate(ctx.db, {
+			name: "tags",
+			label: "Étiquettes",
+			locale: "fr",
+			translationOf: source.data.taxonomy.id,
+		});
+		if (!translated.success) throw new Error(translated.error.message);
+		const parent = await unwrap(
+			handleTermCreate(ctx.db, "tags", { slug: "actualites", label: "Actualités", locale: "fr" }),
+		);
+		await unwrap(
+			handleTermCreate(ctx.db, "tags", { slug: "locales", label: "Locales", locale: "fr" }),
+		);
+
+		const result = await handleTermUpdate(
+			ctx.db,
+			"tags",
+			"locales",
+			{ parentId: parent.id },
+			{ locale: "fr" },
+		);
+
+		expect(result).toEqual({
+			success: false,
+			error: {
+				code: "VALIDATION_ERROR",
+				message: "Taxonomy 'tags' is not hierarchical and cannot have parent terms",
+			},
+		});
+		const unchanged = await unwrap(handleTermGet(ctx.db, "tags", "locales", { locale: "fr" }));
+		expect(unchanged.parentId).toBeNull();
+	});
+
 	it("resolves taxonomy reads with the configured locale casing", async () => {
 		setI18nConfig({ defaultLocale: "en", locales: ["en", "zh-TW"] });
 		const createdDef = await handleTaxonomyCreate(ctx.db, {
@@ -291,11 +390,43 @@ describeEachDialect("content terms route locale-awareness (#1218)", (dialect) =>
 		const taxRepo = new TaxonomyRepository(ctx.db);
 
 		const all = await taxRepo.getTermsForEntry("post", fx.frContentId, "tags");
-		expect(all).toHaveLength(2);
+		expect(all).toHaveLength(2); // bug surface: both locales without a filter
 
 		const frOnly = await taxRepo.getTermsForEntry("post", fx.frContentId, "tags", "fr");
 		expect(frOnly).toHaveLength(1);
 		expect(frOnly[0]!.id).toBe(fx.frTagId);
+	});
+
+	it("updates description only when provided, and clears it on empty string", async () => {
+		setI18nConfig({ defaultLocale: "en", locales: ["en"] });
+		await unwrap(
+			handleTaxonomyCreate(ctx.db, {
+				name: "tags",
+				label: "Tags",
+				hierarchical: false,
+			}),
+		);
+		const created = await unwrap(
+			handleTermCreate(ctx.db, "tags", {
+				slug: "news",
+				label: "News",
+				description: "Original description",
+			}),
+		);
+		expect(created.description).toBe("Original description");
+
+		// Omitting description preserves the stored value.
+		const labelOnly = await unwrap(
+			handleTermUpdate(ctx.db, "tags", "news", { label: "Latest news" }),
+		);
+		expect(labelOnly.description).toBe("Original description");
+
+		// Empty string clears it.
+		const cleared = await unwrap(handleTermUpdate(ctx.db, "tags", "news", { description: "" }));
+		expect(cleared.description).toBe("");
+
+		const fetched = await unwrap(handleTermGet(ctx.db, "tags", "news"));
+		expect(fetched.description).toBe("");
 	});
 
 	it("GET returns only the FR variant for the FR entry", async () => {
@@ -339,6 +470,7 @@ describeEachDialect("content terms route locale-awareness (#1218)", (dialect) =>
 	it("POST response echoes only the entry-locale variant", async () => {
 		const fx = await seedLocalizedTags(ctx.db);
 
+		// Re-set the FR entry's tags via the EN term id (resolved to the group).
 		const res = await postTerms(
 			buildPostContext(ctx.db, { collection: "post", id: fx.frContentId, taxonomy: "tags" }, [
 				fx.enTagId,
@@ -349,6 +481,68 @@ describeEachDialect("content terms route locale-awareness (#1218)", (dialect) =>
 		expect(body.error).toBeUndefined();
 		const ids = (body.data?.terms ?? []).map((t) => t.id);
 		expect(ids).toEqual([fx.frTagId]);
+	});
+
+	it("POST refreshes published translations and taxonomy facets", async () => {
+		const fx = await seedLocalizedTags(ctx.db);
+		const content = new ContentRepository(ctx.db);
+		await content.publish("post", fx.enContentId);
+		await content.publish("post", fx.frContentId);
+		const invalidate = vi.fn().mockResolvedValue(undefined);
+		const context = buildPostContext(
+			ctx.db,
+			{ collection: "post", id: fx.frContentSlug, taxonomy: "tags" },
+			[],
+		);
+		Object.assign(context, { cache: { enabled: true, invalidate } });
+
+		const response = await postTerms(context);
+		expect(response.status).toBe(200);
+		expect(
+			await new TaxonomyRepository(ctx.db).getTermsForEntry("post", fx.frContentId, "tags", "fr"),
+		).toEqual([]);
+		expect(invalidate).toHaveBeenCalledOnce();
+		expect(invalidate).toHaveBeenCalledWith({
+			tags: expect.arrayContaining([
+				"post",
+				fx.enContentId,
+				fx.frContentId,
+				"emdash:taxonomy:tags",
+			]),
+		});
+	});
+
+	it("batches cache purges for large translation groups", async () => {
+		const fx = await seedLocalizedTags(ctx.db);
+		const content = new ContentRepository(ctx.db);
+		const additionalIds: string[] = [];
+		for (let index = 0; index < 97; index++) {
+			const entry = await content.create({
+				type: "post",
+				slug: `extra-${index}`,
+				locale: `en-${String(index + 1).padStart(3, "0")}`,
+				translationOf: fx.enContentId,
+				data: { title: `Translation ${index}` },
+			});
+			additionalIds.push(entry.id);
+		}
+		const invalidate = vi.fn(async ({ tags }: { tags: string[] }) => {
+			if (tags.length > 100) throw new Error("Too many purge tags");
+		});
+		const context = buildPostContext(
+			ctx.db,
+			{ collection: "post", id: fx.frContentId, taxonomy: "tags" },
+			[],
+		);
+		Object.assign(context, { cache: { enabled: true, invalidate } });
+
+		const response = await postTerms(context);
+		expect(response.status).toBe(200);
+		expect(invalidate).toHaveBeenCalledTimes(2);
+		const purgedTags = invalidate.mock.calls.flatMap(([{ tags }]) => tags);
+		expect(new Set(purgedTags)).toEqual(
+			new Set(["post", fx.enContentId, fx.frContentId, ...additionalIds, "emdash:taxonomy:tags"]),
+		);
 	});
 
 	it("falls back to the configured default-locale term and exposes its actual locale", async () => {
@@ -554,6 +748,10 @@ describeEachDialect("content terms route locale-awareness (#1218)", (dialect) =>
 	});
 });
 
+/**
+ * Parent links are stored as the parent's translation_group, not a locale-bound
+ * row id, so a child stays nested under the parent in every locale (#1347).
+ */
 async function insertHierarchicalDef(db: Kysely<Database>, name: string): Promise<void> {
 	await db
 		.insertInto("_emdash_taxonomy_defs")
@@ -579,6 +777,32 @@ function findInTree(terms: TermWithCount[], slug: string): TermWithCount | undef
 	return undefined;
 }
 
+describeEachDialect("content terms route without draft access", (dialect) => {
+	let ctx: DialectTestContext;
+
+	beforeEach(async () => {
+		ctx = await setupForDialectWithCollections(dialect);
+	});
+
+	afterEach(async () => {
+		await teardownForDialect(ctx);
+	});
+
+	it("GET answers 404 to a Subscriber until the entry is published", async () => {
+		const fx = await seedLocalizedTags(ctx.db);
+		const params = { collection: "post", id: fx.enContentId, taxonomy: "tags" };
+
+		const draft = await getTerms(buildGetContext(ctx.db, params, subscriberUser));
+		expect(draft.status, await draft.clone().text()).toBe(404);
+
+		await new ContentRepository(ctx.db).update("post", fx.enContentId, { status: "published" });
+		const published = await getTerms(buildGetContext(ctx.db, params, subscriberUser));
+		expect(published.status).toBe(200);
+		const body = (await published.json()) as TermsResponse;
+		expect((body.data?.terms ?? []).map((t) => t.id)).toEqual([fx.enTagId]);
+	});
+});
+
 describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dialect) => {
 	let ctx: DialectTestContext;
 
@@ -592,6 +816,8 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 	});
 
 	it("nests a child under a parent translated AFTER the child", async () => {
+		// Child is translated before the parent: the FR parent does not exist
+		// when the FR child is created.
 		const enParent = await unwrap(
 			handleTermCreate(ctx.db, "categories", { slug: "news", label: "News", locale: "en" }),
 		);
@@ -613,6 +839,7 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 			}),
 		);
 
+		// Now translate the parent into FR.
 		await unwrap(
 			handleTermCreate(ctx.db, "categories", {
 				slug: "actus",
@@ -624,10 +851,12 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 
 		const frList = await handleTermList(ctx.db, "categories", { locale: "fr" });
 		if (!frList.success) throw new Error(frList.error.message);
+		// The FR child must be nested under the FR parent, not flattened to root.
 		expect(frList.data.terms.map((t) => t.slug)).toEqual(["actus"]);
 		const frParent = frList.data.terms[0]!;
 		expect(frParent.children.map((c) => c.slug)).toEqual(["actualites"]);
 
+		// EN tree is unaffected.
 		const enList = await handleTermList(ctx.db, "categories", { locale: "en" });
 		if (!enList.success) throw new Error(enList.error.message);
 		expect(enList.data.terms.map((t) => t.slug)).toEqual(["news"]);
@@ -664,6 +893,9 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 			}),
 		);
 
+		// No locale filter: rows from both locales are returned. Each child must
+		// stay under the parent in its own locale, not collapse onto a shared
+		// translation_group key.
 		const list = await handleTermList(ctx.db, "categories");
 		if (!list.success) throw new Error(list.error.message);
 		const roots = list.data.terms.toSorted((a, b) => a.slug.localeCompare(b.slug));
@@ -678,6 +910,8 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 		const enTerm = await unwrap(
 			handleTermCreate(ctx.db, "categories", { slug: "news", label: "News", locale: "en" }),
 		);
+		// Creating an FR translation of enTerm whose parent is enTerm (same group)
+		// is a cross-locale self-parent and must be rejected, not silently stored.
 		const res = await handleTermCreate(ctx.db, "categories", {
 			slug: "actus",
 			label: "Actus",
@@ -707,8 +941,9 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 	});
 
 	it("backfills legacy locale-bound parent_id to the translation_group", async () => {
+		// Simulate pre-#1347 rows by writing locale-bound parent ids directly.
 		const enParentId = ulid();
-		const group = enParentId;
+		const group = enParentId; // anchor row: translation_group == id
 		const frParentId = ulid();
 		const enChildId = ulid();
 		const childGroup = enChildId;
@@ -742,7 +977,7 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 					name: "categories",
 					slug: "breaking",
 					label: "Breaking",
-					parent_id: enParentId,
+					parent_id: enParentId, // legacy: anchor row id (== group)
 					data: null,
 					locale: "en",
 					translation_group: childGroup,
@@ -752,7 +987,7 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 					name: "categories",
 					slug: "actualites",
 					label: "Actualités",
-					parent_id: frParentId,
+					parent_id: frParentId, // legacy: cross-locale row id (the bug)
 					data: null,
 					locale: "fr",
 					translation_group: childGroup,
@@ -765,9 +1000,11 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 		const repo = new TaxonomyRepository(ctx.db);
 		const frChild = await repo.findById(frChildId);
 		const enChild = await repo.findById(enChildId);
+		// Both children now reference the parent's translation_group.
 		expect(frChild!.parentId).toBe(group);
 		expect(enChild!.parentId).toBe(group);
 
+		// And the FR tree renders nested rather than flattened.
 		const frList = await handleTermList(ctx.db, "categories", { locale: "fr" });
 		if (!frList.success) throw new Error(frList.error.message);
 		const frParent = findInTree(frList.data.terms, "actus");
@@ -775,6 +1012,9 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 	});
 
 	it("leaves a group where only one row has a parent split across locales", async () => {
+		// The shape `handleTermUpdate` produces: a reparent applied to one row.
+		// 045 rewrites parent_id values, so it converges rows that all point at
+		// some parent; a row still holding NULL is outside its WHERE clause.
 		const parentId = ulid();
 		const enChildId = ulid();
 		const frChildId = ulid();
@@ -808,7 +1048,7 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 					name: "categories",
 					slug: "actualites",
 					label: "Actualités",
-					parent_id: null,
+					parent_id: null, // never reparented — the update named the EN row
 					data: null,
 					locale: "fr",
 					translation_group: childGroup,
@@ -820,8 +1060,10 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 
 		const repo = new TaxonomyRepository(ctx.db);
 		const rows = await repo.findTranslations(childGroup);
+		// 045 cannot converge this: the group still holds two parents.
 		expect(new Set(rows.map((row) => row.parentId))).toEqual(new Set([parentId, null]));
 
+		// So the term is a child in EN and a root in FR.
 		const frList = await handleTermList(ctx.db, "categories", { locale: "fr" });
 		if (!frList.success) throw new Error(frList.error.message);
 		expect(frList.data.terms.map((term) => term.slug)).toEqual(["actualites"]);

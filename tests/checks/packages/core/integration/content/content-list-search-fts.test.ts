@@ -1,3 +1,13 @@
+/**
+ * FTS-backed admin content-list search (#1517).
+ *
+ * When a collection has search enabled, the list filter's `q` is served from
+ * the FTS5 index (token-prefix MATCH plus an index-served slug GLOB prefix)
+ * instead of the full-scan `lower(col) LIKE '%term%'`. These tests pin the
+ * user-visible behavior of that path — matching, count parity, literal
+ * treatment of FTS metacharacters — and the fallback when the display
+ * columns aren't covered by the index.
+ */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -107,6 +117,7 @@ describe("content list search served by FTS (#1517)", () => {
 	});
 
 	it("treats FTS operators as plain words", async () => {
+		// Must not throw and must not match everything.
 		const result = await handleContentList(db, "posts", { q: "needle AND", limit: 100 });
 		if (!result.success) throw new Error("list failed");
 		expect(titlesOf(result)).not.toContain("Ordinary Post 0");
@@ -138,6 +149,8 @@ describe("content list search falls back to LIKE when FTS cannot serve it", () =
 		db = await setupTestDatabase();
 		const registry = new SchemaRegistry(db);
 		await registry.createCollection({ slug: "posts", label: "Posts", labelSingular: "Post" });
+		// `title` exists but is NOT searchable — the FTS index (over `body`)
+		// would miss title matches, so the filter must stay on LIKE.
 		await registry.createField("posts", { slug: "title", label: "Title", type: "string" });
 		await registry.createField("posts", {
 			slug: "body",
@@ -160,6 +173,8 @@ describe("content list search falls back to LIKE when FTS cannot serve it", () =
 	});
 
 	it("still finds title matches via the LIKE fallback", async () => {
+		// Mid-word substring — only LIKE can match this; proves the handler
+		// did not route to FTS despite search being enabled.
 		const result = await handleContentList(db, "posts", { q: "eedle", limit: 20 });
 		expect(titlesOf(result)).toContain("zzz Needle Headline");
 	});

@@ -1,3 +1,9 @@
+/**
+ * Google OAuth Admin Components
+ *
+ * LoginButton for the login page, rendered via the auth provider virtual module.
+ */
+
 import { LinkButton } from "@cloudflare/kumo";
 import * as React from "react";
 

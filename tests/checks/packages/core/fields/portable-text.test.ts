@@ -36,8 +36,10 @@ describe("portableText field", () => {
 		const required = portableText({ required: true });
 		const optional = portableText({ required: false });
 
+		// Required should reject undefined
 		expect(() => required.schema.parse(undefined)).toThrow();
 
+		// Optional should accept undefined
 		expect(() => optional.schema.parse(undefined)).not.toThrow();
 	});
 });

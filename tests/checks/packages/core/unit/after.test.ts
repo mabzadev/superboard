@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
+// Default stub: no host-provided waitUntil. Mirrors what Node (and
+// any adapter that doesn't implement the virtual) sees at runtime.
 vi.mock("virtual:emdash/wait-until", () => ({ waitUntil: undefined }), { virtual: true });
 
+// The waitUntil-handoff path is exercised end-to-end by the cron
+// integration in emdash-runtime.ts; testing it here would require
+// swapping out a module that's already bound at load time, which
+// fights vitest's module cache. These unit tests cover the three
+// behaviors that don't need a real waitUntil: the callback fires,
+// errors don't escape, and the caller doesn't block.
 import { after } from "../../../../../packages/core/src/after.js";
 import { waitForDeferredTasks } from "../../../../../packages/core/src/deferred-tasks.js";
 
@@ -31,6 +39,8 @@ describe("after()", () => {
 				boom,
 			);
 		} finally {
+			// Restore unconditionally so a failed assertion above doesn't leak
+			// the spy into later tests.
 			errorSpy.mockRestore();
 		}
 	});
@@ -41,6 +51,7 @@ describe("after()", () => {
 			await new Promise((r) => setTimeout(r, 10));
 			ran = true;
 		});
+		// after() returned already — the callback hasn't completed.
 		expect(ran).toBe(false);
 	});
 

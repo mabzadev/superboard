@@ -1,17 +1,34 @@
+/**
+ * Plugin settings handlers
+ *
+ * Auto-generated settings UI backend for plugins that declare
+ * `admin.settingsSchema`. Values are stored in the options table under
+ * `plugin:{pluginId}:settings:{key}` — the same keys the plugin itself
+ * reads via `ctx.kv.get("settings:{key}")`.
+ */
+
 import type { Kysely } from "kysely";
 import { ulid } from "ulidx";
 
+import { EmDashSecretsError } from "../../config/secrets.js";
 import { OptionsRepository } from "../../database/repositories/options.js";
 import { withTransaction } from "../../database/transaction.js";
 import type { Database } from "../../database/types.js";
 import type { SandboxedPluginEntry } from "../../emdash-runtime.js";
+import { PluginSettingEncryptionError, encodePluginSettingValue } from "../../plugins/settings.js";
 import type { ResolvedPlugin, SettingField } from "../../plugins/types.js";
 import { ErrorCode } from "../errors.js";
 import type { ApiResult } from "../types.js";
 
 export interface PluginSettingsResponse {
+	/** The plugin's declared settings schema, keyed by setting name */
 	schema: Record<string, SettingField>;
+	/**
+	 * Current values keyed by setting name. Secret fields are never
+	 * included here — check `secretsSet` instead.
+	 */
 	values: Record<string, unknown>;
+	/** For secret fields: whether a value is currently stored */
 	secretsSet: Record<string, boolean>;
 }
 
@@ -19,6 +36,12 @@ function settingsKey(pluginId: string, key: string): string {
 	return `plugin:${pluginId}:settings:${key}`;
 }
 
+/**
+ * Resolve a plugin's settings schema from either the configured
+ * (in-process) plugin list or the statically-sandboxed entries.
+ * Returns null when the plugin doesn't exist, undefined-equivalent
+ * empty object when it declares no schema.
+ */
 export function getPluginSettingsSchema(
 	configuredPlugins: ResolvedPlugin[],
 	sandboxedPluginEntries: SandboxedPluginEntry[],
@@ -33,6 +56,10 @@ export function getPluginSettingsSchema(
 	return null;
 }
 
+/**
+ * Validate a single value against its schema field.
+ * Returns an error message, or null when valid.
+ */
 function validateValue(key: string, field: SettingField, value: unknown): string | null {
 	switch (field.type) {
 		case "string":
@@ -91,7 +118,7 @@ async function buildSettingsResponse(
 		const storedValue = stored.get(keyForSetting(key));
 
 		if (field.type === "secret") {
-			secretsSet[key] = typeof storedValue === "string" && storedValue.length > 0;
+			secretsSet[key] = storedValue !== undefined && storedValue !== null && storedValue !== "";
 			continue;
 		}
 
@@ -107,6 +134,9 @@ async function buildSettingsResponse(
 	return { schema, values, secretsSet };
 }
 
+/**
+ * Get a plugin's settings (schema + current values, secrets masked)
+ */
 export async function handlePluginSettingsGet(
 	db: Kysely<Database>,
 	pluginId: string,
@@ -130,6 +160,14 @@ export async function handlePluginSettingsGet(
 	}
 }
 
+/**
+ * Update a plugin's settings.
+ *
+ * Only keys present in `updates` are written. A `null` value deletes the
+ * stored value (reverting to the schema default). Secret fields are
+ * write-only: they accept a new string value or `null` to clear, and the
+ * response never echoes them back.
+ */
 export async function handlePluginSettingsUpdate(
 	db: Kysely<Database>,
 	pluginId: string,
@@ -138,6 +176,7 @@ export async function handlePluginSettingsUpdate(
 	keyForSetting: (key: string) => string = (key) => settingsKey(pluginId, key),
 ): Promise<ApiResult<PluginSettingsResponse>> {
 	try {
+		// Validate everything before writing anything.
 		for (const [key, value] of Object.entries(updates)) {
 			const field = schema[key];
 			if (!field) {
@@ -159,14 +198,32 @@ export async function handlePluginSettingsUpdate(
 			}
 		}
 
+		const encodedUpdates = new Map<string, unknown>();
+		for (const [key, value] of Object.entries(updates)) {
+			encodedUpdates.set(
+				key,
+				value === null ? null : await encodePluginSettingValue(pluginId, key, value, schema),
+			);
+		}
+
+		// Wrap the writes + read-back in a transaction so a partial failure
+		// can't leave some settings updated and others not. On D1
+		// withTransaction degrades to running the callback directly — D1 is
+		// single-writer, so per-statement atomicity still holds.
 		const data = await withTransaction(db, async (trx) => {
 			const txRepo = new OptionsRepository(trx);
-			for (const [key, value] of Object.entries(updates)) {
+			for (const [key, value] of encodedUpdates) {
 				if (value === null) {
 					await txRepo.delete(keyForSetting(key));
 				} else {
 					await txRepo.set(keyForSetting(key), value);
 				}
+				await trx
+					.deleteFrom("_plugin_storage")
+					.where("plugin_id", "=", pluginId)
+					.where("collection", "=", "__kv")
+					.where("id", "=", `settings:${key}`)
+					.execute();
 			}
 			const snapshot = await buildSettingsResponse(txRepo, pluginId, schema, keyForSetting);
 			await trx
@@ -184,7 +241,23 @@ export async function handlePluginSettingsUpdate(
 		});
 
 		return { success: true, data };
-	} catch {
+	} catch (error) {
+		if (error instanceof PluginSettingEncryptionError) {
+			return {
+				success: false,
+				error: { code: error.code, message: error.message },
+			};
+		}
+		if (error instanceof EmDashSecretsError) {
+			return {
+				success: false,
+				error: {
+					code: ErrorCode.PLUGIN_SETTING_ENCRYPTION_KEY_INVALID,
+					message:
+						"EMDASH_ENCRYPTION_KEY is malformed. Restore or correct the configured key from its secret backup. Generate a new key only if no stored plugin setting depends on the lost key.",
+				},
+			};
+		}
 		return {
 			success: false,
 			error: {

@@ -1,6 +1,6 @@
-import { userEvent } from "@vitest/browser/context";
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
+import { userEvent } from "vitest/browser";
 
 import { UserDetail } from "../../../../../../packages/admin/src/components/users/UserDetail";
 import type { UserDetail as UserDetailType } from "../../../../../../packages/admin/src/lib/api";
@@ -48,6 +48,7 @@ describe("UserDetail", () => {
 				onEnable={noop}
 			/>,
 		);
+		// Dialog.Portal renders outside the container; the popup should be hidden
 		const popup = document.querySelector("[role='dialog']") as HTMLElement;
 		expect(popup?.hidden ?? true).toBe(true);
 	});
@@ -64,6 +65,7 @@ describe("UserDetail", () => {
 				onEnable={noop}
 			/>,
 		);
+		// Skeleton has the animate-pulse class; portal renders outside screen.container
 		await expect.element(screen.getByRole("dialog")).toBeInTheDocument();
 		expect(document.querySelector(".animate-pulse")).not.toBeNull();
 	});
@@ -95,7 +97,9 @@ describe("UserDetail", () => {
 				onEnable={noop}
 			/>,
 		);
+		// Name input
 		await expect.element(screen.getByLabelText("Name")).toHaveValue("Alice Smith");
+		// Email input
 		await expect.element(screen.getByLabelText("Email")).toHaveValue("alice@example.com");
 	});
 
@@ -127,6 +131,7 @@ describe("UserDetail", () => {
 				onEnable={noop}
 			/>,
 		);
+		// Dialog.Portal renders outside screen.container
 		const backdrop = document.querySelector("[role='presentation']") as HTMLElement;
 		expect(backdrop).not.toBeNull();
 		backdrop.click();
@@ -167,6 +172,29 @@ describe("UserDetail", () => {
 		expect(saveButton.disabled).toBe(false);
 	});
 
+	it("provider-managed name: field is read-only and explains why", async () => {
+		const screen = await render(
+			<UserDetail
+				user={makeUser()}
+				isOpen={true}
+				providerManagedName={true}
+				onClose={noop}
+				onSave={noop}
+				onDisable={noop}
+				onEnable={noop}
+			/>,
+		);
+		const nameInput = screen.getByLabelText("Name");
+		await expect.element(nameInput).toHaveAttribute("readonly");
+		await expect
+			.element(nameInput)
+			.toHaveAccessibleDescription("Managed by your identity provider. Change the name there.");
+		await userEvent.type(nameInput, "New Name");
+		await expect.element(nameInput).toHaveValue("Test User");
+		const saveButton = screen.getByText("Save Changes").element().closest("button")!;
+		expect(saveButton.disabled).toBe(true);
+	});
+
 	it("changing email enables save", async () => {
 		const screen = await render(
 			<UserDetail
@@ -200,6 +228,7 @@ describe("UserDetail", () => {
 		const nameInput = screen.getByLabelText("Name");
 		await userEvent.clear(nameInput);
 		await userEvent.type(nameInput, "Changed");
+		// Submit the form -- use native click to bypass data-base-ui-inert overlay
 		const saveButton = screen.getByText("Save Changes").element().closest("button")!;
 		saveButton.click();
 		expect(onSave).toHaveBeenCalledWith({ name: "Changed" });
@@ -234,6 +263,7 @@ describe("UserDetail", () => {
 				onEnable={noop}
 			/>,
 		);
+		// Dialog.Portal renders outside screen.container; query the dialog popup directly
 		const dialog = document.querySelector("[role='dialog']")!;
 		const buttons = dialog.querySelectorAll("button");
 		const disableButton = [...buttons].find((b) => b.textContent?.includes("Disable"));
@@ -253,6 +283,7 @@ describe("UserDetail", () => {
 				onEnable={noop}
 			/>,
 		);
+		// Use native click to bypass data-base-ui-inert overlay
 		const disableButton = screen.getByText("Disable").element().closest("button")!;
 		disableButton.click();
 		expect(onDisable).toHaveBeenCalled();
@@ -271,6 +302,7 @@ describe("UserDetail", () => {
 				onEnable={onEnable}
 			/>,
 		);
+		// Use native click to bypass data-base-ui-inert overlay
 		const enableButton = screen.getByText("Enable").element().closest("button")!;
 		enableButton.click();
 		expect(onEnable).toHaveBeenCalled();
@@ -288,6 +320,7 @@ describe("UserDetail", () => {
 				onEnable={noop}
 			/>,
 		);
+		// Use native click to bypass data-base-ui-inert overlay
 		screen.getByLabelText("Close panel").element().click();
 		expect(onClose).toHaveBeenCalled();
 	});

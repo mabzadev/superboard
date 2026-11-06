@@ -10,6 +10,14 @@ function normalizedLocale(locale: string | undefined): string | undefined {
 	return locale?.trim().toLowerCase() || undefined;
 }
 
+/**
+ * Collapse localized definition rows to one row per logical taxonomy.
+ *
+ * Selection prefers the active locale, then the configured default locale.
+ * If neither exists, the lexically first locale/id/label wins so incomplete
+ * translation groups remain usable and produce stable manifests and UI.
+ * Legacy definitions without translation metadata are grouped by `name`.
+ */
 export function resolveTaxonomyDefinitions<T extends LocalizedTaxonomyDefinition>(
 	definitions: readonly T[],
 	activeLocale?: string,

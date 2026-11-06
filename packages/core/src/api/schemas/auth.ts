@@ -2,8 +2,13 @@ import { z } from "zod";
 
 import { roleLevel } from "./common.js";
 
+// ---------------------------------------------------------------------------
+// WebAuthn credential schemas (matching @emdash-cms/auth/passkey types)
+// ---------------------------------------------------------------------------
+
 const authenticatorTransport = z.enum(["usb", "nfc", "ble", "internal", "hybrid"]);
 
+/** RegistrationResponse — sent by the browser after navigator.credentials.create() */
 const registrationCredential = z.object({
 	id: z.string(),
 	rawId: z.string(),
@@ -16,6 +21,7 @@ const registrationCredential = z.object({
 	authenticatorAttachment: z.enum(["platform", "cross-platform"]).optional(),
 });
 
+/** AuthenticationResponse — sent by the browser after navigator.credentials.get() */
 const authenticationCredential = z.object({
 	id: z.string(),
 	rawId: z.string(),
@@ -29,9 +35,13 @@ const authenticationCredential = z.object({
 	authenticatorAttachment: z.enum(["platform", "cross-platform"]).optional(),
 });
 
+// ---------------------------------------------------------------------------
+// Auth: Input schemas
+// ---------------------------------------------------------------------------
+
 export const signupRequestBody = z
 	.object({
-		email: z.string().email(),
+		email: z.email(),
 	})
 	.meta({ id: "SignupRequestBody" });
 
@@ -52,7 +62,7 @@ export const signupCompleteBody = z
 
 export const inviteCreateBody = z
 	.object({
-		email: z.string().email(),
+		email: z.email(),
 		role: roleLevel.optional(),
 	})
 	.meta({ id: "InviteCreateBody" });
@@ -74,13 +84,19 @@ export const inviteCompleteBody = z
 
 export const magicLinkSendBody = z
 	.object({
-		email: z.string().email(),
+		email: z.email(),
 	})
 	.meta({ id: "MagicLinkSendBody" });
 
+export const magicLinkVerifyBody = z
+	.object({
+		token: z.string().min(1),
+	})
+	.meta({ id: "MagicLinkVerifyBody" });
+
 export const passkeyOptionsBody = z
 	.object({
-		email: z.string().email().optional(),
+		email: z.email().optional().describe("Ignored. Accepted for compatibility with older clients."),
 	})
 	.meta({ id: "PasskeyOptionsBody" });
 

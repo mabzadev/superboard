@@ -1,4 +1,4 @@
-import { ClientResponseError } from "@atcute/client";
+import { ClientResponseError, ClientValidationError } from "@atcute/client";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,6 +7,9 @@ import {
 	registryLabelerPolicyKey,
 } from "../../../../packages/registry-client/src/discovery/index.js";
 
+/**
+ * Builds a fetch stub that records every call and returns canned responses.
+ */
 function buildFetchStub(responses: Record<string, { status: number; body: unknown }>): {
 	fetch: typeof fetch;
 	calls: Array<{ url: string; init: RequestInit | undefined }>;
@@ -33,6 +36,9 @@ function buildFetchStub(responses: Record<string, { status: number; body: unknow
 
 describe("DiscoveryClient", () => {
 	const aggregator = "https://aggregator.test";
+	// atcute validates the response envelope; `cid` must be a real DASL CID
+	// (`/^baf[ky]rei[a-z2-7]{52}$/`, 59 chars). Content is irrelevant to these
+	// tests — only the shape is.
 	const CID = `bafyrei${"a".repeat(52)}`;
 
 	it("hits the searchPackages XRPC endpoint with the right query string", async () => {
@@ -173,6 +179,55 @@ describe("DiscoveryClient", () => {
 		expect(JSON.stringify(result)).not.toContain(unsafeSentinel);
 	});
 
+	it("preserves complete release-history evidence on package views", async () => {
+		const { fetch } = buildFetchStub({
+			"/xrpc/com.emdashcms.experimental.aggregator.getPackage": {
+				status: 200,
+				body: {
+					uri: "at://did:plc:abc/com.emdashcms.experimental.package.profile/gallery",
+					cid: CID,
+					did: "did:plc:abc",
+					slug: "gallery",
+					indexedAt: "2026-04-01T00:00:00Z",
+					profile: {},
+					historicalReleaseCount: 1,
+					releaseHistoryComplete: true,
+				},
+			},
+		});
+
+		const client = new DiscoveryClient({ aggregatorUrl: aggregator, fetch });
+		await expect(client.getPackage({ did: "did:plc:abc", slug: "gallery" })).resolves.toMatchObject(
+			{
+				historicalReleaseCount: 1,
+				releaseHistoryComplete: true,
+			},
+		);
+	});
+
+	it("rejects malformed release-history evidence", async () => {
+		const { fetch } = buildFetchStub({
+			"/xrpc/com.emdashcms.experimental.aggregator.getPackage": {
+				status: 200,
+				body: {
+					uri: "at://did:plc:abc/com.emdashcms.experimental.package.profile/gallery",
+					cid: CID,
+					did: "did:plc:abc",
+					slug: "gallery",
+					indexedAt: "2026-04-01T00:00:00Z",
+					profile: {},
+					historicalReleaseCount: "1",
+					releaseHistoryComplete: true,
+				},
+			},
+		});
+
+		const client = new DiscoveryClient({ aggregatorUrl: aggregator, fetch });
+		await expect(client.getPackage({ did: "did:plc:abc", slug: "gallery" })).rejects.toBeInstanceOf(
+			ClientValidationError,
+		);
+	});
+
 	it("does not downgrade other response failures to ListingUnavailable", async () => {
 		const { fetch } = buildFetchStub({
 			"/xrpc/com.emdashcms.experimental.aggregator.getPackage": {
@@ -244,6 +299,7 @@ describe("DiscoveryClient", () => {
 					did: "did:plc:abc",
 					package: "gallery",
 					version: "1.0.0",
+					artifactCaches: [],
 					indexedAt: "2026-04-01T00:00:00Z",
 					release: {},
 				},
@@ -307,6 +363,11 @@ describe("DiscoveryClient", () => {
 			expect(result.profile).not.toBeNull();
 			expect(result.profile?.name).toBe("Gallery");
 			expect(result.profile?.authors?.[0]?.name).toBe("Alice");
+			// Contract: atcute validation is non-stripping (the lexicon objects
+			// are open). Unrecognised keys are NOT removed — they pass through
+			// inert because consumers only read the typed lexicon fields. This
+			// asserts the boundary's actual behaviour so a future change to it
+			// is a deliberate, visible decision.
 			expect(result.profile).toHaveProperty("somethingTheAggregatorMadeUp");
 		});
 
@@ -320,6 +381,7 @@ describe("DiscoveryClient", () => {
 						did: "did:plc:abc",
 						slug: "x",
 						indexedAt: "2026-04-01T00:00:00Z",
+						// Missing every required field (id/type/license/authors/security).
 						profile: { name: "Looks fine but isn't" },
 					},
 				},
@@ -330,6 +392,10 @@ describe("DiscoveryClient", () => {
 		});
 
 		it("returns null for a non-conforming release record (fail closed)", async () => {
+			// The envelope is valid and `release` is an object (lexicon
+			// `unknown` ≈ open object — a non-object is rejected earlier by
+			// envelope validation), but the record itself is missing every
+			// required package-release field, so `validateRelease` → null.
 			const { fetch } = buildFetchStub({
 				"/xrpc/com.emdashcms.experimental.aggregator.getLatestRelease": {
 					status: 200,
@@ -339,6 +405,7 @@ describe("DiscoveryClient", () => {
 						did: "did:plc:abc",
 						package: "x",
 						version: "1.0.0",
+						artifactCaches: [],
 						indexedAt: "2026-04-01T00:00:00Z",
 						release: { not: "a valid release record" },
 					},
@@ -349,7 +416,32 @@ describe("DiscoveryClient", () => {
 			expect(result.release).toBeNull();
 		});
 
+		it("accepts an older aggregator response without artifact cache descriptors", async () => {
+			const { fetch } = buildFetchStub({
+				"/xrpc/com.emdashcms.experimental.aggregator.getLatestRelease": {
+					status: 200,
+					body: {
+						uri: "at://did:plc:abc/com.emdashcms.experimental.package.release/gallery:1.0.0",
+						cid: CID,
+						did: "did:plc:abc",
+						package: "gallery",
+						version: "1.0.0",
+						indexedAt: "2026-04-01T00:00:00Z",
+						release: validRelease,
+					},
+				},
+			});
+			const client = new DiscoveryClient({ aggregatorUrl: aggregator, fetch });
+
+			await expect(
+				client.getLatestRelease({ did: "did:plc:abc", package: "gallery" }),
+			).resolves.toMatchObject({ artifactCaches: [] });
+		});
+
 		it("does NOT sanitise URL schemes — a javascript: author url passes lexicon validation", async () => {
+			// Documents the boundary's contract: it validates *structure*, not
+			// URL safety (atproto's `uri` format permits any scheme). Consumers
+			// rendering these URLs MUST apply their own scheme allow-list.
 			const { fetch } = buildFetchStub({
 				"/xrpc/com.emdashcms.experimental.aggregator.getPackage": {
 					status: 200,
@@ -384,6 +476,7 @@ describe("DiscoveryClient", () => {
 								did: "did:plc:abc",
 								package: "gallery",
 								version: "1.0.0",
+								artifactCaches: [],
 								indexedAt: "2026-04-01T00:00:00Z",
 								release: validRelease,
 							},
@@ -393,6 +486,7 @@ describe("DiscoveryClient", () => {
 								did: "did:plc:abc",
 								package: "gallery",
 								version: "0.9.0",
+								artifactCaches: [],
 								indexedAt: "2026-03-01T00:00:00Z",
 								release: { garbage: true },
 							},

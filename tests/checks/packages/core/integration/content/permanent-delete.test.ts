@@ -1,3 +1,11 @@
+/**
+ * handleContentPermanentDelete must enforce the trash-state contract:
+ * permanent deletion is "empty trash", not "skip soft-delete". Calling it
+ * on a live (non-trashed) item bypasses the soft-delete safety net and
+ * leaves no recovery path, so the handler must refuse the deletion and
+ * leave the row intact.
+ */
+
 import type { Kysely } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -41,6 +49,9 @@ describe("handleContentPermanentDelete — trash-state guard", () => {
 
 		expect(result.success).toBe(false);
 
+		// The key invariant: the row must remain in the database. Permanent
+		// delete on a live row must not silently succeed and bypass the trash
+		// safety net, regardless of which error code surfaces to the caller.
 		const survivor = await repo.findById("post", item.id);
 		expect(survivor?.id).toBe(item.id);
 	});

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { API_TOKEN_SCOPE_FORM_SCOPES } from "../../../../../packages/admin/src/components/settings/ApiTokenSettings.js";
 import { API_TOKEN_SCOPES } from "../../../../../packages/admin/src/lib/api/api-tokens.js";
+// Import source (not package `dist`) so the contract tracks edits without a prior `auth` build.
 import { VALID_SCOPES } from "../../../../../packages/auth/src/tokens.js";
 
 function sortedUnique(values: readonly string[]): string[] {

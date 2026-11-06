@@ -43,6 +43,12 @@ interface CleanupCandidateEntry {
 	target: CleanupTarget | null;
 }
 
+/**
+ * Reclaims a bounded window of obsolete media-usage occurrences.
+ *
+ * The persisted claim makes a cron tick single-flight across Worker isolates
+ * and Node processes.
+ */
 export async function cleanupMediaUsage(db: Kysely<Database>): Promise<MediaUsageCleanupResult> {
 	const startedMs = Date.now();
 	const canIssueStatement = () => withinBudget(startedMs);
@@ -75,14 +81,15 @@ export async function cleanupMediaUsage(db: Kysely<Database>): Promise<MediaUsag
 			);
 		}
 
-		if (canIssueStatement()) {
-			const cutoff = claim.scanBeforeAt;
-			const candidates = await repo.findMediaUsageCleanupCandidates({
-				cutoff,
-				cursor: claim.cursor,
-				limit: MEDIA_USAGE_CLEANUP_CANDIDATE_LIMIT,
-				cleanupLease: cleanupLease(leaseToken),
-			});
+		const cutoff = claim.scanBeforeAt;
+		const candidates = await repo.findMediaUsageCleanupCandidates({
+			cutoff,
+			cursor: claim.cursor,
+			limit: MEDIA_USAGE_CLEANUP_CANDIDATE_LIMIT,
+			cleanupLease: cleanupLease(leaseToken),
+			canIssueStatement,
+		});
+		if (candidates) {
 			candidateRows = candidates.length;
 			scanHasMore = candidates.length === MEDIA_USAGE_CLEANUP_CANDIDATE_LIMIT;
 

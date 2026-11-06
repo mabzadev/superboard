@@ -1,13 +1,23 @@
+/**
+ * AI Moderation Plugin Descriptor
+ */
+
 import type { PluginDescriptor } from "emdash";
 
 import type { Category } from "./categories.js";
 
 export interface AIModerationOptions {
+	/** Override default categories */
 	categories?: Category[];
+	/** Auto-approve comments that pass AI checks (default: true) */
 	autoApproveClean?: boolean;
+	/** Workers AI binding name (default: "AI") */
 	aiBinding?: string;
 }
 
+/**
+ * Create the AI moderation plugin descriptor.
+ */
 export function aiModerationPlugin(
 	options: AIModerationOptions = {},
 ): PluginDescriptor<AIModerationOptions> {

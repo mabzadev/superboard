@@ -1,8 +1,8 @@
-import BetterSqlite3 from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { addFocalColumnIfMissing } from "../../../../../../../packages/core/src/database/migrations/073_media_focal_point.js";
+import { NodeSqliteCompatDatabase as BetterSqlite3 } from "../../../../../../../packages/core/src/db/node-sqlite-compat.js";
 
 describe("073_media_focal_point migration", () => {
 	let db: Kysely<Record<string, never>> | undefined;

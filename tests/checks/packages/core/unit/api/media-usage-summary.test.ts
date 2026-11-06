@@ -1,5 +1,4 @@
 import { Role, type RoleLevel } from "@emdash-cms/auth";
-import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -27,6 +26,7 @@ import {
 	type MediaItem,
 } from "../../../../../../packages/core/src/database/repositories/media.js";
 import type { Database as DatabaseSchema } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import {
 	CONTENT_MEDIA_USAGE_ADAPTER_ID,
 	CONTENT_MEDIA_USAGE_COLLECTION_SCOPE,
@@ -129,7 +129,7 @@ describe("media usage coverage aggregation", () => {
 });
 
 describe("media usage summary handler and routes", () => {
-	let sqlite: Database.Database;
+	let sqlite: Database;
 	let db: Kysely<DatabaseSchema>;
 	let queries: string[];
 	let usedMedia: MediaItem;
@@ -513,6 +513,7 @@ describe("media usage summary handler and routes", () => {
 			success: false,
 			error: { code: "MEDIA_USAGE_READ_ERROR", message: "Failed to read media usage" },
 		});
+		// Kysely's query logger records the successful media lookup but not the failed statement.
 		expect(queries).toHaveLength(1);
 		expect(errorSpy).toHaveBeenCalledOnce();
 	});

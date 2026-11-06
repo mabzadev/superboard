@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 
-import Database from "better-sqlite3";
 import { sql, SqliteDialect } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MediaUsageWorkRepository } from "../../../../../../packages/core/src/database/repositories/media-usage-work.js";
 import { MediaUsageRepository } from "../../../../../../packages/core/src/database/repositories/media-usage.js";
 import { OptionsRepository } from "../../../../../../packages/core/src/database/repositories/options.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import {
 	EmDashRuntime,
 	type RuntimeDependencies,

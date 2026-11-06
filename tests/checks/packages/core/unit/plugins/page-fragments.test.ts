@@ -1,3 +1,12 @@
+/**
+ * Page Fragments Tests
+ *
+ * Tests the fragment collector for:
+ * - Filtering contributions by placement
+ * - Deduplication by key and src
+ * - HTML rendering of script and raw HTML fragments
+ */
+
 import { describe, it, expect } from "vitest";
 
 import {
@@ -145,6 +154,7 @@ describe("renderFragments", () => {
 
 		const html = renderFragments(contributions, "head");
 
+		// The </ sequence should be escaped to <\/ to prevent tag breakout
 		expect(html).not.toContain("</script><script>");
 		expect(html).toContain("<\\/script>");
 	});

@@ -10,9 +10,16 @@ export interface IntegerOptions {
 	helpText?: string;
 }
 
+/**
+ * Integer field - whole number input
+ *
+ * Unlike the `number` field which stores as REAL (floating point),
+ * this field stores as INTEGER for whole numbers.
+ */
 export function integer(options: IntegerOptions = {}): FieldDefinition<number> {
 	let intSchema = z.number().int("Must be a whole number");
 
+	// Range constraints
 	if (options.min !== undefined) {
 		intSchema = intSchema.min(options.min, `Must be at least ${options.min}`);
 	}
@@ -21,7 +28,8 @@ export function integer(options: IntegerOptions = {}): FieldDefinition<number> {
 		intSchema = intSchema.max(options.max, `Must be at most ${options.max}`);
 	}
 
-	const schema: z.ZodTypeAny = options.required ? intSchema : intSchema.optional();
+	// Optional vs required
+	const schema: z.ZodType = options.required ? intSchema : intSchema.optional();
 
 	const ui: FieldUIHints = {
 		widget: "number",
@@ -29,7 +37,7 @@ export function integer(options: IntegerOptions = {}): FieldDefinition<number> {
 		helpText: options.helpText,
 		min: options.min,
 		max: options.max,
-		step: 1,
+		step: 1, // Indicate whole numbers
 	};
 
 	return {

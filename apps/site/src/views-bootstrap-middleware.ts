@@ -23,6 +23,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		const release = await loadLastVerifiedFrontRelease(env, env.SUPERBOARD_INSTANCE_ID);
 		const response = await saveViewPluginSelection(
 			{ ...context, params: { ...context.params, collection: "views", id: viewItem[1] } },
+			next,
 			release?.release.payload ?? null,
 		);
 		if (response) return withViewConnections(response, release?.release.payload ?? null);

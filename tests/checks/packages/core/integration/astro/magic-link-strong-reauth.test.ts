@@ -4,7 +4,7 @@ import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { GET as verifyMagicLink } from "../../../../../../packages/core/src/astro/routes/api/auth/magic-link/verify.js";
+import { POST as verifyMagicLink } from "../../../../../../packages/core/src/astro/routes/api/auth/magic-link/verify.js";
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
@@ -40,18 +40,22 @@ describe("magic-link strong reauthentication", () => {
 			user.email,
 		);
 		const values = new Map<string, unknown>();
-		const request = new Request(link);
+		const token = new URL(link).searchParams.get("token");
+		const request = new Request("https://site.mabza.dev/_emdash/api/auth/magic-link/verify", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ token }),
+		});
 		const response = await verifyMagicLink({
 			params: {},
-			url: new URL(link),
+			url: new URL(request.url),
 			request,
 			locals: { emdash: { db, config: {}, storage: undefined } },
 			session: { set: (key: string, value: unknown) => values.set(key, value) },
-			redirect: (path: string) => new Response(null, { status: 302, headers: { Location: path } }),
 			// eslint-disable-next-line typescript/no-unsafe-type-assertion -- bounded route harness
 		} as unknown as APIContext);
 
-		expect(response.headers.get("Location")).toBe("/_emdash/admin");
+		expect(response.status).toBe(200);
 		expect(values.get("user")).toEqual({ id: user.id });
 		expect(values.get("strongReauthentication")).toMatchObject({
 			userId: user.id,

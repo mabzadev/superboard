@@ -24,7 +24,7 @@ const maxUploadSize =
 		: undefined;
 
 export default defineConfig({
-	output: "server",
+	output: process.env.EMDASH_TEST_OUTPUT === "static" ? "static" : "server",
 	adapter: node({ mode: "standalone" }),
 	integrations: [
 		react(),

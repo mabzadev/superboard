@@ -355,7 +355,12 @@
 		},
 		"catalog": {
 			"@lingui/core": "^5.9.5",
-			"astro": "~7.0.9"
+			"vitest": "4.1.12",
+			"@vitest/browser-playwright": "4.1.12",
+			"@vitest/ui": "4.1.12",
+			"zod": "4.6.7",
+			"hono": "4.13.16",
+			"wrangler": "^4.157.0"
 		},
 		"removedScripts": [
 			"typecheck:demos",
@@ -378,7 +383,13 @@
 		"upstreamScripts": {
 			"postbuild": "node scripts/local/relink-bins.mjs",
 			"screenshots": "node scripts/emdash/screenshot-all-templates.mjs",
-			"query-counts": "node scripts/emdash/query-counts.mjs"
+			"query-counts": "node scripts/emdash/query-counts.mjs",
+			"ux:site:start": "node scripts/emdash/ux-acceptance-site.mjs start",
+			"ux:site:status": "node scripts/emdash/ux-acceptance-site.mjs status",
+			"ux:site:stop": "node scripts/emdash/ux-acceptance-site.mjs stop",
+			"env-types": "node scripts/emdash/env-types.mjs",
+			"startup:check": "node scripts/emdash/check-worker-startup.mjs",
+			"test:unit": "pnpm run --filter emdash --filter upgrade-emdash --filter @emdash-cms/aggregator --filter @emdash-cms/auth --filter @emdash-cms/blocks --filter @emdash-cms/gutenberg-to-portable-text --filter @emdash-cms/labeler --filter @emdash-cms/marketplace --filter @emdash-cms/plugin-ai-search --filter @emdash-cms/plugin-cli --filter @emdash-cms/plugin-forms --filter @emdash-cms/plugin-types --filter @emdash-cms/registry-client --filter @emdash-cms/registry-lexicons --filter @emdash-cms/registry-moderation test && node --test tests/checks/emdash/archive-changelogs.test.mjs"
 		},
 		"commandOverrides": {
 			"lint": "pnpm run lint:test && node tests/lints/lint.mjs",

@@ -7,6 +7,9 @@ import { render } from "../utils/render.tsx";
 describe("RepeaterField", () => {
 	describe("datetime sub-field", () => {
 		it("displays a stored ISO datetime in the datetime-local input", async () => {
+			// Mirrors the top-level datetime widget contract: full ISO 8601
+			// values must round-trip through `<input type="datetime-local">`,
+			// which only accepts `YYYY-MM-DDTHH:mm`.
 			const screen = await render(
 				<RepeaterField
 					label="Recalls"
@@ -38,9 +41,49 @@ describe("RepeaterField", () => {
 				expect.objectContaining({ recall_date: "2026-02-26T09:30:00.000Z" }),
 			]);
 		});
+
+		it("initializes an optional datetime sub-field as null when adding an item", async () => {
+			const onChange = vi.fn();
+			const existingItem = { recall_date: "2026-02-26T09:30:00.000Z" };
+			const screen = await render(
+				<RepeaterField
+					label="Recalls"
+					id="recalls"
+					value={[existingItem]}
+					onChange={onChange}
+					subFields={[{ slug: "recall_date", type: "datetime", label: "Recall date" }]}
+				/>,
+			);
+
+			await screen.getByRole("button", { name: "Add Item", exact: true }).click();
+
+			expect(onChange).toHaveBeenLastCalledWith([existingItem, { recall_date: null }]);
+			await expect.element(screen.getByLabelText("Recall date").last()).toHaveValue("");
+		});
+
+		it("emits null when an optional datetime sub-field is cleared", async () => {
+			const onChange = vi.fn();
+			const screen = await render(
+				<RepeaterField
+					label="Recalls"
+					id="recalls"
+					value={[{ recall_date: "2026-02-26T09:30:00.000Z" }]}
+					onChange={onChange}
+					subFields={[{ slug: "recall_date", type: "datetime", label: "Recall date" }]}
+				/>,
+			);
+
+			await screen.getByLabelText("Recall date").fill("");
+
+			expect(onChange).toHaveBeenLastCalledWith([expect.objectContaining({ recall_date: null })]);
+		});
 	});
 });
 
+/**
+ * Image sub-field support (issue #1424): rows render the media picker
+ * (ImageFieldRenderer) instead of falling through to a plain text input.
+ */
 describe("RepeaterField sub-field types", () => {
 	it("renders the media picker for image sub-fields", async () => {
 		const screen = await render(
@@ -56,7 +99,9 @@ describe("RepeaterField sub-field types", () => {
 			/>,
 		);
 
+		// Image sub-field → picker button, not a text input.
 		await expect.element(screen.getByRole("button", { name: /Select image/ })).toBeVisible();
+		// Scalar sub-fields keep their plain inputs.
 		await expect.element(screen.getByRole("textbox", { name: "Caption" })).toBeVisible();
 	});
 
@@ -80,6 +125,7 @@ describe("RepeaterField sub-field types", () => {
 			/>,
 		);
 
+		// MediaValue with a storageKey renders the local-media preview image.
 		await expect
 			.element(screen.container.querySelector('img[src="/_emdash/api/media/file/01ABC.png"]'))
 			.toBeInTheDocument();
@@ -118,6 +164,8 @@ describe("RepeaterField sub-field types", () => {
 			/>,
 		);
 
+		// Select sub-field → searchable typeahead input (role "combobox"),
+		// not a plain native select, and it reflects the stored value.
 		const input = screen.getByRole("combobox");
 		await expect.element(input).toBeVisible();
 		await expect.element(input).toHaveValue("CT");

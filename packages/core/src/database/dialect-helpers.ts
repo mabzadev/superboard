@@ -1,11 +1,34 @@
-import type { ColumnDataType, Kysely, RawBuilder } from "kysely";
+/**
+ * Dialect-specific SQL helpers
+ *
+ * Every function takes a Kysely `db` instance and detects the dialect from
+ * the adapter class. No module-level state, no globals, no heuristics —
+ * the adapter is the source of truth.
+ *
+ * This is NOT an ORM abstraction — just targeted helpers for the ~15 places
+ * that use raw dialect-specific SQL. Most Kysely schema builder code already
+ * works cross-dialect.
+ */
+
+import type {
+	ColumnDataType,
+	Compilable,
+	CompiledQuery,
+	Kysely,
+	QueryResult,
+	RawBuilder,
+} from "kysely";
 import { PostgresAdapter, sql } from "kysely";
 
 import type { DatabaseDialectType } from "../db/adapters.js";
+import type { Database } from "./types.js";
 import { validateIdentifier, validateJsonFieldName } from "./validate.js";
 
 export type { DatabaseDialectType };
 
+/**
+ * Detect dialect type from a Kysely instance via the adapter class.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export function detectDialect(db: Kysely<any>): DatabaseDialectType {
 	if (db.getExecutor().adapter instanceof PostgresAdapter) return "postgres";
@@ -22,10 +45,65 @@ export function isPostgres(db: Kysely<any>): boolean {
 	return detectDialect(db) === "postgres";
 }
 
+/**
+ * Declared by an adapter whose backend caps the number of terms in a compound
+ * SELECT (`UNION ALL`, `INTERSECT`, `EXCEPT`). SQLite's own
+ * SQLITE_LIMIT_COMPOUND_SELECT default is 500 — high enough that no query
+ * EmDash builds approaches it — but Cloudflare D1 sets it to 5 and rejects
+ * anything larger with "too many terms in compound SELECT".
+ */
 export interface CompoundSelectLimitedAdapter {
+	/** Maximum terms per compound SELECT. Must be a positive integer. */
 	readonly compoundSelectLimit: number;
 }
 
+/**
+ * Declared by an adapter that can execute independent compiled statements as
+ * one atomic batch. The statements run in order and either all commit or none
+ * do. D1 exposes this through `D1Database.batch()` even though it does not
+ * support Kysely's interactive transaction API.
+ */
+export interface AtomicBatchAdapter {
+	executeAtomicBatch(queries: readonly CompiledQuery[]): Promise<readonly QueryResult<unknown>[]>;
+}
+
+function isAtomicBatchAdapter(adapter: object): adapter is AtomicBatchAdapter {
+	return "executeAtomicBatch" in adapter && typeof adapter.executeAtomicBatch === "function";
+}
+
+/** Whether `executeAtomicBatchIfSupported` runs a batch on this database. */
+export function supportsAtomicBatch<DB>(db: Kysely<DB>): boolean {
+	return isAtomicBatchAdapter(db.getExecutor().adapter);
+}
+
+/**
+ * Execute a fixed statement list atomically when the active adapter supports
+ * it. Returns `null` for adapters that should use an ordinary transaction.
+ */
+export async function executeAtomicBatchIfSupported<DB>(
+	db: Kysely<DB>,
+	queries: readonly (Compilable | RawBuilder<unknown>)[],
+): Promise<readonly QueryResult<unknown>[] | null> {
+	const adapter: object = db.getExecutor().adapter;
+	if (!isAtomicBatchAdapter(adapter)) return null;
+
+	return adapter.executeAtomicBatch(
+		queries.map((query) => ("isRawBuilder" in query ? query.compile(db) : query.compile())),
+	);
+}
+
+/**
+ * The backend's compound-SELECT ceiling, or null when it has none worth
+ * splitting statements for. Only the adapter knows: the limit is a property of
+ * the SQLite build behind the dialect, not of the SQL flavour, so two "sqlite"
+ * dialects can answer differently.
+ *
+ * A declared ceiling must be a positive integer — callers batch by it, and
+ * every other value silently misbehaves rather than failing: 0 and negatives
+ * never advance the batch cursor, fractions overlap batches and double-count,
+ * NaN yields an empty batch. A malformed declaration throws here, where the
+ * message can name the adapter.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export function compoundSelectLimit(db: Kysely<any>): number | null {
 	const adapter: object = db.getExecutor().adapter;
@@ -40,6 +118,13 @@ export function compoundSelectLimit(db: Kysely<any>): number | null {
 	return limit;
 }
 
+/**
+ * Default timestamp expression for column defaults.
+ * Wrapped in parens for use in CREATE TABLE ... DEFAULT (...).
+ *
+ * sqlite:   (datetime('now'))
+ * postgres: CURRENT_TIMESTAMP
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export function currentTimestamp(db: Kysely<any>): RawBuilder<string> {
 	if (isPostgres(db)) {
@@ -48,6 +133,13 @@ export function currentTimestamp(db: Kysely<any>): RawBuilder<string> {
 	return sql`(datetime('now'))`;
 }
 
+/**
+ * Timestamp expression for use in WHERE clauses and SET expressions.
+ * No wrapping parens.
+ *
+ * sqlite:   datetime('now')
+ * postgres: CURRENT_TIMESTAMP
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export function currentTimestampValue(db: Kysely<any>): RawBuilder<string> {
 	if (isPostgres(db)) {
@@ -56,6 +148,11 @@ export function currentTimestampValue(db: Kysely<any>): RawBuilder<string> {
 	return sql`datetime('now')`;
 }
 
+/**
+ * Build WHERE clause for status filtering on a content table.
+ * Scheduled content becomes public only after the publication sweep commits
+ * the row with a literal `published` status.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export function buildStatusCondition(
 	_db: Kysely<any>,
@@ -66,9 +163,14 @@ export function buildStatusCondition(
 	return sql`${sql.ref(statusField)} = ${status}`;
 }
 
+/**
+ * Check if a table exists in the database.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export async function tableExists(db: Kysely<any>, tableName: string): Promise<boolean> {
 	if (isPostgres(db)) {
+		// Scope to the active schema (matches indexExists/columnExists below).
+		// Hardcoding 'public' breaks non-public-schema Postgres deployments.
 		const result = await sql<{ exists: boolean }>`
 			SELECT EXISTS(
 				SELECT 1 FROM information_schema.tables
@@ -85,6 +187,9 @@ export async function tableExists(db: Kysely<any>, tableName: string): Promise<b
 	return result.rows.length > 0;
 }
 
+/**
+ * Check if an index exists in the database.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export async function indexExists(db: Kysely<any>, indexName: string): Promise<boolean> {
 	if (isPostgres(db)) {
@@ -104,6 +209,9 @@ export async function indexExists(db: Kysely<any>, indexName: string): Promise<b
 	return result.rows.length > 0;
 }
 
+/**
+ * Check if a column exists in the database.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export async function columnExists(
 	db: Kysely<any>,
@@ -129,12 +237,20 @@ export async function columnExists(
 	return result.rows.length > 0;
 }
 
+/**
+ * List tables matching a LIKE pattern.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export async function listTablesLike(db: Kysely<any>, pattern: string): Promise<string[]> {
 	if (isPostgres(db)) {
+		// Scope to the connection's active schema rather than hardcoding
+		// 'public'. A Postgres deployment using a non-public schema (per-tenant
+		// or shared-cluster setups), or per-test schemas, otherwise sees tables
+		// from the wrong schema — or none at all. Mirrors migration 038.
 		const result = await sql<{ table_name: string }>`
 			SELECT table_name FROM information_schema.tables
 			WHERE table_schema = current_schema() AND table_name LIKE ${pattern}
+			ORDER BY table_name
 		`.execute(db);
 		return result.rows.map((r) => r.table_name);
 	}
@@ -142,10 +258,54 @@ export async function listTablesLike(db: Kysely<any>, pattern: string): Promise<
 	const result = await sql<{ name: string }>`
 		SELECT name FROM sqlite_master
 		WHERE type = 'table' AND name LIKE ${pattern}
+		ORDER BY name
 	`.execute(db);
 	return result.rows.map((r) => r.name);
 }
 
+export interface TableColumnInfo {
+	name: string;
+	type: string;
+}
+
+/**
+ * List a table's columns in declaration order.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
+export async function listTableColumns(
+	db: Kysely<any>,
+	tableName: string,
+): Promise<TableColumnInfo[]> {
+	if (isPostgres(db)) {
+		const result = await sql<{
+			column_name: string;
+			data_type: string;
+		}>`
+			SELECT column_name, data_type
+			FROM information_schema.columns
+			WHERE table_schema = current_schema() AND table_name = ${tableName}
+			ORDER BY ordinal_position
+		`.execute(db);
+		return result.rows.map((column) => ({
+			name: column.column_name,
+			type: column.data_type,
+		}));
+	}
+
+	const result = await sql<{ name: string; type: string }>`
+		SELECT name, type
+		FROM pragma_table_info(${tableName})
+		ORDER BY cid
+	`.execute(db);
+	return result.rows;
+}
+
+/**
+ * Column type for binary data.
+ *
+ * sqlite:   blob
+ * postgres: bytea
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export function binaryType(db: Kysely<any>): ColumnDataType {
 	if (isPostgres(db)) {
@@ -154,6 +314,18 @@ export function binaryType(db: Kysely<any>): ColumnDataType {
 	return "blob";
 }
 
+/**
+ * SQL expression for extracting a field from a JSON column stored as text.
+ *
+ * sqlite:   json_extract(column, '$.path')
+ * postgres: (column)::jsonb->>'path'
+ *
+ * The Postgres cast is required because JSON columns (e.g.
+ * `_plugin_storage.data`) are `text`, and `text ->> unknown` is not an
+ * operator. The cast is immutable, so the same expression works in
+ * expression indexes — queries and indexes must build it through this
+ * helper so the planner can match them.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export function jsonExtractExpr(db: Kysely<any>, column: string, path: string): string {
 	validateIdentifier(column, "JSON column name");
@@ -164,6 +336,34 @@ export function jsonExtractExpr(db: Kysely<any>, column: string, path: string): 
 	return `json_extract(${column}, '$.${path}')`;
 }
 
+/**
+ * SQL expression for extracting a queryable field from the plugin-storage
+ * `data` column.
+ *
+ * `_plugin_storage.data` is `text`, so Postgres extraction goes through the
+ * `(data)::jsonb->>'field'` cast (#1898) — otherwise `text ->> unknown` is not
+ * an operator. But the extracted value is still `text`, so a numeric comparison
+ * (`stock >= 10`) compares lexically (`'9' >= '10'` is TRUE) and silently
+ * over-counts / oversells; pass `{ numeric: true }` for a numeric comparison.
+ *
+ * The numeric form is a **type-guarded** cast, not a bare `::numeric`. A bare
+ * cast throws `invalid input syntax for type numeric` the moment a single
+ * scanned row stores a non-number in that field (documents are schemaless),
+ * aborting the whole query — and it would diverge from SQLite, which silently
+ * coerces. Guarding with `jsonb_typeof`/`json_type` makes the comparison total
+ * and parity-correct on both dialects: a non-number stored value yields `NULL`
+ * (no match) instead of an error.
+ *
+ * The field name is validated before interpolation, so the casts wrap only a
+ * safe identifier and add no injection surface.
+ *
+ * sqlite text:      json_extract(data, '$.field')
+ * sqlite numeric:   CASE WHEN json_type(data, '$.field') IN ('integer', 'real')
+ *                     THEN json_extract(data, '$.field') END
+ * postgres text:    (data)::jsonb->>'field'
+ * postgres numeric: CASE WHEN jsonb_typeof((data)::jsonb->'field') = 'number'
+ *                     THEN ((data)::jsonb->>'field')::numeric END
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export function pluginDataExtractExpr(
 	db: Kysely<any>,
@@ -181,6 +381,105 @@ export function pluginDataExtractExpr(
 	return `CASE WHEN json_type(data, '$.${field}') IN ('integer', 'real') THEN ${extract} END`;
 }
 
+/**
+ * Build the new value of the `_plugin_storage.data` (text-JSON) column for a
+ * guarded `updateIf`, composing wholesale `set` fields and integer `delta`
+ * fields into a SINGLE dialect-correct expression.
+ *
+ * Both branches go through `json_set` / `jsonb_set` so the write never rewrites
+ * the whole column from JS (which would require a read-then-write and break the
+ * single-statement atomicity that makes no-oversell hold):
+ *
+ * - **set** field → the value is stored via `json(?)` (SQLite) / `?::jsonb`
+ *   (Postgres) with `JSON.stringify(value)`, uniformly handling scalars,
+ *   objects, arrays, and `null` (stored as JSON `null`, never SQL `NULL` — a
+ *   SQL `NULL` in `jsonb_set` would null the entire `data` column and hit the
+ *   `NOT NULL` constraint).
+ * - **delta** field → `COALESCE(<numeric extract>, 0) + n`, where the extract
+ *   is the type-guarded numeric form from {@link pluginDataExtractExpr} so a
+ *   missing or null stored value coalesces to `0` on both dialects. The update
+ *   guard rejects invalid counters and unsafe results. Integer arithmetic stays
+ *   integer (Postgres `to_jsonb(numeric)` and SQLite integer `+` both round-trip
+ *   without a spurious `.0`).
+ *
+ * Field names are validated (`validateJsonFieldName` / `pluginDataExtractExpr`)
+ * before interpolation, so the JSON path is a safe identifier and values are
+ * bound parameters — no injection surface.
+ *
+ * SQLite:   json_set(json_set(data, '$.f1', json(?)), '$.f2', COALESCE(json_extract(...), 0) + ?)
+ * Postgres: (jsonb_set(jsonb_set(data::jsonb, '{f1}', ?::jsonb), '{f2}', to_jsonb(COALESCE(..., 0) + ?)))::text
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
+export function pluginDataWriteExpr(
+	db: Kysely<any>,
+	setEntries: Array<[string, unknown]>,
+	deltaEntries: Array<[string, number]>,
+): RawBuilder<string> {
+	const pg = isPostgres(db);
+	let expr: RawBuilder<unknown> = pg ? sql`data::jsonb` : sql`data`;
+
+	for (const [field, value] of setEntries) {
+		validateJsonFieldName(field, "plugin storage set field name");
+		const json = JSON.stringify(value ?? null);
+		if (pg) {
+			expr = sql`jsonb_set(${expr}, ${sql.lit(`{${field}}`)}, ${json}::jsonb)`;
+		} else {
+			expr = sql`json_set(${expr}, ${sql.lit(`$.${field}`)}, json(${json}))`;
+		}
+	}
+
+	for (const [field, n] of deltaEntries) {
+		const numericExtract = pluginDataExtractExpr(db, field, { numeric: true });
+		if (pg) {
+			expr = sql`jsonb_set(${expr}, ${sql.lit(`{${field}}`)}, to_jsonb(COALESCE(${sql.raw(numericExtract)}, 0) + ${n}))`;
+		} else {
+			expr = sql`json_set(${expr}, ${sql.lit(`$.${field}`)}, cast(COALESCE(${sql.raw(numericExtract)}, 0) as integer) + cast(${n} as integer))`;
+		}
+	}
+
+	if (pg) {
+		return sql<string>`(${expr})::text`;
+	}
+	return sql<string>`${expr}`;
+}
+
+export function pluginDataUpdateGuard(
+	db: Kysely<Database>,
+	deltaEntries: Array<[string, number]>,
+): RawBuilder<boolean> {
+	const pg = isPostgres(db);
+	const conditions: RawBuilder<boolean>[] = [
+		pg ? sql`jsonb_typeof(data::jsonb) = 'object'` : sql`json_type(data) = 'object'`,
+	];
+	for (const [field, amount] of deltaEntries) {
+		const numeric = sql.raw(pluginDataExtractExpr(db, field, { numeric: true }));
+		const type = pg
+			? sql`jsonb_typeof(data::jsonb -> ${sql.lit(field)})`
+			: sql`json_type(data, ${sql.lit(`$.${field}`)})`;
+		const base = sql`coalesce(${numeric}, 0)`;
+		const integral = pg ? sql`${base} = trunc(${base})` : sql`${base} = cast(${base} as integer)`;
+		const lower = Math.max(Number.MIN_SAFE_INTEGER, Number.MIN_SAFE_INTEGER - amount);
+		const upper = Math.min(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER - amount);
+		conditions.push(sql`((${type} is null or ${type} = 'null' or ${numeric} is not null)
+			and ${integral} and ${base} >= ${lower} and ${base} <= ${upper})`);
+	}
+	return sql`(${sql.join(conditions, sql` and `)})`;
+}
+
+/**
+ * SQL expression for ordering plugin-storage rows by a `data` field.
+ *
+ * `ORDER BY` has no bound operand to infer numeric-vs-text from, so extracting
+ * as text (`->>'field'`) would sort a numeric field lexically on Postgres
+ * (`[10, 100, 9]`) while SQLite's `json_extract` sorts it numerically — a
+ * cross-dialect divergence. Ordering over the jsonb-native value (`->'field'`,
+ * single arrow) fixes this: jsonb btree ordering is numeric among numbers,
+ * lexical among strings, and total across heterogeneous values (never throws).
+ * SQLite's `json_extract` already orders numerically, so it is unchanged.
+ *
+ * sqlite:   json_extract(data, '$.field')
+ * postgres: (data)::jsonb->'field'
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any Kysely instance
 export function pluginDataOrderExpr(db: Kysely<any>, field: string): string {
 	validateJsonFieldName(field, "plugin storage order field name");

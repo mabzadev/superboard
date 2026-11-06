@@ -63,6 +63,28 @@ test("current settings identifiers read and update existing plugin storage", asy
 		await cms.close();
 	}
 });
+test("settings of plugins outside SuperBoard keep EmDash authorization and lookup", async () => {
+	const cms = await createCmsApi();
+	try {
+		const request = (role: number) => {
+			const url = new URL("https://site.example/_emdash/api/admin/plugins/outside-plugin/settings");
+			const input = new Request(url);
+			const context = {
+				request: input,
+				url,
+				params: {},
+				locals: { emdash: cms.runtime, user: { id: "operator-1", role } },
+			} as unknown as APIContext;
+			return dispatchSettingsPluginApi(context, input, "outside-plugin");
+		};
+		expect((await request(40)).status).toBe(403);
+		const missing = await request(50);
+		expect(missing.status).toBe(404);
+		expect(await missing.json()).toMatchObject({ error: { code: "NOT_FOUND" } });
+	} finally {
+		await cms.close();
+	}
+});
 test("canonical Settings APIs retain changed values, versions and verified SDK configuration", async () => {
 	const scope = await prepareApiPlugin(plugin);
 	const cms = await createCmsApi();

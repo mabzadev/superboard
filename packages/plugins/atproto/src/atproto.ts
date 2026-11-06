@@ -1,4 +1,13 @@
+/**
+ * AT Protocol client helpers
+ *
+ * Handles session management, record CRUD, and handle resolution.
+ * All HTTP goes through ctx.http.fetch() for sandbox compatibility.
+ */
+
 import type { PluginContext } from "emdash";
+
+// ── Types ───────────────────────────────────────────────────────
 
 export interface AtSession {
 	accessJwt: string;
@@ -19,8 +28,11 @@ export interface BlobRef {
 	size: number;
 }
 
+// ── Helpers ─────────────────────────────────────────────────────
+
 const URL_SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 
+/** Get the HTTP client from plugin context, or throw a helpful error. */
 export function requireHttp(ctx: PluginContext) {
 	if (!ctx.http) {
 		throw new Error("AT Protocol plugin requires the network:request capability");
@@ -28,6 +40,10 @@ export function requireHttp(ctx: PluginContext) {
 	return ctx.http;
 }
 
+/**
+ * Normalize user-entered PDS values to the host portion expected by the
+ * AT Protocol XRPC helpers. Users often paste a full service URL.
+ */
 export function normalizePdsHost(value: string | null | undefined): string {
 	const raw = value?.trim() || "bsky.social";
 	const withScheme = URL_SCHEME_RE.test(raw) ? raw : `https://${raw}`;
@@ -62,6 +78,7 @@ async function responseNeedsSessionRefresh(res: Response): Promise<boolean> {
 	}
 }
 
+/** Validate that a PDS response contains expected string fields. */
 function requireString(data: Record<string, unknown>, field: string, context: string): string {
 	const value = data[field];
 	if (typeof value !== "string") {
@@ -70,6 +87,11 @@ function requireString(data: Record<string, unknown>, field: string, context: st
 	return value;
 }
 
+// ── Session management ──────────────────────────────────────────
+
+/**
+ * Create a new session with the PDS using an app password.
+ */
 export async function createSession(
 	ctx: PluginContext,
 	pdsHost: string,
@@ -97,6 +119,9 @@ export async function createSession(
 	};
 }
 
+/**
+ * Refresh an existing session using the refresh token.
+ */
 export async function refreshSession(
 	ctx: PluginContext,
 	pdsHost: string,
@@ -122,6 +147,25 @@ export async function refreshSession(
 	};
 }
 
+// ── Token-refresh single-flight (poison-immune) ─────────────────
+//
+// Concurrent publishes must not each refresh the session: the PDS rotates
+// (invalidates) the refresh token on use, so a second concurrent refresh would
+// race the first. We coalesce onto one refresh — but deliberately WITHOUT
+// caching an in-flight promise that other calls await. On Cloudflare Workers
+// (workerd) a refresh whose originating request is cancelled mid-flight leaves
+// that promise forever pending, and every later `ensureSession` on the isolate
+// would hang on it until the isolate is evicted (524 at the 100s wall). This
+// is the same isolate-poisoning hazard fixed in core's single-flight cache.
+//
+// Instead, one caller claims a timestamped lock and performs the refresh;
+// concurrent callers poll KV — the source of truth, written by the owner via
+// `persistSession` — for the freshly persisted access token and never await
+// the owner's promise. A cancelled or stuck owner is reclaimed after
+// `refreshDeadlineMs` so a later caller refreshes rather than hanging.
+//
+// State is module-scoped (per isolate), matching the prior implementation.
+
 let refreshDeadlineMs = 15_000;
 let refreshPollMs = 25;
 let refreshMaxWaitMs = 30_000;
@@ -132,6 +176,11 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Coalesced, poison-immune token refresh. Returns the freshly persisted
+ * access token + DID, or `null` if the refresh could not be completed (the
+ * caller should fall back to a full login).
+ */
 async function refreshAccessDeduped(
 	ctx: PluginContext,
 	pdsHost: string,
@@ -139,12 +188,21 @@ async function refreshAccessDeduped(
 ): Promise<{ accessJwt: string; did: string } | null> {
 	const waitStart = Date.now();
 	for (;;) {
+		// 1. Did an owner already publish a fresh token? Check KV (the source
+		// of truth) first, before attempting to claim, so a waiter that wakes
+		// just after the owner finished returns the published token instead of
+		// re-claiming and refreshing again. We only reach this function when
+		// the access token was absent/cleared, so any value here is fresh.
 		const access = await ctx.kv.get<string>("state:accessJwt");
 		if (access) {
 			const did = await ctx.kv.get<string>("state:did");
 			if (did) return { accessJwt: access, did };
 		}
 
+		// 2. No published token yet — claim the lock if it's free or the owner
+		// has held it past the deadline (likely a cancelled request whose
+		// continuation never ran). The claim is synchronous between awaits so
+		// two callers can't both claim.
 		const ownerStartedAt = refreshOwnerStartedAt;
 		if (ownerStartedAt === null || Date.now() - ownerStartedAt > refreshDeadlineMs) {
 			refreshGeneration += 1;
@@ -155,21 +213,35 @@ async function refreshAccessDeduped(
 				await persistSession(ctx, session);
 				return { accessJwt: session.accessJwt, did: session.did };
 			} catch {
+				// Refresh failed (e.g. rotated/expired refresh token). Caller
+				// falls back to a full login.
 				return null;
 			} finally {
+				// Release only while still the current owner: a reclaimer may
+				// have taken the lock while this (slow) refresh was running.
 				if (refreshGeneration === claim) {
 					refreshOwnerStartedAt = null;
 				}
 			}
 		}
 
+		// 3. Another caller owns the refresh. Wait and re-check — never await
+		// its (possibly stranded) promise.
 		if (Date.now() - waitStart > refreshMaxWaitMs) {
+			// Give up rather than hang; caller falls back to a full login.
 			return null;
 		}
 		await sleep(refreshPollMs);
 	}
 }
 
+/**
+ * Test-only: reset the refresh single-flight lock and optionally shorten its
+ * timing so the stranded-owner / coalescing paths can be exercised without
+ * waiting out the production deadline.
+ *
+ * @internal
+ */
 export function __resetRefreshSingleFlightForTests(timing?: {
 	deadlineMs?: number;
 	pollMs?: number;
@@ -182,6 +254,10 @@ export function __resetRefreshSingleFlightForTests(timing?: {
 	refreshMaxWaitMs = timing?.maxWaitMs ?? 30_000;
 }
 
+/**
+ * Get a valid access token, refreshing if needed. Concurrent refreshes are
+ * coalesced onto one query via a poison-immune single-flight lock (see above).
+ */
 export async function ensureSession(ctx: PluginContext): Promise<{
 	accessJwt: string;
 	did: string;
@@ -195,6 +271,7 @@ export async function ensureSession(ctx: PluginContext): Promise<{
 		throw new Error("AT Protocol credentials not configured");
 	}
 
+	// Try existing tokens first
 	const existingAccess = await ctx.kv.get<string>("state:accessJwt");
 	const existingRefresh = await ctx.kv.get<string>("state:refreshJwt");
 	const existingDid = await ctx.kv.get<string>("state:did");
@@ -203,13 +280,16 @@ export async function ensureSession(ctx: PluginContext): Promise<{
 		return { accessJwt: existingAccess, did: existingDid, pdsHost };
 	}
 
+	// Try refresh if we have a refresh token (coalesced, poison-immune)
 	if (existingRefresh) {
 		const refreshed = await refreshAccessDeduped(ctx, pdsHost, existingRefresh);
 		if (refreshed) {
 			return { accessJwt: refreshed.accessJwt, did: refreshed.did, pdsHost };
 		}
+		// Refresh failed or timed out, fall through to full login
 	}
 
+	// Full login
 	const session = await createSession(ctx, pdsHost, handle, appPassword);
 	await persistSession(ctx, session);
 	return { accessJwt: session.accessJwt, did: session.did, pdsHost };
@@ -221,6 +301,12 @@ async function persistSession(ctx: PluginContext, session: AtSession): Promise<v
 	await ctx.kv.set("state:did", session.did);
 }
 
+// ── Record CRUD ─────────────────────────────────────────────────
+
+/**
+ * Create a record on the PDS. Returns the AT-URI and CID.
+ * Retries once on 401 (expired token) by refreshing the session.
+ */
 export async function createRecord(
 	ctx: PluginContext,
 	pdsHost: string,
@@ -239,6 +325,7 @@ export async function createRecord(
 		body: JSON.stringify({ repo: did, collection, record }),
 	});
 
+	// Retry once when the PDS reports an expired access token.
 	if (await responseNeedsSessionRefresh(res)) {
 		const refreshed = await ensureSessionFresh(ctx, pdsHost);
 		if (refreshed) {
@@ -265,6 +352,10 @@ export async function createRecord(
 	};
 }
 
+/**
+ * Update (upsert) a record on the PDS.
+ * Retries once on 401 (expired token).
+ */
 export async function putRecord(
 	ctx: PluginContext,
 	pdsHost: string,
@@ -310,6 +401,10 @@ export async function putRecord(
 	};
 }
 
+/**
+ * Delete a record from the PDS.
+ * Retries once on 401 (expired token).
+ */
 export async function deleteRecord(
 	ctx: PluginContext,
 	pdsHost: string,
@@ -348,10 +443,16 @@ export async function deleteRecord(
 	}
 }
 
+/**
+ * Force a session refresh (for 401 retry). Clears the stale access token
+ * and delegates to ensureSession, which handles refresh deduplication.
+ * Returns null if refresh fails.
+ */
 async function ensureSessionFresh(
 	ctx: PluginContext,
 	_pdsHost: string,
 ): Promise<{ accessJwt: string; did: string } | null> {
+	// Clear stale access token so ensureSession will attempt a refresh
 	await ctx.kv.set("state:accessJwt", "");
 
 	try {
@@ -362,6 +463,12 @@ async function ensureSessionFresh(
 	}
 }
 
+// ── Handle resolution ───────────────────────────────────────────
+
+/**
+ * Resolve an AT Protocol handle to a DID.
+ * Uses the public API -- no auth required.
+ */
 export async function resolveHandle(ctx: PluginContext, handle: string): Promise<string> {
 	const http = requireHttp(ctx);
 	const res = await http.fetch(
@@ -376,6 +483,11 @@ export async function resolveHandle(ctx: PluginContext, handle: string): Promise
 	return requireString(data, "did", "resolveHandle");
 }
 
+// ── Blob upload ─────────────────────────────────────────────────
+
+/**
+ * Upload a blob (image) to the PDS. Returns a blob reference for embedding.
+ */
 export async function uploadBlob(
 	ctx: PluginContext,
 	pdsHost: string,
@@ -409,6 +521,12 @@ export async function uploadBlob(
 	return data.blob as BlobRef;
 }
 
+// ── Utilities ───────────────────────────────────────────────────
+
+/**
+ * Extract the rkey from an AT-URI.
+ * at://did:plc:xxx/collection/rkey -> rkey
+ */
 export function rkeyFromUri(uri: string): string {
 	const parts = uri.split("/");
 	const rkey = parts.at(-1);

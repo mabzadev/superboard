@@ -1,9 +1,20 @@
+/**
+ * Shared import utilities
+ *
+ * Common constants and functions used across all WordPress import sources.
+ */
+
 import type { PortableTextBlock } from "@emdash-cms/gutenberg-to-portable-text";
 import mime from "mime/lite";
 
-import { RESERVED_FIELD_SLUGS } from "../schema/types.js";
+import { RESERVED_COLLECTION_SLUGS, RESERVED_FIELD_SLUGS } from "../schema/types.js";
 import type { ImportFieldDef, CollectionSchemaStatus } from "./types.js";
 
+// =============================================================================
+// Constants
+// =============================================================================
+
+/** Internal WordPress post types that should be excluded from import */
 export const INTERNAL_POST_TYPES = [
 	"revision",
 	"nav_menu_item",
@@ -14,24 +25,33 @@ export const INTERNAL_POST_TYPES = [
 	"wp_navigation",
 	"wp_template",
 	"wp_template_part",
-	"attachment",
-	"wp_block",
+	"attachment", // Handled separately as media
+	"wp_block", // Handled separately as sections (reusable blocks)
+	"acf-field-group",
+	"acf-field",
+	"acf-post-type",
+	"acf-taxonomy",
+	"acf-ui-options-page",
 ];
 
+/** Internal meta key prefixes to filter out */
 export const INTERNAL_META_PREFIXES = ["_edit_", "_wp_"];
 
 const NUMERIC_PATTERN = /^-?\d+(\.\d+)?$/;
 const TRAILING_SLASHES = /\/+$/;
 const WP_JSON_SUFFIX = /\/wp-json\/?.*$/;
 
+/** Specific internal meta keys */
 export const INTERNAL_META_KEYS = ["_edit_last", "_edit_lock", "_pingme", "_encloseme"];
 
+/** Base fields required for any WordPress import */
 export const BASE_REQUIRED_FIELDS: ImportFieldDef[] = [
 	{ slug: "title", label: "Title", type: "string", required: true, searchable: true },
 	{ slug: "content", label: "Content", type: "portableText", required: false, searchable: true },
 	{ slug: "excerpt", label: "Excerpt", type: "text", required: false },
 ];
 
+/** Featured image field - only added to post types that have _thumbnail_id */
 export const FEATURED_IMAGE_FIELD: ImportFieldDef = {
 	slug: "featured_image",
 	label: "Featured Image",
@@ -39,28 +59,50 @@ export const FEATURED_IMAGE_FIELD: ImportFieldDef = {
 	required: false,
 };
 
+// =============================================================================
+// Type Guards
+// =============================================================================
+
+/**
+ * Check if a post type is internal/should be excluded
+ */
 export function isInternalPostType(type: string): boolean {
 	return INTERNAL_POST_TYPES.includes(type);
 }
 
+/**
+ * Check if a meta key is internal/should be filtered out
+ */
 export function isInternalMetaKey(key: string): boolean {
+	// Check specific keys
 	if (INTERNAL_META_KEYS.includes(key)) return true;
 
+	// Check prefixes
 	for (const prefix of INTERNAL_META_PREFIXES) {
 		if (key.startsWith(prefix)) return true;
 	}
 
+	// Keep these useful ones
 	if (key === "_thumbnail_id") return false;
 	if (key.startsWith("_yoast_")) return false;
 	if (key.startsWith("_rank_math_")) return false;
 
+	// Other underscore prefixes are usually internal
 	if (key.startsWith("_")) return true;
 
 	return false;
 }
 
+// =============================================================================
+// Status Mapping
+// =============================================================================
+
+/** Valid WordPress statuses */
 export type WpStatus = "publish" | "draft" | "pending" | "private" | "future";
 
+/**
+ * Map WordPress status to normalized status
+ */
 export function mapWpStatus(status: string | undefined): WpStatus {
 	switch (status) {
 		case "publish":
@@ -78,6 +120,11 @@ export function mapWpStatus(status: string | undefined): WpStatus {
 	}
 }
 
+// =============================================================================
+// Collection Mapping
+// =============================================================================
+
+/** Default mappings from WordPress post types to EmDash collections */
 const POST_TYPE_TO_COLLECTION: Record<string, string> = {
 	post: "posts",
 	page: "pages",
@@ -90,22 +137,50 @@ const POST_TYPE_TO_COLLECTION: Record<string, string> = {
 	faq: "faqs",
 };
 
-export function mapPostTypeToCollection(postType: string): string {
-	return POST_TYPE_TO_COLLECTION[postType] || postType;
+const INVALID_COLLECTION_SLUG_CHARS = /[^a-z0-9_]/g;
+
+/** Turn a WordPress post type name into a valid, non-reserved collection slug. */
+export function sanitizeCollectionSlug(slug: string): string {
+	const sanitized = slug
+		.toLowerCase()
+		.replace(INVALID_COLLECTION_SLUG_CHARS, "_")
+		.replace(LEADING_NON_ALPHA_CHARS, "");
+	if (!sanitized) return "imported";
+	if (RESERVED_COLLECTION_SLUGS.includes(sanitized)) return `wp_${sanitized}`;
+	return sanitized;
 }
 
+/**
+ * Map WordPress post type to EmDash collection name
+ */
+export function mapPostTypeToCollection(postType: string): string {
+	return POST_TYPE_TO_COLLECTION[postType] || sanitizeCollectionSlug(postType);
+}
+
+// =============================================================================
+// Meta Key Mapping
+// =============================================================================
+
+/**
+ * Map WordPress meta key to EmDash field slug
+ */
 export function mapMetaKeyToField(key: string): string {
+	// SEO plugins
 	if (key === "_yoast_wpseo_title") return "seo_title";
 	if (key === "_yoast_wpseo_metadesc") return "seo_description";
 	if (key === "_rank_math_title") return "seo_title";
 	if (key === "_rank_math_description") return "seo_description";
 	if (key === "_thumbnail_id") return "featured_image";
 
+	// Remove leading underscore
 	if (key.startsWith("_")) return key.slice(1);
 
 	return key;
 }
 
+/**
+ * Infer field type from meta key name and sample value
+ */
 export function inferMetaType(
 	key: string,
 	value: string | undefined,
@@ -116,64 +191,100 @@ export function inferMetaType(
 
 	if (!value) return "string";
 
+	// Serialized PHP or JSON
 	if (value.startsWith("a:") || value.startsWith("{") || value.startsWith("[")) return "json";
 
+	// Number
 	if (NUMERIC_PATTERN.test(value)) return "number";
 
+	// Boolean
 	if (["0", "1", "true", "false"].includes(value)) return "boolean";
 
 	return "string";
 }
 
+// =============================================================================
+// Plugin Bookkeeping Meta
+// =============================================================================
+
+/**
+ * Meta prefixes written by well-known WordPress plugins as operational
+ * bookkeeping (sync state, counters, cache keys) — not content. Without
+ * this filter, a mature site's analysis suggests dozens of junk fields
+ * per post type and the real content fields drown in them.
+ *
+ * ponytail: curated list of the plugins we've seen in the wild, not a
+ * taxonomy of the WP ecosystem. Unknown plugins' meta still gets through;
+ * extend the list as real sites surface new offenders.
+ */
 const PLUGIN_META_PREFIXES = [
-	"aawp_",
-	"algolia_",
-	"amazon_polly_",
-	"ampforwp_",
-	"classifai_",
-	"essb_",
-	"eg_",
-	"gnpub_",
-	"jetpack_",
-	"mashsb_",
-	"monsterinsights_",
-	"onesignal_",
-	"penci_",
-	"perfmatters_",
-	"pys_",
-	"rank_math_",
-	"rp4wp_",
-	"saswp_",
-	"sbg_",
-	"snap_",
-	"spay_",
-	"tie_",
-	"wl_",
-	"wpil_",
-	"wprm_",
-	"wpswa_",
-	"wpuf_",
-	"yarpp_",
+	"aawp_", // AAWP (Amazon affiliate)
+	"algolia_", // Algolia / WP Search with Algolia
+	"amazon_polly_", // Amazon Polly
+	"ampforwp_", // AMP for WP
+	"classifai_", // ClassifAI
+	"essb_", // Easy Social Share Buttons
+	"eg_", // Essential Grid
+	"gnpub_", // Google News publisher tools
+	"jetpack_", // Jetpack
+	"mashsb_", // MashShare
+	"monsterinsights_", // MonsterInsights
+	"onesignal_", // OneSignal push
+	"penci_", // Penci themes
+	"perfmatters_", // Perfmatters
+	"pys_", // PixelYourSite
+	"rank_math_", // Rank Math internals (title/description go through the SEO pass)
+	"rp4wp_", // Related Posts for WP
+	"saswp_", // Schema & Structured Data for WP
+	"sbg_", // Simple Blog Grid
+	"snap_", // SNAP auto-poster
+	"spay_", // Simple Pay
+	"tie_", // TieLabs themes
+	"wl_", // WordLift
+	"wpil_", // Link Whisper
+	"wprm_", // WP Recipe Maker internals
+	"wpswa_", // WP Search with Algolia
+	"wpuf_", // WP User Frontend
+	"yarpp_", // YARPP
 ];
 
+/** Exact meta keys that are plugin/core bookkeeping, not content. */
 const PLUGIN_META_KEYS = new Set([
-	"entity_same_as",
-	"exclude_from_search",
-	"footnotes",
-	"inline_featured_image",
-	"os_meta",
-	"thirstydata",
+	"entity_same_as", // WordLift
+	"exclude_from_search", // search exclusion plugins
+	"footnotes", // Gutenberg core footnotes store
+	"inline_featured_image", // inline featured image plugin
+	"os_meta", // theme option stores
+	"thirstydata", // ThirstyAffiliates
 ]);
 
+/**
+ * Check whether a meta key is well-known plugin bookkeeping that should
+ * not become a content field. Hyphens are normalized to underscores
+ * before matching (e.g. `ampforwp-amp-on-off`).
+ */
 export function isPluginBookkeepingMeta(key: string): boolean {
 	const normalized = key.replaceAll("-", "_");
 	if (PLUGIN_META_KEYS.has(normalized)) return true;
 	return PLUGIN_META_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
+// =============================================================================
+// Field Slug Sanitization
+// =============================================================================
+
 const INVALID_FIELD_SLUG_CHARS = /[^a-z0-9_]+/g;
 const LEADING_NON_ALPHA_CHARS = /^[^a-z]+/;
 
+/**
+ * Sanitize a WordPress meta/ACF key into a valid EmDash field slug
+ * (`/^[a-z][a-z0-9_]*$/`, max 63 chars, not reserved).
+ *
+ * Must be applied consistently on both sides of an import: once when
+ * creating fields from the analysis, and again when matching incoming
+ * meta keys onto schema fields — otherwise keys like `my-field` create
+ * `my_field` but never receive values.
+ */
 export function sanitizeFieldSlug(key: string): string {
 	const sanitized = key
 		.toLowerCase()
@@ -185,9 +296,20 @@ export function sanitizeFieldSlug(key: string): string {
 	return sanitized;
 }
 
+// =============================================================================
+// Internal Link Relativization
+// =============================================================================
+
 const REGEX_SPECIALS = /[.*+?^${}()|[\]\\]/g;
 const LEADING_WWW = /^www\./;
 
+/**
+ * Turn an absolute URL into a root-relative one when it points at the
+ * source site (www-insensitive). Returns null when the URL should be
+ * left alone: external links, non-http(s) schemes, and `/wp-content/`
+ * media files — those stay absolute so the later media pass can match
+ * them against its old-URL -> new-URL map.
+ */
 function relativizeUrl(url: string, sourceHost: string): string | null {
 	if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
 	try {
@@ -211,6 +333,16 @@ function relativizeMarkDefs(
 	}
 }
 
+/**
+ * Rewrite internal links in imported content to root-relative URLs, in
+ * place. Without this, imported posts keep linking back to the old
+ * WordPress domain (e.g. `https://oldsite.com/companies/google/`)
+ * instead of staying on the new site.
+ *
+ * ponytail: path structures are kept as-is (WP permalink /2024/05/slug/
+ * stays /2024/05/slug/) — mapping old paths onto the new site's routes
+ * is the planned permalink->redirect-map feature.
+ */
 export function relativizeContentLinks(blocks: PortableTextBlock[], siteUrl: string): void {
 	let sourceHost: string;
 	try {
@@ -218,6 +350,9 @@ export function relativizeContentLinks(blocks: PortableTextBlock[], siteUrl: str
 	} catch {
 		return;
 	}
+	// Raw HTML in the wild uses double-quoted, single-quoted, and unquoted
+	// href values; the backreference \1 matches the closing quote (or
+	// nothing, for unquoted). Rewritten links are normalized to href="...".
 	const hrefPattern = new RegExp(
 		`href=(["']?)https?://(?:www\\.)?${sourceHost.replace(REGEX_SPECIALS, "\\$&")}(/[^"'\\s>]*)?\\1`,
 		"gi",
@@ -229,7 +364,15 @@ export function relativizeContentLinks(blocks: PortableTextBlock[], siteUrl: str
 				relativizeMarkDefs(block.markDefs, sourceHost);
 				break;
 			case "image":
-				if (block.link) block.link = relativizeUrl(block.link, sourceHost) ?? block.link;
+				// asset.url stays absolute (media pass), only the click-through link
+				if (typeof block.link === "string") {
+					block.link = relativizeUrl(block.link, sourceHost) ?? block.link;
+				} else if (block.link?.href) {
+					block.link = {
+						...block.link,
+						href: relativizeUrl(block.link.href, sourceHost) ?? block.link.href,
+					};
+				}
 				break;
 			case "table":
 				for (const row of block.rows) {
@@ -253,11 +396,11 @@ export function relativizeContentLinks(blocks: PortableTextBlock[], siteUrl: str
 			case "htmlBlock":
 				block.html = block.html.replace(
 					hrefPattern,
-					(_m, _quote: string, path: string | undefined) => {
-						return `href="${path || "/"}"`;
-					},
+					(match, _quote: string, path: string | undefined) =>
+						path?.startsWith("/wp-content/") ? match : `href="${path || "/"}"`,
 				);
 				break;
+			// URL-less or media-only blocks: media URLs are the media pass's job
 			case "code":
 			case "embed":
 			case "gallery":
@@ -271,22 +414,39 @@ export function relativizeContentLinks(blocks: PortableTextBlock[], siteUrl: str
 	}
 }
 
+// =============================================================================
+// String Utilities
+// =============================================================================
+
 export { slugify } from "../utils/slugify.js";
 
+/**
+ * Normalize URL for API requests
+ */
 export function normalizeUrl(url: string): string {
 	let normalized = url.trim();
 
+	// Add protocol if missing
 	if (!normalized.startsWith("http")) {
 		normalized = `https://${normalized}`;
 	}
 
+	// Remove trailing slash
 	normalized = normalized.replace(TRAILING_SLASHES, "");
 
+	// Remove /wp-json if included
 	normalized = normalized.replace(WP_JSON_SUFFIX, "");
 
 	return normalized;
 }
 
+// =============================================================================
+// File Utilities
+// =============================================================================
+
+/**
+ * Extract filename from URL
+ */
 export function getFilenameFromUrl(url: string): string | undefined {
 	try {
 		const parsed = new URL(url);
@@ -297,10 +457,20 @@ export function getFilenameFromUrl(url: string): string | undefined {
 	}
 }
 
+/**
+ * Guess MIME type from filename
+ */
 export function guessMimeType(filename: string): string | undefined {
 	return mime.getType(filename) ?? undefined;
 }
 
+// =============================================================================
+// Attachment Map Builder
+// =============================================================================
+
+/**
+ * Build a map of attachment IDs to URLs for resolving featured images
+ */
 export function buildAttachmentMap(
 	attachments: Array<{ id?: number | string; url?: string }>,
 ): Map<string, string> {
@@ -313,6 +483,13 @@ export function buildAttachmentMap(
 	return map;
 }
 
+// =============================================================================
+// Schema Compatibility
+// =============================================================================
+
+/**
+ * Check if two field types are compatible for import
+ */
 export function isTypeCompatible(requiredType: string, existingType: string): boolean {
 	if (requiredType === existingType) return true;
 
@@ -328,11 +505,18 @@ export function isTypeCompatible(requiredType: string, existingType: string): bo
 	return compatible?.includes(existingType) ?? false;
 }
 
+// =============================================================================
+// Byline Import Utilities
+// =============================================================================
+
 import type { BylineRepository } from "../database/repositories/byline.js";
 import { slugify as slugifyFn } from "../utils/slugify.js";
 
 const MAX_SLUG_COLLISION_ATTEMPTS = 1000;
 
+/**
+ * Find or create a unique byline slug, capped at MAX_SLUG_COLLISION_ATTEMPTS.
+ */
 export async function ensureUniqueBylineSlug(
 	bylineRepo: BylineRepository,
 	baseSlug: string,
@@ -352,6 +536,10 @@ export async function ensureUniqueBylineSlug(
 	return candidate;
 }
 
+/**
+ * Resolve (find-or-create) a byline for an imported WordPress author.
+ * Caches results in `cache` keyed by `authorLogin:mappedUserId`.
+ */
 export async function resolveImportByline(
 	authorLogin: string | undefined,
 	displayName: string | undefined,
@@ -386,11 +574,19 @@ export async function resolveImportByline(
 	return created.id;
 }
 
+// =============================================================================
+// Schema Compatibility
+// =============================================================================
+
+/**
+ * Check schema compatibility between required fields and existing collection
+ */
 export function checkSchemaCompatibility(
 	requiredFields: ImportFieldDef[],
 	existingCollection: { slug: string; fields: Map<string, { type: string }> } | undefined,
 ): CollectionSchemaStatus {
 	if (!existingCollection) {
+		// Collection doesn't exist - will need to create it
 		const fieldStatus: CollectionSchemaStatus["fieldStatus"] = {};
 		for (const field of requiredFields) {
 			fieldStatus[field.slug] = {
@@ -405,6 +601,7 @@ export function checkSchemaCompatibility(
 		};
 	}
 
+	// Collection exists - check field compatibility
 	const fieldStatus: CollectionSchemaStatus["fieldStatus"] = {};
 	const incompatibleFields: string[] = [];
 

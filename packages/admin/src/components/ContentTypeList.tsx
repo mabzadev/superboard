@@ -26,15 +26,23 @@ import {
 	Warning,
 	Check,
 	DotsSixVertical,
+	LinkSimple,
 } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import * as React from "react";
 
+import { fetchRelations } from "../lib/api";
 import type { SchemaCollection, OrphanedTable } from "../lib/api";
 import { cn } from "../lib/utils";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { RelationImpact } from "./RelationImpact.js";
 import { RouterLinkButton } from "./RouterLinkButton.js";
 
+/**
+ * Apply a drag-and-drop move to the collection order. Returns the input array
+ * unchanged when the move is a no-op.
+ */
 export function moveCollection(slugs: string[], activeSlug: string, overSlug: string): string[] {
 	const from = slugs.indexOf(activeSlug);
 	const to = slugs.indexOf(overSlug);
@@ -51,9 +59,13 @@ export interface ContentTypeListProps {
 	isLoading?: boolean;
 	onDelete?: (slug: string) => void;
 	onRegisterOrphan?: (slug: string) => void;
+	/** Persist a new sidebar order. Omit to render the list without reordering. */
 	onReorder?: (slugs: string[]) => void;
 }
 
+/**
+ * Content Type list view - shows all collections in the schema registry
+ */
 export function ContentTypeList({
 	collections,
 	orphanedTables,
@@ -66,6 +78,19 @@ export function ContentTypeList({
 	const [deleteTarget, setDeleteTarget] = React.useState<SchemaCollection | null>(null);
 	const hasOrphans = orphanedTables && orphanedTables.length > 0;
 
+	const { data: relations = [] } = useQuery({
+		queryKey: ["relations"],
+		queryFn: () => fetchRelations(),
+	});
+	const affectedRelations = deleteTarget
+		? relations.filter(
+				(rel) =>
+					rel.parentCollection === deleteTarget.slug || rel.childCollection === deleteTarget.slug,
+			)
+		: [];
+
+	// Optimistic order: the drop lands immediately, the server order takes
+	// over once the mutation invalidates the query.
 	const [order, setOrder] = React.useState<string[] | null>(null);
 	const serverOrder = React.useMemo(() => collections.map((c) => c.slug), [collections]);
 	const orderedSlugs = order ?? serverOrder;
@@ -100,6 +125,7 @@ export function ContentTypeList({
 
 	return (
 		<div className="space-y-4">
+			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-semibold leading-tight">{t`Content Types`}</h1>
@@ -107,11 +133,17 @@ export function ContentTypeList({
 						{t`Define the structure of your content`}
 					</p>
 				</div>
-				<RouterLinkButton to="/content-types/new" icon={<Plus />}>
-					{t`New Content Type`}
-				</RouterLinkButton>
+				<div className="flex items-center gap-2">
+					<RouterLinkButton to="/content-types/relations" variant="outline" icon={<LinkSimple />}>
+						{t`Relations`}
+					</RouterLinkButton>
+					<RouterLinkButton to="/content-types/new" icon={<Plus />}>
+						{t`New Content Type`}
+					</RouterLinkButton>
+				</div>
 			</div>
 
+			{/* Orphaned Tables Warning */}
 			{hasOrphans && (
 				<div className="rounded-md border border-kumo-warning/50 bg-kumo-warning-tint p-4">
 					<div className="flex items-start gap-3">
@@ -130,7 +162,9 @@ export function ContentTypeList({
 										className="flex items-center justify-between bg-kumo-base rounded-md px-3 py-2"
 									>
 										<div>
-											<code className="text-sm font-medium">{orphan.slug}</code>
+											<code dir="ltr" className="text-sm font-medium">
+												{orphan.slug}
+											</code>
 											<span className="text-xs text-kumo-subtle ms-2">
 												{plural(orphan.rowCount, { one: "(# item)", other: "(# items)" })}
 											</span>
@@ -151,6 +185,7 @@ export function ContentTypeList({
 				</div>
 			)}
 
+			{/* Table */}
 			<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
 				<div className="rounded-md border bg-kumo-base overflow-x-auto">
 					<table className="w-full">
@@ -230,7 +265,16 @@ export function ContentTypeList({
 						setDeleteTarget(null);
 					}
 				}}
-			/>
+			>
+				{affectedRelations.length > 0 && (
+					<div className="mt-4 rounded-md border border-kumo-danger/50 bg-kumo-danger-tint p-3">
+						<p className="text-sm font-medium">
+							{t`Every relationship this content type takes part in goes too:`}
+						</p>
+						<RelationImpact relations={affectedRelations} />
+					</div>
+				)}
+			</ConfirmDialog>
 		</div>
 	);
 }
@@ -276,13 +320,13 @@ function ContentTypeRow({ collection, canReorder, onRequestDelete }: ContentType
 				<div className="flex items-center space-x-3">
 					<div
 						className={cn(
-							"flex h-8 w-8 items-center justify-center rounded-lg",
+							"flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
 							isFromCode ? "bg-kumo-badge-purple text-white" : "bg-kumo-badge-blue text-white",
 						)}
 					>
 						{isFromCode ? <FileText className="h-4 w-4" /> : <Database className="h-4 w-4" />}
 					</div>
-					<div>
+					<div className="min-w-0">
 						<Link
 							to="/content-types/$slug"
 							params={{ slug: collection.slug }}
@@ -297,14 +341,19 @@ function ContentTypeRow({ collection, canReorder, onRequestDelete }: ContentType
 				</div>
 			</td>
 			<td className="px-4 py-3">
-				<code className="text-sm bg-kumo-tint px-1.5 py-0.5 rounded">{collection.slug}</code>
+				<code dir="ltr" className="text-sm bg-kumo-tint px-1.5 py-0.5 rounded">
+					{collection.slug}
+				</code>
 			</td>
 			<td className="px-4 py-3">
 				<SourceBadge source={collection.source} />
 			</td>
 			<td className="px-4 py-3">
 				<div className="flex flex-wrap gap-1">
-					{collection.supports.map((feature) => (
+					{[
+						...collection.supports.filter((feature) => feature !== "seo"),
+						...(collection.hasSeo ? ["seo"] : []),
+					].map((feature) => (
 						<Badge key={feature} variant="secondary">
 							{feature}
 						</Badge>

@@ -3,6 +3,7 @@ import * as React from "react";
 
 interface Props {
 	children: React.ReactNode;
+	/** The underlying field kind to show in the error message */
 	fieldKind: string;
 }
 
@@ -11,6 +12,10 @@ interface State {
 	error?: Error;
 }
 
+/**
+ * Error boundary that wraps trusted plugin field widgets.
+ * On render error, shows a warning with a retry button instead of crashing the editor.
+ */
 export class PluginFieldErrorBoundary extends React.Component<Props, State> {
 	constructor(props: Props) {
 		super(props);
@@ -25,7 +30,7 @@ export class PluginFieldErrorBoundary extends React.Component<Props, State> {
 		if (this.state.hasError) {
 			return (
 				<div className="rounded-md border border-kumo-danger/50 bg-kumo-danger/5 p-3">
-					<p className="text-sm font-medium text-kumo-danger">
+					<p className="text-base font-medium text-kumo-danger">
 						<Trans>Plugin widget error</Trans>
 					</p>
 					<p className="mt-1 text-xs text-kumo-subtle">

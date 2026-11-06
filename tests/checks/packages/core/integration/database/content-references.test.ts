@@ -13,7 +13,7 @@ describeEachDialect("Content references schema", (dialect) => {
 	let ctx: DialectTestContext;
 
 	beforeEach(async () => {
-		ctx = await setupForDialect(dialect);
+		ctx = await setupForDialect(dialect); // runs all migrations
 	});
 
 	afterEach(async () => {
@@ -35,12 +35,11 @@ describeEachDialect("Content references schema", (dialect) => {
 			.insertInto("_emdash_relations")
 			.values({
 				id: "rel_manages",
-				name: "manages",
+				slug: "manages",
 				parent_collection: "employees",
 				child_collection: "employees",
 				parent_label: "Manager",
 				child_label: "Direct report",
-				translation_group: "rel_manages",
 			})
 			.execute();
 
@@ -48,7 +47,7 @@ describeEachDialect("Content references schema", (dialect) => {
 			.insertInto("_emdash_content_references")
 			.values({
 				id: "ref_1",
-				relation_group: "rel_manages",
+				relation_id: "rel_manages",
 				parent_group: "grp_alice",
 				child_group: "grp_bob",
 			})
@@ -57,160 +56,111 @@ describeEachDialect("Content references schema", (dialect) => {
 		const rel = await ctx.db
 			.selectFrom("_emdash_relations")
 			.selectAll()
-			.where("name", "=", "manages")
+			.where("slug", "=", "manages")
 			.executeTakeFirstOrThrow();
-		expect(rel.locale).toBe("en");
 		expect(rel.child_collection).toBe("employees");
+		expect(rel.parent_label).toBe("Manager");
 
 		const edge = await ctx.db
 			.selectFrom("_emdash_content_references")
 			.selectAll()
 			.where("id", "=", "ref_1")
 			.executeTakeFirstOrThrow();
-		expect(edge.relation_group).toBe("rel_manages");
-		expect(edge.sort_order).toBe(0);
+		expect(edge.relation_id).toBe("rel_manages");
+		expect(edge.sort_order).toBe(0); // default
 	});
 
 	it("rejects a duplicate edge (same relation, parent, child)", async () => {
 		await ctx.db
 			.insertInto("_emdash_content_references")
-			.values({ id: "e1", relation_group: "r1", parent_group: "p1", child_group: "c1" })
+			.values({ id: "e1", relation_id: "r1", parent_group: "p1", child_group: "c1" })
 			.execute();
 
 		await expect(
 			ctx.db
 				.insertInto("_emdash_content_references")
-				.values({ id: "e2", relation_group: "r1", parent_group: "p1", child_group: "c1" })
+				.values({ id: "e2", relation_id: "r1", parent_group: "p1", child_group: "c1" })
 				.execute(),
 		).rejects.toThrow();
 	});
 
-	it("rejects a duplicate relation name within one locale, allows across locales", async () => {
-		const base = {
-			name: "manages",
-			parent_collection: "employees",
-			child_collection: "employees",
-			parent_label: "Manager",
-			child_label: "Report",
-			translation_group: "tg1",
-		};
-
-		await ctx.db
-			.insertInto("_emdash_relations")
-			.values({ id: "r_en", locale: "en", ...base })
-			.execute();
-
-		await expect(
-			ctx.db
-				.insertInto("_emdash_relations")
-				.values({ id: "r_en2", locale: "en", ...base })
-				.execute(),
-		).rejects.toThrow();
-
-		await ctx.db
-			.insertInto("_emdash_relations")
-			.values({
-				id: "r_fr",
-				locale: "fr",
-				...base,
-				parent_label: "Responsable",
-				child_label: "Subordonné",
-			})
-			.execute();
-
-		const rows = await ctx.db
-			.selectFrom("_emdash_relations")
-			.select(["id", "locale"])
-			.where("name", "=", "manages")
-			.execute();
-		expect(rows).toHaveLength(2);
-	});
-
-	it("rejects a duplicate (translation_group, locale), allows across locales", async () => {
+	it("rejects a duplicate relation slug outright", async () => {
 		const base = {
 			parent_collection: "employees",
 			child_collection: "employees",
 			parent_label: "Manager",
 			child_label: "Report",
-			translation_group: "shared_tg",
 		};
 
 		await ctx.db
 			.insertInto("_emdash_relations")
-			.values({ id: "g_en", name: "manages", locale: "en", ...base })
+			.values({ id: "r_1", slug: "manages", ...base })
 			.execute();
 
+		// A slug names exactly one relation — that is what lets a reference
+		// selection be addressed by slug from any locale without ambiguity.
 		await expect(
 			ctx.db
 				.insertInto("_emdash_relations")
-				.values({ id: "g_en2", name: "leads", locale: "en", ...base })
+				.values({ id: "r_2", slug: "manages", ...base, parent_collection: "posts" })
 				.execute(),
 		).rejects.toThrow();
-
-		await ctx.db
-			.insertInto("_emdash_relations")
-			.values({ id: "g_fr", name: "gere", locale: "fr", ...base })
-			.execute();
-
-		const rows = await ctx.db
-			.selectFrom("_emdash_relations")
-			.select(["id", "locale"])
-			.where("translation_group", "=", "shared_tg")
-			.execute();
-		expect(rows).toHaveLength(2);
 	});
 
-	it("rejects a relation with a null translation_group", async () => {
+	it("rejects a relation with a null slug", async () => {
+		// A relation with no slug could not be addressed by any surface.
 		await expect(
 			ctx.db
 				.insertInto("_emdash_relations")
 				.values({
 					id: "n1",
-					name: "manages",
+					slug: null as unknown as string,
 					parent_collection: "employees",
 					child_collection: "employees",
 					parent_label: "Manager",
 					child_label: "Report",
-					locale: "en",
-					translation_group: null as unknown as string,
 				})
 				.execute(),
 		).rejects.toThrow();
 	});
 
 	it("forward and backlink traversal return the expected rows", async () => {
+		// Parent p1 references children c1, c2 (ordered); p2 also references c1.
 		await ctx.db
 			.insertInto("_emdash_content_references")
 			.values([
-				{ id: "e1", relation_group: "r1", parent_group: "p1", child_group: "c1", sort_order: 0 },
-				{ id: "e2", relation_group: "r1", parent_group: "p1", child_group: "c2", sort_order: 1 },
-				{ id: "e3", relation_group: "r1", parent_group: "p2", child_group: "c1", sort_order: 0 },
+				{ id: "e1", relation_id: "r1", parent_group: "p1", child_group: "c1", sort_order: 0 },
+				{ id: "e2", relation_id: "r1", parent_group: "p1", child_group: "c2", sort_order: 1 },
+				{ id: "e3", relation_id: "r1", parent_group: "p2", child_group: "c1", sort_order: 0 },
 			])
 			.execute();
 
+		// Forward: p1's children for relation r1, ordered.
 		const children = await ctx.db
 			.selectFrom("_emdash_content_references")
 			.select("child_group")
 			.where("parent_group", "=", "p1")
-			.where("relation_group", "=", "r1")
+			.where("relation_id", "=", "r1")
 			.orderBy("sort_order")
 			.execute();
 		expect(children.map((r) => r.child_group)).toEqual(["c1", "c2"]);
 
+		// Backlink: who references c1 (any parent) for relation r1.
 		const parents = await ctx.db
 			.selectFrom("_emdash_content_references")
 			.select("parent_group")
 			.where("child_group", "=", "c1")
-			.where("relation_group", "=", "r1")
+			.where("relation_id", "=", "r1")
 			.orderBy("parent_group")
 			.execute();
 		expect(parents.map((r) => r.parent_group)).toEqual(["p1", "p2"]);
 	});
 
 	it("allows same-collection and self references", async () => {
+		// Self reference: parent_group === child_group is permitted.
 		await ctx.db
 			.insertInto("_emdash_content_references")
-			.values({ id: "self1", relation_group: "r1", parent_group: "x1", child_group: "x1" })
+			.values({ id: "self1", relation_id: "r1", parent_group: "x1", child_group: "x1" })
 			.execute();
 
 		const row = await ctx.db
@@ -222,7 +172,7 @@ describeEachDialect("Content references schema", (dialect) => {
 	});
 
 	it("creates the expected indexes (sqlite)", async () => {
-		if (ctx.dialect !== "sqlite") return;
+		if (ctx.dialect !== "sqlite") return; // index introspection is dialect-specific
 
 		const result = await sql<{ name: string }>`
 			SELECT name FROM sqlite_master WHERE type = 'index'
@@ -230,30 +180,22 @@ describeEachDialect("Content references schema", (dialect) => {
 		const names = new Set(result.rows.map((r) => r.name));
 
 		for (const idx of [
-			"idx__emdash_relations_locale",
-			"idx__emdash_relations_translation_group",
 			"idx__emdash_relations_parent_collection",
 			"idx__emdash_relations_child_collection",
-			"idx__emdash_relations_group_locale_unique",
 			"idx__emdash_content_references_parent",
 			"idx__emdash_content_references_child",
 			"idx__emdash_content_references_relation",
 		]) {
 			expect(names.has(idx), `missing index ${idx}`).toBe(true);
 		}
-	});
 
-	it("down() drops both tables and up() can recreate them", async () => {
-		const { down, up } =
-			await import("../../../../../../packages/core/src/database/migrations/043_content_references.js");
-
-		await down(ctx.db);
-
-		await expect(sql`SELECT 1 FROM _emdash_content_references`.execute(ctx.db)).rejects.toThrow();
-		await expect(sql`SELECT 1 FROM _emdash_relations`.execute(ctx.db)).rejects.toThrow();
-
-		await up(ctx.db);
-		const rows = await ctx.db.selectFrom("_emdash_relations").selectAll().execute();
-		expect(Array.isArray(rows)).toBe(true);
+		// 076 dropped the locale-shaped indexes with the columns behind them.
+		for (const idx of [
+			"idx__emdash_relations_locale",
+			"idx__emdash_relations_translation_group",
+			"idx__emdash_relations_group_locale_unique",
+		]) {
+			expect(names.has(idx), `index ${idx} should be gone`).toBe(false);
+		}
 	});
 });

@@ -10,11 +10,15 @@ export interface MultiSelectOptions<T extends readonly [string, ...string[]]> {
 	helpText?: string;
 }
 
+/**
+ * MultiSelect field - multiple choices from predefined options
+ */
 export function multiSelect<T extends readonly [string, ...string[]]>(
 	msOptions: MultiSelectOptions<T>,
 ): FieldDefinition<T[number][]> {
 	let arraySchema = z.array(z.enum(msOptions.options));
 
+	// Apply constraints
 	if (msOptions.min !== undefined) {
 		arraySchema = arraySchema.min(msOptions.min, `Must select at least ${msOptions.min}`);
 	}
@@ -23,7 +27,8 @@ export function multiSelect<T extends readonly [string, ...string[]]>(
 		arraySchema = arraySchema.max(msOptions.max, `Must select at most ${msOptions.max}`);
 	}
 
-	const schema: z.ZodTypeAny = msOptions.required ? arraySchema : arraySchema.optional();
+	// Optional vs required
+	const schema: z.ZodType = msOptions.required ? arraySchema : arraySchema.optional();
 
 	const ui: FieldUIHints = {
 		widget: "multiSelect",

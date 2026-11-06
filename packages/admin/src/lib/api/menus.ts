@@ -1,3 +1,11 @@
+/**
+ * Menu management APIs.
+ *
+ * i18n: all endpoints accept an optional `locale`. When omitted, the server
+ * returns or acts on all locales (legacy behaviour for clients that haven't
+ * been updated yet).
+ */
+
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -101,25 +109,37 @@ function withLocale(path: string, locale?: string): string {
 		: path;
 }
 
+/**
+ * Fetch all menus
+ */
 export async function fetchMenus(options: LocaleOptions = {}): Promise<Menu[]> {
 	const response = await apiFetch(withLocale(`${API_BASE}/menus`, options.locale));
-	return parseApiResponse<Menu[]>(response, "Failed to fetch menus");
+	return parseApiResponse<Menu[]>(response, i18n._(msg`Failed to fetch menus`));
 }
 
+/**
+ * Fetch a single menu with items
+ */
 export async function fetchMenu(name: string, options: LocaleOptions = {}): Promise<MenuWithItems> {
 	const response = await apiFetch(withLocale(`${API_BASE}/menus/${name}`, options.locale));
-	return parseApiResponse<MenuWithItems>(response, "Failed to fetch menu");
+	return parseApiResponse<MenuWithItems>(response, i18n._(msg`Failed to fetch menu`));
 }
 
+/**
+ * Create a menu
+ */
 export async function createMenu(input: CreateMenuInput): Promise<Menu> {
 	const response = await apiFetch(`${API_BASE}/menus`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(input),
 	});
-	return parseApiResponse<Menu>(response, "Failed to create menu");
+	return parseApiResponse<Menu>(response, i18n._(msg`Failed to create menu`));
 }
 
+/**
+ * Update a menu
+ */
 export async function updateMenu(
 	name: string,
 	input: UpdateMenuInput,
@@ -130,9 +150,12 @@ export async function updateMenu(
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(input),
 	});
-	return parseApiResponse<Menu>(response, "Failed to update menu");
+	return parseApiResponse<Menu>(response, i18n._(msg`Failed to update menu`));
 }
 
+/**
+ * Delete a menu
+ */
 export async function deleteMenu(name: string, options: LocaleOptions = {}): Promise<void> {
 	const response = await apiFetch(withLocale(`${API_BASE}/menus/${name}`, options.locale), {
 		method: "DELETE",
@@ -140,6 +163,9 @@ export async function deleteMenu(name: string, options: LocaleOptions = {}): Pro
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete menu`));
 }
 
+/**
+ * Create a menu item
+ */
 export async function createMenuItem(
 	menuName: string,
 	input: CreateMenuItemInput,
@@ -153,9 +179,12 @@ export async function createMenuItem(
 			body: JSON.stringify(input),
 		},
 	);
-	return parseApiResponse<MenuItem>(response, "Failed to create menu item");
+	return parseApiResponse<MenuItem>(response, i18n._(msg`Failed to create menu item`));
 }
 
+/**
+ * Update a menu item
+ */
 export async function updateMenuItem(
 	menuName: string,
 	itemId: string,
@@ -170,9 +199,12 @@ export async function updateMenuItem(
 			body: JSON.stringify(input),
 		},
 	);
-	return parseApiResponse<MenuItem>(response, "Failed to update menu item");
+	return parseApiResponse<MenuItem>(response, i18n._(msg`Failed to update menu item`));
 }
 
+/**
+ * Delete a menu item
+ */
 export async function deleteMenuItem(
 	menuName: string,
 	itemId: string,
@@ -185,6 +217,9 @@ export async function deleteMenuItem(
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete menu item`));
 }
 
+/**
+ * Reorder menu items
+ */
 export async function reorderMenuItems(
 	menuName: string,
 	input: ReorderMenuItemsInput,
@@ -198,9 +233,10 @@ export async function reorderMenuItems(
 			body: JSON.stringify(input),
 		},
 	);
-	return parseApiResponse<MenuItem[]>(response, "Failed to reorder menu items");
+	return parseApiResponse<MenuItem[]>(response, i18n._(msg`Failed to reorder menu items`));
 }
 
+/** List every translation (locale variant) of a menu. */
 export async function fetchMenuTranslations(
 	name: string,
 	options: LocaleOptions = {},
@@ -208,9 +244,16 @@ export async function fetchMenuTranslations(
 	const response = await apiFetch(
 		withLocale(`${API_BASE}/menus/${name}/translations`, options.locale),
 	);
-	return parseApiResponse<MenuTranslationsResponse>(response, "Failed to fetch menu translations");
+	return parseApiResponse<MenuTranslationsResponse>(
+		response,
+		i18n._(msg`Failed to fetch menu translations`),
+	);
 }
 
+/**
+ * Create a new locale translation of a menu. The new menu inherits the
+ * source's items and label unless overridden.
+ */
 export async function createMenuTranslation(
 	name: string,
 	input: { locale: string; label?: string },
@@ -224,5 +267,5 @@ export async function createMenuTranslation(
 			body: JSON.stringify(input),
 		},
 	);
-	return parseApiResponse<Menu>(response, "Failed to create menu translation");
+	return parseApiResponse<Menu>(response, i18n._(msg`Failed to create menu translation`));
 }

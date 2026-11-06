@@ -28,6 +28,7 @@ describe("Loader offset pagination", () => {
 	}
 
 	async function seedAlphabet() {
+		// Deterministic order regardless of created_at second-resolution.
 		const titles = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
 		for (const title of titles) {
 			await createPublishedPost(title);
@@ -94,6 +95,7 @@ describe("Loader offset pagination", () => {
 		);
 		expect(page1.entries!.map((e) => e.data.title)).toEqual(["Alpha", "Bravo"]);
 
+		// cursor continues after Bravo; offset must be ignored, not stacked.
 		const page2 = await runWithContext({ editMode: false, db }, () =>
 			loader.loadCollection!({
 				filter: {

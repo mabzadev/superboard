@@ -1,7 +1,28 @@
+/**
+ * Forms Plugin for EmDash CMS
+ *
+ * Build forms in the admin, embed them in content via Portable Text,
+ * accept submissions from anonymous visitors, send notifications, export data.
+ *
+ * This is a trusted plugin shipped as an npm package. It uses the standard
+ * plugin APIs — nothing privileged.
+ *
+ * @example
+ * ```typescript
+ * // live.config.ts
+ * import { formsPlugin } from "@emdash-cms/plugin-forms";
+ *
+ * export default defineConfig({
+ *   plugins: [formsPlugin()],
+ * });
+ * ```
+ */
+
 import type { PluginDescriptor, ResolvedPlugin } from "emdash";
 import { definePlugin } from "emdash";
 
 import { version } from "../package.json";
+import { formIdFromDigestTask } from "./digest-task.js";
 import { handleCleanup, handleDigest } from "./handlers/cron.js";
 import {
 	formsCreateHandler,
@@ -33,9 +54,14 @@ import {
 } from "./schemas.js";
 import { FORMS_STORAGE_CONFIG } from "./storage.js";
 
+// ─── Plugin Options ──────────────────────────────────────────────
+
 export interface FormsPluginOptions {
+	/** Default spam protection for new forms */
 	defaultSpamProtection?: "none" | "honeypot" | "turnstile";
 }
+
+// ─── Plugin Descriptor (for live.config.ts) ──────────────────────
 
 export function formsPlugin(
 	options: FormsPluginOptions = {},
@@ -54,12 +80,15 @@ export function formsPlugin(
 			{ path: "/submissions", label: "Submissions", icon: "inbox" },
 		],
 		adminWidgets: [{ id: "recent-submissions", title: "Recent Submissions", size: "half" }],
+		// Descriptor uses flat indexes only; composite indexes are in definePlugin
 		storage: {
 			forms: { indexes: ["status", "createdAt"], uniqueIndexes: ["slug"] },
 			submissions: { indexes: ["formId", "status", "starred", "createdAt"] },
 		},
 	};
 }
+
+// ─── Plugin Implementation ───────────────────────────────────────
 
 export function createPlugin(_options: FormsPluginOptions = {}): ResolvedPlugin {
 	return definePlugin({
@@ -73,6 +102,7 @@ export function createPlugin(_options: FormsPluginOptions = {}): ResolvedPlugin 
 		hooks: {
 			"plugin:activate": {
 				handler: async (_event, ctx) => {
+					// Schedule weekly cleanup for expired submissions
 					if (ctx.cron) {
 						await ctx.cron.schedule("cleanup", { schedule: "@weekly" });
 					}
@@ -83,69 +113,79 @@ export function createPlugin(_options: FormsPluginOptions = {}): ResolvedPlugin 
 				handler: async (event, ctx) => {
 					if (event.name === "cleanup") {
 						await handleCleanup(ctx);
-					} else if (event.name.startsWith("digest:")) {
-						const formId = event.name.slice("digest:".length);
-						await handleDigest(formId, ctx);
+					} else {
+						const formId = formIdFromDigestTask(event.name);
+						if (formId) await handleDigest(formId, ctx);
 					}
 				},
 			},
 		},
 
 		routes: {
+			// --- Public routes ---
+
 			submit: {
 				public: true,
 				input: submitSchema,
-				handler: submitHandler as never,
+				handler: submitHandler,
 			},
 
 			definition: {
 				public: true,
 				input: definitionSchema,
-				handler: definitionHandler as never,
+				handler: definitionHandler,
 			},
 
+			// --- Admin routes (require auth) ---
+			// Reads are open to editors (plugins:read). Routes without a
+			// `permission` fall back to plugins:manage, so writes stay admin-only.
+
 			"forms/list": {
+				permission: "plugins:read",
 				handler: formsListHandler,
 			},
 			"forms/create": {
 				input: formCreateSchema,
-				handler: formsCreateHandler as never,
+				handler: formsCreateHandler,
 			},
 			"forms/update": {
 				input: formUpdateSchema,
-				handler: formsUpdateHandler as never,
+				handler: formsUpdateHandler,
 			},
 			"forms/delete": {
 				input: formDeleteSchema,
-				handler: formsDeleteHandler as never,
+				handler: formsDeleteHandler,
 			},
 			"forms/duplicate": {
 				input: formDuplicateSchema,
-				handler: formsDuplicateHandler as never,
+				handler: formsDuplicateHandler,
 			},
 
 			"submissions/list": {
+				permission: "plugins:read",
 				input: submissionsListSchema,
-				handler: submissionsListHandler as never,
+				handler: submissionsListHandler,
 			},
 			"submissions/get": {
+				permission: "plugins:read",
 				input: submissionGetSchema,
-				handler: submissionGetHandler as never,
+				handler: submissionGetHandler,
 			},
 			"submissions/update": {
 				input: submissionUpdateSchema,
-				handler: submissionUpdateHandler as never,
+				handler: submissionUpdateHandler,
 			},
 			"submissions/delete": {
 				input: submissionDeleteSchema,
-				handler: submissionDeleteHandler as never,
+				handler: submissionDeleteHandler,
 			},
 			"submissions/export": {
 				input: exportSchema,
-				handler: exportHandler as never,
+				handler: exportHandler,
 			},
 
 			"settings/turnstile-status": {
+				permission: "plugins:read",
 				handler: async (ctx) => {
 					const siteKey = await ctx.kv.get<string>("settings:turnstileSiteKey");
 					const secretKey = await ctx.kv.get<string>("settings:turnstileSecretKey");
@@ -190,5 +230,6 @@ export function createPlugin(_options: FormsPluginOptions = {}): ResolvedPlugin 
 
 export default createPlugin;
 
+// Re-export types for consumers
 export type * from "./types.js";
 export type { FormsStorage } from "./storage.js";

@@ -1,7 +1,14 @@
+/**
+ * Restore content from trash endpoint - injected by EmDash integration
+ *
+ * POST /_emdash/api/content/{collection}/{id}/restore - Restore from trash
+ */
+
 import type { APIRoute } from "astro";
 
 import { requireOwnerPerm } from "#api/authorize.js";
 import { apiError, mapErrorStatus, unwrapResult } from "#api/error.js";
+import { invalidateRouteCache } from "#cache/route-cache.js";
 
 export const prerender = false;
 
@@ -14,6 +21,7 @@ export const POST: APIRoute = async ({ params, locals, cache }) => {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
 
+	// Fetch item including trashed items to check ownership
 	const existing = await emdash.handleContentGetIncludingTrashed(collection, id);
 	if (!existing.success) {
 		return apiError(
@@ -27,6 +35,7 @@ export const POST: APIRoute = async ({ params, locals, cache }) => {
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- handler returns unknown data; narrowed by typeof check above
 				(existing.data as Record<string, unknown>)
 			: undefined;
+	// Handler returns { item, _rev } — extract the item for ownership check
 	const existingItem =
 		existingData?.item && typeof existingData.item === "object"
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed by typeof check above
@@ -42,7 +51,7 @@ export const POST: APIRoute = async ({ params, locals, cache }) => {
 
 	if (!result.success) return unwrapResult(result);
 
-	if (cache?.enabled) await cache.invalidate({ tags: [collection, resolvedId] });
+	await invalidateRouteCache(cache, [collection, resolvedId]);
 
 	return unwrapResult(result);
 };

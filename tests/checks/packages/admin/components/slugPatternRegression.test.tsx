@@ -1,9 +1,27 @@
+/**
+ * Regression test for https://github.com/emdash-cms/emdash/issues/845
+ *
+ * Several admin forms use `<input pattern="...">` for slug-style identifiers.
+ * Modern browsers compile that attribute as a regex with the `v`
+ * (unicode-sets) flag, where unescaped/dangling `-` inside a character class
+ * is a syntax error. The original `[a-z0-9-]+` therefore failed with
+ * `Invalid character class` and disabled HTML form validation entirely on
+ * the affected inputs.
+ *
+ * This test asserts that every slug-style `pattern` attribute in the admin
+ * is a valid `v`-flag regex.
+ */
+
 import { Toasty } from "@cloudflare/kumo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { render } from "../utils/render.tsx";
+
+// ---------------------------------------------------------------------------
+// Router mock (shared across components under test)
+// ---------------------------------------------------------------------------
 
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual("@tanstack/react-router");
@@ -28,6 +46,10 @@ vi.mock("@tanstack/react-router", async () => {
 	};
 });
 
+// ---------------------------------------------------------------------------
+// API mocks
+// ---------------------------------------------------------------------------
+
 vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	const actual = await vi.importActual("../../../../../packages/admin/src/lib/api");
 	return {
@@ -48,9 +70,14 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	};
 });
 
+// Imported lazily so the mocks above are in place
 const { Sections } = await import("../../../../../packages/admin/src/components/Sections");
 const { MenuList } = await import("../../../../../packages/admin/src/components/MenuList");
 const { Widgets } = await import("../../../../../packages/admin/src/components/Widgets");
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function Wrapper({ children }: { children: React.ReactNode }) {
 	const qc = new QueryClient({
@@ -63,6 +90,11 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 	);
 }
 
+/**
+ * Asserts that every `<input pattern="...">` currently in the document is a
+ * valid regex when compiled with the `v` flag — which is what the browser
+ * does for HTML form validation.
+ */
 function expectAllPatternsValidV() {
 	const inputs = [...document.querySelectorAll<HTMLInputElement>("input[pattern]")];
 	expect(inputs.length).toBeGreaterThan(0);
@@ -88,6 +120,7 @@ describe("slug pattern attributes are valid v-flag regexes (issue #845)", () => 
 			</Wrapper>,
 		);
 		await screen.getByText("New Section").click();
+		// Wait for the dialog to render
 		await expect.element(screen.getByLabelText("Slug")).toBeInTheDocument();
 		expectAllPatternsValidV();
 	});
@@ -98,6 +131,8 @@ describe("slug pattern attributes are valid v-flag regexes (issue #845)", () => 
 				<MenuList />
 			</Wrapper>,
 		);
+		// "Create Menu" button opens the create dialog. With empty menus, two
+		// buttons render (header trigger + empty state CTA). Click the first.
 		await screen.getByText("Create Menu").first().click();
 		await expect.element(screen.getByLabelText("Name")).toBeInTheDocument();
 		expectAllPatternsValidV();

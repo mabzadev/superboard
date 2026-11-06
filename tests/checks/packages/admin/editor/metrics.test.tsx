@@ -36,17 +36,23 @@ describe("Editor Metrics", () => {
 		});
 
 		it("always rounds up (ceil)", () => {
+			// 201 / 200 = 1.005, ceil = 2
 			expect(calculateReadingTime(words(201))).toBe(2);
+			// 401 / 200 = 2.005, ceil = 3
 			expect(calculateReadingTime(words(401))).toBe(3);
 		});
 
 		it("counts CJK content by character, matching the published reading time", () => {
+			// Without the CJK rate, a spaceless paragraph counts as one word and
+			// collapses to "1 min read". 2000 / 500 = 4 minutes, the same result
+			// as the published reading-time util's CJK test.
 			expect(calculateReadingTime("日".repeat(2000))).toBe(4);
 			expect(calculateReadingTime("中".repeat(1000))).toBe(2);
 			expect(calculateReadingTime("한".repeat(2000))).toBe(4);
 		});
 
 		it("adds word-based and CJK reading time for mixed content", () => {
+			// 200 words (1 min) + 500 CJK characters (1 min) = 2 minutes
 			expect(calculateReadingTime(`${words(200)} ${"日".repeat(500)}`)).toBe(2);
 		});
 	});

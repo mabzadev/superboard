@@ -1,3 +1,11 @@
+/**
+ * URL probe endpoint
+ *
+ * POST /_emdash/api/import/probe
+ *
+ * Probes a URL to detect what import source can handle it.
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

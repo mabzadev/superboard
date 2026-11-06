@@ -1,3 +1,8 @@
+/**
+ * handleContentUpdate reports liveContentChanged so edge invalidation can
+ * skip pure draft staging on revision-supporting collections.
+ */
+
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

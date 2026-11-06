@@ -7,6 +7,7 @@ import {
 	POST,
 } from "../../../../../../packages/core/src/astro/routes/api/admin/media-usage/progress.js";
 import * as maintenanceEngine from "../../../../../../packages/core/src/media/usage/maintenance-engine.js";
+import { CONTENT_SOURCE_SCHEMA_VERSION } from "../../../../../../packages/core/src/media/usage/types.js";
 import {
 	setupForDialectWithCollections,
 	teardownForDialect,
@@ -33,7 +34,7 @@ describe("admin media usage progress route", () => {
 					collection_id: collection.id,
 					capture_state: "active",
 					status: "complete",
-					schema_version: 1,
+					schema_version: CONTENT_SOURCE_SCHEMA_VERSION,
 					reconciliation_required: 0,
 				})
 				.where("adapter_id", "=", "content-media")

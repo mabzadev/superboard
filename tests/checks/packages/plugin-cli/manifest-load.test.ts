@@ -1,3 +1,19 @@
+/**
+ * Coverage for the manifest loader. The loader's value-add over plain
+ * `JSON.parse + Zod.parse` is two-fold:
+ *
+ *   1. JSONC tolerance: trailing commas + comments are accepted (matches
+ *      the wrangler.jsonc / tsconfig.json convention).
+ *   2. Source locations on validation errors: the error path is mapped
+ *      back to a 1-indexed line:column so `emdash-plugin validate`
+ *      points editors at the offending field.
+ *
+ * The tests below use `parseAndValidateManifest` (the in-memory variant)
+ * to avoid touching disk for the happy paths and Zod-fail paths. The
+ * filesystem entry point `loadManifest` is exercised separately for its
+ * directory-vs-file resolution and ENOENT shape.
+ */
+
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -56,6 +72,7 @@ describe("parseAndValidateManifest (in-memory)", () => {
 				expect(error).toBeInstanceOf(ManifestError);
 				const err = error as ManifestError;
 				expect(err.code).toBe("MANIFEST_PARSE_ERROR");
+				// Error message includes the file:line:col pointer.
 				expect(err.message).toMatch(/\/v\/m\.jsonc:\d+:\d+/);
 			}
 		});
@@ -80,6 +97,11 @@ describe("parseAndValidateManifest (in-memory)", () => {
 				expect(err.code).toBe("MANIFEST_VALIDATION_ERROR");
 				const license = err.issues.find((i) => i.path === "license");
 				expect(license).toBeDefined();
+				// Source location points at the offending VALUE (the empty
+				// string on line 2), not the key. We don't pin the exact
+				// column because Zod can emit slightly different paths
+				// across versions; the line number is enough to confirm
+				// the mapping works.
 				expect(license?.location?.line).toBe(2);
 			}
 		});
@@ -96,6 +118,7 @@ describe("parseAndValidateManifest (in-memory)", () => {
 			} catch (error) {
 				const err = error as ManifestError;
 				expect(err.issues.length).toBeGreaterThanOrEqual(3);
+				// Every issue must have a path and a message.
 				for (const issue of err.issues) {
 					expect(typeof issue.path).toBe("string");
 					expect(typeof issue.message).toBe("string");
@@ -116,6 +139,12 @@ describe("parseAndValidateManifest (in-memory)", () => {
 			} catch (error) {
 				const err = error as ManifestError;
 				expect(err.code).toBe("MANIFEST_VALIDATION_ERROR");
+				// The line:col must point at the typo'd key, not at the
+				// parent object's opening brace. Typos are the most
+				// common error class; landing on the right line matters.
+				// Regression: previously this returned undefined because
+				// `findNodeAtPath` couldn't resolve a key that didn't
+				// exist in the schema.
 				const typoIssue = err.issues.find((i) => i.message.includes('"licens"'));
 				expect(typoIssue).toBeDefined();
 				expect(typoIssue?.location?.line).toBe(3);
@@ -169,6 +198,9 @@ describe("loadManifest (filesystem)", () => {
 	});
 
 	it("returns MANIFEST_TOO_LARGE when the file exceeds the cap", async () => {
+		// Build a file just over the 1 MiB cap. Filler is JSONC-friendly
+		// (a long string value) so the bytes can't be misread as a
+		// syntactic short-circuit.
 		const { MANIFEST_MAX_BYTES } =
 			await import("../../../../packages/plugin-cli/src/manifest/load.js");
 		const filler = "x".repeat(MANIFEST_MAX_BYTES);

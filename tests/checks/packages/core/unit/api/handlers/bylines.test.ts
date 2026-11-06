@@ -20,6 +20,7 @@ describe("byline handlers", () => {
 	});
 
 	afterEach(async () => {
+		setI18nConfig(null);
 		await teardownTestDatabase(db);
 	});
 
@@ -76,14 +77,19 @@ describe("byline handlers", () => {
 				slug: "jane",
 				displayName: "Jeanne",
 				translationOf: anchor.id,
+				// locale intentionally omitted
 			});
 
+			// Previously this guard lived only at the route boundary, so SDK
+			// callers could clone into the default locale by accident. The
+			// handler now refuses.
 			expect(result.success).toBe(false);
 			if (result.success) return;
 			expect(result.error.code).toBe("VALIDATION_ERROR");
 			expect(result.error.message).toMatch(/locale/i);
 			expect(result.error.message).toMatch(/translationOf/i);
 
+			// No sibling row created.
 			const siblings = await repo.listTranslations(anchor.id);
 			expect(siblings).toHaveLength(1);
 		});
@@ -107,6 +113,36 @@ describe("byline handlers", () => {
 			expect(result.data.locale).toBe("fr");
 			expect(result.data.translationGroup).toBe(anchor.translationGroup);
 			expect(result.data.id).not.toBe(anchor.id);
+		});
+
+		it("treats a code-stamped sibling as the same configured locale", async () => {
+			setI18nConfig({
+				defaultLocale: "es-MX",
+				locales: ["es-MX", "en"],
+				localeAliases: { "en-US": "en" },
+			});
+			const anchor = await repo.create({
+				slug: "terms",
+				displayName: "Terms",
+				locale: "en",
+			});
+			await repo.create({
+				slug: "terms",
+				displayName: "Terms (code)",
+				locale: "en-US",
+				translationOf: anchor.id,
+			});
+
+			const result = await handleBylineCreate(db, {
+				slug: "terms",
+				displayName: "Terms again",
+				locale: "en",
+				translationOf: anchor.id,
+			});
+
+			expect(result.success).toBe(false);
+			if (result.success) return;
+			expect(result.error.code).toBe("CONFLICT");
 		});
 
 		it("returns NOT_FOUND when the source byline is missing", async () => {
@@ -146,6 +182,9 @@ describe("byline handlers", () => {
 			expect(result.success).toBe(false);
 			if (result.success) return;
 			expect(result.error.code).toBe("CONFLICT");
+			// The translation-group conflict fires before the (slug, locale)
+			// conflict — siblings within the same translation_group are
+			// constrained to one row per locale by the partial unique index.
 			expect(result.error.message).toMatch(/translation already exists/i);
 			expect(result.error.message).toMatch(/fr/);
 		});
@@ -163,6 +202,9 @@ describe("byline handlers", () => {
 				translationOf: anchor.id,
 			});
 
+			// Different slug — the (slug, locale) UNIQUE wouldn't catch this,
+			// but the (translation_group, locale) partial unique + the
+			// handler-level guard should.
 			const result = await handleBylineCreate(db, {
 				slug: "jane-alt",
 				displayName: "Jeanne Alt",
@@ -186,6 +228,9 @@ describe("byline handlers", () => {
 			const result = await handleBylineCreate(db, {
 				slug: "jane",
 				displayName: "Other Jane",
+				// Implicit defaultLocale (no `locale` field) — should still
+				// collide with the existing en row because the handler
+				// resolves the effective locale before the conflict check.
 			});
 
 			expect(result.success).toBe(false);
@@ -203,6 +248,9 @@ describe("byline handlers", () => {
 			expect(result.data.translationGroup).toBe(result.data.id);
 		});
 
+		// Schema only enforces non-empty strings; an unknown locale like
+		// "zz" would otherwise create a row no resolver ever asks for.
+		// Validate against the configured locales here.
 		it("rejects a locale that is not in the configured site locales", async () => {
 			setI18nConfig({ defaultLocale: "en", locales: ["en", "fr"] });
 			try {

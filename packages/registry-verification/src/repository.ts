@@ -1,5 +1,6 @@
 const TRAILING_SLASHES_RE = /\/+$/;
 
+/** Canonicalize a signed source repository URL, or return null when it is unsafe. */
 export function canonicalizeRepositoryUrl(value: string): string | null {
 	try {
 		const url = new URL(value);

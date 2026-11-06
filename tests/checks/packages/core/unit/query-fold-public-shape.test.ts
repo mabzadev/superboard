@@ -1,3 +1,18 @@
+/**
+ * Public hydrated shape of the byline/term fold fast path.
+ *
+ * `loader.ts` folds byline + taxonomy hydration into the content query as JSON
+ * subqueries; `hydrateEntryBylines` / `hydrateEntryTerms` in query.ts parse that
+ * JSON instead of issuing extra round trips. These tests assert the shape that
+ * consumers actually read off `entry.data` (not the private FOLDED_* symbols):
+ *
+ *  - `data.bylines[i].byline.avatarMediaId` — a required BylineSummary field that
+ *    templates read to render author avatars. A regression dropped it from the
+ *    folded JSON, so it must be asserted at the public layer.
+ *  - folded terms prime the per-entry request cache, so a later getEntryTerms()
+ *    call serves from cache instead of issuing an N+1 query.
+ */
+
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +30,10 @@ vi.mock("astro:content", () => ({
 
 import { getLiveEntry } from "astro:content";
 
+/**
+ * A content row as the live loader would return it: enumerable data plus the
+ * non-enumerable FOLDED_* markers carrying the folded JSON payloads.
+ */
 function foldedEntry(opts: { id: string; slug: string; bylines: unknown[]; terms: unknown[] }) {
 	const data: Record<string, unknown> = {
 		id: opts.id,
@@ -77,6 +96,10 @@ describe("byline/term fold public hydrated shape", () => {
 	});
 
 	it("primes the per-entry term cache so getEntryTerms serves folded terms", async () => {
+		// The folded payload carries a term that is NOT attached in
+		// content_taxonomies. If priming works, getEntryTerms returns it from the
+		// request cache; if it were dropped, getEntryTerms would query the DB and
+		// find nothing (the N+1 regression this guards against).
 		vi.mocked(getLiveEntry).mockResolvedValue({
 			entry: foldedEntry({
 				id: "post_1",
@@ -105,6 +128,7 @@ describe("byline/term fold public hydrated shape", () => {
 			const data = entry?.data as any;
 			expect(data.terms.tag.map((t: { slug: string }) => t.slug)).toEqual(["news"]);
 
+			// Served from the primed request cache, not the (empty) DB.
 			const terms = await getEntryTerms("post", "post_1", "tag");
 			expect(terms.map((t) => t.slug)).toEqual(["news"]);
 		});

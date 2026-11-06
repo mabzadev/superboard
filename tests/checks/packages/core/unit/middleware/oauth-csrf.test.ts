@@ -97,6 +97,15 @@ describe("Public search API routes", () => {
 	});
 });
 
+/**
+ * OAuth protocol endpoints (RFC 6749, 7591, 8628) are designed to be called
+ * cross-origin. They must bypass the Origin-based CSRF check that applies to
+ * other public API routes.
+ *
+ * Regression test for PR #671: dynamic client registration and the token
+ * endpoint were unreachable from real MCP clients because an Origin header
+ * from a different origin triggered CSRF_REJECTED in middleware.
+ */
 describe("CSRF exemption for OAuth protocol endpoints", () => {
 	const EXEMPT_PATHS = [
 		"/_emdash/api/oauth/token",
@@ -150,6 +159,9 @@ describe("CSRF exemption for OAuth protocol endpoints", () => {
 	});
 
 	it("still rejects cross-origin POST to device/authorize (session-authenticated consent step)", async () => {
+		// /oauth/device/authorize is NOT in the exempt list — it's where the user
+		// approves the CLI's device code from their browser session. It must be
+		// protected by the normal CSRF check.
 		const { response, next } = await runAuthMiddleware({
 			pathname: "/_emdash/api/oauth/device/authorize",
 			origin: "https://evil.example.com",

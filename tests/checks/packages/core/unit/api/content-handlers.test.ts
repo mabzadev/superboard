@@ -8,6 +8,7 @@ import {
 	handleContentList,
 	handleContentPublish,
 	handleContentSchedule,
+	handleContentUnschedule,
 	handleContentUpdate,
 } from "../../../../../../packages/core/src/api/index.js";
 import { BylineRepository } from "../../../../../../packages/core/src/database/repositories/byline.js";
@@ -27,6 +28,7 @@ describe("Content Handlers — auto-slug generation", () => {
 
 	beforeEach(async () => {
 		db = await setupTestDatabaseWithCollections();
+		// Add a "name" field to the page collection so we can test name-based slug generation
 		const registry = new SchemaRegistry(db);
 		await registry.createField("page", { slug: "name", label: "Name", type: "string" });
 	});
@@ -63,6 +65,34 @@ describe("Content Handlers — auto-slug generation", () => {
 			expect(result.data?.item.slug).toBe("from-title");
 		});
 
+		it("should generate the slug from the collection's titleField instead of title", async () => {
+			// A person's name is the headline; `title` is their job title.
+			await new SchemaRegistry(db).updateCollection("page", { titleField: "name" });
+
+			const first = await handleContentCreate(db, "page", {
+				data: { name: "Jane Smith", title: "Trustee" },
+			});
+			const second = await handleContentCreate(db, "page", {
+				data: { name: "John Doe", title: "Trustee" },
+			});
+
+			expect(first.success).toBe(true);
+			expect(first.data?.item.slug).toBe("jane-smith");
+			expect(second.success).toBe(true);
+			expect(second.data?.item.slug).toBe("john-doe");
+		});
+
+		it("should fall back to title when the entry has no value for the titleField", async () => {
+			await new SchemaRegistry(db).updateCollection("page", { titleField: "name" });
+
+			const result = await handleContentCreate(db, "page", {
+				data: { title: "Trustee" },
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.data?.item.slug).toBe("trustee");
+		});
+
 		it("should respect explicit slug and not auto-generate", async () => {
 			const result = await handleContentCreate(db, "post", {
 				data: { title: "Hello World" },
@@ -74,10 +104,12 @@ describe("Content Handlers — auto-slug generation", () => {
 		});
 
 		it("should handle slug collisions by appending numeric suffix", async () => {
+			// Create first item with the slug
 			await handleContentCreate(db, "post", {
 				data: { title: "Hello World" },
 			});
 
+			// Create second item with same title — should get unique slug
 			const result = await handleContentCreate(db, "post", {
 				data: { title: "Hello World" },
 			});
@@ -116,6 +148,8 @@ describe("Content Handlers — auto-slug generation", () => {
 		});
 
 		it("should leave slug null when no title or name is present", async () => {
+			// `data: {}` — no title, no name. Slug source isn't there, so the
+			// auto-generator has nothing to work with.
 			const result = await handleContentCreate(db, "post", {
 				data: {},
 			});
@@ -185,6 +219,10 @@ describe("Content Handlers — auto-slug generation", () => {
 			expect(result.data?.item.publishedAt).toBe(originalPublished);
 		});
 
+		// When the caller omits `locale`, the handler must defer to the
+		// configured site defaultLocale rather than falling back to the
+		// repo's hard-coded "en". Otherwise non-English default-locale
+		// sites silently create entries in a locale the editor never chose.
 		it("defaults to configured i18n defaultLocale when body.locale is omitted", async () => {
 			setI18nConfig({ defaultLocale: "es", locales: ["es", "en"] });
 			try {
@@ -352,6 +390,13 @@ describe("Content Handlers — auto-slug generation", () => {
 
 			expect(scheduled.success).toBe(true);
 			expect(scheduled.data?.item).toMatchObject({ slug: null, status: "scheduled" });
+			const scheduledView = await handleContentGet(db, "post", created.data!.item.id);
+			expect(scheduled.data?._rev).toBe(scheduledView.data?._rev);
+
+			const unscheduled = await handleContentUnschedule(db, "post", created.data!.item.id);
+			expect(unscheduled.success).toBe(true);
+			const unscheduledView = await handleContentGet(db, "post", created.data!.item.id);
+			expect(unscheduled.data?._rev).toBe(unscheduledView.data?._rev);
 		});
 	});
 
@@ -365,6 +410,7 @@ describe("Content Handlers — auto-slug generation", () => {
 			const result = await handleContentDuplicate(db, "post", original.data!.item.id);
 
 			expect(result.success).toBe(true);
+			// Title becomes "My Post (Copy)", slug should be generated from it
 			expect(result.data?.item.slug).toBe("my-post-copy");
 		});
 
@@ -374,9 +420,12 @@ describe("Content Handlers — auto-slug generation", () => {
 				slug: "my-post",
 			});
 
+			// First duplicate
 			const dup1 = await handleContentDuplicate(db, "post", original.data!.item.id);
 			expect(dup1.data?.item.slug).toBe("my-post-copy");
 
+			// Second duplicate — "My Post (Copy)" title slugifies to "my-post-copy"
+			// which now collides with the first duplicate
 			const dup2 = await handleContentDuplicate(db, "post", original.data!.item.id);
 			expect(dup2.success).toBe(true);
 			expect(dup2.data?.item.slug).toBe("my-post-copy-1");
@@ -521,6 +570,11 @@ describe("Content Handlers — auto-slug generation", () => {
 				translationOf: anchor.id,
 			});
 
+			// Editor credits the fr row on a fr entry. The wire bylineId is
+			// fr.id but the server should store the translation_group (which
+			// equals anchor.id for the anchor sibling). The in-memory
+			// `primaryBylineId` on the response must match what's now in the
+			// DB column.
 			const created = await handleContentCreate(db, "post", {
 				data: { title: "Bonjour" },
 				locale: "fr",
@@ -530,6 +584,7 @@ describe("Content Handlers — auto-slug generation", () => {
 			expect(created.success).toBe(true);
 			expect(created.data?.item.primaryBylineId).toBe(anchor.id);
 			expect(created.data?.item.primaryBylineId).toBe(anchor.translationGroup);
+			// fr post hydrates with the fr sibling.
 			expect(created.data?.item.byline?.id).toBe(fr.id);
 			expect(created.data?.item.byline?.locale).toBe("fr");
 		});
@@ -548,6 +603,9 @@ describe("Content Handlers — auto-slug generation", () => {
 				translationOf: anchor.id,
 			});
 
+			// Credit using the anchor (en) wire id on an EN entry, then
+			// translate the entry. The fr-locale entry should hydrate the fr
+			// byline sibling, not the en one.
 			const enEntry = await handleContentCreate(db, "post", {
 				data: { title: "Hello" },
 				locale: "en",
@@ -581,6 +639,11 @@ describe("Content Handlers — auto-slug generation", () => {
 			});
 			expect(enEntry.success).toBe(true);
 
+			// Translate to fr — no fr sibling exists for marco. The credit is
+			// preserved at the DB level (`copyContentBylines` clones the
+			// junction row pointing at marco's translation_group), but
+			// rendering on the fr entry returns nothing because the byline
+			// has no fr sibling.
 			const frEntry = await handleContentCreate(db, "post", {
 				data: { title: "Bonjour" },
 				locale: "fr",
@@ -589,6 +652,8 @@ describe("Content Handlers — auto-slug generation", () => {
 			expect(frEntry.success).toBe(true);
 			expect(frEntry.data?.item.bylines).toEqual([]);
 			expect(frEntry.data?.item.byline).toBeNull();
+			// But the DB-level pointer is preserved — the credit will surface
+			// the moment an fr sibling of marco is created.
 			expect(frEntry.data?.item.primaryBylineId).toBe(anchor.id);
 		});
 
@@ -617,6 +682,7 @@ describe("Content Handlers — auto-slug generation", () => {
 				data: { title: "Bonjour" },
 				locale: "fr",
 				translationOf: enEntry.data!.item.id,
+				// No `bylines` field — copy should run.
 			});
 			expect(frEntry.success).toBe(true);
 			expect(frEntry.data?.item.bylines).toHaveLength(1);
@@ -627,6 +693,7 @@ describe("Content Handlers — auto-slug generation", () => {
 			const bylineRepo = new BylineRepository(db);
 			const a = await bylineRepo.create({ slug: "a", displayName: "A", locale: "en" });
 			const b = await bylineRepo.create({ slug: "b", displayName: "B", locale: "en" });
+			// fr sibling of `b`. The fr entry will be credited with this row.
 			const bFr = await bylineRepo.create({
 				slug: "b",
 				displayName: "B-fr",
@@ -641,6 +708,9 @@ describe("Content Handlers — auto-slug generation", () => {
 			});
 			expect(enEntry.success).toBe(true);
 
+			// Explicit different byline on the translation — should NOT
+			// inherit from source. The fr entry should credit `b`'s fr
+			// sibling, not `a`.
 			const frEntry = await handleContentCreate(db, "post", {
 				data: { title: "Bonjour" },
 				locale: "fr",
@@ -653,6 +723,12 @@ describe("Content Handlers — auto-slug generation", () => {
 		});
 
 		it("does not fall back to author-linked byline when explicit credits exist at another locale", async () => {
+			// Bug 1 regression: strict per-locale hydration returns [] when a
+			// credit's translation_group has no sibling at the entry's
+			// locale, but the old code treated that as "no explicit
+			// credits" and inferred the author byline. The editor's intent
+			// was explicit ("credit Marco, not the article's author") —
+			// silently overriding with an inferred byline is wrong.
 			const userRepo = new UserRepository(db);
 			const author = await userRepo.create({
 				email: "fallback-test@example.com",
@@ -660,6 +736,9 @@ describe("Content Handlers — auto-slug generation", () => {
 				role: "editor",
 			});
 			const bylineRepo = new BylineRepository(db);
+			// Author has a fr byline. If we incorrectly fell back, this
+			// would surface on a fr entry that has an unresolved en-only
+			// credit.
 			await bylineRepo.create({
 				slug: "author-fr",
 				displayName: "Auteur",
@@ -688,11 +767,19 @@ describe("Content Handlers — auto-slug generation", () => {
 				translationOf: enEntry.data!.item.id,
 			});
 			expect(frEntry.success).toBe(true);
+			// The explicit credit was copied to the fr entry (via
+			// `copyContentBylines`). It doesn't render at fr because marco
+			// has no fr sibling. Author inference must NOT step in — the
+			// editor explicitly named marco, not the author.
 			expect(frEntry.data?.item.bylines).toEqual([]);
 			expect(frEntry.data?.item.byline).toBeNull();
 		});
 
 		it("inferred (author-linked) byline still works when the entry has no explicit credits at all", async () => {
+			// Counterpoint to the previous test: when no junction rows
+			// exist, author inference is the right thing to do — Phase 4
+			// hydration must preserve this fallback for entries that were
+			// never explicitly credited.
 			const userRepo = new UserRepository(db);
 			const author = await userRepo.create({
 				email: "implicit-author@example.com",
@@ -711,6 +798,7 @@ describe("Content Handlers — auto-slug generation", () => {
 				data: { title: "Hello" },
 				locale: "en",
 				authorId: author.id,
+				// No bylines field — author inference path.
 			});
 			expect(created.success).toBe(true);
 			expect(created.data?.item.bylines).toHaveLength(1);
@@ -732,6 +820,10 @@ describe("Content Handlers — auto-slug generation", () => {
 				translationOf: anchor.id,
 			});
 
+			// Two entries at different locales, both credited with the same
+			// translation_group (via the anchor wire id). A list endpoint
+			// returning both at once should hydrate each one against its own
+			// locale.
 			const enEntry = await handleContentCreate(db, "post", {
 				data: { title: "Hello" },
 				locale: "en",
@@ -821,6 +913,8 @@ describe("Content Handlers — list total", () => {
 
 	beforeEach(async () => {
 		db = await setupTestDatabaseWithCollections();
+		// Seed enough items that limit-based pagination kicks in and we can
+		// assert total > items.length.
 		for (let i = 0; i < 8; i++) {
 			const result = await handleContentCreate(db, "post", {
 				data: { title: `Post ${i}` },
@@ -840,6 +934,32 @@ describe("Content Handlers — list total", () => {
 		expect(result.data?.items).toHaveLength(2);
 		expect(result.data?.total).toBe(8);
 	});
+
+	it("serves numbered pages with the total and no cursor", async () => {
+		const pages = await Promise.all(
+			[1, 2, 3].map((page) => handleContentList(db, "post", { page, limit: 3 })),
+		);
+
+		const ids = pages.flatMap((result) => result.data?.items.map((item) => item.id) ?? []);
+		expect(pages.map((result) => result.data?.items.length)).toEqual([3, 3, 2]);
+		expect(new Set(ids).size).toBe(8);
+		expect(pages.map((result) => result.data?.total)).toEqual([8, 8, 8]);
+		expect(pages.map((result) => result.data?.nextCursor)).toEqual([
+			undefined,
+			undefined,
+			undefined,
+		]);
+	});
+
+	it.each([
+		["with a cursor", { page: 2, cursor: "cursor" }],
+		["past the safe-integer offset range", { page: Number.MAX_SAFE_INTEGER, limit: 100 }],
+	])("rejects a page %s", async (_case, params) => {
+		const result = await handleContentList(db, "post", params);
+
+		expect(result.success).toBe(false);
+		expect(result.error?.code).toBe("VALIDATION_ERROR");
+	});
 });
 
 describe("Content Handlers — slug-change auto-redirect on publish", () => {
@@ -853,6 +973,11 @@ describe("Content Handlers — slug-change auto-redirect on publish", () => {
 		await teardownTestDatabase(db);
 	});
 
+	/**
+	 * Stage a slug change the way the runtime does for revision-supporting
+	 * collections: write `_slug` into a draft revision and point the entry's
+	 * `draft_revision_id` at it, leaving the live `slug` column untouched.
+	 */
 	async function stageDraftSlugChange(
 		collection: string,
 		entryId: string,

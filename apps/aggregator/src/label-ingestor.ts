@@ -278,7 +278,9 @@ async function verifyWithKeys(
 				expectedSource,
 				publicKey: key.publicKey,
 			});
-		} catch {}
+		} catch {
+			// A retained key may not match this event; try the next observed key.
+		}
 	}
 	return null;
 }

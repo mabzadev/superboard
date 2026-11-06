@@ -1,3 +1,25 @@
+/**
+ * @emdash-cms/registry-lexicons
+ *
+ * Generated TypeScript types and runtime validation schemas for the EmDash
+ * plugin registry lexicons under `com.emdashcms.experimental.*`.
+ *
+ * EXPERIMENTAL: NSIDs and shapes will change. The stable package namespace is
+ * expected to be `com.emdashcms.package.*`. Pin to an exact version while we iterate.
+ *
+ * The exports below are namespace re-exports so consumers can write:
+ *
+ *   import { PackageProfile } from "@emdash-cms/registry-lexicons";
+ *   const profile: PackageProfile.Main = { ... };
+ *
+ * Each namespace exposes (where applicable):
+ *   - `Main`, `<Def>` interfaces — the shape of records / XRPC params / outputs
+ *   - `mainSchema`, `<def>Schema` — runtime validators from `@atcute/lexicons`
+ *
+ * The generated modules also augment `@atcute/lexicons/ambient` `Records` and
+ * `XRPCQueries` so `@atcute/client` callers get strong typing automatically.
+ */
+
 export * as AggregatorDefs from "./generated/types/com/emdashcms/experimental/aggregator/defs.js";
 export * as AggregatorGetLatestRelease from "./generated/types/com/emdashcms/experimental/aggregator/getLatestRelease.js";
 export * as AggregatorGetPackage from "./generated/types/com/emdashcms/experimental/aggregator/getPackage.js";
@@ -19,6 +41,11 @@ export * as PackageReleaseExtension from "./generated/types/com/emdashcms/experi
 export * as PublisherProfile from "./generated/types/com/emdashcms/experimental/publisher/profile.js";
 export * as PublisherVerification from "./generated/types/com/emdashcms/experimental/publisher/verification.js";
 
+/**
+ * NSID constants for the lexicons defined by this package. Useful for consumers
+ * that need to reference a record collection by string (e.g. when issuing
+ * `listRecords` or `putRecord` calls against a PDS).
+ */
 export const NSID = {
 	packageProfile: "com.emdashcms.experimental.package.profile",
 	packageProfileExtension: "com.emdashcms.experimental.package.profileExtension",
@@ -41,15 +68,31 @@ export const NSID = {
 
 export type NSIDValue = (typeof NSID)[keyof typeof NSID];
 
+export const REGISTRY_CUMULUS_ORIGIN = "https://cdn.em-da.sh";
+export const RECORD_SCOPED_BLOB_CACHE_TYPE =
+	`${NSID.aggregatorDefs}#recordScopedBlobCache` as const;
+
 const DELEGATED_RELEASE_PERMISSION = Object.freeze({
 	collection: NSID.packageRelease,
-	scope: `atproto repo:${NSID.packageRelease}?action=create`,
+	scope: `atproto repo:${NSID.packageRelease}?action=create blob:application/gzip blob:image/*`,
 } as const);
 
+/**
+ * Return the exact collection and OAuth scope set used by delegated publishing.
+ * A collection or blob-scope change requires every publisher to authorize a new grant.
+ */
 export function getDelegatedReleasePermission(): typeof DELEGATED_RELEASE_PERMISSION {
 	return DELEGATED_RELEASE_PERMISSION;
 }
 
+/**
+ * NSIDs of record-shaped lexicons in this package (one row per NSID in the
+ * publisher's repo). Embedded objects (`profileExtension`, `releaseExtension`) and shared defs
+ * (`aggregator.defs`) are excluded — they don't address their own collection.
+ *
+ * Useful for consumers building OAuth `repo:` scopes or enumerating writable
+ * collections without hand-rolling a list that drifts from the lexicons.
+ */
 export const RECORD_NSIDS = [
 	NSID.packageProfile,
 	NSID.packageRelease,
@@ -57,6 +100,13 @@ export const RECORD_NSIDS = [
 	NSID.publisherVerification,
 ] as const;
 
+/**
+ * NSIDs of query-shaped lexicons in this package (read-only XRPC methods on
+ * the aggregator). Procedures and shared defs are excluded.
+ *
+ * Useful for consumers building OAuth `rpc:` scopes or enumerating callable
+ * AppView endpoints.
+ */
 export const QUERY_NSIDS = [
 	NSID.aggregatorGetLatestRelease,
 	NSID.aggregatorGetPackage,
@@ -74,6 +124,15 @@ import type * as PackageReleaseNs from "./generated/types/com/emdashcms/experime
 import type * as PublisherProfileNs from "./generated/types/com/emdashcms/experimental/publisher/profile.js";
 import type * as PublisherVerificationNs from "./generated/types/com/emdashcms/experimental/publisher/verification.js";
 
+/**
+ * Map from `record`-shaped NSIDs to the typed record body the publisher writes
+ * to its PDS. Used by `PublishingClient.putRecord` (and any other typed-write
+ * helper) to ensure callers pass a record matching the collection's lexicon.
+ *
+ * Embedded objects (`profileExtension`, `releaseExtension`, which live inside profile and release records'
+ * `extensions` map) and query/procedure NSIDs (the `aggregator.*` ones) are
+ * deliberately absent -- they aren't standalone repo collections.
+ */
 export interface RegistryRecords {
 	"com.emdashcms.experimental.package.profile": PackageProfileNs.Main;
 	"com.emdashcms.experimental.package.release": PackageReleaseNs.Main;

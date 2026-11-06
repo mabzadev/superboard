@@ -1,4 +1,10 @@
-import Database from "better-sqlite3";
+/**
+ * Visible term counts are demand-driven: the aggregate over the assignment
+ * pivot runs only for a caller that asked for counts. Assertions are on the SQL
+ * actually executed, because with no object-cache backend `cachedQuery` is a
+ * passthrough and every render pays the aggregate again.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -6,9 +12,11 @@ import { runMigrations } from "../../../../../../packages/core/src/database/migr
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
 import { TaxonomyRepository } from "../../../../../../packages/core/src/database/repositories/taxonomy.js";
 import type { Database as DatabaseSchema } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { runWithContext } from "../../../../../../packages/core/src/request-context.js";
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 
+// Mock loader.getDb so the runtime taxonomy functions read from our test db.
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 	getDb: vi.fn(),
 }));
@@ -17,12 +25,15 @@ import { prefetchLayoutData } from "../../../../../../packages/core/src/astro/pr
 import { getDb } from "../../../../../../packages/core/src/loader.js";
 import {
 	getTaxonomyTerms,
+	getTerm,
 	invalidateTermCache,
 	resetTaxonomyDefsCacheForTests,
 } from "../../../../../../packages/core/src/taxonomies/index.js";
 
+/** SQL of every query executed against the test database. */
 let queries: string[] = [];
 
+/** `per_collection` is the visible-count aggregate's subquery alias. */
 function countAggregateQueries(): string[] {
 	return queries.filter((q) => q.includes("per_collection"));
 }
@@ -47,13 +58,16 @@ describe("visible term counts are only computed on demand", () => {
 		resetTaxonomyDefsCacheForTests();
 		invalidateTermCache();
 
+		// Migrations seed the `category` (hierarchical) and `tag` defs declaring
+		// a `posts` collection; point them at the collection this test creates so
+		// the aggregate runs against a real table.
 		await new SchemaRegistry(db).createCollection({
 			slug: "post",
 			label: "Posts",
 			labelSingular: "Post",
 		});
 		await db
-			.updateTable("_emdash_taxonomy_defs")
+			.updateTable("_emdash_taxonomy_def_groups")
 			.set({ collections: JSON.stringify(["post"]) })
 			.where("name", "in", ["category", "tag"])
 			.execute();
@@ -103,6 +117,7 @@ describe("visible term counts are only computed on demand", () => {
 			await prefetchLayoutData();
 
 			expect(countAggregateQueries()).toEqual([]);
+			// The term lists themselves are still warmed, one query per taxonomy.
 			expect(termListQueries()).toHaveLength(2);
 		});
 	});
@@ -120,6 +135,7 @@ describe("visible term counts are only computed on demand", () => {
 			const categories = await getTaxonomyTerms("category");
 			expect(categories[0]!.count).toBe(2);
 			expect(categories[0]!.children[0]!.count).toBe(1);
+			// One aggregate, and no second read of the warmed term list.
 			expect(countAggregateQueries()).toHaveLength(1);
 			expect(termListQueries()).toEqual([]);
 		});
@@ -149,5 +165,39 @@ describe("visible term counts are only computed on demand", () => {
 				expect(countAggregateQueries(), `aggregate run ${run}`).toHaveLength(1);
 			});
 		}
+	});
+
+	it("does not aggregate counts for a getTerm caller that opts out", async () => {
+		await runWithContext({ editMode: false }, async () => {
+			queries = [];
+			const term = await getTerm("category", "tech", { includeCounts: false });
+
+			expect(term!.slug).toBe("tech");
+			expect(term!.children.map((c) => c.slug)).toEqual(["web"]);
+			expect(term).not.toHaveProperty("count");
+			expect(countAggregateQueries()).toEqual([]);
+		});
+	});
+
+	it("aggregates once for a getTerm caller that wants counts", async () => {
+		await runWithContext({ editMode: false }, async () => {
+			queries = [];
+			const term = await getTerm("category", "tech");
+
+			expect(term!.count).toBe(2);
+			expect(countAggregateQueries()).toHaveLength(1);
+		});
+	});
+
+	it("shares one request-cached count map across getTerm calls", async () => {
+		await runWithContext({ editMode: false }, async () => {
+			queries = [];
+			const tech = await getTerm("category", "tech");
+			const web = await getTerm("category", "web");
+
+			expect(tech!.count).toBe(2);
+			expect(web!.count).toBe(1);
+			expect(countAggregateQueries()).toHaveLength(1);
+		});
 	});
 });

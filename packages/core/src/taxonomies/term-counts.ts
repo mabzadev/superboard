@@ -1,9 +1,29 @@
+/**
+ * Shared visible-usage counts for taxonomy terms (issue #581).
+ *
+ * `content_taxonomies` rows are written for every entry regardless of status
+ * and are never pruned on unpublish/trash, so counting the pivot directly
+ * inflates counts with drafts and soft-deleted entries. Every user-facing
+ * count (public widget, single-term page, admin term list) must instead count
+ * only entries that have completed publication:
+ * `status = 'published'` AND `deleted_at IS NULL`.
+ *
+ * The public render path is latency-sensitive on D1, so per-collection counts
+ * are combined with UNION ALL — one query per taxonomy, never one per
+ * collection, split only where the backend caps compound-SELECT terms.
+ */
+
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 
 import { buildStatusCondition, compoundSelectLimit } from "../database/dialect-helpers.js";
 import type { Database } from "../database/types.js";
 import { validateIdentifier } from "../database/validate.js";
+import { localeMatches } from "../i18n/query.js";
+import {
+	filterToRegisteredCollections,
+	noteStaleRegisteredCollections,
+} from "../schema/collection-slugs-cache.js";
 import { chunks } from "../utils/chunks.js";
 import { isMissingTableError } from "../utils/db-errors.js";
 
@@ -12,6 +32,22 @@ interface CountRow {
 	count: number | string | bigint;
 }
 
+/**
+ * Per-collection count branch. `taxonomy_id` stores the term's
+ * translation_group, so results are keyed by group (locale-independent) and
+ * each assignment is counted once per content translation group. When a
+ * locale is provided, only that group's matching content row contributes.
+ *
+ * Scoping to the taxonomy uses `translation_group IN (...)` rather than a
+ * join on `taxonomies.id` — the anchor row (id == group) can be deleted while
+ * sibling translations survive, and a plain join on `translation_group` would
+ * multiply counts by the number of locales.
+ *
+ * CROSS JOIN with the join predicate in WHERE keeps stats-blind SQLite/D1 from
+ * reordering content_taxonomies out of the outer position; it touches ec_* only
+ * through the translation-group index. Postgres treats this as an ordinary
+ * inner join and plans freely.
+ */
 function collectionBranch(
 	db: Kysely<Database>,
 	taxonomyName: string,
@@ -25,7 +61,7 @@ function collectionBranch(
 		WHERE e.translation_group = ct.entry_id
 			AND ct.collection = ${collection}
 			AND ct.taxonomy_id IN (SELECT translation_group FROM taxonomies WHERE name = ${taxonomyName})
-			${locale ? sql`AND e.locale = ${locale}` : sql``}
+			${locale ? sql`AND ${localeMatches("e.locale", locale)}` : sql``}
 			AND ${buildStatusCondition(db, "published", "e")}
 			AND e.deleted_at IS NULL
 		GROUP BY ct.taxonomy_id`;
@@ -55,6 +91,10 @@ function addCounts(into: Map<string, number>, from: Map<string, number>): void {
 	for (const [group, count] of from) into.set(group, (into.get(group) ?? 0) + count);
 }
 
+/**
+ * Counts for one batch of collections, degrading to a query per collection
+ * when a declared collection has no ec_* table so the rest still contribute.
+ */
 async function runBatch(
 	db: Kysely<Database>,
 	taxonomyName: string,
@@ -65,6 +105,11 @@ async function runBatch(
 		return await runCounts(db, taxonomyName, collections, locale);
 	} catch (error) {
 		if (!isMissingTableError(error)) throw error;
+		// The slug filter let a missing table through: the collection was
+		// deleted on another isolate (stale cache) or the registry drifted
+		// from the physical schema. Window-gated, so the delete case stops
+		// sending failing statements within one revalidation window.
+		noteStaleRegisteredCollections();
 	}
 
 	const counts = new Map<string, number>();
@@ -78,6 +123,34 @@ async function runBatch(
 	return counts;
 }
 
+/**
+ * Count publicly-visible term assignments for one taxonomy, keyed by the
+ * term's translation_group (what `content_taxonomies.taxonomy_id` stores).
+ * When `locale` is provided, only entries in that locale contribute. Omitting
+ * it preserves the locale-agnostic API used by legacy callers.
+ *
+ * Counts are scoped to the taxonomy's declared collections — pass
+ * `TaxonomyDef.collections` (`_emdash_taxonomy_defs.collections`). Declared
+ * collections without a `_emdash_collections` row (the migration-seeded
+ * defaults declare `posts` unconditionally) are filtered out before any SQL
+ * is built, so no statement referencing a missing `ec_*` table is sent — a
+ * failed statement is logged by the database even when the caller recovers,
+ * flooding D1 observability with phantom errors. The missing-table guards in
+ * `runBatch` stay as the backstop for registry/table drift (e.g. a partially
+ * applied D1 create) and for a table dropped mid-flight, yielding a
+ * partial-but-correct count rather than a throw.
+ *
+ * One database round-trip for the whole taxonomy (UNION ALL across
+ * collections). On a backend that caps compound-SELECT terms — D1 allows five
+ * — the branches are split into one statement per batch, since a taxonomy
+ * declaring more collections than that would otherwise take down every path
+ * that shows counts. Per-collection sums are commutative, so batching cannot
+ * change the total.
+ *
+ * Callers on the public render path should go through the request-cached
+ * wrapper in `taxonomies/index.ts` so a page rendering both the widget and a
+ * term detail shares one computation.
+ */
 export async function fetchVisibleTermCounts(
 	db: Kysely<Database>,
 	taxonomyName: string,
@@ -88,8 +161,11 @@ export async function fetchVisibleTermCounts(
 	for (const collection of unique) validateIdentifier(collection, "collection slug");
 	if (unique.length === 0) return new Map();
 
+	const present = await filterToRegisteredCollections(db, unique);
+	if (present.length === 0) return new Map();
+
 	const limit = compoundSelectLimit(db);
-	const batched = limit === null ? [unique] : chunks(unique, limit);
+	const batched = limit === null ? [present] : chunks(present, limit);
 	const batches = await Promise.all(
 		batched.map((batch) => runBatch(db, taxonomyName, batch, locale)),
 	);

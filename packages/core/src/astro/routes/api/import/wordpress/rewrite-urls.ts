@@ -1,3 +1,15 @@
+/**
+ * WordPress URL rewrite endpoint
+ *
+ * POST /_emdash/api/import/wordpress/rewrite-urls
+ *
+ * Rewrites old WordPress media URLs in Portable Text content
+ * to point to newly imported EmDash media URLs.
+ *
+ * Handles URL variants (e.g., image.jpg vs image.jpg?w=200) by matching
+ * on the base URL path without query parameters.
+ */
+
 import type { APIRoute } from "astro";
 import { sql } from "kysely";
 
@@ -21,9 +33,13 @@ import {
 import type { PortableTextBlock } from "./rewrite-url-helpers.js";
 
 export interface RewriteUrlsResult {
+	/** Total items updated */
 	updated: number;
+	/** Updates by collection */
 	byCollection: Record<string, number>;
+	/** URLs that were rewritten */
 	urlsRewritten: number;
+	/** Any errors encountered */
 	errors: Array<{ collection: string; id: string; error: string }>;
 }
 
@@ -91,8 +107,10 @@ export async function rewriteUrls(
 		}
 	};
 
+	// Build base URL map for flexible matching
 	const baseMap = buildBaseUrlMap(urlMap);
 
+	// Get all collections or filter to specified ones
 	const allCollections = await registry.listCollections();
 	const targetCollections = collections?.length
 		? allCollections.filter((c) => collections.includes(c.slug))
@@ -100,18 +118,22 @@ export async function rewriteUrls(
 
 	try {
 		for (const collection of targetCollections) {
+			// Get fields that might contain URLs
 			const fields = await registry.listFields(collection.id);
 			const portableTextFields = fields.filter((f) => f.type === "portableText");
 			const stringFields = fields.filter((f) => ["text", "string"].includes(f.type));
+			// Image and file fields store URLs directly as TEXT
 			const mediaFields = fields.filter((f) => ["image", "file"].includes(f.type));
 
 			if (portableTextFields.length === 0 && stringFields.length === 0 && mediaFields.length === 0)
 				continue;
 
+			// Get table name
 			validateIdentifier(collection.slug, "collection slug");
 			const tableName = `ec_${collection.slug}`;
 
 			try {
+				// Query all rows
 				const rows = await sql<{ id: string; [key: string]: unknown }>`
 				SELECT * FROM ${sql.ref(tableName)}
 				WHERE deleted_at IS NULL
@@ -122,6 +144,7 @@ export async function rewriteUrls(
 					const updates: Record<string, unknown> = {};
 					let rowUrlsRewritten = 0;
 
+					// Handle Portable Text fields - parse JSON and rewrite URLs in blocks
 					for (const field of portableTextFields) {
 						const value = row[field.slug];
 						if (!value || typeof value !== "string") continue;
@@ -139,6 +162,7 @@ export async function rewriteUrls(
 								rowUrlsRewritten += rewriteResult.urlsRewritten;
 							}
 						} catch {
+							// Not valid JSON, try string replacement as fallback
 							const stringResult = rewriteStringUrls(value, urlMap, baseMap);
 							if (stringResult.changed) {
 								updates[field.slug] = stringResult.newValue;
@@ -148,6 +172,7 @@ export async function rewriteUrls(
 						}
 					}
 
+					// Handle string/text fields - simple string replacement
 					for (const field of stringFields) {
 						const value = row[field.slug];
 						if (!value || typeof value !== "string") continue;
@@ -160,12 +185,17 @@ export async function rewriteUrls(
 						}
 					}
 
+					// Handle image/file fields - normalize to MediaValue objects
 					for (const field of mediaFields) {
 						const value = row[field.slug];
 						if (!value || typeof value !== "string") continue;
 
+						// Values are stored as JSON MediaValue objects (e.g. featured_image from
+						// import normalizes to {"provider":"external","src":"<wp url>"}). Match on the
+						// inner `src`, falling back to the raw value for legacy bare-URL rows.
 						const newUrl = findMatchingUrl(extractMediaUrl(value), urlMap, baseMap);
 						if (newUrl) {
+							// Normalize into a proper MediaValue instead of storing a bare URL
 							try {
 								const normalized = await normalizeMediaValue(newUrl, getProvider);
 								updates[field.slug] = normalized ? JSON.stringify(normalized) : newUrl;
@@ -179,6 +209,7 @@ export async function rewriteUrls(
 
 					if (rowUpdated) {
 						try {
+							// Build update query dynamically
 							// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Kysely dynamic table requires type assertion
 							let query = db.updateTable(tableName as any).where("id", "=", row.id);
 

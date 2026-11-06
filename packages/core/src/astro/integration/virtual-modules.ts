@@ -1,3 +1,11 @@
+/**
+ * Virtual Module Generators
+ *
+ * Functions that generate virtual module content for Vite.
+ * These modules statically import configured dependencies
+ * so Vite can properly resolve and bundle them.
+ */
+
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -9,10 +17,13 @@ import type { PluginDescriptor } from "./runtime.js";
 
 const TS_SOURCE_EXT_RE = /^\.(ts|tsx|mts|cts|jsx)$/;
 
+/** Pattern to remove scoped package prefix from plugin ID */
 const SCOPED_PREFIX_PATTERN = /^@[^/]+\/plugin-/;
 
+/** Pattern to remove emdash-plugin- prefix from plugin ID */
 const EMDASH_PREFIX_PATTERN = /^emdash-plugin-/;
 
+// Virtual module IDs
 export const VIRTUAL_CONFIG_ID = "virtual:emdash/config";
 export const RESOLVED_VIRTUAL_CONFIG_ID = "\0" + VIRTUAL_CONFIG_ID;
 
@@ -64,10 +75,26 @@ export const RESOLVED_VIRTUAL_ENV_ID = "\0" + VIRTUAL_ENV_ID;
 export const VIRTUAL_BUILD_ID = "virtual:emdash/build";
 export const RESOLVED_VIRTUAL_BUILD_ID = "\0" + VIRTUAL_BUILD_ID;
 
+/**
+ * Generates the config virtual module.
+ */
 export function generateConfigModule(serializableConfig: Record<string, unknown>): string {
 	return `export default ${JSON.stringify(serializableConfig)};`;
 }
 
+/**
+ * Generates the dialect virtual module.
+ *
+ * Adapters that set `supportsRequestScope: true` on their descriptor are
+ * expected to export `createRequestScopedDb` from their runtime entrypoint;
+ * the generator re-exports it so middleware can ask for a per-request Kysely
+ * (used for D1 Sessions API, bookmark cookies, read-replica routing). Other
+ * adapters get a stub that returns null.
+ *
+ * Adapters independently opt into the cold-start coalescing dialect. Keeping
+ * this capability explicit prevents bundlers from probing exports that do not
+ * exist on SQLite, libSQL, PostgreSQL, or other adapters.
+ */
 export function generateDialectModule(opts: {
 	entrypoint?: string;
 	type?: string;
@@ -117,6 +144,10 @@ export const createRequestScopedDb = (_opts) => null;
 `;
 }
 
+/**
+ * Generates the storage virtual module.
+ * Statically imports the configured storage adapter.
+ */
 export function generateStorageModule(storageEntrypoint?: string): string {
 	if (!storageEntrypoint) {
 		return `export const createStorage = undefined;`;
@@ -127,6 +158,14 @@ export const createStorage = _createStorage;
 `;
 }
 
+/**
+ * Generates the object-cache virtual module.
+ *
+ * Statically imports the configured object-cache backend's `createObjectCache`
+ * factory and embeds its serializable config. When no object cache is
+ * configured, exports `undefined` so the runtime read-through layer becomes a
+ * transparent passthrough (cache off by default).
+ */
 export function generateObjectCacheModule(
 	entrypoint?: string,
 	config?: Record<string, unknown>,
@@ -144,6 +183,10 @@ export const objectCacheConfig = ${JSON.stringify(config ?? {})};
 `;
 }
 
+/**
+ * Generates the auth virtual module.
+ * Statically imports the configured auth provider.
+ */
 export function generateAuthModule(authEntrypoint?: string): string {
 	if (!authEntrypoint) {
 		return `export const authenticate = undefined;`;
@@ -154,6 +197,15 @@ export const authenticate = _authenticate;
 `;
 }
 
+/**
+ * Generates the auth providers module.
+ *
+ * Statically imports each auth provider's `adminEntry` module and exports
+ * a registry keyed by provider ID. The admin UI uses this to render
+ * provider-specific login buttons/forms and setup steps.
+ *
+ * Follows the same pattern as `generateAdminRegistryModule()` for plugins.
+ */
 export function generateAuthProvidersModule(descriptors: AuthProviderDescriptor[]): string {
 	const withAdmin = descriptors.filter((d) => d.adminEntry);
 
@@ -182,6 +234,21 @@ ${entries.join("\n")}
 `;
 }
 
+/**
+ * Generates the plugins module.
+ * Imports and instantiates all plugins at runtime.
+ *
+ * Handles two plugin formats:
+ * - **Native**: imports `createPlugin` and calls it with options
+ * - **Standard**: imports the default export and wraps it with `adaptSandboxEntry`
+ *
+ * The format is determined by `descriptor.format`:
+ * - `"standard"` -- uses adaptSandboxEntry
+ * - `"native"` or undefined -- uses createPlugin
+ *
+ * This is critical for Cloudflare Workers where globals don't persist
+ * between build time and runtime.
+ */
 export function generatePluginsModule(descriptors: PluginDescriptor[]): string {
 	if (descriptors.length === 0) {
 		return `export const plugins = [];`;
@@ -190,9 +257,16 @@ export function generatePluginsModule(descriptors: PluginDescriptor[]): string {
 	const imports: string[] = [];
 	const instantiations: string[] = [];
 
+	// Track whether we need the adapter import
 	let needsAdapter = false;
 
 	descriptors.forEach((descriptor, index) => {
+		// Every `plugins: []` entry must resolve to a file/package entrypoint that
+		// can be statically imported and bundled at build time. An in-process
+		// `definePlugin({...})` result passed directly has no entrypoint; without
+		// this guard the generator emitted `import pluginDefN from "undefined";`,
+		// which failed deep in Rollup with `failed to resolve import "undefined"`
+		// (#1416). Fail fast with an actionable message instead.
 		if (!descriptor.entrypoint) {
 			throw new Error(
 				`[emdash] Plugin "${descriptor.id}" has no \`entrypoint\`. The astro integration's ` +
@@ -203,6 +277,7 @@ export function generatePluginsModule(descriptors: PluginDescriptor[]): string {
 			);
 		}
 		if (descriptor.format === "standard") {
+			// Standard format: import default export, wrap with adaptSandboxEntry
 			needsAdapter = true;
 			const varName = `pluginDef${index}`;
 			imports.push(`import ${varName} from "${descriptor.entrypoint}";`);
@@ -215,12 +290,16 @@ export function generatePluginsModule(descriptors: PluginDescriptor[]): string {
 					storage: descriptor.storage,
 					adminPages: descriptor.adminPages,
 					adminWidgets: descriptor.adminWidgets,
+					editorPanels: descriptor.editorPanels,
+					editorActions: descriptor.editorActions,
 					settingsSchema: descriptor.settingsSchema,
 					portableTextBlocks: descriptor.portableTextBlocks,
 					fieldWidgets: descriptor.fieldWidgets,
+					mcp: descriptor.mcp,
 				})})`,
 			);
 		} else {
+			// Native format: import createPlugin and call with options
 			const varName = `createPlugin${index}`;
 			imports.push(`import { createPlugin as ${varName} } from "${descriptor.entrypoint}";`);
 			instantiations.push(`${varName}(${JSON.stringify(descriptor.options ?? {})})`);
@@ -228,7 +307,7 @@ export function generatePluginsModule(descriptors: PluginDescriptor[]): string {
 	});
 
 	const adapterImport = needsAdapter
-		? `import { adaptSandboxEntry } from "emdash/plugins/adapt-sandbox-entry";\n`
+		? `import { adaptSandboxEntry } from "emdash/internal/plugins/adapt-sandbox-entry";\n`
 		: "";
 
 	return `
@@ -244,7 +323,12 @@ export const plugins = [
 `;
 }
 
+/**
+ * Generates the admin registry module.
+ * Uses adminEntry from plugin descriptors to statically import admin modules.
+ */
 export function generateAdminRegistryModule(descriptors: PluginDescriptor[]): string {
+	// Filter to descriptors with admin entries
 	const adminDescriptors = descriptors.filter((d) => d.adminEntry);
 
 	if (adminDescriptors.length === 0) {
@@ -256,6 +340,7 @@ export function generateAdminRegistryModule(descriptors: PluginDescriptor[]): st
 
 	adminDescriptors.forEach((descriptor, index) => {
 		const varName = `admin${index}`;
+		// Use explicit ID from descriptor if available, otherwise derive from entrypoint
 		const pluginId =
 			descriptor.id ??
 			descriptor.entrypoint.replace(SCOPED_PREFIX_PATTERN, "").replace(EMDASH_PREFIX_PATTERN, "");
@@ -274,8 +359,17 @@ ${entries.join("\n")}
 `;
 }
 
+/**
+ * Generates the sandbox runner module.
+ * Imports the configured sandbox runner factory or provides a noop default.
+ *
+ * When sandbox is explicitly false (debugging escape hatch), we still mark
+ * sandboxEnabled = true so sandboxed plugin entries are loaded, but we use
+ * the noop runner which falls through to in-process loading via adaptSandboxEntry.
+ */
 export function generateSandboxRunnerModule(sandboxRunner?: string, sandbox?: boolean): string {
 	if (!sandboxRunner) {
+		// No sandbox runner configured - sandboxed plugins disabled
 		return `
 // No sandbox runner configured - sandboxed plugins disabled
 import { createNoopSandboxRunner } from "emdash";
@@ -286,6 +380,8 @@ export const sandboxEnabled = false;
 	}
 
 	if (sandbox === false) {
+		// sandbox: false escape hatch - plugins are loaded but run in-process
+		// (no isolation, for debugging)
 		return `
 // Sandbox explicitly disabled (sandbox: false) - plugins run in-process
 import { createNoopSandboxRunner } from "emdash";
@@ -305,15 +401,21 @@ export const sandboxEnabled = true;
 `;
 }
 
+/**
+ * Generates the media providers module.
+ * Imports and instantiates configured media providers at runtime.
+ */
 export function generateMediaProvidersModule(descriptors: MediaProviderDescriptor[]): string {
+	// Always include local provider by default unless explicitly disabled
 	const localDisabled = descriptors.some((d) => d.id === "local" && d.config.enabled === false);
 
 	const imports: string[] = [];
 	const entries: string[] = [];
 
+	// Add local provider first if not disabled
 	if (!localDisabled) {
 		imports.push(
-			`import { createMediaProvider as createLocalProvider } from "emdash/media/local-runtime";`,
+			`import { createMediaProvider as createLocalProvider } from "emdash/internal/media/local-runtime";`,
 		);
 		entries.push(`{
 	id: "local",
@@ -324,9 +426,10 @@ export function generateMediaProvidersModule(descriptors: MediaProviderDescripto
 }`);
 	}
 
+	// Add custom providers
 	descriptors
 		.filter((d) => d.id !== "local" || d.config.enabled !== false)
-		.filter((d) => d.id !== "local")
+		.filter((d) => d.id !== "local") // Skip local if we already added it
 		.forEach((descriptor, index) => {
 			const varName = `createProvider${index}`;
 			imports.push(`import { createMediaProvider as ${varName} } from "${descriptor.entrypoint}";`);
@@ -350,6 +453,10 @@ export const mediaProviders = [
 `;
 }
 
+/**
+ * Generates the block components module.
+ * Collects and merges `blockComponents` exports from plugin component entries.
+ */
 export function generateBlockComponentsModule(descriptors: PluginDescriptor[]): string {
 	const withComponents = descriptors.filter((d) => d.componentsEntry);
 	if (withComponents.length === 0) {
@@ -366,6 +473,18 @@ export function generateBlockComponentsModule(descriptors: PluginDescriptor[]): 
 	return `${imports.join("\n")}\nexport const pluginBlockComponents = { ${spreads.join(", ")} };`;
 }
 
+/**
+ * Generates the wait-until virtual module.
+ *
+ * Under @astrojs/cloudflare, re-exports `waitUntil` from `cloudflare:workers`
+ * so `after(fn)` in core can extend the worker's lifetime past the response
+ * for deferred bookkeeping. For any other adapter, exports `undefined` —
+ * Node's long-lived event loop keeps deferred promises running without a
+ * lifetime extender.
+ *
+ * Keeping the adapter check here — rather than in core — means core itself
+ * has no Cloudflare-specific imports or code paths.
+ */
 export function generateWaitUntilModule(adapterName: string | undefined): string {
 	if (adapterName === "@astrojs/cloudflare") {
 		return `export { waitUntil } from "cloudflare:workers";`;
@@ -373,6 +492,18 @@ export function generateWaitUntilModule(adapterName: string | undefined): string
 	return `export const waitUntil = undefined;`;
 }
 
+/**
+ * Generates the env virtual module.
+ *
+ * Under @astrojs/cloudflare, re-exports `env` from `cloudflare:workers` so
+ * routes can read Worker bindings/secrets without touching
+ * `Astro.locals.runtime.env`, which Astro 6+ removed (accessing it throws
+ * rather than returning undefined, so `locals.runtime?.env` optional-chaining
+ * doesn't help -- see #1736). For any other adapter, exports `undefined` so
+ * callers fall back to `import.meta.env`. Mirrors generateWaitUntilModule:
+ * core stays adapter-agnostic, with no direct `cloudflare:workers` import
+ * that would fail to resolve under a Node build.
+ */
 export function generateEnvModule(adapterName: string | undefined): string {
 	if (adapterName === "@astrojs/cloudflare") {
 		return `export { env } from "cloudflare:workers";`;
@@ -380,20 +511,40 @@ export function generateEnvModule(adapterName: string | undefined): string {
 	return `export const env = undefined;`;
 }
 
+/**
+ * Generates the build virtual module.
+ *
+ * Content-hashed `/_astro/*` names make the response depend on the build, not
+ * only on the content. Exposing the build timestamp lets the middleware fold
+ * that dimension into the cache validator, so a code-only deploy stops
+ * answering conditional requests with 304 while the assets the cached HTML
+ * references are already gone.
+ */
 export function generateBuildModule(buildTime: number): string {
 	return `export const buildTime = ${buildTime};`;
 }
 
-export function generateSchedulerModule(
-	adapterName: string | undefined,
-	command: "build" | "serve" | undefined,
-): string {
-	if (adapterName === "@astrojs/cloudflare" && command !== "serve") {
-		return `// Serverless build: an external Cron Trigger drives scheduled work.
+/**
+ * Generates the scheduler virtual module.
+ *
+ * Decides — at build time, from the Astro adapter — whether the runtime gets a
+ * long-lived timer heartbeat. Cloudflare Workers have no persistent timers, so
+ * the Worker's `scheduled()` handler drives `runScheduledTasks()` instead. In
+ * local dev the long-lived Vite host invokes an EmDash-owned route that runs
+ * the same maintenance inside workerd. Other adapters (Node, Bun) get a
+ * `NodeCronScheduler` factory.
+ *
+ * Keeping the adapter check here — rather than in core's runtime — means the
+ * runtime has no Cloudflare-specific code path; it just calls `createScheduler`
+ * if one was injected. Mirrors the wait-until module's approach.
+ */
+export function generateSchedulerModule(adapterName: string | undefined): string {
+	if (adapterName === "@astrojs/cloudflare") {
+		return `// Cloudflare: an external platform event drives scheduled work.
 export const createScheduler = null;
 `;
 	}
-	return `// Long-lived runtime (or local dev): drive scheduled work from an in-process timer.
+	return `// Long-lived runtime: drive scheduled work from an in-process timer.
 import { NodeCronScheduler } from "emdash";
 
 export function createScheduler(executor) {
@@ -402,16 +553,38 @@ export function createScheduler(executor) {
 `;
 }
 
+/**
+ * Generates the seed virtual module.
+ * Reads the user's seed file at build time (in Node context) and embeds it,
+ * so the runtime doesn't need filesystem access (required for workerd).
+ *
+ * Search order:
+ *   1. `.emdash/seed.json`
+ *   2. `package.json` → `emdash.seed` reference
+ *   3. `seed/seed.json` (conventional template path)
+ *
+ * Exports `userSeed` (user's seed or null) and `seed` (user's seed or default).
+ *
+ * When no user seed is found, falls back to the built-in default seed and
+ * (if `warnOnFallback` is true) logs a warning so misconfiguration is visible
+ * during `astro dev`. Build/preview/sync stay silent so sites that
+ * intentionally use the default seed (e.g. the blank template) don't
+ * generate noisy logs.
+ */
 export function generateSeedModule(projectRoot: string, warnOnFallback = false): string {
 	let userSeedJson: string | null = null;
 
+	// Try .emdash/seed.json
 	try {
 		const seedPath = resolve(projectRoot, ".emdash", "seed.json");
 		const content = readFileSync(seedPath, "utf-8");
-		JSON.parse(content);
+		JSON.parse(content); // validate
 		userSeedJson = content;
-	} catch {}
+	} catch {
+		// Not found, try next
+	}
 
+	// Try package.json → emdash.seed reference
 	if (!userSeedJson) {
 		try {
 			const pkgPath = resolve(projectRoot, "package.json");
@@ -421,25 +594,33 @@ export function generateSeedModule(projectRoot: string, warnOnFallback = false):
 			if (pkg.emdash?.seed) {
 				const seedPath = resolve(projectRoot, pkg.emdash.seed);
 				const content = readFileSync(seedPath, "utf-8");
-				JSON.parse(content);
+				JSON.parse(content); // validate
 				userSeedJson = content;
 			}
-		} catch {}
+		} catch {
+			// Not found
+		}
 	}
 
+	// Try conventional seed/seed.json fallback
 	if (!userSeedJson) {
 		try {
 			const seedPath = resolve(projectRoot, "seed", "seed.json");
 			const content = readFileSync(seedPath, "utf-8");
-			JSON.parse(content);
+			JSON.parse(content); // validate
 			userSeedJson = content;
-		} catch {}
+		} catch {
+			// Not found
+		}
 	}
 
 	if (userSeedJson) {
 		return [`export const userSeed = ${userSeedJson};`, `export const seed = userSeed;`].join("\n");
 	}
 
+	// No user seed — inline the default. Caller (the Vite plugin) gates this
+	// to dev-only so production builds stay quiet for sites that intentionally
+	// rely on the default seed.
 	if (warnOnFallback) {
 		console.warn(
 			"[emdash] No user seed found at .emdash/seed.json, package.json#emdash.seed, or seed/seed.json. Falling back to the built-in default seed; the setup wizard will not offer demo content for this site.",
@@ -451,12 +632,24 @@ export function generateSeedModule(projectRoot: string, warnOnFallback = false):
 	].join("\n");
 }
 
+/**
+ * Resolve a module specifier from the project's context.
+ * Uses Node.js require.resolve with the project root as base.
+ */
 function resolveModulePathFromProject(specifier: string, projectRoot: string): string {
+	// Create require from the project's package.json location
 	const projectPackageJson = resolve(projectRoot, "package.json");
 	const require = createRequire(projectPackageJson);
 	return require.resolve(specifier);
 }
 
+/**
+ * Generates the sandboxed plugins module.
+ * Resolves plugin entrypoints to files, reads them, and embeds the code.
+ * Notifies the caller about each resolved entry so build tools can watch it.
+ *
+ * At runtime, middleware uses SandboxRunner to load these into isolates.
+ */
 export function generateSandboxedPluginsModule(
 	sandboxed: PluginDescriptor[],
 	projectRoot: string,
@@ -474,6 +667,7 @@ export const sandboxedPlugins = [];
 	for (const descriptor of sandboxed) {
 		const bundleSpecifier = descriptor.entrypoint;
 
+		// Resolve the bundle to a file path using project's require context
 		const filePath = resolveModulePathFromProject(bundleSpecifier, projectRoot);
 
 		const ext = filePath.slice(filePath.lastIndexOf("."));
@@ -490,6 +684,7 @@ export const sandboxedPlugins = [];
 
 		const code = readFileSync(filePath, "utf-8");
 
+		// Create the plugin entry with embedded code and sandbox config
 		pluginEntries.push(`{
     id: ${JSON.stringify(descriptor.id)},
     version: ${JSON.stringify(descriptor.version)},
@@ -506,6 +701,8 @@ export const sandboxedPlugins = [];
     hooks: ${JSON.stringify(descriptor.hooks ?? [])},
     adminPages: ${JSON.stringify(descriptor.adminPages ?? [])},
     adminWidgets: ${JSON.stringify(descriptor.adminWidgets ?? [])},
+    editorPanels: ${JSON.stringify(descriptor.editorPanels ?? [])},
+    editorActions: ${JSON.stringify(descriptor.editorActions ?? [])},
     settingsSchema: ${JSON.stringify(descriptor.settingsSchema)},
     portableTextBlocks: ${JSON.stringify(descriptor.portableTextBlocks ?? [])},
     fieldWidgets: ${JSON.stringify(descriptor.fieldWidgets ?? [])},

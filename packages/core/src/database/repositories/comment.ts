@@ -2,10 +2,31 @@ import { sql, type ExpressionBuilder, type Kysely } from "kysely";
 import { ulid } from "ulidx";
 
 import { invalidateCommentObjectCache } from "../../object-cache/index.js";
+import { chunks, SQL_BATCH_SIZE } from "../../utils/chunks.js";
+import { withTransaction } from "../transaction.js";
 import type { Database } from "../types.js";
 import { encodeCursor, decodeCursor, type FindManyResult } from "./types.js";
 
+/** Matches LIKE wildcard characters and the escape character itself */
 const LIKE_ESCAPE_RE = /[%_\\]/g;
+
+const DEFAULT_COMMENT_LIMIT = 50;
+const MAX_COMMENT_LIMIT = 100;
+
+/**
+ * Normalize a caller-supplied page size to a whole number in [1, MAX].
+ * A fractional value reaching SQLite's `LIMIT` errors, and a negative one
+ * disables the cap; non-finite input falls back to the default.
+ */
+function clampLimit(limit: number | undefined): number {
+	const n = Math.floor(Number(limit));
+	if (!Number.isFinite(n)) return DEFAULT_COMMENT_LIMIT;
+	return Math.min(Math.max(n, 1), MAX_COMMENT_LIMIT);
+}
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export type CommentStatus = "pending" | "approved" | "spam" | "trash";
 
@@ -26,6 +47,7 @@ export interface Comment {
 	updatedAt: string;
 }
 
+/** Public-facing comment shape — no private fields */
 export interface PublicComment {
 	id: string;
 	parentId: string | null;
@@ -34,6 +56,7 @@ export interface PublicComment {
 	body: string;
 	createdAt: string;
 	replies?: PublicComment[];
+	/** Aggregate reaction counts (`{ like: 12 }`), attached when requested. */
 	reactions?: Record<string, number>;
 }
 
@@ -59,9 +82,30 @@ export interface CommentFindOptions {
 	cursor?: string;
 }
 
+export interface PluginCommentFindOptions {
+	status?: Exclude<CommentStatus, "trash">;
+	collection?: string;
+	contentId?: string;
+	limit?: number;
+	cursor?: string;
+}
+
+export type ConditionalCommentStatusResult =
+	| { state: "updated"; comment: Comment }
+	| { state: "unchanged"; comment: Comment }
+	| { state: "conflict"; comment: Comment }
+	| { state: "not_found" };
+
+// ---------------------------------------------------------------------------
+// Repository
+// ---------------------------------------------------------------------------
+
 export class CommentRepository {
 	constructor(private db: Kysely<Database>) {}
 
+	/**
+	 * Create a new comment
+	 */
 	async create(input: CreateCommentInput): Promise<Comment> {
 		const id = ulid();
 		const now = new Date().toISOString();
@@ -97,6 +141,9 @@ export class CommentRepository {
 		return comment;
 	}
 
+	/**
+	 * Find comment by ID
+	 */
 	async findById(id: string): Promise<Comment | null> {
 		const row = await this.db
 			.selectFrom("_emdash_comments")
@@ -107,12 +154,16 @@ export class CommentRepository {
 		return row ? this.rowToComment(row) : null;
 	}
 
+	/**
+	 * Find comments for a content item with optional status filter.
+	 * Results are ordered by created_at ASC (oldest first) for display.
+	 */
 	async findByContent(
 		collection: string,
 		contentId: string,
 		options: { status?: CommentStatus; limit?: number; cursor?: string } = {},
 	): Promise<FindManyResult<Comment>> {
-		const limit = Math.min(options.limit || 50, 100);
+		const limit = clampLimit(options.limit);
 
 		let query = this.db
 			.selectFrom("_emdash_comments")
@@ -124,6 +175,7 @@ export class CommentRepository {
 			query = query.where("status", "=", options.status);
 		}
 
+		// Cursor pagination (ascending by created_at)
 		if (options.cursor) {
 			const decoded = decodeCursor(options.cursor);
 			query = query.where((eb: ExpressionBuilder<Database, "_emdash_comments">) =>
@@ -151,11 +203,15 @@ export class CommentRepository {
 		return result;
 	}
 
+	/**
+	 * Find comments by status (moderation inbox).
+	 * Results are ordered by created_at DESC (newest first).
+	 */
 	async findByStatus(
 		status: CommentStatus,
 		options: { collection?: string; search?: string; limit?: number; cursor?: string } = {},
 	): Promise<FindManyResult<Comment>> {
-		const limit = Math.min(options.limit || 50, 100);
+		const limit = clampLimit(options.limit);
 
 		let query = this.db.selectFrom("_emdash_comments").selectAll().where("status", "=", status);
 
@@ -164,6 +220,7 @@ export class CommentRepository {
 		}
 
 		if (options.search) {
+			// Escape LIKE wildcards to prevent them acting as SQL pattern characters
 			const escaped = options.search.replace(LIKE_ESCAPE_RE, (ch) => `\\${ch}`);
 			const term = `%${escaped}%`;
 			query = query.where((eb: ExpressionBuilder<Database, "_emdash_comments">) =>
@@ -175,6 +232,7 @@ export class CommentRepository {
 			);
 		}
 
+		// Cursor pagination (descending by created_at)
 		if (options.cursor) {
 			const decoded = decodeCursor(options.cursor);
 			query = query.where((eb: ExpressionBuilder<Database, "_emdash_comments">) =>
@@ -202,6 +260,53 @@ export class CommentRepository {
 		return result;
 	}
 
+	/** List non-trashed comments for capability-gated plugin administration. */
+	async findForPlugin(options: PluginCommentFindOptions = {}): Promise<FindManyResult<Comment>> {
+		const limit = clampLimit(options.limit);
+		let query = this.db.selectFrom("_emdash_comments").selectAll().where("status", "!=", "trash");
+
+		if (options.status) query = query.where("status", "=", options.status);
+		if (options.collection) query = query.where("collection", "=", options.collection);
+		if (options.contentId) query = query.where("content_id", "=", options.contentId);
+		if (options.cursor) {
+			const decoded = decodeCursor(options.cursor);
+			query = query.where((eb: ExpressionBuilder<Database, "_emdash_comments">) =>
+				eb.or([
+					eb("created_at", "<", decoded.orderValue),
+					eb.and([eb("created_at", "=", decoded.orderValue), eb("id", "<", decoded.id)]),
+				]),
+			);
+		}
+
+		const rows = await query
+			.orderBy("created_at", "desc")
+			.orderBy("id", "desc")
+			.limit(limit + 1)
+			.execute();
+		const items = rows.slice(0, limit).map((row) => this.rowToComment(row));
+		const result: FindManyResult<Comment> = { items };
+		if (rows.length > limit && items.length > 0) {
+			const last = items.at(-1)!;
+			result.nextCursor = encodeCursor(last.createdAt, last.id);
+		}
+		return result;
+	}
+
+	async countForPlugin(options: Omit<PluginCommentFindOptions, "limit" | "cursor"> = {}) {
+		let query = this.db
+			.selectFrom("_emdash_comments")
+			.select((eb) => eb.fn.count("id").as("count"))
+			.where("status", "!=", "trash");
+		if (options.status) query = query.where("status", "=", options.status);
+		if (options.collection) query = query.where("collection", "=", options.collection);
+		if (options.contentId) query = query.where("content_id", "=", options.contentId);
+		const result = await query.executeTakeFirst();
+		return Number(result?.count ?? 0);
+	}
+
+	/**
+	 * Update comment status
+	 */
 	async updateStatus(id: string, status: CommentStatus): Promise<Comment | null> {
 		const now = new Date().toISOString();
 
@@ -215,21 +320,63 @@ export class CommentRepository {
 		return this.findById(id);
 	}
 
+	/** Atomically change status only when the caller's observed state is current. */
+	async updateStatusIf(
+		id: string,
+		status: CommentStatus,
+		expectedStatus: CommentStatus,
+	): Promise<ConditionalCommentStatusResult> {
+		const existing = await this.findById(id);
+		if (!existing) return { state: "not_found" };
+		if (existing.status !== expectedStatus) return { state: "conflict", comment: existing };
+		if (status === expectedStatus) return { state: "unchanged", comment: existing };
+
+		const now = new Date().toISOString();
+		const result = await this.db
+			.updateTable("_emdash_comments")
+			.set({ status, updated_at: now })
+			.where("id", "=", id)
+			.where("status", "=", expectedStatus)
+			.returningAll()
+			.executeTakeFirst();
+		if (result) {
+			invalidateCommentObjectCache();
+			return { state: "updated", comment: this.rowToComment(result) };
+		}
+
+		const current = await this.findById(id);
+		return !current ? { state: "not_found" } : { state: "conflict", comment: current };
+	}
+
+	/**
+	 * Bulk update comment statuses
+	 */
 	async bulkUpdateStatus(ids: string[], status: CommentStatus): Promise<number> {
 		if (ids.length === 0) return 0;
 
 		const now = new Date().toISOString();
 
-		const result = await this.db
-			.updateTable("_emdash_comments")
-			.set({ status, updated_at: now })
-			.where("id", "in", ids)
-			.executeTakeFirst();
+		const updatedCount = await withTransaction(this.db, async (db) => {
+			let updated = 0;
+			for (const batch of chunks([...new Set(ids)], SQL_BATCH_SIZE)) {
+				const result = await db
+					.updateTable("_emdash_comments")
+					.set({ status, updated_at: now })
+					.where("id", "in", batch)
+					.executeTakeFirst();
 
+				if (!db.isTransaction) invalidateCommentObjectCache();
+				updated += Number(result.numUpdatedRows ?? 0);
+			}
+			return updated;
+		});
 		invalidateCommentObjectCache();
-		return Number(result.numUpdatedRows ?? 0);
+		return updatedCount;
 	}
 
+	/**
+	 * Hard-delete a single comment. Replies cascade via FK.
+	 */
 	async delete(id: string): Promise<boolean> {
 		const result = await this.db
 			.deleteFrom("_emdash_comments")
@@ -240,6 +387,9 @@ export class CommentRepository {
 		return (result.numDeletedRows ?? 0) > 0;
 	}
 
+	/**
+	 * Bulk hard-delete comments
+	 */
 	async bulkDelete(ids: string[]): Promise<number> {
 		if (ids.length === 0) return 0;
 
@@ -252,6 +402,9 @@ export class CommentRepository {
 		return Number(result.numDeletedRows ?? 0);
 	}
 
+	/**
+	 * Delete all comments for a content item (cascade on content deletion)
+	 */
 	async deleteByContent(collection: string, contentId: string): Promise<number> {
 		const result = await this.db
 			.deleteFrom("_emdash_comments")
@@ -263,6 +416,9 @@ export class CommentRepository {
 		return Number(result.numDeletedRows ?? 0);
 	}
 
+	/**
+	 * Count comments for a content item, optionally filtered by status
+	 */
 	async countByContent(
 		collection: string,
 		contentId: string,
@@ -282,7 +438,15 @@ export class CommentRepository {
 		return Number(result?.count ?? 0);
 	}
 
+	/**
+	 * Count comments grouped by status (for inbox badges)
+	 *
+	 * Uses four parallel COUNT queries with WHERE filters to leverage partial indexes
+	 * (idx_comments_pending, idx_comments_approved, idx_comments_spam, idx_comments_trash)
+	 * instead of a full table GROUP BY scan.
+	 */
 	async countByStatus(): Promise<Record<CommentStatus, number>> {
+		// Execute four parallel COUNT queries, each using its partial index
 		const [pending, approved, spam, trash] = await Promise.all([
 			this.db
 				.selectFrom("_emdash_comments")
@@ -314,6 +478,10 @@ export class CommentRepository {
 		};
 	}
 
+	/**
+	 * Count approved comments from a given email address.
+	 * Used for "first time commenter" moderation logic.
+	 */
 	async countApprovedByEmail(email: string): Promise<number> {
 		const result = await this.db
 			.selectFrom("_emdash_comments")
@@ -325,6 +493,9 @@ export class CommentRepository {
 		return Number(result?.count ?? 0);
 	}
 
+	/**
+	 * Update the moderation metadata JSON on a comment
+	 */
 	async updateModerationMetadata(id: string, metadata: Record<string, unknown>): Promise<void> {
 		await this.db
 			.updateTable("_emdash_comments")
@@ -333,6 +504,13 @@ export class CommentRepository {
 			.execute();
 	}
 
+	// ---------------------------------------------------------------------------
+	// Helpers
+	// ---------------------------------------------------------------------------
+
+	/**
+	 * Assemble a flat list of comments into a threaded structure (1-level nesting)
+	 */
 	static assembleThreads(comments: Comment[]): Comment[] {
 		const roots: Comment[] = [];
 		const childrenMap = new Map<string, Comment[]>();
@@ -347,12 +525,16 @@ export class CommentRepository {
 			}
 		}
 
+		// Attach children as a non-standard property — callers map to PublicComment.replies
 		return roots.map((root) => ({
 			...root,
 			_replies: childrenMap.get(root.id) ?? [],
 		}));
 	}
 
+	/**
+	 * Convert a Comment to its public-facing shape
+	 */
 	static toPublicComment(comment: Comment & { _replies?: Comment[] }): PublicComment {
 		const pub: PublicComment = {
 			id: comment.id,
@@ -390,6 +572,10 @@ export class CommentRepository {
 		};
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Module helpers
+// ---------------------------------------------------------------------------
 
 function safeJsonParse(value: string): Record<string, unknown> | null {
 	try {

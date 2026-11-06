@@ -1,3 +1,55 @@
+/**
+ * Zod schema for `emdash-plugin.jsonc` — the publisher-authored manifest that
+ * sits next to a plugin's source and feeds the registry CLI's `publish`,
+ * `validate`, and `init` commands.
+ *
+ * Relationship to the lexicon
+ * ---------------------------
+ *
+ * This schema is NOT the lexicon. The lexicon
+ * (`com.emdashcms.experimental.package.profile`) is the on-wire atproto
+ * record format, optimised for content-addressed storage and aggregator
+ * indexing. This schema is the authoring format, optimised for a human
+ * editing a file in VS Code with `$schema`-powered IDE completion.
+ *
+ * Fields that exist in BOTH places use the lexicon's field names verbatim
+ * (`license`, `keywords`, `repo`, `name`, `description`). Fields that the
+ * publisher cannot reasonably write by hand are derived at publish time and
+ * do not appear here: `id` (full AT URI requires the publisher's DID),
+ * `type` (always `"emdash-plugin"` from this CLI), `slug` (derived from the
+ * bundled `manifest.json`'s `id`), `lastUpdated` (set at publish time),
+ * `artifacts.package` (filled in from the fetched tarball), `extensions`
+ * (computed from the bundled manifest's capabilities + allowedHosts).
+ *
+ * The translation step lives in `./translate.ts`.
+ *
+ * Single-vs-multi-author convenience
+ * ----------------------------------
+ *
+ * The lexicon stores `authors` and `security` as arrays. The overwhelmingly
+ * common case is one author and one security contact, so the manifest
+ * accepts both shapes:
+ *
+ *     // single-author
+ *     { "author": { "name": "Jane Doe" }, "security": { "email": "..." } }
+ *
+ *     // multi-author
+ *     { "authors": [{ "name": "..." }, { "name": "..." }],
+ *       "securityContacts": [{ "email": "..." }] }
+ *
+ * `loadManifest` normalises both forms to the array shape before passing to
+ * publish. You can't mix forms for the same field (e.g. `author` AND
+ * `authors`); the schema rejects that.
+ *
+ * Strict mode
+ * -----------
+ *
+ * Unknown keys are rejected with `.strict()`. This catches typos like
+ * `"licens": "MIT"` rather than letting them silently fall through. The
+ * tradeoff is that adding a field requires a CLI release; we accept that
+ * cost for v1 and may revisit after one cycle of field-add (issue #1029).
+ */
+
 import { isDid, isHandle } from "@atcute/lexicons/syntax";
 import {
 	CAPABILITY_RENAMES,
@@ -11,6 +63,35 @@ import {
 import { isValidVersionRange } from "@emdash-cms/registry-client/env";
 import { z } from "zod";
 
+// ──────────────────────────────────────────────────────────────────────────
+// Field-level schemas — exported so tests can target individual rules.
+//
+// Each field uses `.meta({ description })` so the descriptions flow into
+// the generated JSON Schema and surface as inline hover hints in editors
+// that support `$schema`-driven completion (VS Code, IntelliJ).
+// ──────────────────────────────────────────────────────────────────────────
+
+/** Grapheme caps on the short profile fields, mirroring `profile.json`. */
+const NAME_MAX_GRAPHEMES = 100;
+const DESCRIPTION_MAX_GRAPHEMES = 140;
+const AUTHOR_NAME_MAX_GRAPHEMES = 64;
+const KEYWORD_MAX_GRAPHEMES = 64;
+
+function maxGraphemes(label: string, max: number) {
+	return (value: string, ctx: z.RefinementCtx<string>) => {
+		if (countGraphemes(value) > max) {
+			ctx.addIssue({ code: "custom", message: `${label} must be <= ${max} graphemes` });
+		}
+	};
+}
+
+/**
+ * SPDX license expression. The lexicon caps this at 256 chars. We don't
+ * validate the SPDX grammar here — the registry aggregator does that and
+ * gives clearer errors. We DO refuse the empty string and obvious garbage
+ * (whitespace-only) so the publish command can surface a useful message
+ * before any network round-trip.
+ */
 export const LicenseSchema = z
 	.string()
 	.min(1, 'license must be a non-empty SPDX expression (e.g. "MIT")')
@@ -23,15 +104,21 @@ export const LicenseSchema = z
 		examples: ["MIT", "Apache-2.0", "MIT OR Apache-2.0"],
 	});
 
+/**
+ * One author. Mirrors `profile.json#author`. The lexicon says authors
+ * "SHOULD specify at least one of url or email"; we don't enforce that
+ * here because anonymous-but-named authors are a legitimate (if
+ * discouraged) shape. The publish command surfaces it as a warning.
+ */
 export const AuthorSchema = z
 	.object({
 		name: z
 			.string()
 			.min(1, "author.name cannot be empty")
 			.max(256, "author.name must be <= 256 characters")
-			.meta({ description: "Display name." }),
+			.superRefine(maxGraphemes("author.name", AUTHOR_NAME_MAX_GRAPHEMES))
+			.meta({ description: `Display name (<= ${AUTHOR_NAME_MAX_GRAPHEMES} graphemes).` }),
 		url: z
-			.string()
 			.url("author.url must be a valid URL")
 			.max(1024, "author.url must be <= 1024 characters")
 			.meta({
@@ -39,7 +126,6 @@ export const AuthorSchema = z
 			})
 			.optional(),
 		email: z
-			.string()
 			.email("author.email must be a valid email")
 			.max(256, "author.email must be <= 256 characters")
 			.meta({ description: "Author's contact email. Either this or `url` is recommended." })
@@ -51,10 +137,17 @@ export const AuthorSchema = z
 		description: "A single author entry. Mirrors the lexicon's author shape.",
 	});
 
+/**
+ * One security contact. Mirrors `profile.json#contact`. The lexicon
+ * mandates "at least one of url or email MUST be present"; Lexicon JSON
+ * can't express "required one-of", so we enforce it here. Without this
+ * check a publisher could write `{ "security": {} }` and the publish
+ * record would carry an empty contact (which aggregators reject anyway,
+ * but failing here is a better user experience).
+ */
 export const SecurityContactSchema = z
 	.object({
 		url: z
-			.string()
 			.url("security.url must be a valid URL")
 			.max(1024, "security.url must be <= 1024 characters")
 			.meta({
@@ -63,7 +156,6 @@ export const SecurityContactSchema = z
 			})
 			.optional(),
 		email: z
-			.string()
 			.email("security.email must be a valid email")
 			.max(256, "security.email must be <= 256 characters")
 			.meta({
@@ -81,6 +173,22 @@ export const SecurityContactSchema = z
 		description: "A single security contact. At least one of `url` or `email` must be present.",
 	});
 
+/**
+ * Publisher identity, used to verify the active session matches the
+ * manifest's pinned publisher at publish time. Accepts a DID or a handle.
+ *
+ * Recommended form: DID (`did:plc:...`). DIDs are durable — they survive
+ * handle changes. Handles are friendlier to read but mutable: if the
+ * publisher's handle changes, the manifest needs an update.
+ *
+ * Omitted on first publish, the CLI writes the active session's DID
+ * back into the manifest automatically. Subsequent publishes verify
+ * against the pinned value.
+ *
+ * Validation is structural only here: DID syntax (`did:method:id`) or
+ * handle syntax (`name.tld`). The actual resolve-to-DID step happens at
+ * publish time via `@atcute/identity-resolver`.
+ */
 export const PublisherSchema = z
 	.string()
 	.refine(
@@ -94,40 +202,63 @@ export const PublisherSchema = z
 		examples: ["did:plc:abc123def456", "example.com"],
 	});
 
+/** Optional human-readable display name. Mirrors `profile.json#name`. */
 export const NameSchema = z
 	.string()
 	.min(1, "name cannot be empty when set")
 	.max(1024, "name must be <= 1024 characters")
+	.superRefine(maxGraphemes("name", NAME_MAX_GRAPHEMES))
 	.meta({
 		title: "Display name",
-		description:
-			"Human-readable name shown in directory listings. Defaults to the plugin's `id` when omitted.",
+		description: `Human-readable name shown in directory listings (<= ${NAME_MAX_GRAPHEMES} graphemes). Defaults to the plugin's \`id\` when omitted.`,
 	});
 
+/** Short description. Mirrors `profile.json#description`. */
 export const DescriptionSchema = z
 	.string()
 	.min(1, "description cannot be empty when set")
 	.max(1024, "description must be <= 1024 characters")
+	.superRefine(maxGraphemes("description", DESCRIPTION_MAX_GRAPHEMES))
 	.meta({
 		title: "Description",
-		description:
-			"Short description (<= 140 graphemes by FAIR convention). Aggregators may truncate longer values when displaying in compact lists.",
+		description: `Short description (<= ${DESCRIPTION_MAX_GRAPHEMES} graphemes).`,
 	});
 
+/** Search keywords. Mirrors `profile.json#keywords`. */
 export const KeywordsSchema = z
 	.array(
-		z.string().min(1, "keyword cannot be empty").max(128, "each keyword must be <= 128 characters"),
+		z
+			.string()
+			.min(1, "keyword cannot be empty")
+			.max(128, "each keyword must be <= 128 characters")
+			.superRefine(maxGraphemes("each keyword", KEYWORD_MAX_GRAPHEMES)),
 	)
 	.max(5, "keywords array must have <= 5 entries (FAIR convention)")
 	.meta({
 		title: "Keywords",
-		description: "Search keywords (<= 5 entries, FAIR convention).",
+		description: `Search keywords (<= 5 entries, FAIR convention; each <= ${KEYWORD_MAX_GRAPHEMES} graphemes).`,
 	});
 
+/**
+ * Source repository URL. Mirrors `release.json#repo`. The lexicon accepts
+ * either an HTTPS URL or an AT URI; v1 of the CLI accepts HTTPS only.
+ * AT-URI source repos can be added in a later issue without changing the
+ * field name.
+ *
+ * We use a regex `pattern` rather than `.refine` for the https-only rule
+ * so the constraint flows through to the generated JSON Schema. Editors
+ * doing client-side validation against the schema then surface the same
+ * error the CLI does.
+ */
 export const RepoSchema = z
 	.string()
-	.regex(/^https:\/\//, "repo must be an https:// URL (AT-URI source repos aren't supported yet)")
-	.url("repo must be a valid URL")
+	.check(
+		z.regex(
+			/^https:\/\//,
+			"repo must be an https:// URL (AT-URI source repos aren't supported yet)",
+		),
+		z.url("repo must be a valid URL"),
+	)
 	.max(1024, "repo must be <= 1024 characters")
 	.meta({
 		title: "Source repository",
@@ -135,8 +266,19 @@ export const RepoSchema = z
 		examples: ["https://github.com/emdash-cms/plugin-gallery"],
 	});
 
+/** `env:<name>` requirement keys (one or more non-colon characters). */
 const REQUIRES_ENV_KEY_RE = /^env:[^:]+$/;
 
+/**
+ * Release-level environment constraints. Mirrors `release.json#requires`: a
+ * map of `env:*` keys (host environment requirements) or package DIDs to
+ * semver-range constraint strings. EmDash uses `env:emdash` and `env:astro`.
+ *
+ * Keys are validated structurally (`env:<name>` or `did:<method>:<id>`) and
+ * values against the shared range grammar in `@emdash-cms/registry-client/env`,
+ * the same evaluator the install gate and the admin compatibility warning use,
+ * so a publisher can't ship a constraint that no consumer can evaluate.
+ */
 export const RequiresSchema = z
 	.record(
 		z
@@ -160,6 +302,19 @@ export const RequiresSchema = z
 		examples: [{ "env:emdash": ">=1.0.0", "env:astro": ">=4.16" }],
 	});
 
+// ──────────────────────────────────────────────────────────────────────────
+// Identity (slug + version)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * The plugin's slug. ASCII letter then letters/digits/hyphens/underscores,
+ * max 64 chars. Same constraints as the registry lexicon's `rkey`-portion
+ * of a release record, validated via the shared `PLUGIN_SLUG_RE` in
+ * `@emdash-cms/plugin-types`.
+ *
+ * Slug + publisher together form the package identity. The runtime derives
+ * the AT URI from them; the author never writes the URI directly.
+ */
 export const SlugSchema = z
 	.string()
 	.min(1, "slug must be a non-empty string")
@@ -175,6 +330,11 @@ export const SlugSchema = z
 		examples: ["gallery", "image-resizer", "my-plugin"],
 	});
 
+/**
+ * The plugin's version. Subset of semver 2.0; build-metadata (`+...`) is
+ * disallowed because atproto record keys can't contain `+`. Validated via
+ * `PLUGIN_VERSION_RE` from `@emdash-cms/plugin-types`.
+ */
 export const VersionSchema = z
 	.string()
 	.min(1, "version must be a non-empty string")
@@ -190,13 +350,39 @@ export const VersionSchema = z
 		examples: ["0.1.0", "1.2.3", "1.0.0-rc.1"],
 	});
 
+// ──────────────────────────────────────────────────────────────────────────
+// Trust contract (capabilities + allowedHosts + storage)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * The set of currently-valid (non-deprecated) capability names.
+ *
+ * Mirrors the `CurrentPluginCapability` union from `@emdash-cms/plugin-types`.
+ * TS unions don't survive erasure into a runtime Set, so we maintain the
+ * list here and the schema's tests catch drift against the type definition.
+ */
 const CURRENT_CAPABILITIES = new Set<string>([
 	"network:request",
 	"network:request:unrestricted",
 	"content:read",
+	"content:revisions:read",
 	"content:write",
+	"content:publish",
+	"content:restore",
+	"comments:read",
+	"comments:moderate",
+	"schema:read",
+	"admin.editor-draft:read",
+	"admin.editor-draft:patch",
+	"hooks.content-policy:register",
 	"taxonomies:read",
+	"taxonomies:write",
+	"bylines:read",
+	"redirects:read",
+	"redirects:write",
 	"media:read",
+	"media:bytes:read",
+	"media:metadata:write",
 	"media:write",
 	"users:read",
 	"email:send",
@@ -205,6 +391,16 @@ const CURRENT_CAPABILITIES = new Set<string>([
 	"hooks.page-fragments:register",
 ]);
 
+/**
+ * A single capability declaration. Plain string, validated for membership
+ * in the current vocabulary AND for being non-deprecated. Deprecated names
+ * are hard-rejected with a hint pointing at the replacement — the deprecation
+ * window is for already-published plugins, not for new authoring.
+ *
+ * Uses a single `superRefine` so we can produce an issue-specific message
+ * that names the offending capability string. The shape mirrors Zod 4's
+ * recommended pattern for "value-dependent error messages".
+ */
 export const CapabilitySchema = z
 	.string()
 	.min(1, "capability must be a non-empty string")
@@ -226,6 +422,18 @@ export const CapabilitySchema = z
 		}
 	});
 
+/**
+ * Capabilities array. The plugin's declared trust contract. Empty array
+ * (or omitted field, defaulting to empty) means the plugin asks for no
+ * privileges beyond the built-in surface (logging, kv, routes/hooks
+ * registration).
+ *
+ * Cross-field rule (in `ManifestSchema`'s `.refine()`): if `capabilities`
+ * includes `network:request` (and NOT `network:request:unrestricted`),
+ * then `allowedHosts` must be a non-empty array. This matches the
+ * `releaseExtension` lexicon's `networkRequestConstraints.allowedHosts`
+ * "absent OR non-empty" rule.
+ */
 export const CapabilitiesSchema = z
 	.array(CapabilitySchema)
 	.max(32, "capabilities[] must have <= 32 entries")
@@ -235,8 +443,19 @@ export const CapabilitiesSchema = z
 			"Trust contract: what runtime APIs the plugin is allowed to use. Changing this between releases requires a version bump because installed users have consented to the old contract.",
 	});
 
+/**
+ * Slash or whitespace in a hostname pattern is a sign the user pasted a
+ * URL or path instead of a bare host. Hoisted out of `.refine()` so the
+ * regex is compiled once.
+ */
 const HOST_PATTERN_INVALID_CHARS = /[/\s]/;
 
+/**
+ * Allowed-hosts list for `network:request`. Each entry is a hostname
+ * pattern with no scheme/path/whitespace; a leading `*.` permits
+ * subdomains. (Ports are accepted by this loose check; the publish-time
+ * lexicon validator is the strict authority on the exact grammar.)
+ */
 export const AllowedHostsSchema = z
 	.array(
 		z
@@ -256,6 +475,12 @@ export const AllowedHostsSchema = z
 		examples: [["api.example.com", "*.cdn.example.com"]],
 	});
 
+/**
+ * Storage collection config. Mirrors `StorageCollectionConfig` from
+ * `@emdash-cms/plugin-types`. Indexes are field names (or composite
+ * arrays). Unique indexes are queryable too — don't duplicate them in
+ * `indexes`.
+ */
 export const StorageCollectionSchema = z
 	.object({
 		indexes: z.array(z.union([z.string().min(1), z.array(z.string().min(1)).min(1)])),
@@ -270,6 +495,13 @@ export const StorageCollectionSchema = z
 			"Index configuration for a single storage collection. Indexes are either single field names or composite (array of field names).",
 	});
 
+/**
+ * Storage declaration. Map of collection name to its index config.
+ * Collection names follow the same slug-like rules as plugin slugs:
+ * lowercase letters, digits, hyphens, underscores. The runtime uses the
+ * collection name verbatim as the SQL table-suffix, so the grammar must
+ * be safe.
+ */
 export const StorageSchema = z
 	.record(
 		z
@@ -287,6 +519,19 @@ export const StorageSchema = z
 			"Storage collections the plugin uses. Each collection is namespaced to this plugin at runtime.",
 	});
 
+// ──────────────────────────────────────────────────────────────────────────
+// Admin surface (pages + dashboard widgets)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * An admin page declaration. Sandboxed plugins render admin pages
+ * through Block Kit via their `admin` route handler — the manifest
+ * just declares where the page lives in the navigation, what it's
+ * called, and what icon goes next to it.
+ *
+ * Path is restricted to a leading slash + URL-safe characters so the
+ * admin router has a sensible space of values to dispatch on.
+ */
 export const AdminPageSchema = z
 	.object({
 		path: z
@@ -302,6 +547,12 @@ export const AdminPageSchema = z
 			.min(1, "admin page label cannot be empty")
 			.max(128, "admin page label must be <= 128 characters"),
 		icon: z.string().min(1).max(64).optional(),
+		group: z
+			.string()
+			.trim()
+			.min(1, "admin page group cannot be empty")
+			.max(100, "admin page group must be <= 100 characters")
+			.optional(),
 	})
 	.strict()
 	.meta({
@@ -310,6 +561,11 @@ export const AdminPageSchema = z
 			"A single admin page declaration. The plugin's `admin` route handler is responsible for rendering Block Kit content for this path.",
 	});
 
+/**
+ * A dashboard widget declaration. Same surface contract as admin
+ * pages — the plugin's `admin` route handler renders the widget's
+ * Block Kit content, scoped by widget id.
+ */
 export const AdminWidgetSchema = z
 	.object({
 		id: z
@@ -329,6 +585,217 @@ export const AdminWidgetSchema = z
 		description: "A single dashboard widget declaration.",
 	});
 
+const editorExtensionIdSchema = z
+	.string()
+	.min(1)
+	.max(64)
+	.regex(/^[a-z][a-z0-9_-]*$/, "editor extension id must be a lowercase slug");
+const editorRouteSchema = z
+	.string()
+	.min(1)
+	.max(128)
+	.regex(/^[a-zA-Z0-9][a-zA-Z0-9_\-/]*$/, "editor extension route must be a safe path");
+const editorCollectionsSchema = z
+	.array(
+		z
+			.string()
+			.max(63)
+			.regex(/^[a-z][a-z0-9_]*$/, "editor extension collection must be a collection slug"),
+	)
+	.max(64)
+	.refine((collections) => new Set(collections).size === collections.length, {
+		message: "editor extension collections must be unique",
+	});
+const editorDraftFieldsSchema = z
+	.array(
+		z
+			.string()
+			.max(63)
+			.regex(/^[a-z][a-z0-9_]*$/, "invalid editor draft field slug"),
+	)
+	.min(1)
+	.max(32)
+	.refine((fields) => new Set(fields).size === fields.length, {
+		message: "editor draft fields must be unique",
+	});
+const EditorDraftFieldSelectorSchema = z.union([
+	z.object({ fields: editorDraftFieldsSchema, translatable: z.literal(true).optional() }).strict(),
+	z.object({ fields: editorDraftFieldsSchema.optional(), translatable: z.literal(true) }).strict(),
+]);
+const EditorDraftAccessSchema = z.union([
+	z
+		.object({
+			read: EditorDraftFieldSelectorSchema,
+			patch: EditorDraftFieldSelectorSchema.optional(),
+		})
+		.strict(),
+	z
+		.object({
+			read: EditorDraftFieldSelectorSchema.optional(),
+			patch: EditorDraftFieldSelectorSchema,
+		})
+		.strict(),
+]);
+const editorDraftCollectionsSchema = z
+	.array(
+		z
+			.string()
+			.max(63)
+			.regex(/^[a-z][a-z0-9_]*$/, "editor extension collection must be a collection slug"),
+	)
+	.min(1)
+	.max(64)
+	.refine((collections) => new Set(collections).size === collections.length, {
+		message: "editor extension collections must be unique",
+	});
+const editorPanelBase = {
+	id: editorExtensionIdSchema,
+	title: z.string().min(1).max(128),
+	route: editorRouteSchema,
+	order: z.number().int().min(-1_000).max(1_000).optional(),
+};
+
+export const EditorPanelSchema = z.union([
+	z.object({ ...editorPanelBase, collections: editorCollectionsSchema.optional() }).strict(),
+	z
+		.object({
+			...editorPanelBase,
+			collections: editorDraftCollectionsSchema,
+			draft: EditorDraftAccessSchema,
+		})
+		.strict(),
+]);
+
+const EditorActionConfirmSchema = z
+	.object({
+		title: z.string().min(1).max(128),
+		text: z.string().min(1).max(1_024),
+		confirm: z.string().min(1).max(64),
+		deny: z.string().min(1).max(64),
+		style: z.literal("danger").optional(),
+	})
+	.strict();
+
+const editorActionBase = {
+	id: editorExtensionIdSchema,
+	label: z.string().min(1).max(128),
+	route: editorRouteSchema,
+	placement: z.enum(["toolbar", "overflow"]),
+	style: z.enum(["default", "danger"]).optional(),
+	confirm: EditorActionConfirmSchema.optional(),
+};
+
+export const EditorActionSchema = z
+	.union([
+		z.object({ ...editorActionBase, collections: editorCollectionsSchema.optional() }).strict(),
+		z
+			.object({
+				...editorActionBase,
+				collections: editorDraftCollectionsSchema,
+				draft: EditorDraftAccessSchema,
+			})
+			.strict(),
+	])
+	.refine((action) => action.style !== "danger" || action.confirm !== undefined, {
+		message: "danger editor actions require confirmation",
+		path: ["confirm"],
+	});
+
+function addDuplicateEditorExtensionIssues(
+	items: readonly { id: string }[] | undefined,
+	ctx: z.RefinementCtx,
+	path: "editorPanels" | "editorActions",
+): void {
+	const seen = new Set<string>();
+	for (const [index, item] of (items ?? []).entries()) {
+		if (seen.has(item.id)) {
+			ctx.addIssue({ code: "custom", message: `duplicate ${path} id`, path: [path, index, "id"] });
+		}
+		seen.add(item.id);
+	}
+}
+
+const settingBase = {
+	label: z.string().min(1),
+	description: z.string().optional(),
+};
+
+const SettingFieldSchema = z.discriminatedUnion("type", [
+	z.object({
+		...settingBase,
+		type: z.literal("string"),
+		default: z.string().optional(),
+		multiline: z.boolean().optional(),
+	}),
+	z.object({
+		...settingBase,
+		type: z.literal("number"),
+		default: z.number().optional(),
+		min: z.number().optional(),
+		max: z.number().optional(),
+	}),
+	z.object({ ...settingBase, type: z.literal("boolean"), default: z.boolean().optional() }),
+	z.object({
+		...settingBase,
+		type: z.literal("select"),
+		options: z.array(z.object({ value: z.string(), label: z.string() })),
+		default: z.string().optional(),
+	}),
+	z.object({ ...settingBase, type: z.literal("secret") }),
+	z.object({
+		...settingBase,
+		type: z.literal("url"),
+		default: z.string().optional(),
+		placeholder: z.string().optional(),
+	}),
+	z.object({
+		...settingBase,
+		type: z.literal("email"),
+		default: z.string().optional(),
+		placeholder: z.string().optional(),
+	}),
+]);
+
+const FIELD_TYPES = [
+	"string",
+	"text",
+	"number",
+	"integer",
+	"boolean",
+	"datetime",
+	"select",
+	"multiSelect",
+	"portableText",
+	"image",
+	"file",
+	"reference",
+	"json",
+	"slug",
+	"repeater",
+] as const;
+
+const FieldWidgetSchema = z.object({
+	name: z.string().min(1),
+	label: z.string().min(1),
+	fieldTypes: z.array(z.enum(FIELD_TYPES)),
+	elements: z
+		.array(
+			z
+				.object({
+					type: z.string(),
+					action_id: z.string(),
+					label: z.string().optional(),
+				})
+				.loose(),
+		)
+		.optional(),
+});
+
+/**
+ * Admin surface block in the manifest. Both fields are optional;
+ * plugins that don't expose admin UI at all simply omit the `admin`
+ * key entirely.
+ */
 export const AdminSchema = z
 	.object({
 		pages: z.array(AdminPageSchema).max(32, "admin.pages[] must have <= 32 entries").optional(),
@@ -336,17 +803,31 @@ export const AdminSchema = z
 			.array(AdminWidgetSchema)
 			.max(32, "admin.widgets[] must have <= 32 entries")
 			.optional(),
+		settingsSchema: z.record(z.string(), SettingFieldSchema).optional(),
+		fieldWidgets: z.array(FieldWidgetSchema).max(32).optional(),
+		editorPanels: z.array(EditorPanelSchema).max(32).optional(),
+		editorActions: z.array(EditorActionSchema).max(32).optional(),
 	})
 	.strict()
+	.superRefine((admin, ctx) => {
+		addDuplicateEditorExtensionIssues(admin.editorPanels, ctx, "editorPanels");
+		addDuplicateEditorExtensionIssues(admin.editorActions, ctx, "editorActions");
+	})
 	.meta({
 		title: "Admin surface",
-		description:
-			"Pages and widgets the plugin exposes in the admin UI. The plugin's `admin` route handler renders Block Kit content for each path / widget id at runtime.",
+		description: "Pages, widgets, and saved-entry extensions the plugin exposes in the admin UI.",
 	});
 
+// ──────────────────────────────────────────────────────────────────────────
+// Long-form profile sections (description / installation / faq / changelog /
+// security)
+// ──────────────────────────────────────────────────────────────────────────
+
+/** Per-section size caps, mirroring `profile.json#sections`. */
 export const SECTION_MAX_BYTES = 20000;
 export const SECTION_MAX_GRAPHEMES = 2000;
 
+/** The five FAIR-recognised section keys the lexicon enumerates. */
 export const SECTION_KEYS = [
 	"description",
 	"installation",
@@ -359,12 +840,19 @@ export type SectionKey = (typeof SECTION_KEYS)[number];
 
 const sectionGraphemeSegmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
 
+/** Grapheme count via `Intl.Segmenter` — the codebase's grapheme-aware measure. */
 export function countGraphemes(value: string): number {
 	let count = 0;
 	for (const _ of sectionGraphemeSegmenter.segment(value)) count++;
 	return count;
 }
 
+/**
+ * Enforce the per-section size caps on a resolved markdown string. Returns
+ * an error message when over a cap, or `null` when within both. Shared by the
+ * inline-string schema check and the load-time file-ref check so an inline
+ * section and a `{ file }` section fail with the same message.
+ */
 export function sectionCapError(value: string): string | null {
 	const bytes = Buffer.byteLength(value, "utf8");
 	if (bytes > SECTION_MAX_BYTES) {
@@ -377,6 +865,12 @@ export function sectionCapError(value: string): string | null {
 	return null;
 }
 
+/**
+ * A single section file reference. The `file` path is resolved relative to the
+ * manifest at LOAD time; the CLI reads the file's content directly into the
+ * section string (sections are inlined into the profile record, unlike media
+ * artifacts whose bytes are uploaded). Only the authoring input lives here.
+ */
 export const SectionFileSchema = z
 	.object({
 		file: z
@@ -395,6 +889,12 @@ export const SectionFileSchema = z
 			"Loads the section's Markdown from a sibling file instead of inlining it in the manifest.",
 	});
 
+/**
+ * A single section value: either an inline CommonMark string or a `{ file }`
+ * reference. Inline strings are capped here (20000 bytes / 2000 graphemes); a
+ * file ref's content is capped at load time once the file is read, because the
+ * bytes aren't known until then.
+ */
 export const SectionValueSchema = z
 	.union([
 		z
@@ -415,6 +915,13 @@ export const SectionValueSchema = z
 			"Either inline CommonMark Markdown or a `{ file }` reference to a sibling Markdown file.",
 	});
 
+/**
+ * Long-form profile sections. Profile-level (not per-release): the same map of
+ * human-readable Markdown carries across every release of a package. Keys are
+ * the five FAIR-recognised section names; `.strict()` rejects any other key so
+ * a typo (`instalation`) fails locally rather than producing an unrecognised
+ * section in the published profile.
+ */
 export const SectionsSchema = z
 	.object({
 		description: SectionValueSchema.optional(),
@@ -430,6 +937,14 @@ export const SectionsSchema = z
 			"Long-form package documentation (description / installation / faq / changelog / security). Each value is CommonMark Markdown (inline or a `{ file }` ref) capped at 20000 bytes / 2000 graphemes. Rendered on the package's registry page.",
 	});
 
+// ──────────────────────────────────────────────────────────────────────────
+// Media artifacts (icon / screenshot / banner)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * BCP 47 language tag for a localised artifact. Mirrors `release.json#artifact.lang`.
+ * Structural check only — the registry aggregator owns the strict grammar.
+ */
 const ArtifactLangSchema = z
 	.string()
 	.min(2, 'lang must be a BCP 47 language tag (e.g. "en", "pt-BR")')
@@ -439,6 +954,13 @@ const ArtifactLangSchema = z
 		examples: ["en", "pt-BR"],
 	});
 
+/**
+ * A single media-artifact file reference. The `file` path is resolved relative
+ * to the manifest at publish time; the CLI reads the bytes, computes the
+ * checksum and pixel dimensions, uploads them to the publisher's PDS, and
+ * writes an image-artifact record into the release. Only the authoring inputs live here — the
+ * derived fields never appear in the manifest.
+ */
 export const ArtifactFileSchema = z
 	.object({
 		file: z
@@ -454,10 +976,14 @@ export const ArtifactFileSchema = z
 	.strict()
 	.meta({
 		title: "Artifact file reference",
-		description:
-			"A media file (PNG / JPEG / WebP / GIF / AVIF) bundled into a release as an icon, screenshot, or banner.",
+		description: "A PNG, JPEG, or WebP file published as an icon, screenshot, or banner.",
 	});
 
+/**
+ * Release media artifacts. `icon` and `banner` are single files; `screenshots`
+ * is an array (a plugin can ship a gallery). Mirrors `release.json#artifacts`
+ * minus the `package` entry, which the CLI derives from the tarball.
+ */
 export const ArtifactsSchema = z
 	.object({
 		icon: ArtifactFileSchema.optional(),
@@ -479,6 +1005,11 @@ export const ArtifactsSchema = z
 			"Release media artifacts. `icon` and `banner` are single images; `screenshots` is a gallery array.",
 	});
 
+/**
+ * Release-level block. Holds fields scoped to a single version rather than the
+ * package profile. Today that's media `artifacts`; the source `repo` stays at
+ * the top level for backwards compatibility.
+ */
 export const ReleaseSchema = z
 	.object({
 		requires: RequiresSchema.optional(),
@@ -491,8 +1022,26 @@ export const ReleaseSchema = z
 			"Per-release fields: environment constraints (`requires`) and media artifacts (icon / screenshot / banner).",
 	});
 
+// ──────────────────────────────────────────────────────────────────────────
+// Top-level manifest
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * The full v1 manifest. Unknown keys are rejected by `.strict()` so a
+ * typo'd field name produces an immediate error rather than passing
+ * through silently. The cost is that every later issue (#1029, #1030, ...)
+ * has to extend this schema, which is intentional: the manifest is a
+ * contract with users and we want changes to be deliberate.
+ *
+ * `$schema` is allowed because editors write it automatically for IDE
+ * completion. It is stripped before validation passes the value to the
+ * publish translation.
+ */
 export const ManifestSchema = z
 	.object({
+		// `$schema` is for editor IDE support and the JSON Schema tooling
+		// chain. It carries no semantic meaning to publish; the loader
+		// strips it before handing the value off.
 		$schema: z
 			.string()
 			.meta({
@@ -501,20 +1050,51 @@ export const ManifestSchema = z
 			})
 			.optional(),
 
+		// Identity. Slug + publisher together form the package's identity;
+		// the AT URI is derived at runtime, never authored.
 		slug: SlugSchema,
+		// Version is optional in the source manifest. `package.json#version`
+		// is the canonical source for npm-distributed plugins (Changesets
+		// bumps it on release), so duplicating it here causes drift. Two
+		// authoring shapes are valid:
+		//   - Omit `version` in the manifest, keep it only in `package.json`.
+		//   - Set it in both, in which case the build step enforces they
+		//     match and errors loudly on mismatch.
+		// Registry-only plugins (no `package.json`) must set `version` here
+		// — there's nowhere else for it to live.
 		version: VersionSchema.optional(),
 
+		// Required on first publish, ignored on subsequent publishes (the
+		// existing profile wins). Same precedence rules as today's
+		// --license flag.
 		license: LicenseSchema,
 
+		// Publisher pin. Required for the plugin to load — the runtime
+		// can't compute the AT URI without it. Authors fill it in before
+		// first run; on first publish, if the value matches the session,
+		// it stays. If a publisher migrates the manifest's `publisher`
+		// must be updated explicitly.
 		publisher: PublisherSchema,
 
+		// Trust contract. Static for a given version; changes require
+		// a version bump because installed users have consented to the
+		// old contract. Default-empty so the minimal manifest doesn't
+		// need to spell out the absence of privileges.
 		capabilities: CapabilitiesSchema.default([]),
 		allowedHosts: AllowedHostsSchema.default([]),
 		storage: StorageSchema.default({}),
 
+		// Admin surface. Optional; plugins that don't expose any admin
+		// UI omit the key entirely. The runtime checks that any plugin
+		// declaring admin.pages or admin.widgets also serves an `admin`
+		// route — the schema can't enforce that here because route
+		// names are probed from src/plugin.ts, not the manifest.
 		admin: AdminSchema.optional(),
 
+		// Single-author form. Mutually exclusive with `authors`.
 		author: AuthorSchema.optional(),
+		// Multi-author form. Mutually exclusive with `author`. At least one
+		// entry is required when this field is used.
 		authors: z
 			.array(AuthorSchema)
 			.min(1, "authors[] must have at least one entry")
@@ -526,7 +1106,9 @@ export const ManifestSchema = z
 			})
 			.optional(),
 
+		// Single-contact form. Mutually exclusive with `securityContacts`.
 		security: SecurityContactSchema.optional(),
+		// Multi-contact form. Mutually exclusive with `security`.
 		securityContacts: z
 			.array(SecurityContactSchema)
 			.min(1, "securityContacts[] must have at least one entry")
@@ -538,14 +1120,22 @@ export const ManifestSchema = z
 			})
 			.optional(),
 
+		// Optional profile fields.
 		name: NameSchema.optional(),
 		description: DescriptionSchema.optional(),
 		keywords: KeywordsSchema.optional(),
 
+		// Long-form profile sections (description / installation / faq /
+		// changelog / security). Profile-level, like the fields above. File
+		// refs are read inline at load time relative to the manifest.
 		sections: SectionsSchema.optional(),
 
+		// Optional release fields.
 		repo: RepoSchema.optional(),
 
+		// Per-release block: environment constraints (`requires`) and media
+		// artifacts (icon / screenshot / banner). File refs are resolved
+		// relative to the manifest at publish time.
 		release: ReleaseSchema.optional(),
 	})
 	.strict()
@@ -569,6 +1159,10 @@ export const ManifestSchema = z
 	})
 	.refine(
 		(v) => {
+			// network:request without :unrestricted requires a non-empty
+			// allowedHosts. Without this guard, the lexicon's
+			// networkRequestConstraints rule fires at publish time and
+			// users see a confusing PDS error rather than a schema error.
 			const caps = new Set((v.capabilities ?? []).map((c) => normalizeCapability(c)));
 			if (caps.has("network:request") && !caps.has("network:request:unrestricted")) {
 				return (v.allowedHosts ?? []).length > 0;
@@ -583,6 +1177,10 @@ export const ManifestSchema = z
 	)
 	.refine(
 		(v) => {
+			// network:request:unrestricted with allowedHosts is contradictory
+			// — the unrestricted capability says "any host", but the list
+			// implies "only these". The lexicon's rule is "allowedHosts
+			// MUST NOT appear when unrestricted"; same here.
 			const caps = new Set((v.capabilities ?? []).map((c) => normalizeCapability(c)));
 			if (caps.has("network:request:unrestricted")) {
 				return (v.allowedHosts ?? []).length === 0;
@@ -601,16 +1199,28 @@ export const ManifestSchema = z
 			"Hand-authored manifest for publishing a plugin to the EmDash plugin registry. Lives next to the plugin's `package.json` as `emdash-plugin.jsonc`.",
 	});
 
+/**
+ * Validated manifest shape. Note: this is the SHAPE AFTER the schema's
+ * `.refine()` rules have run, not the on-disk shape. The single-form
+ * convenience fields (`author`, `security`) are still present at this
+ * stage; normalisation to the array forms happens in `./translate.ts`.
+ */
 export type Manifest = z.infer<typeof ManifestSchema>;
 
+/** A single author entry, normalised. */
 export type ManifestAuthor = z.infer<typeof AuthorSchema>;
 
+/** A single security contact entry, normalised. */
 export type ManifestSecurityContact = z.infer<typeof SecurityContactSchema>;
 
+/** A single media-artifact file reference (icon / screenshot / banner). */
 export type ManifestArtifactFile = z.infer<typeof ArtifactFileSchema>;
 
+/** A single section file reference (`{ file }`). */
 export type ManifestSectionFile = z.infer<typeof SectionFileSchema>;
 
+/** The long-form sections block, as authored (inline strings or file refs). */
 export type ManifestSections = z.infer<typeof SectionsSchema>;
 
+/** The release media-artifacts block. */
 export type ManifestArtifacts = z.infer<typeof ArtifactsSchema>;

@@ -17,6 +17,7 @@ describe("text-align round-trip (core converters)", () => {
 			],
 		};
 
+		// PM → PT
 		const pt = prosemirrorToPortableText(pmDoc);
 		expect(pt).toHaveLength(1);
 		const block = pt[0] as PortableTextTextBlock;
@@ -25,6 +26,7 @@ describe("text-align round-trip (core converters)", () => {
 		expect(block.textAlign).toBe("center");
 		expect(block.children[0]?.text).toBe("Centered text");
 
+		// PT → PM
 		const restored = portableTextToProsemirror(pt);
 		expect(restored.content[0]?.type).toBe("paragraph");
 		expect(restored.content[0]?.attrs?.textAlign).toBe("center");

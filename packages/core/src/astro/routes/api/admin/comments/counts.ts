@@ -1,3 +1,9 @@
+/**
+ * Comment status counts for inbox badges
+ *
+ * GET /_emdash/api/admin/comments/counts
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

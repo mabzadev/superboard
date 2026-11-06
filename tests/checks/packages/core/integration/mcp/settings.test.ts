@@ -1,3 +1,13 @@
+/**
+ * MCP settings tools — integration tests.
+ *
+ * Covers:
+ *   - settings_get
+ *   - settings_update
+ *
+ * Plus regression for bug #16 (no MCP tool for site settings).
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { ulid } from "ulidx";
@@ -46,6 +56,10 @@ async function seedMedia(db: Kysely<Database>, opts?: { id?: string }): Promise<
 	return id;
 }
 
+// ---------------------------------------------------------------------------
+// Tool registration — bug #16 regression.
+// ---------------------------------------------------------------------------
+
 describe("settings tools registered (bug #16)", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -67,6 +81,10 @@ describe("settings tools registered (bug #16)", () => {
 		expect(names.has("settings_update")).toBe(true);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// settings_get
+// ---------------------------------------------------------------------------
 
 describe("settings_get", () => {
 	let db: Kysely<Database>;
@@ -126,6 +144,7 @@ describe("settings_get", () => {
 		const data = extractJson<SiteSettingsResponse>(result);
 		expect(data.logo?.mediaId).toBe(mediaId);
 		expect(data.logo?.alt).toBe("Site logo");
+		// URL is resolved to the media file route
 		expect(data.logo?.url).toMatch(/^\/_emdash\/api\/media\/file\//);
 	});
 
@@ -194,6 +213,10 @@ describe("settings_get", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// settings_update
+// ---------------------------------------------------------------------------
+
 describe("settings_update", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -226,6 +249,7 @@ describe("settings_update", () => {
 			arguments: { title: "First", tagline: "Original tagline" },
 		});
 
+		// Update only tagline; title should be preserved
 		const result = await harness.client.callTool({
 			name: "settings_update",
 			arguments: { tagline: "Updated tagline" },
@@ -284,6 +308,32 @@ describe("settings_update", () => {
 		expect(data.social?.twitter).toBe("@emdash");
 		expect(data.social?.github).toBe("emdash-cms");
 		expect((data.seo as { titleSeparator?: string }).titleSeparator).toBe(" | ");
+	});
+
+	it("removes media references while preserving sibling SEO settings", async () => {
+		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
+		await harness.client.callTool({
+			name: "settings_update",
+			arguments: {
+				logo: { mediaId: "med_logo" },
+				favicon: { mediaId: "med_favicon" },
+				seo: {
+					defaultOgImage: { mediaId: "med_og" },
+					titleSeparator: " | ",
+					googleVerification: "abc123",
+				},
+			},
+		});
+
+		const result = await harness.client.callTool({
+			name: "settings_update",
+			arguments: { logo: null, favicon: null, seo: { defaultOgImage: null } },
+		});
+		expect(result.isError, extractText(result)).toBeFalsy();
+		const data = extractJson<SiteSettingsResponse>(result);
+		expect(data.logo).toBeUndefined();
+		expect(data.favicon).toBeUndefined();
+		expect(data.seo).toEqual({ titleSeparator: " | ", googleVerification: "abc123" });
 	});
 
 	it("editor cannot update settings (INSUFFICIENT_PERMISSIONS — admin only)", async () => {

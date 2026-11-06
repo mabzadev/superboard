@@ -11,6 +11,10 @@ import {
 	encrypt,
 	decrypt,
 	validateScopes,
+	hasScope,
+	isTransferScope,
+	TRANSFER_SCOPES,
+	VALID_SCOPES,
 } from "../../../../../packages/auth/src/tokens.js";
 
 const BASE64URL_REGEX = /^[A-Za-z0-9_-]+$/;
@@ -36,10 +40,40 @@ describe("tokens", () => {
 		});
 	});
 
+	describe("transfer scopes", () => {
+		it("are valid scopes", () => {
+			expect(validateScopes([...TRANSFER_SCOPES])).toEqual([]);
+			expect(validateScopes(["transfer:import", "transfer:*"])).toEqual([
+				"transfer:import",
+				"transfer:*",
+			]);
+		});
+
+		it.each(TRANSFER_SCOPES)("are granted by admin: %s", (scope) => {
+			expect(hasScope(["admin"], scope)).toBe(true);
+		});
+
+		it.each(TRANSFER_SCOPES)("are not granted by any other scope: %s", (scope) => {
+			const others = VALID_SCOPES.filter((s) => s !== "admin" && !isTransferScope(s));
+			expect(hasScope(others, scope)).toBe(false);
+		});
+
+		it("each grants only itself", () => {
+			for (const held of TRANSFER_SCOPES) {
+				for (const required of TRANSFER_SCOPES) {
+					expect(hasScope([held], required)).toBe(held === required);
+				}
+				expect(hasScope([held], "admin")).toBe(false);
+				expect(hasScope([held], "content:read")).toBe(false);
+			}
+		});
+	});
+
 	describe("generateToken", () => {
 		it("generates a base64url-encoded token", () => {
 			const token = generateToken();
 			expect(token).toMatch(BASE64URL_REGEX);
+			// 32 bytes = 43 base64url characters (without padding)
 			expect(token.length).toBe(43);
 		});
 
@@ -63,6 +97,19 @@ describe("tokens", () => {
 			const token2 = generateToken();
 			expect(hashToken(token1)).not.toBe(hashToken(token2));
 		});
+
+		it("hashes malformed (non-base64url) tokens without throwing", () => {
+			for (const malformed of ["!!!", "not a token", "\0", "日本語"]) {
+				expect(() => hashToken(malformed)).not.toThrow();
+				expect(hashToken(malformed)).toMatch(NO_PADDING_REGEX);
+			}
+		});
+
+		it("hashes malformed tokens deterministically to a non-matching value", () => {
+			const token = generateToken();
+			expect(hashToken("!!!")).toBe(hashToken("!!!"));
+			expect(hashToken("!!!")).not.toBe(hashToken(token));
+		});
 	});
 
 	describe("generateTokenWithHash", () => {
@@ -78,6 +125,7 @@ describe("tokens", () => {
 		it("generates a shorter session ID", () => {
 			const sessionId = generateSessionId();
 			expect(sessionId).toMatch(BASE64URL_REGEX);
+			// 20 bytes = 27 base64url characters
 			expect(sessionId.length).toBe(27);
 		});
 	});
@@ -106,6 +154,9 @@ describe("tokens", () => {
 
 	describe("computeS256Challenge", () => {
 		it("produces correct S256 challenge for a known verifier", () => {
+			// RFC 7636 Appendix B test vector:
+			// verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+			// expected challenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
 			const challenge = computeS256Challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk");
 			expect(challenge).toBe("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
 		});

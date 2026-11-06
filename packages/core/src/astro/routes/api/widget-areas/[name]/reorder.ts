@@ -1,13 +1,22 @@
+/**
+ * Reorder widgets endpoint
+ *
+ * POST /_emdash/api/widget-areas/:name/reorder
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
 import { apiError, apiSuccess, handleError } from "#api/error.js";
 import { isParseError, parseBody } from "#api/parse.js";
 import { reorderWidgetsBody } from "#api/schemas.js";
+import { widgetAreaTag } from "#cache/chrome-tags.js";
+import { invalidateRouteCache } from "#cache/route-cache.js";
+import { invalidateWidgetObjectCache } from "#widgets/index.js";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ params, request, locals }) => {
+export const POST: APIRoute = async ({ params, request, locals, cache }) => {
 	const { emdash, user } = locals;
 	const db = emdash.db;
 	const { name } = params;
@@ -20,6 +29,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 	}
 
 	try {
+		// Get the area
 		const area = await db
 			.selectFrom("_emdash_widget_areas")
 			.select("id")
@@ -33,6 +43,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		const body = await parseBody(request, reorderWidgetsBody);
 		if (isParseError(body)) return body;
 
+		// Verify all widget IDs belong to this area
 		const existingWidgets = await db
 			.selectFrom("_emdash_widgets")
 			.select("id")
@@ -46,12 +57,19 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			}
 		}
 
-		await Promise.all(
+		// Update sort_order for each widget
+		// Invalidating before every update settles would let a concurrent read
+		// cache a half-reordered area under the new epoch.
+		const results = await Promise.allSettled(
 			body.widgetIds.map((id, index) =>
 				db.updateTable("_emdash_widgets").set({ sort_order: index }).where("id", "=", id).execute(),
 			),
 		);
+		invalidateWidgetObjectCache();
+		const failed = results.find((result) => result.status === "rejected");
+		if (failed) throw failed.reason;
 
+		await invalidateRouteCache(cache, [widgetAreaTag(name)]);
 		return apiSuccess({ success: true });
 	} catch (error) {
 		return handleError(error, "Failed to reorder widgets", "WIDGET_REORDER_ERROR");

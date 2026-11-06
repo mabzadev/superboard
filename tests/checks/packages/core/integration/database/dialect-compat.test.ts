@@ -1,3 +1,13 @@
+/**
+ * Dialect compatibility tests
+ *
+ * Runs core database operations against every available dialect.
+ * SQLite always runs (in-memory). Postgres runs when EMDASH_TEST_PG is set.
+ *
+ * These tests verify that migrations, schema registry, and content CRUD
+ * work identically across dialects.
+ */
+
 import { it, expect, beforeEach, afterEach } from "vitest";
 
 import {
@@ -19,10 +29,15 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
+// ---------------------------------------------------------------------------
+// Migrations
+// ---------------------------------------------------------------------------
+
 describeEachDialect("Migrations", (dialect) => {
 	let ctx: DialectTestContext;
 
 	beforeEach(async () => {
+		// Bare database — no migrations yet. Tests run them explicitly.
 		ctx = await createForDialect(dialect);
 	});
 
@@ -44,6 +59,8 @@ describeEachDialect("Migrations", (dialect) => {
 			"_emdash_migrations",
 			"_emdash_collections",
 			"_emdash_fields",
+			"_emdash_block_types",
+			"_emdash_block_type_versions",
 			"_plugin_storage",
 			"_plugin_state",
 			"_plugin_indexes",
@@ -122,6 +139,10 @@ describeEachDialect("Migrations", (dialect) => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Schema registry
+// ---------------------------------------------------------------------------
+
 describeEachDialect("Schema registry", (dialect) => {
 	let ctx: DialectTestContext;
 	let registry: SchemaRegistry;
@@ -143,12 +164,14 @@ describeEachDialect("Schema registry", (dialect) => {
 			labelSingular: "Article",
 		});
 
+		// Dynamic table should exist
 		const rows = await ctx.db
 			.selectFrom("ec_article" as keyof Database)
 			.selectAll()
 			.execute();
 		expect(Array.isArray(rows)).toBe(true);
 
+		// Registry should have the collection
 		const collections = await registry.listCollections();
 		expect(collections.map((c) => c.slug)).toContain("article");
 	});
@@ -193,6 +216,7 @@ describeEachDialect("Schema registry", (dialect) => {
 			labelSingular: "Temp",
 		});
 
+		// Verify it exists
 		const before = await registry.listCollections();
 		expect(before.map((c) => c.slug)).toContain("temp");
 
@@ -202,6 +226,10 @@ describeEachDialect("Schema registry", (dialect) => {
 		expect(after.map((c) => c.slug)).not.toContain("temp");
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Content CRUD
+// ---------------------------------------------------------------------------
 
 describeEachDialect("Content CRUD", (dialect) => {
 	let ctx: DialectTestContext;

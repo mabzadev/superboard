@@ -1,8 +1,16 @@
+/**
+ * Accessibility E2E Tests
+ *
+ * Automated WCAG 2.1 AA audit using axe-core.
+ * Tests for critical and high-priority accessibility issues across admin pages.
+ */
+
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 
 import { test, expect } from "../../fixtures/emdash-browser";
 
+// Regex patterns for URL assertions (anchored to prevent false matches)
 const ADMIN_ROOT_URL = /\/_emdash\/admin\/?(?:[?#].*)?$/;
 const CONTENT_POSTS_URL = /\/content\/posts\/?(?:[?#].*)?$/;
 const CONTENT_POSTS_NEW_URL = /\/content\/posts\/new\/?(?:[?#].*)?$/;
@@ -10,6 +18,10 @@ const MEDIA_URL = /\/media\/?(?:[?#].*)?$/;
 const USERS_URL = /\/users\/?(?:[?#].*)?$/;
 const SETTINGS_URL = /\/settings\/?(?:[?#].*)?$/;
 
+// Known a11y violations from upstream dependencies:
+// - color-contrast: kumo design system colors on white backgrounds (needs upstream fix)
+// - aria-valid-attr-value: Base UI's Collapsible sets aria-controls on triggers pointing
+//   to panel IDs that may not be in the DOM when collapsed (kumo Sidebar collapsible groups)
 const KNOWN_A11Y_EXCLUSIONS = ["color-contrast", "aria-valid-attr-value"];
 
 async function beginPointerDrag(page: Page, source: Locator, target: Locator) {
@@ -38,6 +50,7 @@ test.describe("Accessibility Audit", () => {
 		test("should have no WCAG 2.x AA violations", async ({ admin }) => {
 			await admin.goto("/login");
 
+			// Wait for stable content — admin pages need Astro compilation on first hit
 			await expect(admin.page.locator("h1")).toContainText("Sign in", { timeout: 15000 });
 
 			const results = await new AxeBuilder({ page: admin.page })
@@ -175,11 +188,39 @@ test.describe("Accessibility Audit", () => {
 
 			const results = await new AxeBuilder({ page: admin.page })
 				.withTags(["wcag2a", "wcag2aa", "wcag21aa"])
-				.exclude(".ProseMirror")
+				.exclude(".ProseMirror") // Rich text editor has complex a11y needs
 				.disableRules(KNOWN_A11Y_EXCLUSIONS)
 				.analyze();
 
 			expect(results.violations).toEqual([]);
+		});
+
+		test("content publishing overlays should have no WCAG 2.x AA violations", async ({
+			admin,
+			serverInfo,
+		}) => {
+			const analyze = () =>
+				new AxeBuilder({ page: admin.page })
+					.withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+					.exclude(".ProseMirror")
+					// Base UI uses hidden tab-focus sentinels to contain focus in Kumo overlays.
+					.exclude("[data-base-ui-focus-guard]")
+					.disableRules(KNOWN_A11Y_EXCLUSIONS)
+					.analyze();
+
+			await admin.goToEditContent("posts", serverInfo.contentIds.posts[0]!);
+			await admin.waitForLoading();
+			await admin.page.getByRole("button", { name: /Change publication date:/ }).click();
+			expect((await analyze()).violations).toEqual([]);
+			await admin.page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+			await admin.goToEditContent("posts", serverInfo.contentIds.posts[2]!);
+			await admin.waitForLoading();
+			await admin.page.getByRole("button", { name: "Publish now", exact: true }).click();
+			expect((await analyze()).violations).toEqual([]);
+			await admin.page.getByRole("button", { name: "Cancel", exact: true }).click();
+			await admin.page.getByRole("button", { name: "Schedule" }).click();
+			expect((await analyze()).violations).toEqual([]);
 		});
 
 		test("media library should have no WCAG 2.x AA violations", async ({ admin }) => {
@@ -437,6 +478,7 @@ test.describe("Accessibility Audit", () => {
 			await admin.goToContent("posts");
 			await admin.waitForLoading();
 
+			// Tab through key interactive elements
 			await admin.page.keyboard.press("Tab");
 
 			const focusedElements: string[] = [];
@@ -446,6 +488,7 @@ test.describe("Accessibility Audit", () => {
 				await admin.page.keyboard.press("Tab");
 			}
 
+			// Should have found interactive elements (buttons, links)
 			expect(focusedElements.some((el) => el === "BUTTON" || el === "A")).toBe(true);
 		});
 	});

@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
 	DEFAULT_LOCALE,
 	getLocaleDir,
+	getLocaleLabel,
 	loadMessages,
 	resolveLocale,
 	SUPPORTED_LOCALES,
@@ -21,6 +22,28 @@ test("loadMessages falls back to English for unknown locale", async () => {
 	const [fallback, english] = await Promise.all([loadMessages("xx"), loadMessages("en")]);
 	expect(fallback).toEqual(english);
 });
+
+// -- getLocaleLabel ----------------------------------------------------------
+
+describe("getLocaleLabel", () => {
+	test("uses the admin label for a supported locale", () => {
+		expect(getLocaleLabel("de")).toBe("Deutsch");
+	});
+
+	test("matches a supported locale regardless of case", () => {
+		expect(getLocaleLabel("zh-tw")).toBe("繁體中文");
+	});
+
+	test("names a content locale the admin is not translated into", () => {
+		expect(getLocaleLabel("it")).toBe("Italiano");
+	});
+
+	test("falls back to the uppercase code for an invalid tag", () => {
+		expect(getLocaleLabel("not a locale")).toBe("NOT A LOCALE");
+	});
+});
+
+// -- getLocaleDir ----------------------------------------------------------
 
 describe("getLocaleDir", () => {
 	test("returns 'rtl' for Arabic", () => {
@@ -42,6 +65,13 @@ describe("getLocaleDir", () => {
 	});
 });
 
+// -- resolveLocale ---------------------------------------------------------
+
+/**
+ * Build a Request with the given headers. Browser environments silently
+ * strip the `cookie` header (forbidden header name) from Request/Headers,
+ * so we override `.get()` to inject it for testing purposes.
+ */
 function makeRequest(headers: Record<string, string> = {}): Request {
 	const { cookie, ...rest } = headers;
 	const req = new Request("http://localhost/", { headers: rest });
@@ -57,6 +87,7 @@ describe("resolveLocale", () => {
 		expect(resolveLocale(makeRequest())).toBe(DEFAULT_LOCALE);
 	});
 
+	// Cookie precedence
 	test("returns locale from emdash-locale cookie", () => {
 		expect(resolveLocale(makeRequest({ cookie: "emdash-locale=de" }))).toBe("de");
 	});
@@ -76,6 +107,7 @@ describe("resolveLocale", () => {
 		).toBe("de");
 	});
 
+	// Accept-Language exact match
 	test("matches exact accept-language tag", () => {
 		expect(resolveLocale(makeRequest({ "accept-language": "de" }))).toBe("de");
 	});
@@ -84,6 +116,7 @@ describe("resolveLocale", () => {
 		expect(resolveLocale(makeRequest({ "accept-language": "pt-BR" }))).toBe("pt-BR");
 	});
 
+	// Accept-Language case insensitivity (fix for Copilot review #4)
 	test("matches accept-language case-insensitively (pt-br -> pt-BR)", () => {
 		expect(resolveLocale(makeRequest({ "accept-language": "pt-br" }))).toBe("pt-BR");
 	});
@@ -96,8 +129,13 @@ describe("resolveLocale", () => {
 		expect(resolveLocale(makeRequest({ "accept-language": "DE" }))).toBe("de");
 	});
 
-	test("falls back to base language (pt-PT -> pt-BR)", () => {
-		expect(resolveLocale(makeRequest({ "accept-language": "pt-PT" }))).toBe("pt-BR");
+	// Accept-Language base language fallback
+	test("matches accept-language with region (pt-PT)", () => {
+		expect(resolveLocale(makeRequest({ "accept-language": "pt-PT" }))).toBe("pt-PT");
+	});
+
+	test("falls back to base language (de-AT -> de)", () => {
+		expect(resolveLocale(makeRequest({ "accept-language": "de-AT" }))).toBe("de");
 	});
 
 	test("matches exact accept-language tag with region (zh-TW)", () => {
@@ -115,6 +153,7 @@ describe("resolveLocale", () => {
 	test("matches Simplified Chinese script tag (zh-Hans -> zh-CN)", () => {
 		expect(resolveLocale(makeRequest({ "accept-language": "zh-Hans" }))).toBe("zh-CN");
 	});
+	// Accept-Language with quality weights
 	test("respects order in accept-language list", () => {
 		expect(resolveLocale(makeRequest({ "accept-language": "fr;q=0.9, de;q=1.0" }))).toBe("fr");
 	});
@@ -123,6 +162,7 @@ describe("resolveLocale", () => {
 		expect(resolveLocale(makeRequest({ "accept-language": "xx, yy, de" }))).toBe("de");
 	});
 
+	// Malformed input
 	test("handles empty accept-language gracefully", () => {
 		expect(resolveLocale(makeRequest({ "accept-language": "" }))).toBe(DEFAULT_LOCALE);
 	});

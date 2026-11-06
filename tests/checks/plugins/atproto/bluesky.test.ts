@@ -14,6 +14,7 @@ describe("buildFacets", () => {
 			uri: "https://example.com",
 		});
 
+		// Verify byte offsets match
 		const encoder = new TextEncoder();
 		const bytes = encoder.encode(text);
 		const extracted = new TextDecoder().decode(
@@ -40,6 +41,7 @@ describe("buildFacets", () => {
 	});
 
 	it("handles UTF-8 multibyte characters before URLs", () => {
+		// Emoji is multiple UTF-8 bytes but one grapheme
 		const text = "Great post! 🎉 https://example.com";
 		const facets = buildFacets(text);
 		expect(facets).toHaveLength(1);
@@ -58,6 +60,7 @@ describe("buildFacets", () => {
 	});
 
 	it("does not match hashtag at start of word", () => {
+		// Hashtag requires preceding whitespace or start of string
 		const text = "foo#bar";
 		const facets = buildFacets(text);
 		const tagFacets = facets.filter((f) => f.features[0]?.$type === "app.bsky.richtext.facet#tag");
@@ -205,13 +208,16 @@ describe("buildBskyPost", () => {
 	});
 
 	it("skips facets when text is truncated to avoid partial URL links", () => {
+		// Create content with very long excerpt that forces truncation
 		const longExcerpt = "A".repeat(300);
 		const post = buildBskyPost({
 			template: "{excerpt} {url}",
 			content: { ...baseContent, excerpt: longExcerpt },
 			siteUrl: "https://myblog.com",
 		});
+		// Text was truncated (>300 graphemes), so facets should be omitted
 		expect(post.facets).toBeUndefined();
+		// But embed should still have the full URL
 		expect(post.embed?.external.uri).toBe("https://myblog.com/my-article");
 	});
 });

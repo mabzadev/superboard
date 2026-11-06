@@ -1,3 +1,12 @@
+/**
+ * Confirm media upload endpoint
+ *
+ * POST /_emdash/api/media/{id}/confirm
+ *
+ * Confirms that the client has successfully uploaded the file to storage.
+ * Marks the media record as ready and optionally updates metadata.
+ */
+
 import type { APIRoute } from "astro";
 import type { DownloadResult } from "emdash";
 
@@ -10,10 +19,22 @@ import { enrichImageMetadata } from "#media/enrich.js";
 import type { MediaItem } from "#types";
 import { computeContentHash, MAX_CONTENT_HASH_BYTES } from "#utils/hash.js";
 
+import { after } from "../../../../../after.js";
+
 export const prerender = false;
 
+/**
+ * Max raw bytes to buffer for server-side LQIP generation at confirm time. The
+ * signed-URL upload flow exists so large files bypass server buffering — re-reading
+ * the whole object into a Worker's 128 MB heap to compute a blurhash would OOM
+ * on the very uploads that flow was designed for. LQIP is progressive
+ * enhancement: large images simply ship without a server-generated placeholder.
+ */
 const MAX_PLACEHOLDER_DOWNLOAD_BYTES = MAX_CONTENT_HASH_BYTES;
 
+/**
+ * Add URL to media item (relative URL for portability)
+ */
 function addUrlToMedia(item: MediaItem): MediaItem & { url: string } {
 	return {
 		...item,
@@ -82,6 +103,9 @@ async function consumeDownload(download: DownloadResult): Promise<Uint8Array> {
 	}
 }
 
+/**
+ * Confirm upload completion
+ */
 export const POST: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { id } = params;
@@ -103,11 +127,13 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
 		const repo = new MediaRepository(emdash.db);
 
+		// Get the media item first to check status
 		const existing = await repo.findById(id);
 		if (!existing) {
 			return apiError("NOT_FOUND", `Media item not found: ${id}`, 404);
 		}
 
+		// Only the uploader or a user with media:edit_any can confirm/fail a pending upload
 		const ownerDenied = requireOwnerPerm(
 			user,
 			existing.authorId ?? "",
@@ -175,6 +201,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			}
 		}
 
+		// LQIP is best-effort; oversized images skip server-side placeholders.
 		let blurhash: string | undefined;
 		let dominantColor: string | undefined;
 		let width = body.width;
@@ -196,6 +223,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			}
 		}
 
+		// Confirm the upload
 		const item = await repo.confirmUpload(
 			id,
 			{
@@ -215,7 +243,25 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
 		await forgetUploadAttempt(repo, item.storageKey);
 
+		// Add URL to the response (relative URL for portability)
 		const itemWithUrl = addUrlToMedia(item);
+
+		if (emdash.hooks?.hasHooks("media:afterUpload")) {
+			after(async () => {
+				try {
+					await emdash.hooks.runMediaAfterUpload({
+						id: itemWithUrl.id,
+						filename: itemWithUrl.filename,
+						mimeType: itemWithUrl.mimeType,
+						size: itemWithUrl.size,
+						url: itemWithUrl.url,
+						createdAt: itemWithUrl.createdAt,
+					});
+				} catch (error) {
+					console.error("[media] afterUpload hook failed:", error);
+				}
+			});
+		}
 
 		return apiSuccess({ item: itemWithUrl });
 	} catch (error) {

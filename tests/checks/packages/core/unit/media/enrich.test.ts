@@ -36,8 +36,8 @@ describe("enrichImageMetadata", () => {
 		const result = await enrichImageMetadata(JPEG_4x4, "image/jpeg", {
 			placeholder: { bytes: PNG_4x4, contentType: "image/png" },
 		});
-		expect(result.width).toBe(4);
-		expect(result.blurhash).toBeTruthy();
+		expect(result.width).toBe(4); // from JPEG_4x4 header
+		expect(result.blurhash).toBeTruthy(); // decoded from the PNG override
 	});
 
 	it("returns dimensions but no blurhash for a GIF (placeholder format unsupported)", async () => {
@@ -66,6 +66,10 @@ describe("enrichImageMetadata", () => {
 	});
 
 	it("guards the decode with header dimensions, not client knownDimensions (OOM bypass)", async () => {
+		// A real JPEG whose header declares 3000×3000 (3000²×4 = 36 MB RGBA, over
+		// the 32 MB decode cap) but is tiny on the wire (solid color). A malicious
+		// client claims a 1×1 size to slip past the guard so the decoder allocates
+		// the full RGBA buffer and OOMs the runtime.
 		const { encode } = await import("jpeg-js");
 		const side = 3000;
 		const raw = { data: Buffer.alloc(side * side * 4, 0xff), width: side, height: side };
@@ -75,8 +79,10 @@ describe("enrichImageMetadata", () => {
 			knownDimensions: { width: 1, height: 1 },
 		});
 
+		// The guard reads the real header dims and skips the oversized decode.
 		expect(result.blurhash).toBeUndefined();
 		expect(result.dominantColor).toBeUndefined();
+		// Client dims are still trusted for the stored record (EXIF-orientation fix).
 		expect(result.width).toBe(1);
 		expect(result.height).toBe(1);
 	});

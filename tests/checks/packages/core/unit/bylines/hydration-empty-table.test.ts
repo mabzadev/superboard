@@ -1,4 +1,14 @@
-import BetterSqlite3 from "better-sqlite3";
+/**
+ * Byline hydration on sites with no bylines.
+ *
+ * When `_emdash_bylines` is empty, the folded byline JSON is authoritative:
+ * no credit can exist in any locale and the author fallback has no byline to
+ * resolve to. Entries that merely have an `author_id` must not send the
+ * batch down the byline query path — those lookups can only return zero
+ * rows, and they run on every logged-out render. Once a byline row exists,
+ * the author fallback must still take the query path.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -6,6 +16,7 @@ import { runMigrations } from "../../../../../../packages/core/src/database/migr
 import { BylineRepository } from "../../../../../../packages/core/src/database/repositories/byline.js";
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as BetterSqlite3 } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { emdashLoader } from "../../../../../../packages/core/src/loader.js";
 import { getEmDashCollection } from "../../../../../../packages/core/src/query.js";
 import { runWithContext } from "../../../../../../packages/core/src/request-context.js";
@@ -20,6 +31,10 @@ import { getLiveCollection } from "astro:content";
 
 const openDbs: Kysely<Database>[] = [];
 
+/**
+ * In-memory db with a query counter on Kysely's `log` hook, so the tests can
+ * assert "no byline query was issued" against real SQL (no repository mocks).
+ */
 async function setupCountingDb(): Promise<{
 	db: Kysely<Database>;
 	queries: string[];
@@ -41,6 +56,7 @@ async function setupCountingDb(): Promise<{
 	return { db, queries, reset: () => queries.splice(0, queries.length) };
 }
 
+/** Route getLiveCollection through the real loader so folded columns flow. */
 function delegateToLoader() {
 	const loader = emdashLoader();
 	vi.mocked(getLiveCollection).mockImplementation(async (_name: string, filter: unknown) =>
@@ -49,6 +65,8 @@ function delegateToLoader() {
 	);
 }
 
+/** Byline lookups issued by the query path (the folded content SELECT reads
+ * the byline tables too, but only inside the `ec_post` query). */
 function bylineQueries(queries: string[]): string[] {
 	return queries.filter(
 		(q) =>

@@ -203,3 +203,22 @@ test("consolidated authentication requires the SDK namespace and application sig
 		[],
 	);
 });
+
+test("declared public identifiers are not reported as unowned Cloudflare ids", () => {
+	const occurrences = findForbiddenSharedOccurrences({
+		path: "packages/auth/src/oauth/providers/microsoft.ts",
+		source: [
+			'const CONSUMERS_TENANT_ID = "9188040d-6c67-4c5b-b112-36a304b66dad";',
+			'const databaseId = "7c0a8f4e-2d1b-4c3a-9e8f-1a2b3c4d5e6f";',
+		].join("\n"),
+		ownership: {
+			domainSuffixes: [],
+			exactLiterals: [],
+			publicIdentifiers: ["9188040d-6c67-4c5b-b112-36a304b66dad"],
+		},
+	});
+	assert.deepEqual(
+		occurrences.map(({ kind, value }) => [kind, value]),
+		[["unowned-cloudflare-id", "7c0a8f4e-2d1b-4c3a-9e8f-1a2b3c4d5e6f"]],
+	);
+});

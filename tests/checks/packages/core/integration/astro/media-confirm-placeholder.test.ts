@@ -9,6 +9,7 @@ import { computeContentHash } from "../../../../../../packages/core/src/utils/ha
 import { JPEG_4x4 } from "../../utils/image-fixtures.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
+/** Storage stub matching the real interface: download returns a ReadableStream. */
 function storageWith(bytes: Uint8Array) {
 	return {
 		async exists() {
@@ -24,6 +25,7 @@ function storageWith(bytes: Uint8Array) {
 	};
 }
 
+/** Storage stub whose download is spyable (to assert read-back never happens). */
 function spyableStorage(bytes: Uint8Array, reportedSize = bytes.byteLength) {
 	const download = vi.fn(async () => ({
 		body: new Response(bytes).body as ReadableStream<Uint8Array>,
@@ -253,6 +255,9 @@ describe("POST /media/:id/confirm — placeholder read-back", () => {
 		await repo.createUploadAttempt(pending.id, pending.storageKey);
 		const storage = spyableStorage(JPEG_4x4, reportedSize);
 
+		// Confirm claims a size far above the download cap. The signed-URL flow
+		// exists so large files bypass server buffering; confirm must not re-read
+		// such an object into memory just to compute a blurhash.
 		const res = await postConfirm(
 			buildContext({
 				db,
@@ -266,6 +271,7 @@ describe("POST /media/:id/confirm — placeholder read-back", () => {
 		expect(storage.download).toHaveBeenCalledOnce();
 		const row = await repo.findById(pending.id);
 		expect(row?.status).toBe("ready");
+		// Client-supplied dimensions are still recorded even when LQIP is skipped.
 		expect(row?.width).toBe(4000);
 		expect(row?.height).toBe(3000);
 		expect(row?.blurhash).toBeNull();

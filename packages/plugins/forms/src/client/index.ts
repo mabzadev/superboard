@@ -1,3 +1,20 @@
+/**
+ * Client-side form enhancement.
+ *
+ * Following the same progressive enhancement pattern as Astro's <ClientRouter />,
+ * this uses event delegation on `document` — a single set of listeners handles
+ * all forms on the page, including forms added after initial load.
+ *
+ * Features:
+ * - AJAX submission (no page reload)
+ * - Client-side validation with inline errors
+ * - Multi-page navigation with history integration
+ * - Conditional field visibility
+ * - Session persistence (survives page refreshes)
+ * - Turnstile widget injection
+ * - File upload
+ */
+
 const STORAGE_PREFIX = "ec-form:";
 const DEBOUNCE_MS = 500;
 
@@ -23,11 +40,15 @@ export function parseSubmitResponse(body: unknown): SubmitResponse {
 let saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let listenersRegistered = false;
 
+// ─── Initialization ──────────────────────────────────────────────
+
 export function initForms() {
 	const init = () => {
 		document.querySelectorAll<HTMLFormElement>("[data-ec-form]").forEach((form) => {
 			if (form.dataset.ecInitialized) return;
 			form.dataset.ecInitialized = "1";
+			// Set here, not in the markup, so a reader without JavaScript keeps native validation.
+			form.noValidate = true;
 			restoreState(form);
 			initMultiPage(form);
 			initConditions(form);
@@ -35,17 +56,21 @@ export function initForms() {
 		});
 	};
 
+	// Guard against duplicate listener registration
 	if (!listenersRegistered) {
 		listenersRegistered = true;
 
+		// Event delegation — handles all forms, current and future
 		document.addEventListener("submit", handleSubmit);
 		document.addEventListener("click", handleClick);
 		document.addEventListener("input", handleInput);
 		document.addEventListener("change", handleChange);
 		window.addEventListener("popstate", handlePopState);
 
+		// Astro ClientRouter fires astro:page-load on every navigation
 		document.addEventListener("astro:page-load", init);
 
+		// Clean up pending save timers before view transitions swap the DOM
 		document.addEventListener("astro:before-swap", () => {
 			for (const timer of saveTimers.values()) {
 				clearTimeout(timer);
@@ -54,6 +79,7 @@ export function initForms() {
 		});
 	}
 
+	// Fallback for sites without ClientRouter
 	if (document.readyState === "loading") {
 		document.addEventListener("DOMContentLoaded", init);
 	} else {
@@ -61,11 +87,14 @@ export function initForms() {
 	}
 }
 
+// ─── Submit Handler ──────────────────────────────────────────────
+
 async function handleSubmit(e: Event) {
 	const form = (e.target as HTMLElement).closest<HTMLFormElement>("[data-ec-form]");
 	if (!form) return;
 	e.preventDefault();
 
+	// Validate current (or last) page
 	if (!validateVisibleFields(form)) return;
 
 	const submitBtn = form.querySelector<HTMLButtonElement>(".ec-form-submit");
@@ -77,43 +106,10 @@ async function handleSubmit(e: Event) {
 	clearStatus(form);
 
 	try {
-		const hasFiles = form.querySelector<HTMLInputElement>('input[type="file"]');
-		let body: BodyInit;
-		const headers: Record<string, string> = {};
-
-		if (hasFiles) {
-			body = new FormData(form);
-		} else {
-			headers["Content-Type"] = "application/json";
-			const formData = new FormData(form);
-			let formId = "";
-			const data: Record<string, unknown> = {};
-			const seen = new Set<string>();
-			for (const [key, val] of formData) {
-				if (typeof val !== "string") continue;
-				if (key === "formId") {
-					formId = val;
-				} else if (key === "_hp" || key === "cf-turnstile-response") {
-					data[key] = val;
-				} else if (seen.has(key)) {
-					const existing = data[key];
-					if (Array.isArray(existing)) {
-						existing.push(val);
-					} else {
-						data[key] = [existing, val];
-					}
-				} else {
-					seen.add(key);
-					data[key] = val;
-				}
-			}
-			body = JSON.stringify({ formId, data });
-		}
-
 		const res = await fetch(form.action, {
 			method: "POST",
-			headers,
-			body,
+			headers: { "Content-Type": "application/json" },
+			body: await serializeSubmission(new FormData(form)),
 		});
 
 		const result = parseSubmitResponse(await res.json());
@@ -121,6 +117,7 @@ async function handleSubmit(e: Event) {
 		if (result.success) {
 			clearSavedState(form);
 			if (result.redirect) {
+				// prevent xss
 				if (isSafeRedirectUrl(result.redirect)) {
 					window.location.href = result.redirect;
 				} else {
@@ -146,6 +143,61 @@ async function handleSubmit(e: Event) {
 	}
 }
 
+function toBase64(bytes: Uint8Array): string {
+	let binary = "";
+	// Chunked so String.fromCharCode never receives more arguments than the engine allows
+	for (let i = 0; i < bytes.length; i += 0x8000) {
+		binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+	}
+	return btoa(binary);
+}
+
+/**
+ * Build the JSON body the submit route accepts. Chosen files travel as
+ * base64 under `files`, keyed by field name.
+ *
+ * @internal
+ */
+export async function serializeSubmission(formData: FormData): Promise<string> {
+	let formId = "";
+	const data: Record<string, unknown> = {};
+	const files: Record<string, { filename: string; contentType: string; bytes: string }> = {};
+	// Track keys we've seen to detect multi-value fields (checkbox-group)
+	const seen = new Set<string>();
+	for (const [key, val] of formData) {
+		if (typeof val !== "string") {
+			// An empty file input still submits a nameless, zero-byte File
+			if (val.size > 0) {
+				files[key] = {
+					filename: val.name,
+					contentType: val.type || "application/octet-stream",
+					bytes: toBase64(new Uint8Array(await val.arrayBuffer())),
+				};
+			}
+			continue;
+		}
+		if (key === "formId") {
+			formId = val;
+		} else if (key === "_hp" || key === "cf-turnstile-response") {
+			// Include spam fields at top level for server-side checks
+			data[key] = val;
+		} else if (seen.has(key)) {
+			// Multi-value field (checkbox-group) — collect into array
+			const existing = data[key];
+			if (Array.isArray(existing)) {
+				existing.push(val);
+			} else {
+				data[key] = [existing, val];
+			}
+		} else {
+			seen.add(key);
+			data[key] = val;
+		}
+	}
+	return JSON.stringify(Object.keys(files).length > 0 ? { formId, data, files } : { formId, data });
+}
+
+/** validates that a redirect url uses a safe protocol */
 function isSafeRedirectUrl(url: string): boolean {
 	try {
 		const parsed = new URL(url, window.location.href);
@@ -154,6 +206,8 @@ function isSafeRedirectUrl(url: string): boolean {
 		return false;
 	}
 }
+
+// ─── Click Handler (Prev/Next) ───────────────────────────────────
 
 function handleClick(e: Event) {
 	const target = e.target as HTMLElement;
@@ -186,17 +240,21 @@ function handleClick(e: Event) {
 	}
 }
 
+// ─── Input/Change Handlers ───────────────────────────────────────
+
 function handleInput(e: Event) {
 	const target = e.target as HTMLElement;
 	const form = target.closest<HTMLFormElement>("[data-ec-form]");
 	if (!form) return;
 
+	// Clear field error on input
 	const name = (target as HTMLInputElement).name;
 	if (name) {
 		const errorEl = form.querySelector(`[data-error-for="${name}"]`);
 		if (errorEl) errorEl.textContent = "";
 	}
 
+	// Debounced save
 	debouncedSave(form);
 }
 
@@ -205,8 +263,11 @@ function handleChange(e: Event) {
 	const form = target.closest<HTMLFormElement>("[data-ec-form]");
 	if (!form) return;
 
+	// Evaluate conditions
 	evaluateConditions(form);
 }
+
+// ─── Popstate Handler ────────────────────────────────────────────
 
 function handlePopState(e: PopStateEvent) {
 	if (e.state && typeof e.state.ecFormPage === "number" && typeof e.state.ecFormId === "string") {
@@ -221,13 +282,17 @@ function handlePopState(e: PopStateEvent) {
 	}
 }
 
+// ─── Multi-Page ──────────────────────────────────────────────────
+
 function initMultiPage(form: HTMLFormElement) {
 	const pages = form.querySelectorAll<HTMLFieldSetElement>("[data-page]");
 	if (pages.length <= 1) return;
 
+	// Hide all pages except first
 	pages.forEach((page, i) => {
 		if (i > 0) {
 			page.hidden = true;
+			// Remove required from hidden pages to prevent native validation
 			page.querySelectorAll<HTMLElement>("[required]").forEach((el) => {
 				el.removeAttribute("required");
 				el.dataset.wasRequired = "1";
@@ -235,6 +300,7 @@ function initMultiPage(form: HTMLFormElement) {
 		}
 	});
 
+	// Show next button, hide submit (unless single page)
 	const nextBtn = form.querySelector<HTMLButtonElement>("[data-ec-next]");
 	const submitBtn = form.querySelector<HTMLButtonElement>(".ec-form-submit");
 	if (nextBtn) nextBtn.hidden = false;
@@ -250,12 +316,14 @@ function showPage(form: HTMLFormElement, pageIndex: number) {
 	pages.forEach((page, i) => {
 		if (i === pageIndex) {
 			page.hidden = false;
+			// Restore required attributes
 			page.querySelectorAll<HTMLElement>("[data-was-required]").forEach((el) => {
 				el.setAttribute("required", "");
 				delete el.dataset.wasRequired;
 			});
 		} else {
 			page.hidden = true;
+			// Strip required from hidden
 			page.querySelectorAll<HTMLElement>("[required]").forEach((el) => {
 				el.removeAttribute("required");
 				el.dataset.wasRequired = "1";
@@ -263,6 +331,7 @@ function showPage(form: HTMLFormElement, pageIndex: number) {
 		}
 	});
 
+	// Update button visibility
 	const prevBtn = form.querySelector<HTMLButtonElement>("[data-ec-prev]");
 	const nextBtn = form.querySelector<HTMLButtonElement>("[data-ec-next]");
 	const submitBtn = form.querySelector<HTMLButtonElement>(".ec-form-submit");
@@ -288,6 +357,8 @@ function updateProgress(form: HTMLFormElement, current: number, total: number) {
 		progress.textContent = `Step ${current + 1} of ${total}`;
 	}
 }
+
+// ─── Validation ──────────────────────────────────────────────────
 
 function validatePage(form: HTMLFormElement, pageIndex: number): boolean {
 	const page = form.querySelector<HTMLFieldSetElement>(`[data-page="${pageIndex}"]`);
@@ -337,6 +408,8 @@ function showErrors(form: HTMLFormElement, errors: Array<{ field: string; messag
 	}
 }
 
+// ─── Status Messages ─────────────────────────────────────────────
+
 function showStatus(form: HTMLFormElement, message: string, type: "success" | "error") {
 	const status = form.querySelector("[data-form-status]");
 	if (status) {
@@ -352,6 +425,8 @@ function clearStatus(form: HTMLFormElement) {
 		status.className = "ec-form-status";
 	}
 }
+
+// ─── Conditional Fields ──────────────────────────────────────────
 
 function initConditions(form: HTMLFormElement) {
 	evaluateConditions(form);
@@ -387,12 +462,17 @@ function evaluateConditions(form: HTMLFormElement) {
 			}
 
 			wrapper.hidden = !visible;
+			// Disable inputs in hidden fields so they're excluded from FormData
 			wrapper.querySelectorAll<HTMLInputElement>("input, select, textarea").forEach((el) => {
 				el.disabled = !visible;
 			});
-		} catch {}
+		} catch {
+			// Invalid condition JSON — show field
+		}
 	});
 }
+
+// ─── Session Persistence ─────────────────────────────────────────
 
 function saveState(form: HTMLFormElement) {
 	const formId = form.dataset.formId;
@@ -409,7 +489,9 @@ function saveState(form: HTMLFormElement) {
 			STORAGE_PREFIX + formId,
 			JSON.stringify({ page, values, savedAt: Date.now() }),
 		);
-	} catch {}
+	} catch {
+		// sessionStorage full or unavailable — ignore
+	}
 }
 
 function restoreState(form: HTMLFormElement) {
@@ -425,6 +507,7 @@ function restoreState(form: HTMLFormElement) {
 			values: Record<string, string>;
 		};
 
+		// Restore field values
 		for (const [name, value] of Object.entries(state.values)) {
 			const input = form.elements.namedItem(name);
 			if (input && "value" in input) {
@@ -432,12 +515,15 @@ function restoreState(form: HTMLFormElement) {
 			}
 		}
 
+		// Navigate to saved page (clamped to valid range)
 		if (state.page > 0) {
 			const pages = form.querySelectorAll("[data-page]");
 			const page = Math.min(state.page, pages.length - 1);
 			if (page > 0) showPage(form, page);
 		}
-	} catch {}
+	} catch {
+		// Invalid saved state — ignore
+	}
 }
 
 function clearSavedState(form: HTMLFormElement) {
@@ -445,7 +531,9 @@ function clearSavedState(form: HTMLFormElement) {
 	if (formId) {
 		try {
 			sessionStorage.removeItem(STORAGE_PREFIX + formId);
-		} catch {}
+		} catch {
+			// Ignore
+		}
 	}
 }
 
@@ -465,6 +553,8 @@ function debouncedSave(form: HTMLFormElement) {
 	);
 }
 
+// ─── Turnstile ───────────────────────────────────────────────────
+
 function initTurnstile(form: HTMLFormElement) {
 	const container = form.querySelector<HTMLElement>("[data-ec-turnstile]");
 	if (!container) return;
@@ -472,6 +562,7 @@ function initTurnstile(form: HTMLFormElement) {
 	const siteKey = container.dataset.sitekey;
 	if (!siteKey) return;
 
+	// Load Turnstile script if not already loaded
 	if (!document.querySelector('script[src*="turnstile"]')) {
 		const script = document.createElement("script");
 		script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";

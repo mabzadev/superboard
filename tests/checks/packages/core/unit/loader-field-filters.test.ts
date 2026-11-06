@@ -15,11 +15,12 @@ describe("Loader field filters", () => {
 	beforeEach(async () => {
 		db = await setupTestDatabaseWithCollections();
 		await db
-			.updateTable("_emdash_taxonomy_defs")
+			.updateTable("_emdash_taxonomy_def_groups")
 			.set({ collections: JSON.stringify(["post"]) })
 			.where("name", "in", ["category", "tag"])
 			.execute();
 		resetTaxonomyNamesCache();
+		// Add a 'series' field to the post collection for field filtering tests
 		const registry = new SchemaRegistry(db);
 		await registry.createField("post", {
 			slug: "series",
@@ -132,12 +133,14 @@ describe("Loader field filters", () => {
 			}),
 		);
 
+		// Invalid field names are skipped, so no filter is applied
 		expect(result.entries).toHaveLength(2);
 	});
 
-	it("should handle empty WhereRange object (no conditions added)", async () => {
+	it("should warn and ignore a range object with no bounds", async () => {
 		await createPost("Post A");
 		await createPost("Post B");
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
 		const loader = emdashLoader();
 		const result = await runWithContext({ editMode: false, db }, () =>
@@ -147,6 +150,123 @@ describe("Loader field filters", () => {
 		);
 
 		expect(result.entries).toHaveLength(2);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('"published_at"'));
+		warn.mockRestore();
+	});
+
+	it("should warn on an object filter that is not a range, such as { in: [...] }", async () => {
+		await createPost("Post A", { series: "alpha" });
+		await createPost("Post B", { series: "beta" });
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		const loader = emdashLoader();
+		const result = await runWithContext({ editMode: false, db }, () =>
+			loader.loadCollection!({
+				filter: { type: "post", where: { series: { in: ["alpha"] } as never } },
+			}),
+		);
+
+		expect(result.entries).toHaveLength(2);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('"series"'));
+		warn.mockRestore();
+	});
+
+	/** Runs `fn` against `db`, recording the SQL and bound parameters of every collection read. */
+	async function captureReads<T>(fn: (target: Kysely<Database>) => Promise<T>) {
+		const reads: { sql: string; parameters: readonly unknown[] }[] = [];
+		const target = db.withPlugin({
+			transformQuery: (args) => args.node,
+			transformResult: async (args) => args.result,
+		});
+		const executor = target.getExecutor();
+		const execute = executor.executeQuery.bind(executor);
+		executor.executeQuery = ((
+			compiled: { sql: string; parameters: readonly unknown[] },
+			...rest: unknown[]
+		) => {
+			if (/^\s*SELECT \*/i.test(compiled.sql)) reads.push(compiled);
+			return (execute as (...args: unknown[]) => unknown)(compiled, ...rest);
+		}) as typeof executor.executeQuery;
+		const value = await fn(target);
+		return { value, reads };
+	}
+
+	it("binds a long IN list as one parameter, ordered and paged by the database", async () => {
+		const wanted: string[] = [];
+		for (let i = 0; i < 130; i++) {
+			const post = await createPost(`Post ${i}`, {
+				series: `s${i}`,
+				publishedAt: new Date(2020, 0, 1, 0, i).toISOString(),
+			});
+			// 110 values: more than D1's 100 bound parameters on their own.
+			if (i < 110) wanted.push(post.data.series as string);
+		}
+
+		const { value: page, reads } = await captureReads((target) =>
+			runWithContext({ editMode: false, db: target }, () =>
+				emdashLoader().loadCollection!({
+					filter: {
+						type: "post",
+						where: { series: wanted },
+						orderBy: { published_at: "asc" },
+						limit: 10,
+						offset: 5,
+					},
+				}),
+			),
+		);
+
+		expect(reads).toHaveLength(1);
+		expect(reads[0]!.parameters.length).toBeLessThan(100);
+		expect(page.entries.map((e) => e.data.series)).toEqual(
+			[5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map((n) => `s${n}`),
+		);
+	});
+
+	it("keeps every array under the parameter budget when two arrays are long", async () => {
+		const registry = new SchemaRegistry(db);
+		await registry.createField("post", { slug: "edition", label: "Edition", type: "string" });
+		const series: string[] = [];
+		const editions: string[] = [];
+		for (let i = 0; i < 80; i++) {
+			const result = await handleContentCreate(db, "post", {
+				data: { title: `Post ${i}`, series: `s${i}`, edition: `e${i}` },
+				status: "published",
+			});
+			if (!result.success) throw new Error("Failed to create post");
+			series.push(`s${i}`);
+			// Every other edition, so the two lists agree on 40 entries.
+			if (i % 2 === 0) editions.push(`e${i}`);
+		}
+
+		const { value: result, reads } = await captureReads((target) =>
+			runWithContext({ editMode: false, db: target }, () =>
+				emdashLoader().loadCollection!({
+					filter: { type: "post", where: { series, edition: editions }, limit: 100 },
+				}),
+			),
+		);
+
+		expect(reads).toHaveLength(1);
+		expect(reads[0]!.parameters.length).toBeLessThan(100);
+		expect(result.entries).toHaveLength(40);
+	});
+
+	it("binds short arrays one value per parameter, as before", async () => {
+		await createPost("Post A", { series: "alpha" });
+		await createPost("Post B", { series: "beta" });
+
+		const { reads } = await captureReads((target) =>
+			runWithContext({ editMode: false, db: target }, () =>
+				emdashLoader().loadCollection!({
+					filter: { type: "post", where: { series: ["alpha", "beta"] } },
+				}),
+			),
+		);
+
+		expect(reads).toHaveLength(1);
+		expect(reads[0]!.sql).not.toContain("json_each");
+		expect(reads[0]!.parameters).toEqual(expect.arrayContaining(["alpha", "beta"]));
 	});
 
 	it("should filter by gt (strict greater than)", async () => {
@@ -212,6 +332,7 @@ describe("Loader field filters", () => {
 	});
 
 	it("should combine taxonomy filter with field filter", async () => {
+		// Create a taxonomy term and assign it to posts
 		await db
 			.insertInto("taxonomies" as never)
 			.values({
@@ -219,6 +340,8 @@ describe("Loader field filters", () => {
 				name: "category",
 				slug: "news",
 				label: "News",
+				// content_taxonomies.taxonomy_id stores the term's translation_group
+				// (migration 036). Single-locale terms seed translation_group = id.
 				translation_group: "tax_cat_news",
 			} as never)
 			.execute();
@@ -227,6 +350,7 @@ describe("Loader field filters", () => {
 		const postB = await createPost("B-News-Beta", { series: "beta" });
 		await createPost("C-Other-Alpha", { series: "alpha" });
 
+		// Assign taxonomy to posts A and B
 		await db
 			.insertInto("content_taxonomies" as never)
 			.values([
@@ -245,6 +369,7 @@ describe("Loader field filters", () => {
 			}),
 		);
 
+		// Only post A matches both category=news AND series=alpha
 		expect(result.entries).toHaveLength(1);
 		expect(result.entries[0].data.title).toBe("A-News-Alpha");
 	});
@@ -264,6 +389,8 @@ describe("Loader field filters", () => {
 		const postA = await createPost("Tech Post");
 		await createPost("Other Post");
 
+		// Attach through the repository so the pivot row is stamped with the
+		// entry's denormalized filter/sort columns (migration 051).
 		await new TaxonomyRepository(db).attachToEntry("post", postA.id, "tax_cat_tech");
 
 		const loader = emdashLoader();
@@ -291,6 +418,7 @@ describe("Loader field filters", () => {
 			}),
 		);
 
+		// null values are skipped, so no filter is applied
 		expect(result.entries).toHaveLength(2);
 	});
 
@@ -320,6 +448,7 @@ describe("Loader field filters", () => {
 			}),
 		);
 
+		// Range on taxonomy is ignored, returns all entries
 		expect(result.entries).toHaveLength(2);
 		expect(warnSpy).toHaveBeenCalledWith(
 			expect.stringContaining("range operators are not supported on taxonomy"),
@@ -346,22 +475,26 @@ describe("Loader field filters", () => {
 		expect(result.entries[0].data.title).toBe("Early");
 	});
 
-	it("should return empty results for non-existent column in where filter", async () => {
-		await createPost("Post A", { series: "alpha" });
+	it.each(["nonexistent_column", "_emdash_missing"])(
+		"should return empty results for non-existent caller field %s",
+		async (field) => {
+			await createPost("Post A", { series: "alpha" });
 
-		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-		const loader = emdashLoader();
-		const result = await runWithContext({ editMode: false, db }, () =>
-			loader.loadCollection!({
-				filter: {
-					type: "post",
-					where: { nonexistent_column: "value" },
-				},
-			}),
-		);
+			const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+			const loader = emdashLoader();
+			const result = await runWithContext({ editMode: false, db }, () =>
+				loader.loadCollection!({
+					filter: {
+						type: "post",
+						where: { [field]: "value" },
+					},
+				}),
+			);
 
-		expect(result.entries).toHaveLength(0);
-		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("no such column"));
-		warnSpy.mockRestore();
-	});
+			expect(result.error).toBeUndefined();
+			expect(result.entries).toHaveLength(0);
+			expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("no such column"));
+			warnSpy.mockRestore();
+		},
+	);
 });

@@ -16,6 +16,15 @@ export interface BlockKitMediaPickerFieldProps {
 	onChange: (actionId: string, value: unknown) => void;
 }
 
+/**
+ * Shared media_picker BlockKit element renderer used by `BlockKitFieldWidget`
+ * (sandboxed plugin field widgets) and the `BlockKitField` switch inside
+ * `PortableTextEditor` (plugin block forms).
+ *
+ * The stored value is the asset URL string, so values are interchangeable
+ * with `text_input`. Existing arbitrary URLs are tolerated but only previewed
+ * when they pass scheme/path safety checks.
+ */
 export function BlockKitMediaPickerField({
 	actionId,
 	label,
@@ -25,6 +34,7 @@ export function BlockKitMediaPickerField({
 	onChange,
 }: BlockKitMediaPickerFieldProps) {
 	const { t } = useLingui();
+	const labelId = React.useId();
 	const [pickerOpen, setPickerOpen] = React.useState(false);
 	const [imageBroken, setImageBroken] = React.useState(false);
 	const url = typeof value === "string" && value.length > 0 ? value : "";
@@ -36,6 +46,10 @@ export function BlockKitMediaPickerField({
 	const canPreview = isSafePreviewUrl(url);
 
 	const handleSelect = (item: MediaItem) => {
+		// `MediaPickerModal` returns URL-inserted items with `id: ""` and no
+		// `provider`/`storageKey`, so we cannot infer "local" from absence of
+		// `provider` alone — that would rewrite the external URL to a broken
+		// `/_emdash/api/media/file/` path. Detect local explicitly.
 		const isLocalMedia = item.provider === "local" || !!item.storageKey;
 		const localKey = item.storageKey || item.id;
 		const nextUrl = isLocalMedia && localKey ? `/_emdash/api/media/file/${localKey}` : item.url;
@@ -44,14 +58,16 @@ export function BlockKitMediaPickerField({
 	};
 
 	return (
-		<div>
-			<label className="text-sm font-medium mb-1.5 block">{label}</label>
+		<div role="group" aria-labelledby={labelId}>
+			<span id={labelId} className="mb-1.5 block text-base font-medium text-kumo-default">
+				{label}
+			</span>
 			{canPreview ? (
 				imageBroken ? (
 					<div className="relative group min-h-20">
-						<div className="min-h-20 w-full rounded-md border border-kumo-line bg-kumo-muted flex items-center justify-center gap-2 text-kumo-subtle">
+						<div className="flex min-h-20 w-full items-center justify-center gap-2 rounded-md border border-kumo-line bg-kumo-tint text-kumo-subtle">
 							<ImageBroken className="h-5 w-5" />
-							<span className="text-sm">{t`Image not found`}</span>
+							<span className="text-xs leading-4">{t`Image not found`}</span>
 						</div>
 						<div className="absolute top-2 end-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-opacity flex gap-1">
 							<Button
@@ -79,7 +95,7 @@ export function BlockKitMediaPickerField({
 						<img
 							src={url}
 							alt=""
-							className="max-h-40 min-h-20 w-full rounded-md border border-kumo-line object-contain bg-kumo-muted"
+							className="emdash-media-transparency-grid max-h-40 min-h-20 w-full rounded-md border border-kumo-line object-contain"
 							referrerPolicy="no-referrer"
 							loading="lazy"
 							onError={() => setImageBroken(true)}
@@ -115,7 +131,7 @@ export function BlockKitMediaPickerField({
 				>
 					<div className="flex flex-col items-center gap-1.5 text-kumo-subtle">
 						<ImageIcon className="h-6 w-6" />
-						<span className="text-sm">{placeholder ?? t`Select media`}</span>
+						<span className="text-base">{placeholder ?? t`Select media`}</span>
 					</div>
 				</Button>
 			)}
@@ -132,6 +148,14 @@ export function BlockKitMediaPickerField({
 
 const HAS_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 
+/**
+ * Returns true when `url` is safe to preview via `<img src={url}>`:
+ * - Same-origin relative path starting with `/` (but not `//`)
+ * - External `http://` or `https://` URL
+ *
+ * Rejects `javascript:`, `data:`, protocol-relative `//host`, and other
+ * schemes whose preview could leak credentials or trigger surprises.
+ */
 function isSafePreviewUrl(url: string): boolean {
 	if (!url) return false;
 	if (HAS_SCHEME_RE.test(url)) {

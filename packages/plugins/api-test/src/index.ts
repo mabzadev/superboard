@@ -1,18 +1,36 @@
+/**
+ * API Test Plugin for EmDash CMS
+ *
+ * This plugin exercises all v2 plugin APIs for testing purposes:
+ * - ctx.plugin (plugin info)
+ * - ctx.kv (key-value store)
+ * - ctx.log (logging)
+ * - ctx.storage (storage collections)
+ * - ctx.content (content access with read/write)
+ * - ctx.media (media access with read/write)
+ * - ctx.http (network fetch)
+ *
+ * Each API is exposed via a route for manual testing.
+ */
+
 import type { ResolvedPlugin, PluginDescriptor } from "emdash";
 import { definePlugin } from "emdash";
 
 import { version } from "../package.json";
 
+/** Narrow unknown to a record */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Safely extract a string property from an unknown value */
 function getString(value: unknown, key: string): string | undefined {
 	if (!isRecord(value)) return undefined;
 	const v = value[key];
 	return typeof v === "string" ? v : undefined;
 }
 
+/** Safely extract a number property from an unknown value */
 function getNumber(value: unknown, key: string): number | undefined {
 	if (!isRecord(value)) return undefined;
 	const v = value[key];
@@ -20,9 +38,14 @@ function getNumber(value: unknown, key: string): number | undefined {
 }
 
 export interface ApiTestPluginOptions {
+	/** Test webhook URL for http.fetch testing */
 	testUrl?: string;
 }
 
+/**
+ * Plugin factory - returns a descriptor for the integration to use
+ * The integration will generate a virtual module that imports and calls createPlugin
+ */
 export function apiTestPlugin(
 	options: ApiTestPluginOptions = {},
 ): PluginDescriptor<ApiTestPluginOptions> {
@@ -37,15 +60,21 @@ export function apiTestPlugin(
 	};
 }
 
+/**
+ * Create the resolved plugin - called by the generated virtual module
+ */
 export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugin {
 	return definePlugin({
 		id: "api-test",
 		version,
 
+		// Declare ALL capabilities to test everything
 		capabilities: ["content:read", "content:write", "media:read", "media:write", "network:request"],
 
+		// Allowed hosts for fetch testing
 		allowedHosts: ["httpbin.org", "*.httpbin.org", "jsonplaceholder.typicode.com"],
 
+		// Storage collections with indexes
 		storage: {
 			logs: {
 				indexes: ["timestamp", "level", ["level", "timestamp"]],
@@ -55,13 +84,18 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 			},
 		},
 
+		// Admin configuration
 		admin: {
 			entry: "@emdash-cms/plugin-api-test/admin",
 			pages: [{ path: "/test", label: "API Tests", icon: "code" }],
 			widgets: [{ id: "api-status", title: "API Status", size: "half" }],
 		},
 
+		// Routes that exercise each API
 		routes: {
+			// =================================================================
+			// Plugin Info (always available)
+			// =================================================================
 			"plugin/info": {
 				handler: async (ctx) => {
 					return {
@@ -71,6 +105,9 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 				},
 			},
 
+			// =================================================================
+			// Logging (always available)
+			// =================================================================
 			"log/test": {
 				handler: async (ctx) => {
 					ctx.log.debug("Debug message from api-test", { route: "log/test" });
@@ -81,6 +118,9 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 				},
 			},
 
+			// =================================================================
+			// KV Store (always available)
+			// =================================================================
 			"kv/get": {
 				handler: async (ctx) => {
 					const key = getString(ctx.input, "key") ?? "test-key";
@@ -114,6 +154,9 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 				},
 			},
 
+			// =================================================================
+			// Storage Collections (requires storage declaration)
+			// =================================================================
 			"storage/logs/put": {
 				handler: async (ctx) => {
 					const id = `log-${Date.now()}`;
@@ -179,6 +222,9 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 				},
 			},
 
+			// =================================================================
+			// Content Access (requires content:read, content:write)
+			// =================================================================
 			"content/list": {
 				handler: async (ctx) => {
 					if (!ctx.content) {
@@ -254,6 +300,9 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 				},
 			},
 
+			// =================================================================
+			// Media Access (requires media:read, media:write)
+			// =================================================================
 			"media/list": {
 				handler: async (ctx) => {
 					if (!ctx.media) {
@@ -295,6 +344,9 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 				},
 			},
 
+			// =================================================================
+			// HTTP Fetch (requires network:request)
+			// =================================================================
 			"http/fetch": {
 				handler: async (ctx) => {
 					if (!ctx.http) {
@@ -348,24 +400,31 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 				},
 			},
 
+			// =================================================================
+			// Combined Test (exercises multiple APIs)
+			// =================================================================
 			"test/all": {
 				handler: async (ctx) => {
 					const results: Record<string, unknown> = {};
 
+					// 1. Plugin info
 					results.plugin = {
 						id: ctx.plugin.id,
 						version: ctx.plugin.version,
 					};
 
+					// 2. Logging
 					ctx.log.info("Running all API tests", { timestamp: Date.now() });
 					results.log = "logged";
 
+					// 3. KV
 					const kvKey = `test-all-${Date.now()}`;
 					await ctx.kv.set(kvKey, { tested: true });
 					const kvValue = await ctx.kv.get(kvKey);
 					await ctx.kv.delete(kvKey);
 					results.kv = { key: kvKey, value: kvValue, cleaned: true };
 
+					// 4. Storage
 					const logId = `test-${Date.now()}`;
 					await ctx.storage.logs.put(logId, {
 						timestamp: new Date().toISOString(),
@@ -376,6 +435,7 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 					await ctx.storage.logs.delete(logId);
 					results.storage = { id: logId, entry: logEntry, cleaned: true };
 
+					// 5. Content (if available)
 					if (ctx.content) {
 						const contentList = await ctx.content.list("posts", { limit: 1 });
 						results.content = {
@@ -387,6 +447,7 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 						results.content = { available: false };
 					}
 
+					// 6. Media (if available)
 					if (ctx.media) {
 						const mediaList = await ctx.media.list({ limit: 1 });
 						results.media = {
@@ -398,6 +459,7 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 						results.media = { available: false };
 					}
 
+					// 7. HTTP (if available)
 					if (ctx.http) {
 						try {
 							const response = await ctx.http.fetch("https://httpbin.org/get");
@@ -424,6 +486,7 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 			},
 		},
 
+		// Hooks to test hook system
 		hooks: {
 			"plugin:install": {
 				handler: async (_event, ctx) => {
@@ -440,12 +503,13 @@ export function createPlugin(_options: ApiTestPluginOptions = {}): ResolvedPlugi
 			},
 
 			"content:afterSave": {
-				priority: 200,
+				priority: 200, // Run late to not interfere
 				handler: async (event, ctx) => {
 					ctx.log.debug("api-test saw content save", {
 						collection: event.collection,
 						isNew: event.isNew,
 					});
+					// Log to storage for verification
 					await ctx.storage.logs.put(`save-${Date.now()}`, {
 						timestamp: new Date().toISOString(),
 						level: "info",

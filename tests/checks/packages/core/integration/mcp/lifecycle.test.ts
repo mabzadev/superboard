@@ -1,3 +1,16 @@
+/**
+ * MCP content lifecycle tests.
+ *
+ * Covers two contracts that callers rely on:
+ *
+ * - `content_unpublish` preserves `published_at` as the editorial publication
+ *   date. Publication state comes from the status and revision pointers, and
+ *   re-publishing without an override keeps the same timestamp.
+ * - `schema_create_collection` applies its documented default of
+ *   `['drafts', 'revisions']` for `supports` when the caller omits it.
+ *   Explicit `[]` is preserved as an opt-out.
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -6,6 +19,7 @@ import type { Database } from "../../../../../../packages/core/src/database/type
 import {
 	connectMcpHarness,
 	extractJson,
+	revOf,
 	extractText,
 	type McpHarness,
 } from "../../utils/mcp-runtime.js";
@@ -17,7 +31,7 @@ import {
 
 const ADMIN_ID = "user_admin";
 
-describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
+describe("MCP content_unpublish — publishedAt preservation", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
 
@@ -31,45 +45,47 @@ describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
 		await teardownTestDatabase(db);
 	});
 
-	it("unpublish clears publishedAt so 'currently live' is unambiguous", async () => {
+	it("unpublish preserves publishedAt", async () => {
 		const created = await harness.client.callTool({
 			name: "content_create",
 			arguments: { collection: "post", data: { title: "Will publish" } },
 		});
 		const id = extractJson<{ item: { id: string } }>(created).item.id;
 
+		// Publish — populates publishedAt
 		const published = await harness.client.callTool({
 			name: "content_publish",
-			arguments: { collection: "post", id },
+			arguments: { collection: "post", id, _rev: revOf(created) },
 		});
-		const publishedItem = extractJson<{ item: { publishedAt: string | null } }>(published);
-		expect(publishedItem.item.publishedAt).toBeTruthy();
+		const publishedAt = extractJson<{ item: { publishedAt: string } }>(published).item.publishedAt;
+		expect(publishedAt).toBeTruthy();
 
 		const unpublished = await harness.client.callTool({
 			name: "content_unpublish",
-			arguments: { collection: "post", id },
+			arguments: { collection: "post", id, _rev: revOf(published) },
 		});
 		const unpubItem = extractJson<{
 			item: { publishedAt: string | null; status: string };
 		}>(unpublished);
 
 		expect(unpubItem.item.status).toBe("draft");
-		expect(unpubItem.item.publishedAt).toBeNull();
+		expect(unpubItem.item.publishedAt).toBe(publishedAt);
 	});
 
-	it("content_get after unpublish reflects null publishedAt and status=draft", async () => {
+	it("content_get after unpublish returns the retained publishedAt and draft status", async () => {
 		const created = await harness.client.callTool({
 			name: "content_create",
 			arguments: { collection: "post", data: { title: "T" } },
 		});
 		const id = extractJson<{ item: { id: string } }>(created).item.id;
-		await harness.client.callTool({
+		const published = await harness.client.callTool({
 			name: "content_publish",
-			arguments: { collection: "post", id },
+			arguments: { collection: "post", id, _rev: revOf(created) },
 		});
+		const publishedAt = extractJson<{ item: { publishedAt: string } }>(published).item.publishedAt;
 		await harness.client.callTool({
 			name: "content_unpublish",
-			arguments: { collection: "post", id },
+			arguments: { collection: "post", id, _rev: revOf(published) },
 		});
 
 		const got = await harness.client.callTool({
@@ -80,10 +96,11 @@ describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
 			item: { publishedAt: string | null; status: string };
 		}>(got);
 		expect(gotItem.item.status).toBe("draft");
-		expect(gotItem.item.publishedAt).toBeNull();
+		expect(gotItem.item.publishedAt).toBe(publishedAt);
 	});
 
-	it("re-publish after unpublish gets a fresh publishedAt timestamp", async () => {
+	it("re-publish after unpublish keeps the original publishedAt timestamp", async () => {
+		const publishedAt = "2020-01-01T00:00:00.000Z";
 		const created = await harness.client.callTool({
 			name: "content_create",
 			arguments: { collection: "post", data: { title: "T" } },
@@ -92,29 +109,26 @@ describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
 
 		const firstPub = await harness.client.callTool({
 			name: "content_publish",
-			arguments: { collection: "post", id },
+			arguments: { collection: "post", id, publishedAt, _rev: revOf(created) },
 		});
 		const firstTs = extractJson<{ item: { publishedAt: string } }>(firstPub).item.publishedAt;
-		expect(firstTs).toBeTruthy();
+		expect(firstTs).toBe(publishedAt);
 
-		await harness.client.callTool({
+		const unpublished = await harness.client.callTool({
 			name: "content_unpublish",
-			arguments: { collection: "post", id },
+			arguments: { collection: "post", id, _rev: revOf(firstPub) },
 		});
-
-		await new Promise((r) => setTimeout(r, 5));
 
 		const secondPub = await harness.client.callTool({
 			name: "content_publish",
-			arguments: { collection: "post", id },
+			arguments: { collection: "post", id, _rev: revOf(unpublished) },
 		});
 		const secondTs = extractJson<{ item: { publishedAt: string } }>(secondPub).item.publishedAt;
-		expect(secondTs).toBeTruthy();
-		expect(secondTs).not.toBe(firstTs);
+		expect(secondTs).toBe(publishedAt);
 	});
 });
 
-describe("MCP schema_create_collection — supports default (bug #11)", () => {
+describe("MCP schema_create_collection — supports default", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
 
@@ -182,7 +196,7 @@ describe("MCP schema_create_collection — supports default (bug #11)", () => {
 
 		await harness.client.callTool({
 			name: "content_update",
-			arguments: { collection: "story", id, data: { title: "Updated" } },
+			arguments: { collection: "story", id, data: { title: "Updated" }, _rev: revOf(created) },
 		});
 
 		const revs = await harness.client.callTool({

@@ -1,3 +1,9 @@
+/**
+ * Search stats endpoint
+ *
+ * GET /_emdash/api/search/stats
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -6,6 +12,9 @@ import { getSearchStats } from "#search/index.js";
 
 export const prerender = false;
 
+/**
+ * Get search index statistics
+ */
 export const GET: APIRoute = async ({ locals }) => {
 	const { emdash, user } = locals;
 

@@ -1,3 +1,7 @@
+/**
+ * Google OAuth provider (using OIDC)
+ */
+
 import { z } from "zod";
 
 import type { OAuthProvider, OAuthProfile } from "../types.js";

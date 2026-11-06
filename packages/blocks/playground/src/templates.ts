@@ -6,6 +6,8 @@ export interface Template {
 	blocks: Block[];
 }
 
+// ── Sample data generators ───────────────────────────────────────────────────
+
 const HOUR = 3_600_000;
 
 function generateTrafficSeries(): ChartSeries[] {

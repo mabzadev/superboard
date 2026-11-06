@@ -1,9 +1,14 @@
+/**
+ * PasskeyItem - Individual passkey display with rename and delete actions
+ */
+
 import { Button, Input } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { Pencil, Trash, Check, X, DeviceMobile, Cloud } from "@phosphor-icons/react";
 import * as React from "react";
 
 import type { PasskeyInfo } from "../../lib/api";
+import { formatRelativeTime } from "../../lib/utils.js";
 import { ConfirmDialog } from "../ConfirmDialog.js";
 
 export interface PasskeyItemProps {
@@ -13,27 +18,6 @@ export interface PasskeyItemProps {
 	onDelete: (id: string) => Promise<void>;
 	isDeleting?: boolean;
 	isRenaming?: boolean;
-}
-
-function formatRelativeTime(dateString: string, locale: string): string {
-	const date = new Date(dateString);
-	const now = new Date();
-	const diffMs = now.getTime() - date.getTime();
-	const diffSecs = Math.floor(diffMs / 1000);
-	const diffMins = Math.floor(diffSecs / 60);
-	const diffHours = Math.floor(diffMins / 60);
-	const diffDays = Math.floor(diffHours / 24);
-
-	const relativeTime = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-	if (diffSecs < 60) return relativeTime.format(0, "second");
-	if (diffMins < 60) return relativeTime.format(-diffMins, "minute");
-	if (diffHours < 24) return relativeTime.format(-diffHours, "hour");
-	if (diffDays < 7) return relativeTime.format(-diffDays, "day");
-	return date.toLocaleDateString(locale, {
-		month: "short",
-		day: "numeric",
-		year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-	});
 }
 
 export function PasskeyItem({
@@ -62,7 +46,9 @@ export function PasskeyItem({
 		try {
 			await onRename(passkey.id, editName.trim());
 			setIsEditing(false);
-		} catch {}
+		} catch {
+			// Error handled by parent
+		}
 	};
 
 	const handleCancel = () => {
@@ -94,6 +80,7 @@ export function PasskeyItem({
 	return (
 		<li className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
 			<div className="flex min-w-0 items-start gap-3">
+				{/* Icon */}
 				<div className="mt-0.5 p-2 rounded-md bg-kumo-tint">
 					{passkey.deviceType === "multiDevice" ? (
 						<Cloud className="h-4 w-4 text-kumo-subtle" />
@@ -102,6 +89,7 @@ export function PasskeyItem({
 					)}
 				</div>
 
+				{/* Info */}
 				<div className="min-w-0 flex-1">
 					{isEditing ? (
 						<div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
@@ -143,11 +131,12 @@ export function PasskeyItem({
 						{passkey.backedUp && <span className="text-kumo-success"> {t`(synced)`}</span>}
 					</div>
 					<div className="text-xs text-kumo-subtle mt-1">
-						{t`Last used`} {formatRelativeTime(passkey.lastUsedAt, i18n.locale)}
+						{t`Last used`} <bdi>{formatRelativeTime(passkey.lastUsedAt, i18n.locale)}</bdi>
 					</div>
 				</div>
 			</div>
 
+			{/* Actions */}
 			{!isEditing && (
 				<div className="flex self-end items-center gap-1 sm:self-center">
 					<Button
@@ -177,6 +166,7 @@ export function PasskeyItem({
 				</div>
 			)}
 
+			{/* Delete confirmation dialog */}
 			<ConfirmDialog
 				open={showDeleteDialog}
 				onClose={() => {

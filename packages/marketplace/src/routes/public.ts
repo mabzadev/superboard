@@ -10,6 +10,8 @@ import {
 
 export const publicRoutes = new Hono<{ Bindings: Env }>();
 
+// ── GET /auth/discovery — Auth config for CLI ───────────────────
+
 publicRoutes.get("/auth/discovery", (c) => {
 	return c.json({
 		github: {
@@ -22,6 +24,8 @@ publicRoutes.get("/auth/discovery", (c) => {
 		},
 	});
 });
+
+// ── GET /plugins — Search/list plugins ──────────────────────────
 
 publicRoutes.get("/plugins", async (c) => {
 	const url = new URL(c.req.url);
@@ -83,6 +87,8 @@ publicRoutes.get("/plugins", async (c) => {
 		return c.json({ error: "Internal server error" }, 500);
 	}
 });
+
+// ── GET /plugins/:id — Plugin detail ────────────────────────────
 
 publicRoutes.get("/plugins/:id", async (c) => {
 	const id = c.req.param("id");
@@ -170,6 +176,8 @@ publicRoutes.get("/plugins/:id", async (c) => {
 	}
 });
 
+// ── GET /plugins/:id/versions — Version history ─────────────────
+
 publicRoutes.get("/plugins/:id/versions", async (c) => {
 	const pluginId = c.req.param("id");
 
@@ -195,6 +203,8 @@ publicRoutes.get("/plugins/:id/versions", async (c) => {
 		return c.json({ error: "Internal server error" }, 500);
 	}
 });
+
+// ── GET /plugins/:id/versions/:version/bundle — Bundle download ─
 
 publicRoutes.get("/plugins/:id/versions/:version/bundle", async (c) => {
 	const pluginId = c.req.param("id");
@@ -223,6 +233,8 @@ publicRoutes.get("/plugins/:id/versions/:version/bundle", async (c) => {
 	}
 });
 
+// ── GET /plugins/:id/versions/:version/audit — Audit result ─────
+
 publicRoutes.get("/plugins/:id/versions/:version/audit", async (c) => {
 	const pluginId = c.req.param("id");
 	const version = c.req.param("version");
@@ -250,6 +262,8 @@ publicRoutes.get("/plugins/:id/versions/:version/audit", async (c) => {
 	}
 });
 
+// ── GET /plugins/:id/versions/:version/image-audit — Image audit ─
+
 publicRoutes.get("/plugins/:id/versions/:version/image-audit", async (c) => {
 	const pluginId = c.req.param("id");
 	const version = c.req.param("version");
@@ -276,6 +290,8 @@ publicRoutes.get("/plugins/:id/versions/:version/image-audit", async (c) => {
 		return c.json({ error: "Internal server error" }, 500);
 	}
 });
+
+// ── Helpers ─────────────────────────────────────────────────────
 
 function safeJsonParse<T>(value: string | null, fallback: T): T {
 	if (!value) return fallback;

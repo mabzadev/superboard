@@ -1,5 +1,17 @@
 #!/usr/bin/env node
 
+/**
+ * Screenshot template pages at desktop + mobile breakpoints, light + dark mode.
+ *
+ * Usage:
+ *   node scripts/screenshot-templates.mjs <template> <url>
+ *   node scripts/screenshot-templates.mjs blog http://localhost:4321
+ *
+ * Reads page definitions from templates/screenshots.json.
+ * Outputs JPEG screenshots to assets/templates/<template>/<datetime>/
+ * and copies the folder to assets/templates/<template>/latest/.
+ */
+
 import { readFileSync, mkdirSync, cpSync, rmSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +29,7 @@ const BREAKPOINTS = {
 const COLOR_SCHEMES = ["light", "dark"];
 const JPEG_QUALITY = 80;
 
+// JS to hide the EmDash toolbar (the visual editing toolbar injected in dev mode)
 const HIDE_TOOLBAR_JS = `
 	document.querySelector("[data-emdash-toolbar]")?.remove();
 `;
@@ -57,6 +70,7 @@ async function screenshotTemplate(browser, baseUrl, pages, outDir) {
 					await page.goto(url, { waitUntil: "networkidle" });
 					await page.evaluate(HIDE_TOOLBAR_JS);
 					await page.evaluate(() => window.scrollTo(0, 0));
+					// let lazy images and fonts settle after load
 					await page.waitForTimeout(500);
 					await page.screenshot({
 						path: filepath,
@@ -118,6 +132,7 @@ async function run() {
 		process.exit(1);
 	}
 
+	// copy to latest/
 	const latestDir = join(ROOT, "assets", "templates", template, "latest");
 	if (existsSync(latestDir)) rmSync(latestDir, { recursive: true });
 	cpSync(outDir, latestDir, { recursive: true });

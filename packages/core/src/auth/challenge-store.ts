@@ -1,3 +1,9 @@
+/**
+ * Challenge store for WebAuthn
+ *
+ * Stores WebAuthn challenges in a dedicated table with automatic expiration.
+ */
+
 import type { ChallengeStore, ChallengeData } from "@emdash-cms/auth/passkey";
 import type { Kysely } from "kysely";
 
@@ -14,13 +20,14 @@ export function createChallengeStore(db: Kysely<Database>): ChallengeStore {
 					challenge,
 					type: data.type,
 					user_id: data.userId ?? null,
-					data: null,
+					data: data.context ?? null,
 					expires_at: expiresAt,
 				})
 				.onConflict((oc) =>
 					oc.column("challenge").doUpdateSet({
 						type: data.type,
 						user_id: data.userId ?? null,
+						data: data.context ?? null,
 						expires_at: expiresAt,
 					}),
 				)
@@ -38,7 +45,9 @@ export function createChallengeStore(db: Kysely<Database>): ChallengeStore {
 
 			const expiresAt = new Date(row.expires_at).getTime();
 
+			// Check expiration
 			if (expiresAt < Date.now()) {
+				// Expired, delete and return null
 				await this.delete(challenge);
 				return null;
 			}
@@ -47,6 +56,7 @@ export function createChallengeStore(db: Kysely<Database>): ChallengeStore {
 				type: row.type === "registration" ? "registration" : "authentication",
 				userId: row.user_id ?? undefined,
 				expiresAt,
+				...(row.data === null ? {} : { context: row.data }),
 			};
 		},
 
@@ -56,6 +66,10 @@ export function createChallengeStore(db: Kysely<Database>): ChallengeStore {
 	};
 }
 
+/**
+ * Clean up expired challenges.
+ * Should be called periodically (e.g., on startup, or via cron).
+ */
 export async function cleanupExpiredChallenges(db: Kysely<Database>): Promise<number> {
 	const now = new Date().toISOString();
 

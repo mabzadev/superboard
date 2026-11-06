@@ -1,5 +1,32 @@
+/**
+ * @emdash-cms/auth - Passkey-first authentication for EmDash
+ *
+ * Email is now handled by the plugin email pipeline (see PLUGIN-EMAIL.md).
+ * Auth functions accept an optional `email` send function instead of a
+ * hardcoded adapter. The route layer bridges `emdash.email.send()` from
+ * the pipeline into the auth functions.
+ *
+ * @example
+ * ```ts
+ * import { auth } from '@emdash-cms/auth'
+ *
+ * export default defineConfig({
+ *   integrations: [
+ *     emdash({
+ *       auth: auth({
+ *         secret: import.meta.env.EMDASH_AUTH_SECRET,
+ *         passkeys: { rpName: 'My Site' },
+ *       }),
+ *     }),
+ *   ],
+ * })
+ * ```
+ */
+
+// Types
 export * from "./types.js";
 
+// Config
 import { authConfigSchema as _authConfigSchema } from "./config.js";
 export {
 	authConfigSchema,
@@ -8,6 +35,7 @@ export {
 	type ResolvedAuthConfig,
 } from "./config.js";
 
+// RBAC
 export {
 	Permissions,
 	hasPermission,
@@ -20,6 +48,7 @@ export {
 	type Permission,
 } from "./rbac.js";
 
+// Tokens
 export {
 	generateToken,
 	hashToken,
@@ -29,26 +58,39 @@ export {
 	secureCompare,
 	encrypt,
 	decrypt,
+	// Prefixed API tokens (ec_pat_, ec_oat_, ec_ort_)
 	TOKEN_PREFIXES,
 	generatePrefixedToken,
 	hashPrefixedToken,
+	// Scopes
 	VALID_SCOPES,
+	TRANSFER_SCOPES,
 	validateScopes,
 	isValidScope,
+	isTransferScope,
 	hasScope,
 	type ApiTokenScope,
+	type TransferScope,
+	// PKCE
 	computeS256Challenge,
 } from "./tokens.js";
 
+// Passkey
 export * from "./passkey/index.js";
 
+// Magic Link
 export {
 	sendMagicLink,
+	createMagicLinkUrl,
 	verifyMagicLink,
 	MagicLinkError,
+	buildMagicLinkEmail,
 	type MagicLinkConfig,
+	type MagicLinkEmailStrings,
+	type MagicLinkUrlOptions,
 } from "./magic-link/index.js";
 
+// Invite
 export {
 	requestAdminEmailSetup,
 	completeAdminEmailSetup,
@@ -62,13 +104,16 @@ export {
 	createInviteToken,
 	validateInvite,
 	completeInvite,
+	buildInviteEmail,
 	InviteError,
 	escapeHtml,
 	type InviteConfig,
 	type InviteTokenResult,
+	type InviteEmailStrings,
 	type EmailSendFn,
 } from "./invite.js";
 
+// Signup
 export {
 	canSignup,
 	requestSignup,
@@ -78,6 +123,7 @@ export {
 	type SignupConfig,
 } from "./signup.js";
 
+// OAuth
 export {
 	createAuthorizationUrl,
 	handleOAuthCallback,
@@ -90,11 +136,25 @@ export {
 	type StateStore,
 	type OAuthConsumerConfig,
 } from "./oauth/consumer.js";
-export type { OAuthProvider, OAuthConfig, OAuthProfile, OAuthState } from "./oauth/types.js";
+export { isValidMicrosoftTenant } from "./oauth/providers/microsoft.js";
+export type {
+	OAuthProvider,
+	OAuthConfig,
+	MicrosoftOAuthConfig,
+	OAuthProfile,
+	OAuthState,
+} from "./oauth/types.js";
 
+// Email types (implementations moved to plugin email pipeline)
 export type { EmailAdapter, EmailMessage } from "./types.js";
 
+/**
+ * Create an auth configuration
+ *
+ * This is a helper function that validates the config at runtime.
+ */
 export function auth(config: import("./config.js").AuthConfig): import("./config.js").AuthConfig {
+	// Validate config
 	const result = _authConfigSchema.safeParse(config);
 	if (!result.success) {
 		throw new Error(`Invalid auth config: ${result.error.message}`);

@@ -34,6 +34,7 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	return {
 		...actual,
 		fetchMenu: vi.fn(),
+		updateMenu: vi.fn(),
 		createMenuItem: vi.fn().mockResolvedValue({ id: "3" }),
 		deleteMenuItem: vi.fn().mockResolvedValue(undefined),
 		updateMenuItem: vi.fn().mockResolvedValue({}),
@@ -44,6 +45,7 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 import * as api from "../../../../../packages/admin/src/lib/api";
 
 const ADD_CUSTOM_LINK_REGEX = /Add Custom Link/;
+const ABOUT_DELETE_MSG_REGEX = /"About" will be removed from this menu/;
 
 const defaultMenu = {
 	id: "menu1",
@@ -108,9 +110,18 @@ describe("MenuEditor", () => {
 		vi.mocked(api.fetchMenu).mockResolvedValue(defaultMenu);
 	});
 
+	it("links back to the menus list", async () => {
+		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
+
+		const backLink = screen.getByRole("link", { name: "Back to menus" });
+		await expect.element(backLink).toHaveAttribute("href", "/menus");
+		await expect.element(backLink).toHaveTextContent(/^Back$/);
+	});
+
 	it("displays menu items in order", async () => {
 		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
 
+		// Use exact: true to avoid matching "/about" which contains "About"
 		await expect.element(screen.getByText("Home")).toBeInTheDocument();
 		await expect.element(screen.getByText("About", { exact: true })).toBeInTheDocument();
 	});
@@ -138,16 +149,35 @@ describe("MenuEditor", () => {
 			.toBeInTheDocument();
 	});
 
-	it("delete item fires immediately without confirmation dialog", async () => {
+	it("asks for confirmation before deleting a menu item", async () => {
 		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
 
-		await expect.element(screen.getByText("Home")).toBeInTheDocument();
+		await expect.element(screen.getByText("About", { exact: true })).toBeInTheDocument();
+		await screen.getByRole("button", { name: "Delete" }).nth(1).click();
 
-		const deleteBtn = screen.getByRole("button", { name: "Delete" });
-		await deleteBtn.first().click();
+		const dialog = screen.getByRole("dialog", { name: "Delete menu item?" });
+		await expect.element(dialog.getByText(ABOUT_DELETE_MSG_REGEX)).toBeInTheDocument();
+		expect(api.deleteMenuItem).not.toHaveBeenCalled();
 
-		expect(screen.getByText("Are you sure").query()).toBeNull();
-		expect(screen.getByText("Confirm").query()).toBeNull();
+		dialog.getByRole("button", { name: "Delete" }).element().click();
+
+		await vi.waitFor(() =>
+			expect(api.deleteMenuItem).toHaveBeenCalledWith("main-menu", "2", { locale: "en" }),
+		);
+		await expect.element(dialog).not.toBeInTheDocument();
+	});
+
+	it("keeps the confirmation open with the error when deleting a menu item fails", async () => {
+		vi.mocked(api.deleteMenuItem).mockRejectedValueOnce(new Error("Menu item not found"));
+		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
+
+		await expect.element(screen.getByText("About", { exact: true })).toBeInTheDocument();
+		await screen.getByRole("button", { name: "Delete" }).nth(1).click();
+		const dialog = screen.getByRole("dialog", { name: "Delete menu item?" });
+		await expect.element(dialog).toBeInTheDocument();
+		dialog.getByRole("button", { name: "Delete" }).element().click();
+
+		await expect.element(dialog.getByRole("alert")).toHaveTextContent("Menu item not found");
 	});
 
 	it("up/down reorder buttons — first item up disabled, last item down disabled", async () => {
@@ -156,6 +186,7 @@ describe("MenuEditor", () => {
 		await expect.element(screen.getByText("Home")).toBeInTheDocument();
 
 		const disabledButtons = document.querySelectorAll("button[disabled]");
+		// At least 2: first item's up + last item's down
 		expect(disabledButtons.length).toBeGreaterThanOrEqual(2);
 	});
 
@@ -179,6 +210,73 @@ describe("MenuEditor", () => {
 		await expect.element(screen.getByRole("heading", { name: "Main Menu" })).toBeInTheDocument();
 	});
 
+	it("renames the menu and shows the new label", async () => {
+		vi.mocked(api.updateMenu).mockImplementation(async (_name, input) => {
+			const renamed = { ...defaultMenu, label: input.label ?? "" };
+			vi.mocked(api.fetchMenu).mockResolvedValue(renamed);
+			return renamed;
+		});
+		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
+
+		await screen.getByRole("button", { name: "Rename menu" }).click();
+		const labelInput = screen.getByLabelText("Label");
+		await expect.element(labelInput).toHaveValue("Main Menu");
+		await labelInput.fill("Footer links");
+		screen.getByRole("button", { name: "Save" }).element().click();
+
+		await expect
+			.element(screen.getByRole("heading", { name: "Footer links", level: 1 }))
+			.toBeInTheDocument();
+		expect(api.updateMenu).toHaveBeenCalledWith(
+			"main-menu",
+			{ label: "Footer links" },
+			{ locale: "en" },
+		);
+	});
+
+	it("adds a custom link with trimmed CSS classes", async () => {
+		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
+
+		await screen.getByRole("button", { name: ADD_CUSTOM_LINK_REGEX }).click();
+		await screen.getByLabelText("Label").fill("Book a demo");
+		await screen.getByLabelText("URL").fill("/contact");
+		await screen.getByLabelText("CSS classes").fill(" button ");
+		screen.getByRole("button", { name: "Add", exact: true }).element().click();
+
+		await vi.waitFor(() =>
+			expect(api.createMenuItem).toHaveBeenCalledWith(
+				"main-menu",
+				expect.objectContaining({ label: "Book a demo", cssClasses: "button" }),
+				{ locale: "en" },
+			),
+		);
+	});
+
+	it("clears a menu item's CSS classes", async () => {
+		const [home, about] = defaultMenu.items;
+		vi.mocked(api.fetchMenu).mockResolvedValue({
+			...defaultMenu,
+			items: [{ ...home!, cssClasses: "button" }, about!],
+		});
+		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
+
+		await expect.element(screen.getByText("Home")).toBeInTheDocument();
+		await screen.getByRole("button", { name: "Edit" }).first().click();
+		const classesInput = screen.getByLabelText("CSS classes");
+		await expect.element(classesInput).toHaveValue("button");
+		await classesInput.fill("");
+		screen.getByRole("button", { name: "Save" }).element().click();
+
+		await vi.waitFor(() =>
+			expect(api.updateMenuItem).toHaveBeenCalledWith(
+				"main-menu",
+				"1",
+				expect.objectContaining({ cssClasses: "" }),
+				{ locale: "en" },
+			),
+		);
+	});
+
 	it("shows custom URLs for custom link items", async () => {
 		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
 
@@ -194,6 +292,7 @@ describe("MenuEditor", () => {
 		const urlInput = screen.getByLabelText("URL");
 		await urlInput.fill("/about");
 
+		// The input should accept the value without browser validation errors
 		const inputEl = urlInput.element() as HTMLInputElement;
 		expect(inputEl.validity.valid).toBe(true);
 	});
@@ -231,6 +330,11 @@ describe("MenuEditor", () => {
 		await expect
 			.element(screen.getByRole("heading", { name: "Edit Menu Item" }))
 			.toBeInTheDocument();
+		// Use a native DOM click rather than a Playwright locator click: this
+		// env doesn't load Tailwind CSS, so the Dialog's `fixed` positioning
+		// class has no effect and Base UI's outside-click-capture layer (styled
+		// via inline `position: fixed`) stacks on top per normal paint order,
+		// failing Playwright's pointer-event hit test on the trigger.
 		screen.getByRole("combobox", { name: "Parent" }).element().click();
 
 		await expect.element(screen.getByRole("option", { name: "About" })).toBeInTheDocument();
@@ -265,6 +369,8 @@ describe("MenuEditor", () => {
 		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
 
 		await expect.element(screen.getByText("Home")).toBeInTheDocument();
+		// Home is the first row; editing it must exclude its own child (Services)
+		// from the Parent options, not just itself.
 		await screen.getByRole("button", { name: "Edit" }).first().click();
 
 		await expect
@@ -340,6 +446,8 @@ describe("MenuEditor", () => {
 		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
 
 		await expect.element(screen.getByText("Services", { exact: true })).toBeInTheDocument();
+		// "Services" is Home's only child, so both its up and down buttons are
+		// disabled even though it isn't the first/last item in the flat list.
 		const servicesRow = screen
 			.getByText("Services", { exact: true })
 			.element()

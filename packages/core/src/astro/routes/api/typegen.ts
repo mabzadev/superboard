@@ -1,38 +1,26 @@
+/**
+ * Typegen endpoint - generates emdash-env.d.ts content
+ *
+ * POST /_emdash/api/typegen - Generate types and return as JSON
+ * GET /_emdash/api/typegen - Return types as text (for preview/debugging)
+ *
+ * The caller (integration or CLI) is responsible for writing the file to disk.
+ * This endpoint only generates the content — it has no filesystem access,
+ * which is essential for Cloudflare Workers where process.cwd() is "/" and
+ * node:fs may not be available.
+ *
+ * Dev-only endpoint - disabled in production.
+ */
+
 import type { APIRoute } from "astro";
 
 import { apiError, apiSuccess, handleError } from "#api/error.js";
-import type { SchemaRegistry } from "#schema/registry.js";
 
 export const prerender = false;
 
-async function safeListCollections(registry: SchemaRegistry) {
-	try {
-		return await registry.listCollections();
-	} catch (error) {
-		if (error instanceof Error && error.message.includes("no such table")) {
-			return [];
-		}
-		throw error;
-	}
-}
-
-async function generateTypes(registry: SchemaRegistry) {
-	const { generateTypesFile, generateSchemaHash } = await import("#schema/zod-generator.js");
-
-	const collections = await safeListCollections(registry);
-	const collectionsWithFields = await Promise.all(
-		collections.map(async (c) => {
-			const fields = await registry.listFields(c.id);
-			return { ...c, fields };
-		}),
-	);
-
-	const types = generateTypesFile(collectionsWithFields);
-	const hash: string = await generateSchemaHash(collectionsWithFields);
-
-	return { types, hash, collections: collections.length };
-}
-
+/**
+ * GET - Return types as plain text (for preview/debugging)
+ */
 export const GET: APIRoute = async ({ locals }) => {
 	if (!import.meta.env.DEV) {
 		return apiError("FORBIDDEN", "Typegen is only available in development", 403);
@@ -45,9 +33,8 @@ export const GET: APIRoute = async ({ locals }) => {
 	}
 
 	try {
-		const { SchemaRegistry } = await import("#schema/registry.js");
-		const registry = new SchemaRegistry(emdash.db);
-		const { types } = await generateTypes(registry);
+		const { generateEnvTypes } = await import("#schema/env-types.js");
+		const { types } = await generateEnvTypes(emdash.db);
 
 		return new Response(types, {
 			status: 200,
@@ -61,6 +48,12 @@ export const GET: APIRoute = async ({ locals }) => {
 	}
 };
 
+/**
+ * POST - Generate types and return as JSON
+ *
+ * The caller writes the file to disk. Response shape:
+ * { types: string, hash: string, collections: number }
+ */
 export const POST: APIRoute = async ({ locals }) => {
 	if (!import.meta.env.DEV) {
 		return apiError("FORBIDDEN", "Typegen is only available in development", 403);
@@ -73,9 +66,8 @@ export const POST: APIRoute = async ({ locals }) => {
 	}
 
 	try {
-		const { SchemaRegistry } = await import("#schema/registry.js");
-		const registry = new SchemaRegistry(emdash.db);
-		const result = await generateTypes(registry);
+		const { generateEnvTypes } = await import("#schema/env-types.js");
+		const result = await generateEnvTypes(emdash.db);
 
 		return apiSuccess(result);
 	} catch (error) {

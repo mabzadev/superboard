@@ -3,7 +3,23 @@ import { z } from "zod";
 import { SQL_BATCH_SIZE } from "../../utils/chunks.js";
 import { bylineSummarySchema, bylineCreditSchema, contentBylineInputSchema } from "./bylines.js";
 import { cursorPaginationQuery, httpUrl, localeCode } from "./common.js";
+import { referenceChildrenResponseSchema } from "./relations.js";
 
+// ---------------------------------------------------------------------------
+// Content: Input schemas
+// ---------------------------------------------------------------------------
+
+const contentDateTime = z.iso
+	.datetime({ offset: true, message: "must be an ISO 8601 datetime" })
+	.or(
+		z.iso.datetime({
+			offset: true,
+			precision: -1,
+			message: "must be an ISO 8601 datetime",
+		}),
+	);
+
+/** SEO input — per-content meta fields */
 export const contentSeoInput = z
 	.object({
 		title: z.string().max(200).nullish(),
@@ -14,13 +30,19 @@ export const contentSeoInput = z
 	})
 	.meta({ id: "ContentSeoInput" });
 
+/** ISO 8601 date or datetime bound for the content-list date range filter. */
 const contentDateBound = z
-	.union([
-		z.iso.datetime({ offset: true, message: "must be an ISO 8601 datetime" }),
-		z.iso.date({ message: "must be an ISO 8601 date" }),
-	])
+	.union([contentDateTime, z.iso.date({ message: "must be an ISO 8601 date" })])
 	.optional();
 
+/**
+ * Byline ids for the content-list filter: either the literal `none` or a
+ * comma-separated list, parsed into an array.
+ *
+ * The 25-id cap keeps the `IN (...)` clause clear of D1's bound-parameter
+ * ceiling once the rest of the list query's placeholders are counted
+ * (`SQL_BATCH_SIZE` is 50 for a query binding nothing else).
+ */
 const bylineFilterParam = z
 	.string()
 	.trim()
@@ -41,12 +63,13 @@ const bylineFilterParam = z
 		message: "must contain at least one byline id",
 	});
 
+/** Query-string boolean. Explicit values only — `z.coerce.boolean()` reads "false" as true. */
 const booleanParam = z
 	.enum(["1", "0", "true", "false"])
 	.optional()
 	.transform((value) => value === "1" || value === "true");
 
-const contentFieldComparable = z.union([z.string().max(2048), z.number().finite()]);
+const contentFieldComparable = z.union([z.string().max(2048), z.number()]);
 const contentFieldFilterScalar = z.union([contentFieldComparable, z.boolean(), z.null()]);
 const contentFieldFilterValue = z.union([
 	contentFieldFilterScalar,
@@ -78,6 +101,7 @@ function contentFieldFilterOperandCount(value: unknown): number {
 	return Object.values(value).filter((bound) => bound !== undefined).length;
 }
 
+/** AND-combined filters over custom fields explicitly marked as indexed. */
 export const contentFieldFiltersSchema = z
 	.record(
 		z
@@ -113,20 +137,63 @@ const contentFieldFiltersQuery = z
 	})
 	.pipe(contentFieldFiltersSchema);
 
+/** Statuses the content list can filter by. */
+const CONTENT_STATUSES = [
+	"draft",
+	"published",
+	"scheduled",
+	"archived",
+	"pending",
+	"private",
+	"future",
+] as const;
+
+const pageParam = z.coerce
+	.number()
+	.int()
+	.min(1)
+	.max(Number.MAX_SAFE_INTEGER)
+	.optional()
+	.meta({ description: "1-based page number, for numbered pages instead of a cursor" });
+
 export const contentListQuery = cursorPaginationQuery
 	.extend({
-		status: z.string().optional(),
+		page: pageParam,
+		/** Filter by status; `all` (like omitting it) lists every status. */
+		status: z
+			.enum([...CONTENT_STATUSES, "all"])
+			.optional()
+			.transform((status) => (status === "all" ? undefined : status)),
 		orderBy: z.string().optional(),
 		order: z.enum(["asc", "desc"]).optional(),
 		locale: localeCode.optional(),
+		/** Search across the collection's display fields, slug, and searchable custom fields. */
 		q: z.string().trim().min(1).max(200).optional(),
+		/** Filter to entries authored by this user (the `author_id` column). */
 		authorId: z.string().min(1).max(64).optional(),
+		/** Which timestamp column the `dateFrom`/`dateTo` range applies to. */
 		dateField: z.enum(["createdAt", "updatedAt", "publishedAt"]).optional(),
+		/** Inclusive lower bound for the date range. Requires `dateField`. */
 		dateFrom: contentDateBound,
+		/** Inclusive upper bound for the date range. Requires `dateField`. */
 		dateTo: contentDateBound,
+		/**
+		 * Comma-separated byline ids; an entry matches if it is credited to any
+		 * of them. The literal `none` (alone) matches entries with no byline.
+		 */
 		bylines: bylineFilterParam,
+		/**
+		 * Also match the byline inferred from an entry's author when it has no
+		 * explicit credit — i.e. filter on the byline the list renders rather
+		 * than on the credits stored against the entry. Off by default.
+		 */
 		includeInferredBylines: booleanParam,
+		/** JSON-encoded indexed custom-field filters, combined with AND semantics. */
 		fieldFilters: contentFieldFiltersQuery.optional(),
+	})
+	.refine(({ cursor, page }) => cursor === undefined || page === undefined, {
+		message: "cursor and page cannot be used together",
+		path: ["page"],
 	})
 	.transform(({ bylines, ...rest }) => ({
 		...rest,
@@ -135,9 +202,29 @@ export const contentListQuery = cursorPaginationQuery
 	}))
 	.meta({ id: "ContentListQuery" });
 
-const contentDateOverride = z.iso
+const MAX_CALENDAR_RANGE_MS = 62 * 24 * 60 * 60 * 1000;
+
+/** Canonical UTC form, so bounds compare as text against stored timestamps. */
+const calendarBound = z.iso
 	.datetime({ offset: true, message: "must be an ISO 8601 datetime" })
-	.nullish();
+	.transform((value) => new Date(value).toISOString());
+
+/** Calendar range: `from` inclusive, `to` exclusive, at most 62 days apart. */
+export const calendarQuery = cursorPaginationQuery
+	.extend({ from: calendarBound, to: calendarBound })
+	.refine((query) => query.from < query.to, { message: "to must be after from", path: ["to"] })
+	.refine((query) => Date.parse(query.to) - Date.parse(query.from) <= MAX_CALENDAR_RANGE_MS, {
+		message: "the range can span at most 62 days",
+		path: ["to"],
+	});
+
+/** ISO 8601 datetime for `publishedAt` / `createdAt`. Routes gate writes behind `content:publish_any`. */
+const contentDateOverride = contentDateTime.nullish();
+
+const overrideLockFlag = z.boolean().optional().meta({
+	description:
+		"Write even though another editor holds this entry's edit lock. Without it the write is refused with 409 ENTRY_LOCKED.",
+});
 
 export const contentCreateBody = z
 	.object({
@@ -152,8 +239,14 @@ export const contentCreateBody = z
 			description:
 				"Taxonomy term assignments as { taxonomyName: [termSlug, ...] }, resolved in the entry's locale.",
 		}),
+		references: z.record(z.string(), z.array(z.string()).max(1000)).optional().meta({
+			description:
+				"Reference selections as { fieldSlug: [entryId, ...] }, in display order. Written as content-reference links in the same transaction as the entry. A field bound to the child end of its relation selects the entries pointing at this one, which carry no order.",
+		}),
 		publishedAt: contentDateOverride,
 		createdAt: contentDateOverride,
+		migrateBlocks: z.boolean().optional(),
+		replaceBlocks: z.boolean().optional(),
 	})
 	.meta({ id: "ContentCreateBody" });
 
@@ -169,33 +262,61 @@ export const contentUpdateBody = z
 			.optional()
 			.meta({ description: "Opaque revision token for optimistic concurrency" }),
 		skipRevision: z.boolean().optional(),
+		overrideLock: overrideLockFlag,
 		seo: contentSeoInput.optional(),
 		taxonomies: z.record(z.string(), z.array(z.string())).optional().meta({
 			description:
 				"Replace taxonomy assignments as { taxonomyName: [termSlug, ...] }. Only named taxonomies are touched; pass an empty array to clear a taxonomy.",
 		}),
+		references: z.record(z.string(), z.array(z.string()).max(1000)).optional().meta({
+			description:
+				"Reference selections as { fieldSlug: [entryId, ...] }, in display order. Written as content-reference links in the same transaction as the entry. A field bound to the child end of its relation selects the entries pointing at this one, which carry no order.",
+		}),
 		publishedAt: contentDateOverride,
+		migrateBlocks: z.boolean().optional(),
+		replaceBlocks: z.boolean().optional(),
 	})
 	.meta({ id: "ContentUpdateBody" });
 
 export const contentScheduleBody = z
 	.object({
-		scheduledAt: z.string().min(1, "scheduledAt is required").meta({
-			description: "ISO 8601 datetime for scheduled publishing",
-			example: "2025-06-15T09:00:00Z",
+		scheduledAt: contentDateTime.meta({
+			description: "ISO 8601 datetime with Z or an explicit offset for scheduled publishing",
+			examples: ["2025-06-15T09:00:00Z"],
 		}),
+		overrideLock: overrideLockFlag,
+		_rev: z
+			.string()
+			.optional()
+			.meta({ description: "Opaque revision token for optimistic concurrency" }),
 	})
 	.meta({ id: "ContentScheduleBody" });
 
-export const contentPublishBody = z
+export const contentRevisionConditionBody = z
 	.object({
-		publishedAt: z.iso
-			.datetime({ offset: true, message: "must be an ISO 8601 datetime" })
+		_rev: z
+			.string()
 			.optional()
-			.meta({
-				description:
-					"Optional ISO 8601 datetime to backdate the publish (e.g. when migrating content). Requires content:publish_any permission. Without this, existing published_at is preserved on re-publish.",
-			}),
+			.meta({ description: "Opaque revision token for optimistic concurrency" }),
+		overrideLock: overrideLockFlag,
+	})
+	.meta({ id: "ContentRevisionConditionBody" });
+
+export const revisionRestoreBody = z.object({
+	overrideLock: overrideLockFlag,
+});
+
+export const contentPublishBody = contentRevisionConditionBody
+	.extend({
+		// .optional() rather than .nullish(): publishing has no semantic
+		// meaning for `null` (you can't "clear" a publish timestamp by
+		// publishing). Tightening the schema here means callers either
+		// pass a valid datetime or omit the field, and the route doesn't
+		// have to silently drop a null that snuck through.
+		publishedAt: contentDateTime.optional().meta({
+			description:
+				"Optional ISO 8601 datetime to backdate the publish (e.g. when migrating content). Requires content:publish_any permission. Without this, existing published_at is preserved on re-publish.",
+		}),
 	})
 	.meta({ id: "ContentPublishBody" });
 
@@ -212,8 +333,60 @@ export const contentTermsBody = z
 	})
 	.meta({ id: "ContentTermsBody" });
 
-export const contentTrashQuery = cursorPaginationQuery;
+/** A single term variant returned as part of an entry's term assignments. */
+const contentEntryTermSchema = z
+	.object({
+		id: z.string(),
+		name: z.string().meta({ description: "Taxonomy name" }),
+		slug: z.string(),
+		label: z.string(),
+		parentId: z.string().nullable(),
+		locale: localeCode,
+		translationGroup: z.string().nullable(),
+	})
+	.meta({ id: "ContentEntryTerm" });
 
+/** Term assignments response for the content terms endpoint. */
+export const contentTermsResponseSchema = z
+	.object({
+		terms: z.array(contentEntryTermSchema),
+		unresolved: z.array(
+			z.object({
+				translationGroup: z.string(),
+				availableLocales: z.array(localeCode),
+				translations: z.array(
+					z.object({
+						id: z.string(),
+						slug: z.string(),
+						locale: localeCode,
+					}),
+				),
+			}),
+		),
+		entryLocale: localeCode,
+		defaultLocale: localeCode,
+		implicitDefaultLocale: z.boolean(),
+	})
+	.meta({ id: "ContentTermsResponse" });
+
+export const contentTrashQuery = cursorPaginationQuery
+	.extend({
+		page: pageParam,
+		locale: localeCode.optional().meta({
+			description: "Restrict the trash listing to entries in this locale",
+		}),
+	})
+	.refine(({ cursor, page }) => cursor === undefined || page === undefined, {
+		message: "cursor and page cannot be used together",
+		path: ["page"],
+	})
+	.meta({ id: "ContentTrashQuery" });
+
+// ---------------------------------------------------------------------------
+// Content: Response schemas
+// ---------------------------------------------------------------------------
+
+/** SEO metadata on a content item */
 export const contentSeoSchema = z
 	.object({
 		title: z.string().nullable(),
@@ -224,6 +397,7 @@ export const contentSeoSchema = z
 	})
 	.meta({ id: "ContentSeo" });
 
+/** A single content item as returned by the API */
 export const contentItemSchema = z
 	.object({
 		id: z.string(),
@@ -247,9 +421,14 @@ export const contentItemSchema = z
 		locale: z.string().nullable(),
 		translationGroup: z.string().nullable(),
 		seo: contentSeoSchema.optional(),
+		// First page of each reference field's selection, keyed by field slug. Only
+		// present when the editor GET path opts into hydration
+		// (`referenceOptions`); omitted otherwise, so it's optional here.
+		references: z.record(z.string(), referenceChildrenResponseSchema).optional(),
 	})
 	.meta({ id: "ContentItem" });
 
+/** Response for single content item endpoints (get, create, update) */
 export const contentResponseSchema = z
 	.object({
 		item: contentItemSchema,
@@ -260,6 +439,16 @@ export const contentResponseSchema = z
 	})
 	.meta({ id: "ContentResponse" });
 
+/** Response for restoring an item from trash */
+export const contentRestoreResponseSchema = z
+	.object({
+		restored: z.literal(true),
+		item: contentItemSchema,
+		_rev: z.string().meta({ description: "Opaque revision token for optimistic concurrency" }),
+	})
+	.meta({ id: "ContentRestoreResponse" });
+
+/** Response for content list endpoints */
 export const contentListResponseSchema = z
 	.object({
 		items: z.array(contentItemSchema),
@@ -268,6 +457,7 @@ export const contentListResponseSchema = z
 	})
 	.meta({ id: "ContentListResponse" });
 
+/** A distinct content author for the admin author filter */
 export const contentAuthorSchema = z
 	.object({
 		id: z.string(),
@@ -277,18 +467,22 @@ export const contentAuthorSchema = z
 	})
 	.meta({ id: "ContentAuthor" });
 
+/** Response for the content authors endpoint */
 export const contentAuthorsResponseSchema = z
 	.object({
 		items: z.array(contentAuthorSchema),
 	})
 	.meta({ id: "ContentAuthorsResponse" });
 
+/** Trashed content item */
 export const trashedContentItemSchema = z
 	.object({
 		id: z.string(),
 		type: z.string(),
 		slug: z.string().nullable(),
 		status: z.string(),
+		locale: z.string().nullable(),
+		translationGroup: z.string().nullable(),
 		data: z.record(z.string(), z.unknown()),
 		authorId: z.string().nullable(),
 		createdAt: z.string(),
@@ -298,13 +492,17 @@ export const trashedContentItemSchema = z
 	})
 	.meta({ id: "TrashedContentItem" });
 
+/** Response for trashed content list */
 export const trashedContentListResponseSchema = z
 	.object({
 		items: z.array(trashedContentItemSchema),
 		nextCursor: z.string().optional(),
+		/** Every trashed entry matching the filters. Returned with numbered pages. */
+		total: z.number().int().nonnegative().optional(),
 	})
 	.meta({ id: "TrashedContentListResponse" });
 
+/** Response for content compare (live vs draft) */
 export const contentCompareResponseSchema = z
 	.object({
 		hasChanges: z.boolean(),
@@ -313,6 +511,7 @@ export const contentCompareResponseSchema = z
 	})
 	.meta({ id: "ContentCompareResponse" });
 
+/** Translation summary for a content item */
 export const contentTranslationSchema = z.object({
 	id: z.string(),
 	locale: z.string().nullable(),
@@ -321,6 +520,7 @@ export const contentTranslationSchema = z.object({
 	updatedAt: z.string(),
 });
 
+/** Response for content translations endpoint */
 export const contentTranslationsResponseSchema = z
 	.object({
 		translationGroup: z.string(),

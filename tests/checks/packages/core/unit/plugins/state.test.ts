@@ -1,17 +1,33 @@
-import Database from "better-sqlite3";
+/**
+ * PluginStateRepository Tests
+ *
+ * Tests the database-backed plugin state storage for:
+ * - CRUD operations (get, getAll, upsert, delete)
+ * - Enable/disable convenience methods
+ * - Timestamp tracking
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { runMigrations } from "../../../../../../packages/core/src/database/migrations/runner.js";
 import type { Database as DbSchema } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { PluginStateRepository } from "../../../../../../packages/core/src/plugins/state.js";
+import {
+	describeEachDialect,
+	setupForDialect,
+	teardownForDialect,
+	type DialectTestContext,
+} from "../../utils/test-db.js";
 
 describe("PluginStateRepository", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 	let repo: PluginStateRepository;
 
 	beforeEach(async () => {
+		// Create in-memory SQLite database
 		sqliteDb = new Database(":memory:");
 
 		db = new Kysely<DbSchema>({
@@ -20,6 +36,7 @@ describe("PluginStateRepository", () => {
 			}),
 		});
 
+		// Run migrations to create tables
 		await runMigrations(db);
 
 		repo = new PluginStateRepository(db);
@@ -37,6 +54,7 @@ describe("PluginStateRepository", () => {
 		});
 
 		it("returns state for existing plugin", async () => {
+			// Insert directly
 			await db
 				.insertInto("_plugin_state")
 				.values({
@@ -78,6 +96,53 @@ describe("PluginStateRepository", () => {
 			expect(state!.installedAt).toBeInstanceOf(Date);
 			expect(state!.activatedAt).toBeInstanceOf(Date);
 			expect(state!.deactivatedAt).toBeInstanceOf(Date);
+		});
+
+		it("parses zone-less database timestamps as UTC", async () => {
+			const previousTimezone = process.env.TZ;
+			process.env.TZ = "America/Los_Angeles";
+
+			try {
+				await db
+					.insertInto("_plugin_state")
+					.values({
+						plugin_id: "test-plugin",
+						status: "active",
+						version: "1.0.0",
+						installed_at: "2026-08-31 12:34:56",
+						activated_at: "2026-08-31 12:34:56",
+						deactivated_at: null,
+						data: null,
+					})
+					.execute();
+
+				const state = await repo.get("test-plugin");
+
+				expect(state!.installedAt.toISOString()).toBe("2026-08-31T12:34:56.000Z");
+				expect(state!.activatedAt!.toISOString()).toBe("2026-08-31T12:34:56.000Z");
+			} finally {
+				if (previousTimezone === undefined) delete process.env.TZ;
+				else process.env.TZ = previousTimezone;
+			}
+		});
+
+		it("parses PostgreSQL hour-only timezone offsets", async () => {
+			await db
+				.insertInto("_plugin_state")
+				.values({
+					plugin_id: "test-plugin",
+					status: "active",
+					version: "1.0.0",
+					installed_at: "2026-08-31 12:34:56.123456+00",
+					activated_at: null,
+					deactivated_at: null,
+					data: null,
+				})
+				.execute();
+
+			const state = await repo.get("test-plugin");
+
+			expect(state!.installedAt.toISOString()).toBe("2026-08-31T12:34:56.123Z");
 		});
 
 		it("handles null dates", async () => {
@@ -150,8 +215,10 @@ describe("PluginStateRepository", () => {
 		});
 
 		it("updates existing state", async () => {
+			// Create initial state
 			await repo.upsert("test-plugin", "1.0.0", "active");
 
+			// Update it
 			const state = await repo.upsert("test-plugin", "1.1.0", "inactive");
 
 			expect(state.pluginId).toBe("test-plugin");
@@ -160,28 +227,35 @@ describe("PluginStateRepository", () => {
 		});
 
 		it("sets activated_at when activating", async () => {
+			// Create as inactive
 			await repo.upsert("test-plugin", "1.0.0", "inactive");
 
+			// Activate
 			const state = await repo.upsert("test-plugin", "1.0.0", "active");
 
 			expect(state.activatedAt).toBeInstanceOf(Date);
 		});
 
 		it("sets deactivated_at when deactivating", async () => {
+			// Create as active
 			await repo.upsert("test-plugin", "1.0.0", "active");
 
+			// Deactivate
 			const state = await repo.upsert("test-plugin", "1.0.0", "inactive");
 
 			expect(state.deactivatedAt).toBeInstanceOf(Date);
 		});
 
 		it("does not change activated_at if already active", async () => {
+			// Create as active
 			const initial = await repo.upsert("test-plugin", "1.0.0", "active");
 			const initialActivatedAt = initial.activatedAt!.getTime();
 
+			// Wait a bit then update version (still active)
 			await new Promise((r) => setTimeout(r, 10));
 			const updated = await repo.upsert("test-plugin", "1.1.0", "active");
 
+			// activated_at should be the same
 			expect(updated.activatedAt!.getTime()).toBe(initialActivatedAt);
 		});
 	});
@@ -234,6 +308,7 @@ describe("PluginStateRepository", () => {
 
 			expect(deleted).toBe(true);
 
+			// Verify it's gone
 			const state = await repo.get("test-plugin");
 			expect(state).toBeNull();
 		});
@@ -250,5 +325,44 @@ describe("PluginStateRepository", () => {
 			expect(stateA).toBeNull();
 			expect(stateB).not.toBeNull();
 		});
+	});
+});
+
+describeEachDialect("PluginStateRepository.createActiveIfAbsent", (dialect) => {
+	let ctx: DialectTestContext;
+	let repo: PluginStateRepository;
+
+	beforeEach(async () => {
+		ctx = await setupForDialect(dialect);
+		repo = new PluginStateRepository(ctx.db);
+	});
+
+	afterEach(async () => {
+		await teardownForDialect(ctx);
+	});
+
+	it("creates an active row and reports that it did", async () => {
+		expect(await repo.createActiveIfAbsent("test-plugin", "1.0.0", "config")).toBe(true);
+
+		const state = await repo.get("test-plugin");
+		expect(state).toMatchObject({ status: "active", version: "1.0.0", source: "config" });
+		expect(state?.activatedAt).toBeInstanceOf(Date);
+	});
+
+	it("leaves an existing row untouched and reports that it did not insert", async () => {
+		await repo.disable("test-plugin", "1.0.0");
+
+		expect(await repo.createActiveIfAbsent("test-plugin", "2.0.0", "config")).toBe(false);
+
+		const state = await repo.get("test-plugin");
+		expect(state).toMatchObject({ status: "inactive", version: "1.0.0" });
+	});
+
+	it("lets exactly one of several concurrent callers create the row", async () => {
+		const results = await Promise.all(
+			Array.from({ length: 5 }, () => repo.createActiveIfAbsent("test-plugin", "1.0.0", "config")),
+		);
+
+		expect(results.filter(Boolean)).toHaveLength(1);
 	});
 });

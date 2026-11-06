@@ -1,21 +1,73 @@
 ---
+/**
+ * LiveSearch - A live search component for EmDash content
+ *
+ * ```astro
+ * ---
+ * import LiveSearch from "emdash/ui/search";
+ * ---
+ * <LiveSearch placeholder="Search articles..." collections={["posts", "pages"]} />
+ * ```
+ *
+ * Results are scoped to the page's locale, taken from `Astro.currentLocale`,
+ * so a translated site returns each entry once, in the language of the page
+ * the visitor searched from. Pass `locale` to override that, or `null` to
+ * search across every locale:
+ *
+ * ```astro
+ * <LiveSearch collections={["posts", "pages"]} locale={null} />
+ * ```
+ *
+ * Customize the result rendering with slots:
+ *
+ * ```astro
+ * <LiveSearch>
+ *   <span slot="no-results">Nothing found</span>
+ *   <a slot="result" let:result href={`/${result.collection}/${result.slug}`}>
+ *     {result.title}
+ *   </a>
+ * </LiveSearch>
+ * ```
+ */
+
 export interface Props {
+	/** Placeholder text for the search input */
 	placeholder?: string;
+	/** Collections to search (defaults to all searchable collections) */
 	collections?: string[];
+	/**
+	 * Locale to restrict results to. Defaults to `Astro.currentLocale`, which
+	 * Astro derives from the URL, so results match the page the search was
+	 * made from. Pass `null` to search across every locale.
+	 */
 	locale?: string | null;
+	/** Minimum characters before searching (defaults to 2) */
 	minChars?: number;
+	/** Debounce delay in milliseconds (defaults to 300) */
 	debounce?: number;
+	/** Maximum results to show (defaults to 10) */
 	limit?: number;
+	/** CSS class for the container */
 	class?: string;
+	/** Inline style for the container */
 	style?: string;
+	/** CSS class for the input */
 	inputClass?: string;
+	/** CSS class for the results container */
 	resultsClass?: string;
+	/** CSS class for each result item */
 	resultClass?: string;
+	/** Show snippets in results (defaults to true) */
 	showSnippets?: boolean;
+	/** Autofocus the input */
 	autofocus?: boolean;
+	/** Use suggestions endpoint for autocomplete (defaults to false for full search) */
 	suggestMode?: boolean;
+	/** Expand input width on focus (provide collapsed and expanded widths) */
 	expandOnFocus?: { collapsed: string; expanded: string };
+	/** Search results page to navigate to when pressing Enter without a focused result */
 	searchPage?: string;
+	/** Per-collection URL templates, e.g. { posts: "/blog/:path" } */
 	routeMap?: Record<string, string>;
 }
 
@@ -144,14 +196,17 @@ const config = {
 		private abortController: AbortController | null = null;
 
 		connectedCallback() {
+			// Parse config
 			const configStr = this.dataset.config;
 			if (configStr) {
 				try {
 					this.config = { ...this.config, ...JSON.parse(configStr) };
 				} catch {
+					// Use defaults
 				}
 			}
 
+			// Get elements
 			this.input = this.querySelector(".emdash-live-search-input");
 			this.resultsContainer = this.querySelector(
 				".emdash-live-search-results"
@@ -167,31 +222,38 @@ const config = {
 
 			if (!this.input) return;
 
+			// Event listeners
 			this.input.addEventListener("input", this.handleInput.bind(this));
 			this.input.addEventListener("keydown", this.handleKeydown.bind(this));
 
+			// Close on click outside
 			document.addEventListener("click", (e) => {
 				if (!this.contains(e.target as Node)) {
 					this.hideResults();
 				}
 			});
 
+			// Show results on focus if we have a query
 			this.input.addEventListener("focus", () => {
 				if (this.input && this.input.value.length >= this.config.minChars) {
 					this.showResults();
 				}
+				// Handle expand on focus
 				if (this.config.expandOnFocus && this.input) {
 					this.input.style.width = this.config.expandOnFocus.expanded;
 				}
 			});
 
+			// Handle collapse on blur
 			this.input.addEventListener("blur", () => {
+				// Delay to allow clicking on results
 				setTimeout(() => {
 					if (
 						this.config.expandOnFocus &&
 						this.input &&
 						document.activeElement !== this.input
 					) {
+						// Only collapse if not focused on a result
 						const activeInResults = this.resultsContainer?.contains(
 							document.activeElement
 						);
@@ -202,8 +264,11 @@ const config = {
 				}, 150);
 			});
 
+			// Set initial width if expandOnFocus is enabled
 			if (this.config.expandOnFocus) {
 				this.input.style.width = this.config.expandOnFocus.collapsed;
+				// Apply transition after initial width is set so the collapsed
+				// width doesn't animate in on page load
 				requestAnimationFrame(() => {
 					if (this.input) {
 						this.input.style.transition = "width 0.2s ease";
@@ -217,6 +282,7 @@ const config = {
 
 			const query = this.input.value.trim();
 
+			// Clear any pending request
 			if (this.debounceTimer) {
 				clearTimeout(this.debounceTimer);
 			}
@@ -226,6 +292,7 @@ const config = {
 				return;
 			}
 
+			// Debounce the search
 			this.debounceTimer = setTimeout(() => {
 				this.search(query);
 			}, this.config.debounce);
@@ -274,6 +341,7 @@ const config = {
 				(r) => r === document.activeElement || r.classList.contains("focused")
 			);
 
+			// Remove current focus
 			results.forEach((r) => r.classList.remove("focused"));
 
 			let nextIndex: number;
@@ -293,6 +361,7 @@ const config = {
 		}
 
 		private async search(query: string) {
+			// Cancel any in-flight request
 			if (this.abortController) {
 				this.abortController.abort();
 			}
@@ -327,6 +396,7 @@ const config = {
 				}
 
 				const responseData = await response.json();
+				// Handle API response envelope: { data: { items: [...] } }
 				const data = responseData.data || responseData;
 
 				if (this.config.suggestMode) {
@@ -336,6 +406,7 @@ const config = {
 				}
 			} catch (error) {
 				if ((error as Error).name === "AbortError") {
+					// Request was cancelled, ignore
 					return;
 				}
 				console.error("Search error:", error);
@@ -360,6 +431,7 @@ const config = {
 				if (link) {
 					link.href = this.buildResultUrl(result);
 
+					// Fill in title
 					const titleEl = link.querySelector(
 						".emdash-live-search-result-title"
 					);
@@ -367,6 +439,7 @@ const config = {
 						titleEl.textContent = result.title ?? result.slug ?? result.id;
 					}
 
+					// Fill in collection
 					const collectionEl = link.querySelector(
 						".emdash-live-search-result-collection"
 					);
@@ -374,6 +447,10 @@ const config = {
 						collectionEl.textContent = result.collection;
 					}
 
+					// Snippets returned by /api/search are already sanitised
+					// server-side by sanitizeSnippet() — they contain only
+					// HTML-escaped text plus literal <mark>...</mark> tags
+					// around matched terms.
 					const snippetEl = link.querySelector(
 						".emdash-live-search-result-snippet"
 					);
@@ -383,6 +460,7 @@ const config = {
 						snippetEl.remove();
 					}
 
+					// Store data on element for custom handling
 					link.dataset.id = result.id;
 					link.dataset.collection = result.collection;
 					link.dataset.slug = result.slug ?? "";
@@ -426,6 +504,7 @@ const config = {
 						collectionEl.textContent = suggestion.collection;
 					}
 
+					// Remove snippet for suggestions
 					const snippetEl = link.querySelector(
 						".emdash-live-search-result-snippet"
 					);
@@ -482,6 +561,18 @@ const config = {
 </script>
 
 <style>
+	/*
+	 * LiveSearch uses CSS custom properties for theming.
+	 * Override these in your site's CSS to match your design:
+	 *
+	 * --emdash-search-bg: Background color for the results dropdown
+	 * --emdash-search-text: Text color
+	 * --emdash-search-muted: Muted/secondary text color
+	 * --emdash-search-border: Border color
+	 * --emdash-search-hover: Hover/focus background color
+	 * --emdash-search-highlight: Highlighted match text color
+	 */
+
 	.emdash-live-search {
 		position: relative;
 		display: inline-block;
@@ -564,6 +655,7 @@ const config = {
 		margin-top: 0.25rem;
 	}
 
+	/* Highlight matches in snippets (FTS5 uses <mark> tags) */
 	.emdash-live-search-result-snippet :global(mark) {
 		font-weight: 600;
 		background: none;

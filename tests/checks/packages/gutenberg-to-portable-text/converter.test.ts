@@ -1,3 +1,7 @@
+/**
+ * Tests for the main Gutenberg to Portable Text converter
+ */
+
 import { describe, it, expect } from "vitest";
 
 import {
@@ -176,6 +180,17 @@ describe("gutenbergToPortableText", () => {
 			const result = gutenbergToPortableText(content);
 			expect(result).toHaveLength(2);
 		});
+
+		it("converts a paragraph with formatting nested thousands of levels deep", () => {
+			const content = `<!-- wp:paragraph -->
+<p>${"<strong>".repeat(20_000)}deep</p>
+<!-- /wp:paragraph -->`;
+
+			const result = gutenbergToPortableText(content);
+			const block = result[0] as PortableTextTextBlock;
+
+			expect(block.children).toMatchObject([{ text: "deep", marks: ["strong"] }]);
+		});
 	});
 
 	describe("heading blocks", () => {
@@ -326,6 +341,7 @@ describe("gutenbergToPortableText", () => {
 
 			const result = gutenbergToPortableText(content);
 
+			// Should have quote block + citation block
 			expect(result.length).toBeGreaterThanOrEqual(1);
 			expect(result[0]).toMatchObject({
 				_type: "block",
@@ -754,9 +770,40 @@ https://${domain}/123456
 				style: "fill",
 			});
 		});
+
+		it("reads the link from the markup when the url attribute is missing", () => {
+			const content = `<!-- wp:button -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" data-href="https://wrong.example/" href="https://example.com/?a=1&amp;b=2&#038;c=3">Go</a></div>
+<!-- /wp:button -->`;
+
+			const result = gutenbergToPortableText(content);
+
+			expect(result[0]).toMatchObject({
+				_type: "button",
+				text: "Go",
+				url: "https://example.com/?a=1&b=2&c=3",
+			});
+		});
 	});
 
 	describe("buttons block", () => {
+		it("reads links from the markup and drops unsafe ones", () => {
+			const content = `<!-- wp:buttons -->
+<div class="wp-block-buttons">
+<!-- wp:button -->
+<div class="wp-block-button"><a class="wp-block-button__link" href="https://example.com/one">First</a></div>
+<!-- /wp:button -->
+<!-- wp:button {"url":"javascript:alert(1)"} -->
+<div class="wp-block-button"><a href="javascript:alert(1)">Second</a></div>
+<!-- /wp:button -->
+</div>
+<!-- /wp:buttons -->`;
+
+			const block = gutenbergToPortableText(content)[0] as PortableTextButtonsBlock;
+
+			expect(block.buttons.map((b) => b.url)).toEqual(["https://example.com/one", ""]);
+		});
+
 		it("converts a buttons container", () => {
 			const content = `<!-- wp:buttons -->
 <div class="wp-block-buttons">
@@ -973,6 +1020,7 @@ https://${domain}/123456
 
 			const result = gutenbergToPortableText(content);
 
+			// Group should be flattened - we get the inner blocks directly
 			expect(result.some((b) => (b as PortableTextTextBlock).style === "normal")).toBe(true);
 			expect(result.some((b) => (b as PortableTextTextBlock).style === "h2")).toBe(true);
 		});
@@ -1006,6 +1054,34 @@ https://${domain}/123456
 					count: 5,
 				},
 			);
+		});
+
+		it("keeps a placeholder for a self-closing dynamic block", () => {
+			const content = `<!-- wp:paragraph --><p>Before</p><!-- /wp:paragraph -->
+<!-- wp:acme/testimonial {"author":"Kunde","note":"a--b <i> \\u0022q\\u0022"} /-->
+<!-- wp:paragraph --><p>After</p><!-- /wp:paragraph -->`;
+
+			const result = gutenbergToPortableText(content);
+
+			expect(result).toHaveLength(3);
+			expect(result[1]).toMatchObject({
+				_type: "htmlBlock",
+				html: '<!-- wp:acme/testimonial {"author":"Kunde","note":"a\\u002d\\u002db \\u003ci\\u003e \\u0022q\\u0022"} /-->',
+				originalBlockName: "acme/testimonial",
+				originalAttrs: { author: "Kunde", note: 'a--b <i> "q"' },
+			});
+		});
+
+		it("names core blocks the way WordPress serializes them", () => {
+			const result = gutenbergToPortableText("<!-- wp:latest-posts /-->");
+
+			expect(result).toEqual([
+				expect.objectContaining({
+					_type: "htmlBlock",
+					html: "<!-- wp:latest-posts /-->",
+					originalBlockName: "core/latest-posts",
+				}),
+			]);
 		});
 	});
 
@@ -1063,6 +1139,7 @@ https://${domain}/123456
 
 			const result = gutenbergToPortableText(content);
 
+			// h1 + p + image + 2 list items + quote = 6 blocks
 			expect(result.length).toBeGreaterThanOrEqual(5);
 
 			const types = result.map((b) => b._type);
@@ -1141,33 +1218,338 @@ describe("htmlToPortableText", () => {
 	});
 });
 
+describe("classic editor tables", () => {
+	const cellTexts = (table: PortableTextTableBlock) =>
+		table.rows.map((row) =>
+			row.cells.map((cell) => cell.content.map((span) => span.text).join("")),
+		);
+
+	const thHeaderTable = `<table>
+<tbody>
+<tr>
+<th>Employee</th>
+<th class="views">Salary</th>
+<th></th>
+</tr>
+<tr class="odd">
+<td><a href="http://example.com/">Jane</a></td>
+<td>$1</td>
+<td>Because that's all Steve Jobs needed for a salary.</td>
+</tr>
+</tbody>
+</table>`;
+
+	it("converts a table between paragraphs into a table block", () => {
+		const html = `<p>Before.</p>
+<table style="border-collapse: collapse; width: 100%;" border="1">
+<tbody>
+<tr>
+<td><b>Role</b></td>
+<td colspan="1"><b>Salary</b></td>
+</tr>
+<tr>
+<td><a href="https://example.com/jobs/developer"><strong>Developer</strong></a></td>
+<td>20-50k</td>
+</tr>
+</tbody>
+</table>
+<p>After.</p>`;
+
+		const result = gutenbergToPortableText(html);
+
+		expect(result.map((block) => block._type)).toEqual(["block", "table", "block"]);
+		const table = result[1] as PortableTextTableBlock;
+		expect(cellTexts(table)).toEqual([
+			["Role", "Salary"],
+			["Developer", "20-50k"],
+		]);
+		expect(table.hasHeaderRow).toBe(false);
+		expect(table.rows[0]!.cells.map((cell) => cell.isHeader)).toEqual([undefined, undefined]);
+		expect(table.rows[0]!.cells[0]!.content[0]!.marks).toEqual(["strong"]);
+
+		const linkCell = table.rows[1]!.cells[0]!;
+		expect(linkCell.markDefs).toEqual([
+			{ _type: "link", _key: expect.any(String), href: "https://example.com/jobs/developer" },
+		]);
+		expect(linkCell.content[0]!.marks).toHaveLength(2);
+		expect(linkCell.content[0]!.marks).toEqual(
+			expect.arrayContaining(["strong", linkCell.markDefs![0]!._key]),
+		);
+	});
+
+	it.each([
+		["Classic HTML", thHeaderTable],
+		[
+			"a core/table block",
+			`<!-- wp:table -->\n<figure class="wp-block-table">${thHeaderTable}</figure>\n<!-- /wp:table -->`,
+		],
+	])("marks a first row of <th> cells as the header row in %s", (_source, content) => {
+		const [table] = gutenbergToPortableText(content) as PortableTextTableBlock[];
+
+		expect(table!._type).toBe("table");
+		expect(table!.hasHeaderRow).toBe(true);
+		expect(table!.rows[0]!.cells.map((cell) => cell.isHeader)).toEqual([true, true, true]);
+		expect(table!.rows[1]!.cells.map((cell) => cell.isHeader)).toEqual([
+			undefined,
+			undefined,
+			undefined,
+		]);
+	});
+
+	it("does not mark a first row as the header row when it mixes <th> and <td>", () => {
+		const html = `<table>
+<tbody>
+<tr><th>Jane</th><td>$1</td></tr>
+<tr><th>John</th><td>$100K</td></tr>
+</tbody>
+</table>`;
+
+		const [table] = gutenbergToPortableText(html) as PortableTextTableBlock[];
+
+		expect(table!._type).toBe("table");
+		expect(table!.hasHeaderRow).toBe(false);
+	});
+
+	it("keeps the image of a table that wraps an image and its caption", () => {
+		const html = `<table style="width: 100%;">
+<tbody>
+<tr>
+<td><img class="aligncenter size-full wp-image-42" src="https://example.com/wp-content/uploads/2020/05/classroom.jpg" alt="Classroom" width="680" height="408" /></td>
+</tr>
+<tr>
+<td>Morning session</td>
+</tr>
+</tbody>
+</table>`;
+
+		const result = gutenbergToPortableText(html);
+
+		expect(result.map((block) => block._type)).toEqual(["image", "block"]);
+		expect(result[0]).toMatchObject({
+			asset: { url: "https://example.com/wp-content/uploads/2020/05/classroom.jpg" },
+			alt: "Classroom",
+		});
+		const caption = result[1] as PortableTextTextBlock;
+		expect(caption.children.map((span) => span.text).join("")).toContain("Morning session");
+	});
+
+	it.each([
+		[
+			"a caption",
+			`<table><caption>Salaries 2024</caption><tbody><tr><td>Developer</td><td>20-50k</td></tr></tbody></table>`,
+			["Salaries 2024", "Developer", "20-50k"],
+		],
+		[
+			"footer rows",
+			`<table><tbody><tr><td>Developer</td><td>20</td></tr></tbody><tfoot><tr><td>Total</td><td>20</td></tr></tfoot></table>`,
+			["Developer", "Total"],
+		],
+		[
+			"rows without end tags",
+			`<table><tr><td>Role<td>Salary<tr><td>Developer<td>20-50k</table>`,
+			["Role", "Salary", "Developer", "20-50k"],
+		],
+		[
+			"a cell without an end tag",
+			`<table><tr><td>Role<td>Salary</td></tr><tr><td>Developer</td><td>20-50k</td></tr></table>`,
+			["Role", "Salary", "Developer", "20-50k"],
+		],
+		[
+			"a row without an end tag",
+			`<table><tr><td>Role</td><td>Salary</td><tr><td>Developer</td><td>20-50k</td></tr></table>`,
+			["Role", "Salary", "Developer", "20-50k"],
+		],
+		[
+			"a merged cell",
+			`<table><tbody><tr><th>Item</th><th>Q1</th><th>Q2</th></tr><tr><td colspan="2">Total</td><td>5</td></tr></tbody></table>`,
+			["Item", "Q2", "Total", "5"],
+		],
+		[
+			"a heading in a cell",
+			`<table><tbody><tr><td><h3>Services</h3>Design and build</td></tr></tbody></table>`,
+			["Services", "Design and build"],
+		],
+		[
+			"a list in a cell",
+			`<table><tbody><tr><td>Services<ul><li>Design</li><li>Build</li></ul></td></tr></tbody></table>`,
+			["Services", "Design", "Build"],
+		],
+		[
+			"a numbered list in a cell",
+			`<table><tbody><tr><td>Steps<ol><li>Plan</li><li>Build</li></ol></td></tr></tbody></table>`,
+			["Steps", "Plan", "Build"],
+		],
+		[
+			"code in a cell",
+			`<table><tbody><tr><td>Install with<pre>pnpm add emdash</pre></td></tr></tbody></table>`,
+			["Install with"],
+		],
+		[
+			"a quote in a cell",
+			`<table><tbody><tr><td>Review<blockquote>Fast to set up.</blockquote></td></tr></tbody></table>`,
+			["Review", "Fast to set up."],
+		],
+		[
+			"a horizontal rule in a cell",
+			`<table><tbody><tr><td>Above<hr>Below</td></tr></tbody></table>`,
+			["Above", "Below"],
+		],
+	])("keeps the text of a table with %s as text blocks", (_shape, html, texts) => {
+		const result = gutenbergToPortableText(html);
+
+		expect(result.map((block) => block._type)).not.toContain("table");
+		const text = result
+			.flatMap((block) => (block._type === "block" ? block.children.map((span) => span.text) : []))
+			.join("");
+		for (const expected of texts) expect(text).toContain(expected);
+	});
+
+	it("keeps paragraphs in one cell apart", () => {
+		const html = `<table><tbody><tr>
+<td><p>Line one</p><p>Line two</p></td>
+<td>Intro<p>Detail</p></td>
+<td><p>Price</p>per month</td>
+<td><strong>Opening hours</strong>
+<p>Mon-Fri 9-17</p></td>
+<td><div><p>Only line</p></div></td>
+<td><div><p>Wrapped</p></div>after</td>
+</tr></tbody></table>`;
+
+		const result = gutenbergToPortableText(html);
+
+		expect(result.map((block) => block._type)).toEqual(["table"]);
+		expect(cellTexts(result[0] as PortableTextTableBlock)[0]).toEqual([
+			"Line one\nLine two",
+			"Intro\nDetail",
+			"Price\nper month",
+			"Opening hours\nMon-Fri 9-17",
+			"Only line",
+			"Wrapped\nafter",
+		]);
+	});
+
+	it.each([
+		[
+			"beside a cell of the outer table",
+			`<table><tbody><tr>
+<td>Opening hours</td>
+<td><table><tbody><tr><td>Mon</td><td>9-17</td></tr></tbody></table></td>
+</tr></tbody></table>`,
+			[["Mon", "9-17"]],
+		],
+		[
+			"with an empty header row, below a row of the outer table",
+			`<table><tbody>
+<tr><td>Opening hours</td></tr>
+<tr><td><table><thead><tr><th></th></tr></thead><tbody><tr><td>Mon 9-17</td></tr></tbody></table></td></tr>
+</tbody></table>`,
+			[[""], ["Mon 9-17"]],
+		],
+	])("converts a nested table on its own: %s", (_shape, html, rows) => {
+		const result = gutenbergToPortableText(html);
+
+		expect(result.map((block) => block._type)).toEqual(["block", "table"]);
+		const outerText = result[0] as PortableTextTextBlock;
+		expect(outerText.children.map((span) => span.text).join("")).toContain("Opening hours");
+		expect(cellTexts(result[1] as PortableTextTableBlock)).toEqual(rows);
+	});
+
+	it("reads a table inside a <div> as text", () => {
+		const html = `<div><table><tr><td>Role</td><td>Salary</td></tr></table></div><p>After.</p>`;
+
+		const result = gutenbergToPortableText(html) as PortableTextTextBlock[];
+
+		expect(result.map((block) => block._type)).toEqual(["block", "block"]);
+		expect(result[0]!.children.map((span) => span.text).join("")).toBe("RoleSalary");
+	});
+
+	it("leaves a table inside an HTML comment out", () => {
+		const html = `<p>Before</p><!--<table><tr><td>Hidden</td></tr></table>--><p>After</p>`;
+
+		const result = gutenbergToPortableText(html);
+
+		expect(result.map((block) => block._type)).toEqual(["block", "block"]);
+		expect(
+			(result as PortableTextTextBlock[]).map((block) =>
+				block.children.map((span) => span.text).join(""),
+			),
+		).toEqual(["Before", "After"]);
+	});
+
+	it("converts a table after an HTML comment", () => {
+		const html = `<p>Intro</p><!--more--><table><tr><td>Shown</td></tr></table>`;
+
+		const result = gutenbergToPortableText(html);
+
+		expect(result.map((block) => block._type)).toEqual(["block", "table"]);
+		expect(cellTexts(result[1] as PortableTextTableBlock)).toEqual([["Shown"]]);
+	});
+
+	it.each([
+		["unclosed table start tags", "<table".repeat(50_000), []],
+		[
+			"table start tags in an HTML comment",
+			`<!--${"<table ".repeat(25_000)}>${"<table>".repeat(25_000)}</table>-->`,
+			[],
+		],
+		[
+			"spaces after a colspan attribute name",
+			`<table><tr><td>colspan=${" ".repeat(100_000)}x</td></tr></table>`,
+			["table"],
+		],
+		["row start tags without end tags", `<table>${"<tr".repeat(20_000)}</table>`, []],
+		["rows without end tags", `<table>${"<tr><td>x</td>".repeat(20_000)}</table>`, ["block"]],
+		["cell start tags without end tags", `<table><tr>${"<td".repeat(20_000)}</tr></table>`, []],
+		["table tags after an unclosed HTML comment", `<!--${"<table>-".repeat(50_000)}</table>`, []],
+		[
+			"table start tags in an attribute value",
+			`<span title="${"<table>".repeat(50_000)}</table>">Text</span>`,
+			["block"],
+		],
+	])("converts %s within a second", (_shape, html, types) => {
+		const started = performance.now();
+		const result = gutenbergToPortableText(html);
+
+		expect(performance.now() - started).toBeLessThan(1000);
+		expect(result.map((block) => block._type)).toEqual(types);
+	});
+});
+
 describe("WordPress.com classic editor content", () => {
+	// Test case from sparge.wordpress.com - classic editor with linked images
+	// and HTML entities in URLs (&#038; instead of &)
 	const spargePostContent = `<p><a href="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg"><img data-attachment-id="238" data-permalink="https://sparge.wordpress.com/2011/11/27/now-brewing-hip-hop-nelson-sauvin/hip-hop/" data-orig-file="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg" data-orig-size="384,560" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;}" data-image-title="hip-hop" data-image-description="" data-image-caption="" data-medium-file="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg?w=205" data-large-file="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg?w=384" class="alignright size-medium wp-image-238" title="hip-hop" src="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg?w=205&#038;h=300" alt="" width="205" height="300" /></a>Hip Hops Nelson Sauvin is the first of my Christmas brews.</p>
 <p>It's inspired by <a href="http://www.brewdog.com/product/77-lager" target="_blank" rel="noopener">BrewDog 77</a>, which is a classic lager dry-hopped with Nelson Sauvin. OK, so Hip Hops is 6.3% rather than 4.9%, and uses ordinary Saaz in the boil, but the essence is the same: it's a delicious, crisp German-style lager, given a New Zealand accent with a big hit of Nelson Sauvin.</p>`;
 
 	it("extracts linked images with decoded URLs", () => {
 		const result = htmlToPortableText(spargePostContent);
 
+		// Should have at least one image block
 		const imageBlocks = result.filter((b) => b._type === "image");
 		expect(imageBlocks.length).toBeGreaterThanOrEqual(1);
 
+		// First block should be the image
 		const img = imageBlocks[0];
 		expect(img._type).toBe("image");
 
+		// URL should have decoded HTML entities (& not &#038;)
 		expect(img.asset.url).toBe(
 			"https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg?w=205&h=300",
 		);
 		expect(img.asset.url).not.toContain("&#038;");
 
+		// Link should be preserved
 		expect(img.link).toBe("https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg");
 	});
 
 	it("preserves text content alongside images", () => {
 		const result = htmlToPortableText(spargePostContent);
 
+		// Should have text blocks with the paragraph content
 		const textBlocks = result.filter((b) => b._type === "block");
 		expect(textBlocks.length).toBeGreaterThanOrEqual(1);
 
+		// Check that text content is preserved
 		const allText = textBlocks.flatMap((b) => b.children.map((c) => c.text)).join("");
 		expect(allText).toContain("Hip Hops Nelson Sauvin");
 		expect(allText).toContain("Christmas brews");
@@ -1176,8 +1558,10 @@ describe("WordPress.com classic editor content", () => {
 	it("preserves links in text", () => {
 		const result = htmlToPortableText(spargePostContent);
 
+		// Should have text blocks with links
 		const textBlocks = result.filter((b) => b._type === "block");
 
+		// Find block with BrewDog link
 		const blockWithLink = textBlocks.find((b) => b.markDefs?.length);
 		expect(blockWithLink).toBeDefined();
 		expect(blockWithLink?.markDefs).toContainEqual(
@@ -1214,6 +1598,7 @@ describe("WordPress.com classic editor content", () => {
 		expect(img.asset.url).toBe("https://example.com/photo.jpg?a=1&b=2");
 	});
 
+	// Test for figure with HTML entities
 	it("decodes HTML entities in figure images", () => {
 		const html = `<figure><img src="https://example.com/photo.jpg?w=200&#038;h=300" alt="test"><figcaption>Caption</figcaption></figure>`;
 		const result = htmlToPortableText(html);

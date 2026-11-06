@@ -2,6 +2,7 @@ import { useLingui } from "@lingui/react";
 import * as React from "react";
 
 import { SUPPORTED_LOCALE_CODES } from "./config.js";
+import { loadDateLocale } from "./date-locale.js";
 import { loadMessages } from "./loadMessages.js";
 
 function setCookie(code: string) {
@@ -9,6 +10,10 @@ function setCookie(code: string) {
 	document.cookie = `emdash-locale=${code}; Path=/_emdash; SameSite=Lax; Max-Age=31536000${secure}`;
 }
 
+/**
+ * Get the current locale and a function to switch locales.
+ * Loads the new catalog dynamically and sets a cookie for server-side persistence.
+ */
 export function useLocale() {
 	const { i18n } = useLingui();
 	const [locale, setLocaleState] = React.useState(i18n.locale);
@@ -17,8 +22,8 @@ export function useLocale() {
 		(code: string) => {
 			if (code === i18n.locale || !SUPPORTED_LOCALE_CODES.has(code)) return;
 			setCookie(code);
-			void loadMessages(code)
-				.then((messages) => i18n.loadAndActivate({ locale: code, messages }))
+			void Promise.all([loadMessages(code), loadDateLocale(code)])
+				.then(([messages]) => i18n.loadAndActivate({ locale: code, messages }))
 				.catch(() => {
 					setCookie(i18n.locale);
 				});
@@ -26,6 +31,7 @@ export function useLocale() {
 		[i18n],
 	);
 
+	// Subscribe to i18n change events to trigger re-renders
 	React.useEffect(() => {
 		const unsubscribe = i18n.on("change", () => {
 			setLocaleState(i18n.locale);

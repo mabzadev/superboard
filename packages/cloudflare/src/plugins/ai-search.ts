@@ -1,3 +1,43 @@
+/**
+ * AI Search Plugin
+ *
+ * Semantic search using Cloudflare AI Search namespace bindings.
+ * Indexes content on save, removes on delete, exposes a search route.
+ *
+ * Requires only the `ai_search_namespaces` binding in wrangler.jsonc —
+ * no API tokens, no account IDs, no manual instance creation.
+ *
+ * @example
+ * ```typescript
+ * // astro.config.mjs
+ * import { aiSearch } from "@emdash-cms/cloudflare/plugins";
+ *
+ * export default defineConfig({
+ *   integrations: [
+ *     emdash({
+ *       plugins: [aiSearch()],
+ *     }),
+ *   ],
+ * });
+ * ```
+ *
+ * @example
+ * ```jsonc
+ * // wrangler.jsonc
+ * {
+ *   "ai_search_namespaces": [
+ *     { "binding": "AI_SEARCH", "namespace": "default" }
+ *   ]
+ * }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // src/pages/api/ai-search/search.ts
+ * export { POST, prerender } from "@emdash-cms/cloudflare/plugins/ai-search";
+ * ```
+ */
+
 import type { APIRoute } from "astro";
 import type {
 	ContentDeleteEvent,
@@ -22,10 +62,18 @@ const MD_EXT = /\.md$/;
 const ITEM_PREFIX = /^item:/;
 const INSTANCE_NOT_FOUND_MESSAGE = /ai_search_not_found|instance.*not found|not found.*instance/i;
 
+// =============================================================================
+// Configuration
+// =============================================================================
+
 export interface AISearchConfig {
+	/** AI Search instance name. @default "emdash-content" */
 	instanceName?: string;
+	/** Binding name in wrangler.jsonc. @default "AI_SEARCH" */
 	binding?: string;
+	/** Enable hybrid search (vector + keyword). @default true */
 	hybridSearch?: boolean;
+	/** Public URL templates keyed by collection slug. @default "/{collection}/{slug}" */
 	urlTemplates?: Record<string, string>;
 }
 
@@ -42,12 +90,24 @@ export function getActiveAISearchConfig(): AISearchConfig {
 	return activeConfigHolder().value;
 }
 
+/**
+ * KV key holding the collections the operator last configured in the admin
+ * dashboard. Persisted so the picker can restore the previous selection and
+ * the content hooks know which collections to index.
+ */
 const CONFIG_COLLECTIONS_KEY = "config:collections";
 const DEFAULT_COLLECTIONS = ["posts", "pages"];
 
+/** KV prefix of the id-map mirrors (`item:{collection}/{id}.md` -> item id). */
 const MIRROR_PREFIX = "item:";
+/** Parallel deletions when purging mirrors of deselected collections. */
 const PURGE_CONCURRENCY = 4;
 
+/**
+ * KV key holding query synonyms configured in the admin dashboard. Each entry
+ * maps a term/phrase (`from`) to a replacement (`to`) that is substituted into
+ * search queries before they reach AI Search, to improve recall.
+ */
 const CONFIG_SYNONYMS_KEY = "config:synonyms";
 
 const REINDEX_JOB_KEY = "reindex:job";
@@ -68,36 +128,58 @@ interface ReindexJob {
 	indexed: number;
 	errors: number;
 	skipped: number;
+	/** Item keys accepted on the current page, used to resume mid-page safely. */
 	completedItemKeys?: string[];
 	updatedAt: string;
 }
 
+/** AI Search's maximum length for a text custom-metadata value. */
 const METADATA_TEXT_MAX_LENGTH = 500;
 
+/** Preferred maximum length of the indexed article-preview description. */
 const DESCRIPTION_MAX_LENGTH = 400;
 
+/**
+ * Separator used to pack `title` and `description` into a single metadata
+ * field (AI Search allows at most 5 custom_metadata fields). The ASCII Unit
+ * Separator (U+001F) is chosen because it never appears in extracted plain
+ * text, so it can't collide with title or description content.
+ */
 const TITLE_DESC_SEP = "\u001F";
 
+/** Pack a title and description into one value within AI Search's text limit. */
 export function packTitleDescription(title: string, description: string): string {
 	if ((title + TITLE_DESC_SEP + description).length <= METADATA_TEXT_MAX_LENGTH) {
 		return title + TITLE_DESC_SEP + description;
 	}
 
+	// Real titles fit comfortably inside the limit; retain one character for the
+	// separator if an unexpectedly long title does not.
 	const packedTitle = title.slice(0, METADATA_TEXT_MAX_LENGTH - TITLE_DESC_SEP.length);
 	const descriptionBudget = METADATA_TEXT_MAX_LENGTH - packedTitle.length - TITLE_DESC_SEP.length;
 	return packedTitle + TITLE_DESC_SEP + truncateDescription(description, descriptionBudget);
 }
 
+/** Unpack a packed `title_desc` value, splitting on the first separator only. */
 export function unpackTitleDescription(value: string): { title: string; description: string } {
 	const i = value.indexOf(TITLE_DESC_SEP);
 	if (i < 0) return { title: value, description: "" };
 	return { title: value.slice(0, i), description: value.slice(i + 1) };
 }
 
+/** A single query synonym: replace `from` with `to` in incoming queries. */
 export interface Synonym {
 	from: string;
 	to: string;
 }
+
+// =============================================================================
+// Minimal types for the AI Search namespace binding
+//
+// These mirror the generated types from `wrangler types` (see
+// worker-configuration.d.ts). Remove once @cloudflare/workers-types
+// ships the AI Search binding types.
+// =============================================================================
 
 interface AiSearchSearchRequest {
 	messages: Array<{ role: string; content: string | null }>;
@@ -108,6 +190,7 @@ interface AiSearchSearchRequest {
 			max_num_results?: number;
 			filters?: Record<string, unknown>;
 			context_expansion?: number;
+			/** Return only item metadata, skipping the (slow) full-text chunks. */
 			metadata_only?: boolean;
 		};
 		query_rewrite?: { enabled?: boolean; model?: string; rewrite_prompt?: string };
@@ -180,6 +263,10 @@ interface AiSearchNamespace {
 	create(config: AiSearchConfig): Promise<AiSearchInstance>;
 }
 
+// =============================================================================
+// Helpers
+// =============================================================================
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -197,6 +284,10 @@ const WORKERS_MODULE_KEY = Symbol.for("emdash.ai-search.workers-module");
 
 type WorkersModule = typeof import("cloudflare:workers");
 
+/**
+ * Import `cloudflare:workers` once per isolate. Several call sites need it, and
+ * a rejected import is not cached so a later call can retry.
+ */
 function loadWorkersModule(): Promise<WorkersModule> {
 	const globals = globalThis as typeof globalThis & {
 		[WORKERS_MODULE_KEY]?: Promise<WorkersModule>;
@@ -207,6 +298,7 @@ function loadWorkersModule(): Promise<WorkersModule> {
 	}));
 }
 
+/** Get Cloudflare runtime env via cloudflare:workers. */
 async function getCloudflareEnv(): Promise<object | null> {
 	try {
 		return (await loadWorkersModule()).env;
@@ -215,6 +307,11 @@ async function getCloudflareEnv(): Promise<object | null> {
 	}
 }
 
+/**
+ * Keep the Worker isolate alive for the given promise.
+ * Uses cloudflare:workers waitUntil — safe to call after the response is sent.
+ * Silently no-ops outside Workers (e.g. during local dev).
+ */
 function cfWaitUntil(promise: Promise<unknown>): void {
 	loadWorkersModule()
 		.then(({ waitUntil }) => waitUntil(promise))
@@ -270,6 +367,7 @@ function truncateDescription(value: string, maxLength: number = DESCRIPTION_MAX_
 	return `${lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated}\u2026`;
 }
 
+/** Convert a content entry to Markdown for indexing. */
 function contentToMarkdown(content: Record<string, unknown>, collection: string): string {
 	const parts: string[] = [];
 
@@ -285,6 +383,10 @@ function contentToMarkdown(content: Record<string, unknown>, collection: string)
 	return parts.join("\n\n");
 }
 
+/**
+ * Build a short plain-text description (article preview) from the content's
+ * explicit excerpt. Returns an empty description when no excerpt is present.
+ */
 function contentToDescription(content: Record<string, unknown>): string {
 	const excerpt = extractIndexableText(content.excerpt);
 	return excerpt ? truncateDescription(excerpt) : "";
@@ -300,6 +402,10 @@ function imageUrlFromValue(value: unknown): string {
 	return "";
 }
 
+/**
+ * Extract a thumbnail URL from a content entry, preferring the conventional
+ * featured-image field before falling back to the first image-shaped value.
+ */
 function extractImageUrl(content: Record<string, unknown>): string {
 	const featured = imageUrlFromValue(content.featured_image ?? content.featuredImage);
 	if (featured) return featured;
@@ -312,8 +418,15 @@ function extractImageUrl(content: Record<string, unknown>): string {
 	return "";
 }
 
+/**
+ * Get the `visible_after` timestamp for a content item.
+ * Returns 0 for published content (immediately visible) or the
+ * scheduled_at unix timestamp in seconds for scheduled content.
+ */
 function getVisibleAfter(content: Record<string, unknown>): number {
 	const status = typeof content.status === "string" ? content.status : "";
+	// Hook events expose the camelCase `scheduledAt`; reindex merges the raw
+	// row which may still carry snake_case `scheduled_at`. Accept either.
 	const scheduledAt = content.scheduledAt ?? content.scheduled_at;
 	if (
 		status === "scheduled" &&
@@ -325,11 +438,20 @@ function getVisibleAfter(content: Record<string, unknown>): number {
 	return 0;
 }
 
+/**
+ * Flatten a content-hook record. Content hooks pass the `ContentItem` shape,
+ * where the editable fields (title, body, images) live under `.data` while the
+ * system columns (id, slug, status, locale, scheduledAt) sit at the top level.
+ * Merging `.data` up gives the same flat record the reindex path builds with
+ * `{ ...item, ...item.data }`, so field extraction behaves identically in both
+ * paths (without it, the hook path reads an empty title and skips the body).
+ */
 export function flattenContentRecord(content: Record<string, unknown>): Record<string, unknown> {
 	const data = content.data && typeof content.data === "object" ? content.data : {};
 	return { ...content, ...data };
 }
 
+/** Deterministic document key: `{collection}/{id}.md`. */
 function contentKey(collection: string, id: string): string {
 	return `${collection}/${id}.md`;
 }
@@ -347,6 +469,7 @@ async function retry<T>(operation: () => Promise<T>): Promise<T> {
 	throw lastError;
 }
 
+/** Upload an item and mirror its AI Search item ID for later deletion. */
 async function uploadItem(
 	instance: AiSearchInstance,
 	key: string,
@@ -387,11 +510,17 @@ function reindexResult(job: ReindexJob) {
 	};
 }
 
+/** Parse a content key back into collection + id. */
 function parseContentKey(key: string): { collection: string; id: string } {
 	const [col, ...rest] = key.split("/");
 	return { collection: col ?? "", id: rest.join("/").replace(MD_EXT, "") };
 }
 
+/**
+ * Normalize a `collections` request field into a trimmed slug array.
+ * Accepts a comma-separated string or an array of strings; returns `null`
+ * when the input is neither (so callers can fall back or error).
+ */
 function parseCollections(value: unknown): string[] | null {
 	const raw =
 		typeof value === "string"
@@ -413,6 +542,11 @@ function hasRequiredMetadataSchema(config: AiSearchInstanceInfo): boolean {
 	);
 }
 
+/**
+ * Normalize a `synonyms` request field into a validated `Synonym[]`. Accepts an
+ * array of `{ from, to }` objects; trims whitespace and drops entries missing
+ * either side. Returns `null` when the input is not an array.
+ */
 function parseSynonyms(value: unknown): Synonym[] | null {
 	if (!Array.isArray(value)) return null;
 	const result: Synonym[] = [];
@@ -428,16 +562,22 @@ function parseSynonyms(value: unknown): Synonym[] | null {
 	return result;
 }
 
+/** Escape a string for safe use inside a RegExp. */
 function escapeRegex(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * A synonym rewriter compiled from a synonym set. Holds a single combined
+ * regex plus the `from` -> `to` lookup so a query can be rewritten in one pass.
+ */
 export interface SynonymRewriter {
 	re: RegExp | null;
 	lookup: Map<string, string>;
 }
 
 export function compileSynonyms(synonyms: Synonym[]): SynonymRewriter {
+	// Longer phrases first so multi-word terms win over their sub-words.
 	const sorted = synonyms.filter((s) => s.from).toSorted((a, b) => b.from.length - a.from.length);
 	const lookup = new Map<string, string>();
 	for (const s of sorted) {
@@ -553,6 +693,8 @@ async function ensureAISearchInstance(
 			custom_metadata: REQUIRED_CUSTOM_METADATA,
 		});
 	} catch (createError) {
+		// A concurrent initializer may have won the create; the failure is only
+		// fatal if the instance still is not there.
 		try {
 			await handle.info();
 		} catch {
@@ -646,17 +788,25 @@ export async function searchAISearch(
 	return response;
 }
 
+// =============================================================================
+// Descriptor (for astro.config.mjs)
+// =============================================================================
+
 export function aiSearch(config: AISearchConfig = {}): PluginDescriptor<AISearchConfig> {
 	return {
 		id: "ai-search",
 		version: "1.0.0",
 		entrypoint: "@emdash-cms/cloudflare/plugins/ai-search",
 		options: config,
-		capabilities: ["read:content"],
+		capabilities: ["content:read"],
 		adminEntry: "@emdash-cms/cloudflare/plugins/ai-search-admin",
 		adminPages: [{ path: "/settings", label: "Cloudflare AI Search", icon: "search" }],
 	};
 }
+
+// =============================================================================
+// Plugin implementation (loaded at runtime via entrypoint)
+// =============================================================================
 
 export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 	activeConfigHolder().value = config;
@@ -664,6 +814,11 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 	const bindingName = config.binding ?? "AI_SEARCH";
 	const hybridSearch = config.hybridSearch ?? true;
 
+	/**
+	 * Read the collections the operator last configured in the dashboard.
+	 * Returns `null` when nothing has been configured yet (never persisted),
+	 * distinct from an explicit empty selection.
+	 */
 	async function getConfiguredCollections(ctx: PluginContext): Promise<string[] | null> {
 		const saved = await ctx.kv.get<string[]>(CONFIG_COLLECTIONS_KEY);
 		return Array.isArray(saved) ? saved : null;
@@ -673,6 +828,7 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		return (await getConfiguredCollections(ctx)) ?? DEFAULT_COLLECTIONS;
 	}
 
+	/** Persist the operator's collection selection from the dashboard. */
 	async function saveConfiguredCollections(
 		ctx: PluginContext,
 		collections: string[],
@@ -680,6 +836,14 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		await ctx.kv.set(CONFIG_COLLECTIONS_KEY, collections);
 	}
 
+	/**
+	 * Persist the operator's collection selection and purge every mirrored
+	 * document whose collection is no longer selected.
+	 *
+	 * The selection is stored before any deletion so concurrent content hooks
+	 * stop indexing deselected collections while the purge runs. An explicit
+	 * empty selection therefore removes every mirrored document.
+	 */
 	async function applyConfiguredCollections(
 		ctx: PluginContext,
 		collections: string[],
@@ -697,6 +861,8 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		let failures = 0;
 		await Promise.all(
 			Array.from({ length: Math.min(PURGE_CONCURRENCY, excluded.length) }, async () => {
+				// `cursor` advances synchronously between awaits, so each worker
+				// claims a distinct mirror.
 				while (cursor < excluded.length) {
 					const key = excluded[cursor++]!;
 					try {
@@ -720,11 +886,13 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		}
 	}
 
+	/** Read the query synonyms configured in the dashboard. */
 	async function getConfiguredSynonyms(ctx: PluginContext): Promise<Synonym[]> {
 		const saved = await ctx.kv.get<Synonym[]>(CONFIG_SYNONYMS_KEY);
 		return Array.isArray(saved) ? saved : [];
 	}
 
+	/** Persist the operator's query synonyms from the dashboard. */
 	async function saveConfiguredSynonyms(ctx: PluginContext, synonyms: Synonym[]): Promise<void> {
 		await ctx.kv.set(CONFIG_SYNONYMS_KEY, synonyms);
 		const cache = synonymCacheHolder();
@@ -733,6 +901,11 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		cache.refreshAfter = Date.now() + SYNONYM_CACHE_TTL_MS;
 	}
 
+	/**
+	 * Whether a content hook should act on the given collection. Content is
+	 * synced only for collections the operator selected in the dashboard, or the
+	 * default collections when no selection has been saved yet.
+	 */
 	async function shouldSync(collection: string, ctx: PluginContext): Promise<boolean> {
 		return (await getEffectiveCollections(ctx)).includes(collection);
 	}
@@ -745,6 +918,14 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		return ensureAISearchInstance(ns, config);
 	}
 
+	/**
+	 * Index a content item in AI Search.
+	 *
+	 * @param visibleAfter Unix timestamp (seconds) when the content becomes
+	 *   visible. Use 0 for already-published content. For scheduled content,
+	 *   pass the `scheduled_at` timestamp so the query filter
+	 *   `visible_after <= now` excludes it until the scheduled time.
+	 */
 	async function indexContent(
 		content: Record<string, unknown>,
 		collection: string,
@@ -760,6 +941,8 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		const key = contentKey(collection, String(content.id));
 		try {
 			const instance = await ensureInstance(ns);
+			// Hook events nest editable fields under `.data`; flatten so title/body
+			// extraction matches the reindex path.
 			const record = flattenContentRecord(content);
 			const markdown = contentToMarkdown(record, collection);
 			if (!markdown.trim()) return;
@@ -788,18 +971,24 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		}
 	}
 
+	/**
+	 * Delete one mirrored document from AI Search and drop its KV mirror.
+	 * Throws, so callers decide whether a failure is fatal.
+	 */
 	async function deleteIndexedItem(key: string, itemId: string, ctx: PluginContext): Promise<void> {
 		const ns = await getBinding();
 		if (!ns) return;
 
 		const instance = await ensureInstance(ns);
 		await instance.items.delete(itemId);
+		// Do not erase a replacement written by a concurrent save/reindex.
 		if ((await ctx.kv.get<string>(`item:${key}`)) === itemId) {
 			await ctx.kv.delete(`item:${key}`);
 		}
 		console.log(`[ai-search] Removed ${key} (item: ${itemId})`);
 	}
 
+	/** Remove a content item from the AI Search index. */
 	async function removeFromIndex(
 		collection: string,
 		id: string,
@@ -816,6 +1005,12 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		}
 	}
 
+	/**
+	 * Synchronize one content item with the public search index based on its
+	 * status. Published content is indexed as immediately visible, scheduled
+	 * content is indexed but gated behind its `visible_after` timestamp, and
+	 * anything else (draft, trashed) is removed from the index.
+	 */
 	function syncSearchIndex(
 		content: Record<string, unknown>,
 		collection: string,
@@ -831,11 +1026,13 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 		return removeFromIndex(collection, String(content.id), ctx);
 	}
 
+	/** Keep the worker alive until the index write settles, then surface it. */
 	function waitForSync(work: Promise<void>): Promise<void> {
 		cfWaitUntil(work);
 		return work;
 	}
 
+	/** Process exactly one content page so every request stays bounded. */
 	async function processReindexBatch(job: ReindexJob, ctx: PluginContext) {
 		if (job.status === "complete") return reindexResult(job);
 		if (!ctx.content) throw new Error("Content access not available");
@@ -862,6 +1059,8 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 			job.completedItemKeys = [...completedItemKeys];
 			job.updatedAt = new Date().toISOString();
 
+			// Uploads stay concurrent, while checkpoint writes are serialized so an
+			// older snapshot cannot overwrite a newer completion out of order.
 			const snapshot: ReindexJob = { ...job, completedItemKeys: [...completedItemKeys] };
 			checkpointWrites = checkpointWrites.then(() => ctx.kv.set(REINDEX_JOB_KEY, snapshot));
 			await checkpointWrites;
@@ -929,7 +1128,7 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 	return definePlugin({
 		id: "ai-search",
 		version: "1.0.0",
-		capabilities: ["read:content"],
+		capabilities: ["content:read"],
 		admin: {
 			entry: "@emdash-cms/cloudflare/plugins/ai-search-admin",
 			pages: [{ path: "/settings", label: "Cloudflare AI Search", icon: "search" }],
@@ -937,6 +1136,9 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 
 		hooks: {
 			cron: {
+				// The default five-second plugin hook timeout can expire while a page
+				// of accepted uploads is still checkpointing. Keep the scheduled event
+				// alive for the bounded two-page batch; this does not poll for indexing.
 				timeout: REINDEX_HOOK_TIMEOUT_MS,
 				handler: async (event, ctx): Promise<void> => {
 					if (event.name !== REINDEX_CRON_TASK) return;
@@ -967,6 +1169,9 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 					)
 						return;
 
+					// Sync based on the current status: published content is visible
+					// immediately (visible_after=0), scheduled content is indexed but
+					// gated until its scheduledAt timestamp, and drafts are removed.
 					return waitForSync(syncSearchIndex(content, collection, ctx));
 				},
 			},
@@ -1002,6 +1207,8 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 					const { content, collection } = event;
 					if (!(await shouldSync(collection, ctx))) return;
 
+					// Index the item with its `visible_after` gate so it stays hidden
+					// from search results until the scheduled time arrives.
 					return waitForSync(syncSearchIndex(content, collection, ctx));
 				},
 			},
@@ -1013,6 +1220,8 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 				): Promise<void> => {
 					const { content, collection } = event;
 
+					// Unscheduling returns the item to a draft state — drop it from
+					// the index.
 					return waitForSync(removeFromIndex(collection, String(content.id), ctx));
 				},
 			},
@@ -1029,6 +1238,8 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 					)
 						return;
 
+					// Restored content re-enters the index according to its restored
+					// status (published/scheduled index, otherwise remove).
 					return waitForSync(syncSearchIndex(content, collection, ctx));
 				},
 			},
@@ -1090,6 +1301,8 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 						);
 					}
 
+					// Build the set of item keys currently present in the index from the
+					// KV id-map (`item:{collection}/{id}.md` -> AI Search item id).
 					const itemEntries = await ctx.kv.list("item:");
 					const indexedKeys = new Set<string>();
 					for (const entry of itemEntries) {
@@ -1168,6 +1381,9 @@ export function createPlugin(config: AISearchConfig = {}): ResolvedPlugin {
 				},
 			},
 
+			// Read or persist the operator's dashboard configuration (indexed
+			// collections and query synonyms). GET returns the saved config; POST
+			// updates whichever fields are provided.
 			config: {
 				handler: async (ctx: RouteContext): Promise<unknown> => {
 					if (ctx.request.method.toUpperCase() === "GET") {
@@ -1252,6 +1468,7 @@ interface SnippetSearchBody {
 	collection?: unknown;
 	ai_search_options?: {
 		retrieval?: {
+			/** Configured in the AI Search backoffice rather than controlled by public clients. */
 			max_num_results?: unknown;
 		};
 	};
@@ -1319,6 +1536,17 @@ export async function handleAISearchSnippetRequest(
 
 export function createAISearchSnippetEndpoint(config?: AISearchConfig): APIRoute {
 	return async ({ request }) => {
+		// The snippet endpoint is public: anonymous site visitors hit it for
+		// site search. On the anonymous request path `locals.emdash` is the
+		// partial fast-path facade whose `db` getter is undefined, so reading
+		// `locals.emdash.db` throws when we load synonyms. Resolve a real,
+		// request-scoped runtime via withEmDashRuntime() so `runtime.db` works
+		// regardless of auth.
+		//
+		// Imported lazily: `emdash/middleware` references `astro:` virtual
+		// modules, which the Astro config loader (plain Node ESM) cannot
+		// resolve. A top-level import would drag that into config evaluation
+		// via `aiSearch()` and break `astro build`.
 		const { withEmDashRuntime } = await import("emdash/middleware");
 		return withEmDashRuntime(async (runtime: EmDashRuntime) => {
 			if (!runtime.getPluginRouteMeta("ai-search", "status")) {

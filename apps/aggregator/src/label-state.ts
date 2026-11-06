@@ -16,6 +16,7 @@ export function upsertVerifiedLabelState(
 	return upsertHydratedLabelState(db, label, trusted);
 }
 
+/** Persists labels loaded from an already authenticated local store. */
 export function upsertHydratedLabelState(
 	db: D1Database,
 	label: ListingLabelEvent,

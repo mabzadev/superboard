@@ -1,18 +1,78 @@
+/**
+ * Cloudflare Email Provider Plugin
+ *
+ * Delivers EmDash emails (magic links, invites, comment notifications)
+ * through Cloudflare Email Sending via a `send_email` Worker binding.
+ * Registers `email:deliver` as an exclusive hook. EmDash selects this
+ * plugin automatically when it is the only active email provider.
+ *
+ * Without an email provider, magic link sign-in on a Cloudflare
+ * deployment fails with "Email is not configured", and invites return a
+ * link to share manually.
+ *
+ * @example
+ * ```typescript
+ * // astro.config.mjs
+ * import emdash from "emdash/astro";
+ * import { cloudflareEmail } from "@emdash-cms/cloudflare/plugins";
+ *
+ * export default defineConfig({
+ *   integrations: [
+ *     emdash({
+ *       plugins: [
+ *         cloudflareEmail({
+ *           from: { email: "cms@mails.example.com", name: "My Site CMS" },
+ *           replyTo: "hello@example.com",
+ *         }),
+ *       ],
+ *     }),
+ *   ],
+ * });
+ * ```
+ *
+ * @example
+ * ```jsonc
+ * // wrangler.jsonc — the sender domain must be onboarded for
+ * // Email Sending (Cloudflare dashboard → Email Service).
+ * {
+ *   "send_email": [{ "name": "EMAIL" }]
+ * }
+ * ```
+ */
+
 import type { PluginContext, PluginDescriptor, ResolvedPlugin } from "emdash";
 import { definePlugin } from "emdash";
 import type { EmailDeliverEvent } from "emdash/plugin";
 
+/**
+ * Cloudflare Email Provider Configuration
+ */
 export interface CloudflareEmailConfig {
+	/**
+	 * Name of the `send_email` binding in the wrangler config.
+	 * @default "EMAIL"
+	 */
 	binding?: string;
 
+	/**
+	 * Sender address. Must belong to a domain onboarded for Cloudflare
+	 * Email Sending. Either a bare address or `{ email, name }`.
+	 */
 	from: string | { email: string; name?: string };
 
+	/**
+	 * Optional Reply-To address — useful when the sender is a
+	 * no-reply style subdomain address. A message's own `replyTo` takes
+	 * precedence.
+	 */
 	replyTo?: string;
 }
 
+/** Minimal shape of the Email Sending binding (`send_email` in wrangler). */
 interface SendEmailBinding {
 	send(message: {
 		to: string | string[];
+		cc?: string[];
 		from: { email: string; name?: string };
 		subject: string;
 		text?: string;
@@ -21,11 +81,25 @@ interface SendEmailBinding {
 	}): Promise<{ messageId?: string }>;
 }
 
+/**
+ * Resolve the Worker env at delivery time.
+ *
+ * Hooks run without request context, so the binding cannot come from
+ * `Astro.locals.runtime`. The `cloudflare:workers` module exposes the
+ * same env to any code bundled into the Worker — including in `astro dev`
+ * when the Cloudflare Vite plugin provides the workerd runtime.
+ *
+ * The env is imported through `cloudflare-email-env.ts` rather than directly,
+ * so the built-in module is referenced via a static import in a dedicated
+ * helper. This avoids relying on a direct dynamic import of `cloudflare:workers`
+ * in the bundled Worker, which some Astro Cloudflare builds do not resolve
+ * correctly.
+ */
 async function loadWorkerEnv(): Promise<Record<string, unknown>> {
 	try {
-		const mod = await import("cloudflare:workers");
+		const { env } = await import("./cloudflare-email-env.js");
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Env is deployment-specific; the binding lookup validates the shape
-		return mod.env as unknown as Record<string, unknown>;
+		return env as unknown as Record<string, unknown>;
 	} catch {
 		throw new Error(
 			"[cloudflare-email] cloudflare:workers is not available — this provider " +
@@ -35,6 +109,13 @@ async function loadWorkerEnv(): Promise<Record<string, unknown>> {
 	}
 }
 
+/**
+ * Build the email:deliver handler.
+ *
+ * Exported for testing — production code should use {@link cloudflareEmail}.
+ *
+ * @internal
+ */
 export function createCloudflareEmailDeliver(
 	config: CloudflareEmailConfig,
 	loadEnv: () => Promise<Record<string, unknown>> = loadWorkerEnv,
@@ -54,13 +135,15 @@ export function createCloudflareEmailDeliver(
 			);
 		}
 
+		const replyTo = message.replyTo ?? config.replyTo;
 		const result = await binding.send({
 			from,
 			to: message.to,
 			subject: message.subject,
 			text: message.text,
 			...(message.html ? { html: message.html } : {}),
-			...(config.replyTo ? { replyTo: config.replyTo } : {}),
+			...(message.cc?.length ? { cc: message.cc } : {}),
+			...(replyTo ? { replyTo } : {}),
 		});
 
 		ctx.log.info("email delivered via Cloudflare Email Sending", {
@@ -69,6 +152,7 @@ export function createCloudflareEmailDeliver(
 	};
 }
 
+/** Validate the sender address early so misconfiguration fails at config time. */
 function assertValidFrom(config: CloudflareEmailConfig): void {
 	const fromEmail = typeof config.from === "string" ? config.from : config.from?.email;
 	if (!fromEmail || !fromEmail.includes("@")) {
@@ -79,6 +163,14 @@ function assertValidFrom(config: CloudflareEmailConfig): void {
 	}
 }
 
+/**
+ * Instantiate the Cloudflare Email Sending provider plugin.
+ *
+ * Called by the generated `virtual:emdash/plugins` module with the
+ * `options` from the {@link cloudflareEmail} descriptor. Use
+ * `cloudflareEmail()` in the astro config — this export exists so the
+ * integration can bundle the plugin from a static entrypoint.
+ */
 export function createPlugin(config: CloudflareEmailConfig): ResolvedPlugin {
 	assertValidFrom(config);
 	return definePlugin({
@@ -94,6 +186,18 @@ export function createPlugin(config: CloudflareEmailConfig): ResolvedPlugin {
 	});
 }
 
+/**
+ * Create a Cloudflare Email Sending provider plugin descriptor.
+ *
+ * Pass it to the emdash() integration's plugins array. The plugin is active
+ * from the first deployment, and EmDash selects it automatically when it is
+ * the only active email provider.
+ *
+ * Returns a `PluginDescriptor` (not an in-process definition): the astro
+ * integration requires every `plugins: []` entry to resolve to a bundlable
+ * `entrypoint`, so the descriptor points at this module and the integration
+ * imports {@link createPlugin} from it at build time (#1721).
+ */
 export function cloudflareEmail(
 	config: CloudflareEmailConfig,
 ): PluginDescriptor<CloudflareEmailConfig> {

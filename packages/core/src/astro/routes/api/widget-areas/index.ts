@@ -1,3 +1,10 @@
+/**
+ * Widget areas list and create endpoints
+ *
+ * GET  /_emdash/api/widget-areas - List all widget areas
+ * POST /_emdash/api/widget-areas - Create widget area
+ */
+
 import type { APIRoute } from "astro";
 import { ulid } from "ulidx";
 
@@ -5,7 +12,9 @@ import { requirePerm } from "#api/authorize.js";
 import { apiError, apiSuccess, handleError } from "#api/error.js";
 import { isParseError, parseBody } from "#api/parse.js";
 import { createWidgetAreaBody } from "#api/schemas.js";
-import { rowToWidget } from "#widgets/index.js";
+import { widgetAreaTag } from "#cache/chrome-tags.js";
+import { invalidateRouteCache } from "#cache/route-cache.js";
+import { invalidateWidgetObjectCache, rowToWidget } from "#widgets/index.js";
 import type { WidgetRow } from "#widgets/types.js";
 
 export const prerender = false;
@@ -24,6 +33,7 @@ export const GET: APIRoute = async ({ locals }) => {
 			.orderBy("name", "asc")
 			.execute();
 
+		// Get widgets for each area (needed for drag-and-drop reordering in admin UI)
 		const areasWithWidgets = await Promise.all(
 			areas.map(async (area) => {
 				const widgets = await db
@@ -48,7 +58,7 @@ export const GET: APIRoute = async ({ locals }) => {
 	}
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, cache }) => {
 	const { emdash, user } = locals;
 	const db = emdash.db;
 
@@ -59,6 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const body = await parseBody(request, createWidgetAreaBody);
 		if (isParseError(body)) return body;
 
+		// Check if area name already exists
 		const existing = await db
 			.selectFrom("_emdash_widget_areas")
 			.select("id")
@@ -79,6 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 				description: body.description ?? null,
 			})
 			.execute();
+		invalidateWidgetObjectCache();
 
 		const area = await db
 			.selectFrom("_emdash_widget_areas")
@@ -86,6 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			.where("id", "=", id)
 			.executeTakeFirstOrThrow();
 
+		await invalidateRouteCache(cache, [widgetAreaTag(area.name)]);
 		return apiSuccess(area, 201);
 	} catch (error) {
 		return handleError(error, "Failed to create widget area", "WIDGET_AREA_CREATE_ERROR");

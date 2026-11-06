@@ -1,7 +1,19 @@
+/**
+ * Integration tests for EmDashClient.
+ *
+ * Tests full CRUD lifecycles against a mock HTTP backend that simulates
+ * the real API behavior including _rev tokens, schema caching, and
+ * content state transitions.
+ */
+
 import { describe, it, expect } from "vitest";
 
 import { EmDashClient, EmDashApiError } from "../../../../../../packages/core/src/client/index.js";
 import type { Interceptor } from "../../../../../../packages/core/src/client/transport.js";
+
+// ---------------------------------------------------------------------------
+// Simulated backend
+// ---------------------------------------------------------------------------
 
 const COLLECTION_MATCH_REGEX = /^\/schema\/collections\/([^/]+)$/;
 const CONTENT_LIST_REGEX = /^\/content\/([^/]+)$/;
@@ -28,7 +40,13 @@ function encodeRev(item: StoredItem): string {
 	return btoa(`${item.version}:${item.updatedAt}`);
 }
 
+/**
+ * Mirrors the API response envelope: `{ success: true, data }` on 2xx and
+ * `{ success: false, error }` on 4xx/5xx.
+ */
 function jsonRes(body: unknown, status = 200): Response {
+	// Error callers already pass `{ error: ... }`; add the discriminant so the
+	// fixture matches what `apiError()` actually sends.
 	const payload =
 		status >= 400
 			? { success: false, ...(typeof body === "object" && body !== null ? body : {}) }
@@ -39,6 +57,10 @@ function jsonRes(body: unknown, status = 200): Response {
 	});
 }
 
+/**
+ * A stateful mock backend that simulates EmDash's REST API.
+ * Supports schema, content CRUD, _rev tokens, and conflict detection.
+ */
 function createStatefulBackend() {
 	const collections = new Map<
 		string,
@@ -53,6 +75,7 @@ function createStatefulBackend() {
 	const content = new Map<string, StoredItem>();
 	let idCounter = 0;
 
+	// Seed a collection
 	collections.set("posts", {
 		slug: "posts",
 		label: "Posts",
@@ -67,6 +90,8 @@ function createStatefulBackend() {
 	const interceptor: Interceptor = async (req) => {
 		const url = new URL(req.url);
 		const path = url.pathname.replace("/_emdash/api", "");
+
+		// --- Schema routes ---
 
 		if (req.method === "GET" && path === "/schema/collections") {
 			return jsonRes({
@@ -86,6 +111,8 @@ function createStatefulBackend() {
 			return jsonRes({ item: { ...col, supports: [] } });
 		}
 
+		// --- Manifest ---
+
 		if (req.method === "GET" && path === "/manifest") {
 			const cols: Record<string, unknown> = {};
 			for (const [slug, col] of collections) {
@@ -103,6 +130,8 @@ function createStatefulBackend() {
 			return jsonRes({ version: "0.1.0", hash: "abc", collections: cols, plugins: {} });
 		}
 
+		// --- Content list ---
+
 		const listMatch = path.match(CONTENT_LIST_REGEX);
 		if (req.method === "GET" && listMatch) {
 			const collectionSlug = listMatch[1];
@@ -112,6 +141,8 @@ function createStatefulBackend() {
 				.filter((i) => !status || i.status === status);
 			return jsonRes({ items, nextCursor: undefined });
 		}
+
+		// --- Content create ---
 
 		if (req.method === "POST" && listMatch) {
 			const collectionSlug = listMatch[1];
@@ -141,6 +172,8 @@ function createStatefulBackend() {
 			return jsonRes({ item, _rev: encodeRev(item) });
 		}
 
+		// --- Content get/update/delete ---
+
 		const itemMatch = path.match(CONTENT_ITEM_REGEX);
 		if (itemMatch) {
 			const itemId = itemMatch[2];
@@ -161,6 +194,7 @@ function createStatefulBackend() {
 					_rev?: string;
 				};
 
+				// Check _rev for conflict
 				if (body._rev) {
 					const expected = encodeRev(item);
 					if (body._rev !== expected) {
@@ -176,6 +210,7 @@ function createStatefulBackend() {
 					}
 				}
 
+				// Apply updates
 				if (body.data) item.data = { ...item.data, ...body.data };
 				if (body.slug !== undefined) item.slug = body.slug;
 				if (body.status) item.status = body.status;
@@ -192,6 +227,8 @@ function createStatefulBackend() {
 				return jsonRes({});
 			}
 		}
+
+		// --- Content actions ---
 
 		const actionMatch = path.match(CONTENT_ACTION_REGEX);
 		if (req.method === "POST" && actionMatch) {
@@ -224,6 +261,8 @@ function createStatefulBackend() {
 			return jsonRes({});
 		}
 
+		// --- Search ---
+
 		if (req.method === "GET" && path === "/search") {
 			const q = url.searchParams.get("q") ?? "";
 			const items = [...content.values()]
@@ -246,6 +285,10 @@ function createStatefulBackend() {
 	return { interceptor, collections, content };
 }
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe("EmDashClient lifecycle (integration)", () => {
 	function createClient() {
 		const { interceptor, content } = createStatefulBackend();
@@ -260,6 +303,7 @@ describe("EmDashClient lifecycle (integration)", () => {
 	it("full content CRUD lifecycle", async () => {
 		const { client } = createClient();
 
+		// Create
 		const created = await client.create("posts", {
 			data: { title: "My Post", body: "Hello **world**" },
 			slug: "my-post",
@@ -268,31 +312,39 @@ describe("EmDashClient lifecycle (integration)", () => {
 		expect(created.id).toBeDefined();
 		expect(created.slug).toBe("my-post");
 		expect(created.status).toBe("draft");
+		// body was converted from markdown to PT
 		expect(Array.isArray(created.data.body)).toBe(true);
 
+		// List
 		const list = await client.list("posts");
 		expect(list.items).toHaveLength(1);
 		expect(list.items[0].id).toBe(created.id);
 
+		// Get — returns _rev for optimistic concurrency
 		const fetched = await client.get("posts", created.id);
 		expect(fetched.id).toBe(created.id);
-		expect(typeof fetched.data.body).toBe("string");
+		expect(typeof fetched.data.body).toBe("string"); // PT -> markdown
 		expect(fetched.data.body).toContain("world");
 		expect(fetched._rev).toBeDefined();
 
+		// Update with explicit _rev
 		const updated = await client.update("posts", created.id, {
 			data: { title: "Updated Title" },
 			_rev: fetched._rev,
 		});
 		expect(updated.data.title).toBe("Updated Title");
 
+		// Publish
 		await client.publish("posts", created.id);
 
+		// List published
 		const published = await client.list("posts", { status: "published" });
 		expect(published.items).toHaveLength(1);
 
+		// Unpublish
 		await client.unpublish("posts", created.id);
 
+		// Delete (soft)
 		await client.delete("posts", created.id);
 	});
 
@@ -303,6 +355,7 @@ describe("EmDashClient lifecycle (integration)", () => {
 			data: { title: "Test" },
 		});
 
+		// Update without reading — blind write (no _rev) should succeed
 		const updated = await client.update("posts", item.id, {
 			data: { title: "Blind Write OK" },
 		});
@@ -316,9 +369,11 @@ describe("EmDashClient lifecycle (integration)", () => {
 			data: { title: "Test" },
 		});
 
+		// Read — should return _rev on the item
 		const fetched = await client.get("posts", item.id);
 		expect(fetched._rev).toBeDefined();
 
+		// Update with explicit _rev
 		const updated = await client.update("posts", item.id, {
 			data: { title: "Safe Update" },
 			_rev: fetched._rev,
@@ -333,15 +388,19 @@ describe("EmDashClient lifecycle (integration)", () => {
 			data: { title: "V1" },
 		});
 
+		// First read
 		const v1 = await client.get("posts", item.id);
 
+		// First update with _rev
 		await client.update("posts", item.id, {
 			data: { title: "V2" },
 			_rev: v1._rev,
 		});
 
+		// Re-read for fresh _rev (previous rev is now stale)
 		const v2 = await client.get("posts", item.id);
 
+		// Second update with new _rev
 		const v3 = await client.update("posts", item.id, {
 			data: { title: "V3" },
 			_rev: v2._rev,
@@ -352,6 +411,7 @@ describe("EmDashClient lifecycle (integration)", () => {
 	it("listAll() iterates through all items", async () => {
 		const { client } = createClient();
 
+		// Create multiple items
 		await client.create("posts", { data: { title: "A" } });
 		await client.create("posts", { data: { title: "B" } });
 		await client.create("posts", { data: { title: "C" } });
@@ -369,6 +429,7 @@ describe("EmDashClient lifecycle (integration)", () => {
 		const item = await client.create("posts", { data: { title: "Scheduled" } });
 		await client.schedule("posts", item.id, { at: "2026-06-01T09:00:00Z" });
 
+		// Verify via get
 		const fetched = await client.get("posts", item.id);
 		expect(fetched.scheduledAt).toBe("2026-06-01T09:00:00Z");
 	});
@@ -422,6 +483,7 @@ describe("EmDashClient lifecycle (integration)", () => {
 	it("PT conversion round-trips through create and get", async () => {
 		const { client } = createClient();
 
+		// Create with markdown
 		const item = await client.create("posts", {
 			data: {
 				title: "Markdown Post",
@@ -429,8 +491,10 @@ describe("EmDashClient lifecycle (integration)", () => {
 			},
 		});
 
+		// Data stored as PT
 		expect(Array.isArray(item.data.body)).toBe(true);
 
+		// Get returns markdown
 		const fetched = await client.get("posts", item.id);
 		expect(typeof fetched.data.body).toBe("string");
 		const body = fetched.data.body as string;

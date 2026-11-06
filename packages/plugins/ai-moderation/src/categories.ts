@@ -1,11 +1,30 @@
+/**
+ * AI Moderation Categories
+ *
+ * Defines the content taxonomy used by Llama Guard for comment classification.
+ * Categories map to actions (block, hold, ignore) that feed into the moderation decision.
+ */
+
 export interface Category {
+	/** Short identifier (e.g. "C1") */
 	id: string;
+	/** Human-readable name */
 	name: string;
+	/** Description of what this category covers */
 	description: string;
+	/** Action to take when this category is triggered */
 	action: "block" | "hold" | "ignore";
+	/** Whether this is a built-in category (cannot be deleted) */
 	builtin: boolean;
 }
 
+/**
+ * Default categories tuned for comment moderation.
+ *
+ * Covers the most common problems a comment moderator faces: spam, toxicity,
+ * trolling, harassment, and hate speech. Child safety is retained as a
+ * hard block since it applies universally.
+ */
 export const DEFAULT_CATEGORIES: Category[] = [
 	{
 		id: "C1",
@@ -64,6 +83,10 @@ export const DEFAULT_CATEGORIES: Category[] = [
 	},
 ];
 
+/**
+ * Build a Llama Guard taxonomy string from categories.
+ * Only includes categories whose action is not "ignore".
+ */
 export function buildTaxonomy(categories: Category[]): string {
 	const active = categories.filter((c) => c.action !== "ignore");
 	if (active.length === 0) return "";

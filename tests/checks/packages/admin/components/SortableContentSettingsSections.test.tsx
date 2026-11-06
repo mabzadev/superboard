@@ -35,6 +35,7 @@ function renderSections() {
 async function pressKey(target: Document | HTMLElement, key: string, code: string) {
 	await act(async () => {
 		fireEvent.keyDown(target, { key, code });
+		// dnd-kit schedules keyboard sensor listeners and state updates on the next task.
 		await new Promise((resolve) => setTimeout(resolve, 0));
 	});
 }

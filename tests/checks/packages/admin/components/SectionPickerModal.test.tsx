@@ -21,6 +21,7 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	};
 });
 
+// Import after mocks
 const { SectionPickerModal } =
 	await import("../../../../../packages/admin/src/components/SectionPickerModal");
 
@@ -92,6 +93,7 @@ describe("SectionPickerModal", () => {
 			</Wrapper>,
 		);
 		await expect.element(screen.getByText("Hero Section")).toBeInTheDocument();
+		// The Base UI dialog puts an inert overlay. Use direct DOM click to bypass it.
 		const heroEl = screen.getByText("Hero Section").element();
 		const button = heroEl.closest("button");
 		button!.click();
@@ -110,6 +112,7 @@ describe("SectionPickerModal", () => {
 		await expect.element(screen.getByText("Hero Section")).toBeInTheDocument();
 		const searchInput = screen.getByPlaceholder("Search sections...");
 		await searchInput.fill("cta");
+		// Search is debounced — wait for the query to fire
 		await vi.waitFor(() => {
 			expect(mockFetchSections).toHaveBeenCalledWith(expect.objectContaining({ search: "cta" }));
 		});
@@ -123,6 +126,7 @@ describe("SectionPickerModal", () => {
 			</Wrapper>,
 		);
 		await expect.element(screen.getByText("Insert Section")).toBeInTheDocument();
+		// Direct DOM click to bypass the inert overlay
 		const cancelEl = screen.getByText("Cancel").element();
 		cancelEl.click();
 		expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -134,6 +138,7 @@ describe("SectionPickerModal", () => {
 				<SectionPickerModal open={false} onOpenChange={vi.fn()} onSelect={vi.fn()} />
 			</Wrapper>,
 		);
+		// Wait a tick to let any queries that might fire settle
 		await new Promise((r) => setTimeout(r, 50));
 		expect(mockFetchSections).not.toHaveBeenCalled();
 		expect(mockFetchSectionCategories).not.toHaveBeenCalled();
@@ -146,8 +151,10 @@ describe("SectionPickerModal", () => {
 				<SectionPickerModal open={true} onOpenChange={onOpenChange} onSelect={vi.fn()} />
 			</Wrapper>,
 		);
+		// Type something in search
 		const searchInput = screen.getByPlaceholder("Search sections...");
 		await searchInput.fill("test");
+		// Close and reopen
 		await screen.rerender(
 			<Wrapper>
 				<SectionPickerModal open={false} onOpenChange={onOpenChange} onSelect={vi.fn()} />
@@ -158,6 +165,7 @@ describe("SectionPickerModal", () => {
 				<SectionPickerModal open={true} onOpenChange={onOpenChange} onSelect={vi.fn()} />
 			</Wrapper>,
 		);
+		// Search should be reset — the input should have an empty value
 		await vi.waitFor(() => {
 			const input = document.querySelector(
 				'input[placeholder="Search sections..."]',

@@ -1,3 +1,13 @@
+/**
+ * Page Context Tests
+ *
+ * Tests the public page context builder for:
+ * - Astro-like input handling
+ * - URL string and object input
+ * - Default pageType resolution
+ * - Null normalization for optional fields
+ */
+
 import { describe, it, expect } from "vitest";
 
 import { createPublicPageContext } from "../../../../../../packages/core/src/page/context.js";
@@ -67,6 +77,7 @@ describe("createPublicPageContext", () => {
 		const result = createPublicPageContext({
 			Astro: {
 				url: new URL("https://example.com/"),
+				// currentLocale not set
 			},
 			kind: "custom",
 		});

@@ -18,6 +18,9 @@ describe("deriveSlugFromId", () => {
 	});
 
 	it("does not normalise case (caller must follow up with isPluginSlug)", () => {
+		// `Gallery` is not a valid slug; this helper only does the mechanical
+		// scoped-name translation. Callers must reject the result if it fails
+		// `isPluginSlug`.
 		expect(deriveSlugFromId("@Acme/Gallery")).toBe("Acme-Gallery");
 	});
 });
@@ -81,6 +84,7 @@ describe("isPluginVersion", () => {
 		expect(isPluginVersion("01.0.0")).toBe(false);
 		expect(isPluginVersion("1.02.0")).toBe(false);
 		expect(isPluginVersion("1.0.03")).toBe(false);
+		// Pre-release numerics also disallow leading zeros.
 		expect(isPluginVersion("1.0.0-01")).toBe(false);
 		expect(isPluginVersion("1.0.0-rc.01")).toBe(false);
 	});
@@ -91,8 +95,11 @@ describe("isPluginVersion", () => {
 		expect(isPluginVersion("-")).toBe(false);
 		expect(isPluginVersion(".")).toBe(false);
 		expect(isPluginVersion("foo")).toBe(false);
-		expect(isPluginVersion("1.0")).toBe(false);
+		expect(isPluginVersion("1.0")).toBe(false); // missing patch
 		expect(isPluginVersion("1")).toBe(false);
+		// Note: `1.0.0--rc` is technically valid semver — `-rc` is an
+		// alphanumeric identifier with leading hyphen — even though it looks
+		// suspicious. We accept it.
 		expect(isPluginVersion("1.0.0--rc")).toBe(true);
 	});
 
@@ -112,8 +119,11 @@ describe("isPluginVersion", () => {
 	});
 
 	it("rejects versions over the max length", () => {
+		// Construct exactly-max-length: "1." repeated, capped to keep semver shape.
+		// Use a prerelease tail to inflate length within the format.
 		const shortValid = "1.0.0";
 		expect(isPluginVersion(shortValid)).toBe(true);
+		// Synthesize a max-length valid: "1.0.0-" + identifier of length (max-6).
 		const tail = "a".repeat(PLUGIN_VERSION_MAX_LENGTH - 6);
 		const exactlyMax = `1.0.0-${tail}`;
 		expect(exactlyMax.length).toBe(PLUGIN_VERSION_MAX_LENGTH);

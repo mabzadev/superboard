@@ -1,3 +1,10 @@
+/**
+ * Import system
+ *
+ * Provides a pluggable system for importing content from various sources.
+ */
+
+// Core types
 export type {
 	ImportSource,
 	ImportAnalysis,
@@ -25,6 +32,7 @@ export type {
 	TaxonomyAnalysis,
 } from "./types.js";
 
+// Menu import
 export {
 	importMenusFromWxr,
 	importMenusFromPlugin,
@@ -33,14 +41,17 @@ export {
 	type PluginMenuItem,
 } from "./menus.js";
 
+// Sections import
 export { importReusableBlocksAsSections, type SectionsImportResult } from "./sections.js";
 
+// Comments import
 export {
 	importCommentsFromPlugin,
 	type PluginComment,
 	type CommentsImportResult,
 } from "./comments.js";
 
+// Site settings import
 export {
 	importSiteSettings,
 	parseSiteSettingsFromPlugin,
@@ -49,6 +60,7 @@ export {
 	type SettingsMediaIds,
 } from "./settings.js";
 
+// Registry
 export {
 	registerSource,
 	getSource,
@@ -57,10 +69,13 @@ export {
 	getUrlSources,
 	probeUrl,
 	clearSources,
+	SiteChallengeError,
 } from "./registry.js";
 
+// SSRF protection
 export { validateExternalUrl, ssrfSafeFetch, SsrfError } from "./ssrf.js";
 
+// Sources
 export { wxrSource, parseWxrDate } from "./sources/wxr.js";
 export { wordpressRestSource } from "./sources/wordpress-rest.js";
 export {
@@ -70,11 +85,14 @@ export {
 	fetchPluginTaxonomies,
 } from "./sources/wordpress-plugin.js";
 
+// Auto-register built-in sources
 import { registerSource } from "./registry.js";
 import { wordpressPluginSource } from "./sources/wordpress-plugin.js";
 import { wordpressRestSource } from "./sources/wordpress-rest.js";
 import { wxrSource } from "./sources/wxr.js";
 
+// Register in priority order (most specific first)
+// Plugin source first - if they have our plugin, use it
 registerSource(wordpressPluginSource);
 registerSource(wordpressRestSource);
 registerSource(wxrSource);

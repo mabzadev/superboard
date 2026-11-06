@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// ---------------------------------------------------------------------------
+// Widgets: Input schemas
+// ---------------------------------------------------------------------------
+
 const widgetType = z.enum(["content", "menu", "component"]);
 
 export const createWidgetAreaBody = z
@@ -37,6 +41,10 @@ export const reorderWidgetsBody = z
 		widgetIds: z.array(z.string().min(1)),
 	})
 	.meta({ id: "ReorderWidgetsBody" });
+
+// ---------------------------------------------------------------------------
+// Widgets: Response schemas
+// ---------------------------------------------------------------------------
 
 export const widgetAreaSchema = z
 	.object({

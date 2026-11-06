@@ -79,6 +79,7 @@ describe("redirect patterns", () => {
 		});
 
 		it("validates consecutively without regex state leaking", () => {
+			// Calling validatePattern multiple times should not have stateful regex issues
 			expect(validatePattern("/[a]")).toBeNull();
 			expect(validatePattern("/[b]")).toBeNull();
 			expect(validatePattern("/[c]/[...rest]")).toBeNull();
@@ -140,8 +141,29 @@ describe("redirect patterns", () => {
 
 		it("escapes regex-special characters in literal parts", () => {
 			const compiled = compilePattern("/blog.old/[slug]");
+			// The dot should be escaped, not matching any character
 			expect(compiled.regex.test("/blog.old/test")).toBe(true);
 			expect(compiled.regex.test("/blogXold/test")).toBe(false);
+		});
+
+		it("treats parentheses in literal parts as literal characters", () => {
+			const compiled = compilePattern("/(.*x)/[slug]");
+			expect(matchPattern(compiled, "/(.*x)/hello")).toEqual({ slug: "hello" });
+			expect(compiled.regex.test("/abcx/hello")).toBe(false);
+
+			const grouped = compilePattern("/foo(bar)/[slug]");
+			expect(matchPattern(grouped, "/foo(bar)/hello")).toEqual({ slug: "hello" });
+			expect(grouped.regex.test("/foobar/hello")).toBe(false);
+		});
+
+		it("assigns captures to the right names when a [param] precedes a [...splat]", () => {
+			const compiled = compilePattern("/[category]/[...rest]");
+			expect(matchPattern(compiled, "/tech/a/b")).toEqual({ category: "tech", rest: "a/b" });
+		});
+
+		it("compiles a source with unbalanced literal parentheses", () => {
+			const compiled = compilePattern("/a((b)/[slug]");
+			expect(matchPattern(compiled, "/a((b)/hello")).toEqual({ slug: "hello" });
 		});
 	});
 
@@ -180,6 +202,25 @@ describe("redirect patterns", () => {
 		it("handles URL-encoded segments", () => {
 			const compiled = compilePattern("/blog/[slug]");
 			expect(matchPattern(compiled, "/blog/my%20post")).toEqual({ slug: "my%20post" });
+		});
+
+		it("matches [param] patterns with a trailing slash", () => {
+			const compiled = compilePattern("/category/[slug]/feed");
+			expect(matchPattern(compiled, "/category/arts/feed")).toEqual({ slug: "arts" });
+			expect(matchPattern(compiled, "/category/arts/feed/")).toEqual({ slug: "arts" });
+		});
+
+		it("matches [...rest] patterns with a trailing slash", () => {
+			const compiled = compilePattern("/old/[...path]");
+			expect(matchPattern(compiled, "/old/2024/01/post/")).toEqual({
+				path: "2024/01/post/",
+			});
+		});
+
+		it("matches a pattern whose source ends with a trailing slash when the request omits it", () => {
+			const compiled = compilePattern("/category/[slug]/feed/");
+			expect(matchPattern(compiled, "/category/arts/feed")).toEqual({ slug: "arts" });
+			expect(matchPattern(compiled, "/category/arts/feed/")).toEqual({ slug: "arts" });
 		});
 	});
 
@@ -236,6 +277,7 @@ describe("redirect patterns", () => {
 			const params = matchPattern(source, "/v1/news/hello");
 			expect(params).toEqual({ category: "news", slug: "hello" });
 
+			// Destination only uses slug, drops category
 			const destination = interpolateDestination("/posts/[slug]", params!);
 			expect(destination).toBe("/posts/hello");
 		});

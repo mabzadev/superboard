@@ -1,5 +1,15 @@
+/**
+ * Tests for the PluginBridge taxonomy methods (taxonomyList, taxonomyTerms,
+ * taxonomyEntryTerms): capability enforcement, SQL/parameter wiring for the
+ * locale/taxonomy filters, and D1 row mapping (JSON parsing, int→bool,
+ * nullable columns).
+ */
+
 import { describe, expect, it, vi } from "vitest";
 
+// PluginBridge extends WorkerEntrypoint from cloudflare:workers, which is
+// not importable under plain vitest. Substitute a minimal base class that
+// stores ctx/env the way the runtime does.
 vi.mock("cloudflare:workers", () => ({
 	WorkerEntrypoint: class {
 		ctx: unknown;
@@ -11,7 +21,10 @@ vi.mock("cloudflare:workers", () => ({
 	},
 }));
 
-import { PluginBridge } from "../../../../../packages/cloudflare/src/sandbox/bridge.js";
+import {
+	PluginBridge,
+	setTaxonomyWriteCallback,
+} from "../../../../../packages/cloudflare/src/sandbox/bridge.js";
 
 type Row = Record<string, unknown>;
 
@@ -20,6 +33,7 @@ interface RecordedQuery {
 	params: unknown[];
 }
 
+/** Minimal fake D1Database: records SQL + bound params, returns canned rows. */
 function fakeD1(rows: Row[], recorded: RecordedQuery[]) {
 	return {
 		prepare(sql: string) {
@@ -47,7 +61,7 @@ function fakeD1(rows: Row[], recorded: RecordedQuery[]) {
 	};
 }
 
-function makeBridge(capabilities: string[], rows: Row[] = []) {
+function makeBridge(capabilities: string[], rows: Row[] = [], taxonomyWriteRuntimeId?: string) {
 	const recorded: RecordedQuery[] = [];
 	const ctx = {
 		props: {
@@ -56,6 +70,7 @@ function makeBridge(capabilities: string[], rows: Row[] = []) {
 			capabilities,
 			allowedHosts: [],
 			storageCollections: [],
+			taxonomyWriteRuntimeId,
 		},
 	};
 	const env = { DB: fakeD1(rows, recorded) };
@@ -77,10 +92,109 @@ const TERM_ROW: Row = {
 
 describe("PluginBridge taxonomy methods — capability enforcement", () => {
 	it("rejects all three methods without taxonomies:read", async () => {
+		// content:read must not grant taxonomy access.
 		const { bridge } = makeBridge(["content:read"]);
 		await expect(bridge.taxonomyList()).rejects.toThrow(/taxonomies:read/);
 		await expect(bridge.taxonomyTerms("category")).rejects.toThrow(/taxonomies:read/);
 		await expect(bridge.taxonomyEntryTerms("posts", "p1")).rejects.toThrow(/taxonomies:read/);
+	});
+
+	it("routes writes through the runtime callback and denies read-only plugins", async () => {
+		const createTerm = vi.fn(async () => ({
+			id: "term-2",
+			taxonomy: "category",
+			slug: "reviews",
+			label: "Reviews",
+			parentId: null,
+			data: null,
+			locale: "en",
+			translationGroup: "term-2",
+		}));
+		const addEntryTerms = vi.fn(async () => []);
+		const removeEntryTerms = vi.fn(async () => []);
+		setTaxonomyWriteCallback("writer", {
+			getAll: vi.fn(async () => []),
+			getTerms: vi.fn(async () => []),
+			getEntryTerms: vi.fn(async () => []),
+			createTerm,
+			addEntryTerms,
+			removeEntryTerms,
+		});
+
+		const reader = makeBridge(["taxonomies:read"]).bridge;
+		await expect(reader.taxonomyCreateTerm("category", { label: "Reviews" })).rejects.toThrow(
+			/taxonomies:write/,
+		);
+
+		const writer = makeBridge(["taxonomies:read", "taxonomies:write"], [], "writer").bridge;
+		await writer.taxonomyCreateTerm("category", { label: "Reviews" });
+		await writer.taxonomyAddEntryTerms("posts", "post-1", "category", ["term-2"]);
+		await writer.taxonomyRemoveEntryTerms("posts", "post-1", "category", ["term-2"]);
+
+		expect(createTerm).toHaveBeenCalledWith("category", { label: "Reviews" });
+		expect(addEntryTerms).toHaveBeenCalledWith("posts", "post-1", "category", ["term-2"]);
+		expect(removeEntryTerms).toHaveBeenCalledWith("posts", "post-1", "category", ["term-2"]);
+		setTaxonomyWriteCallback("writer", null);
+	});
+
+	it("isolates taxonomy callbacks by runner and removes terminated callbacks", async () => {
+		const firstCreate = vi.fn(async () => TERM_ROW as never);
+		const secondCreate = vi.fn(async () => TERM_ROW as never);
+		const access = (createTerm: typeof firstCreate) => ({
+			getAll: vi.fn(async () => []),
+			getTerms: vi.fn(async () => []),
+			getEntryTerms: vi.fn(async () => []),
+			createTerm,
+			addEntryTerms: vi.fn(async () => []),
+			removeEntryTerms: vi.fn(async () => []),
+		});
+		setTaxonomyWriteCallback("first", access(firstCreate));
+		setTaxonomyWriteCallback("second", access(secondCreate));
+
+		const first = makeBridge(["taxonomies:write"], [], "first").bridge;
+		const second = makeBridge(["taxonomies:write"], [], "second").bridge;
+		await first.taxonomyCreateTerm("category", { label: "First" });
+		await second.taxonomyCreateTerm("category", { label: "Second" });
+
+		expect(firstCreate).toHaveBeenCalledOnce();
+		expect(secondCreate).toHaveBeenCalledOnce();
+		setTaxonomyWriteCallback("first", null);
+		await expect(first.taxonomyCreateTerm("category", { label: "Missing" })).rejects.toThrow(
+			"Taxonomy mutations are not available",
+		);
+		setTaxonomyWriteCallback("second", null);
+	});
+});
+
+describe("PluginBridge content discovery capability enforcement", () => {
+	it("denies schema and revision history independently", async () => {
+		const { bridge } = makeBridge(["content:read"]);
+		await expect(bridge.schemaListCollections()).rejects.toThrow(/schema:read/);
+		await expect(bridge.contentListRevisions("posts", "post-1")).rejects.toThrow(
+			/content:revisions:read/,
+		);
+	});
+});
+
+describe("PluginBridge byline capability enforcement", () => {
+	it("rejects every byline method without bylines:read", async () => {
+		const { bridge, recorded } = makeBridge(["content:read", "users:read"]);
+		await expect(bridge.bylineGet("b1")).rejects.toThrow(/bylines:read/);
+		await expect(bridge.bylineList()).rejects.toThrow(/bylines:read/);
+		await expect(bridge.bylineEntriesBylines("posts", ["p1"])).rejects.toThrow(/bylines:read/);
+		expect(recorded).toEqual([]);
+	});
+
+	it("rejects invalid collection names and entry ID lists before querying", async () => {
+		const { bridge, recorded } = makeBridge(["bylines:read"]);
+		await expect(bridge.bylineEntriesBylines("posts; --", ["p1"])).rejects.toThrow(
+			/Invalid collection name/,
+		);
+		await expect(
+			// eslint-disable-next-line typescript/no-unsafe-type-assertion -- RPC callers are untyped
+			bridge.bylineEntriesBylines("posts", [1] as unknown as string[]),
+		).rejects.toThrow(/entryIds must be an array of strings/);
+		expect(recorded).toEqual([]);
 	});
 });
 
@@ -176,6 +290,9 @@ describe("taxonomyTerms", () => {
 		expect(recorded[1]?.params).toEqual(["category", "fr"]);
 	});
 
+	// Terms carry a manual order, so a plugin reading through the bridge has to
+	// get the same order core's TaxonomyRepository.findByName returns. The clause
+	// is a raw string here, so assert it rather than trusting it.
 	it("orders by the manual position ahead of the label", async () => {
 		const { bridge, recorded } = makeBridge(["taxonomies:read"]);
 		await bridge.taxonomyTerms("category");

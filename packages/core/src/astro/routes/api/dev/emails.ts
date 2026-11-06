@@ -1,3 +1,14 @@
+/**
+ * GET /_emdash/api/dev/emails
+ * DELETE /_emdash/api/dev/emails
+ *
+ * Development-only endpoint to view and clear emails captured by
+ * the dev console email provider.
+ *
+ * ONLY available when import.meta.env.DEV is true.
+ *
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;

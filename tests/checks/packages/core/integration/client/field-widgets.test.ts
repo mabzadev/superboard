@@ -1,3 +1,16 @@
+/**
+ * Integration tests for plugin field widgets.
+ *
+ * Tests the full pipeline:
+ * - Manifest includes widget property on fields
+ * - Manifest includes plugin fieldWidgets declarations
+ * - Content CRUD works with widget-annotated fields
+ * - Widget data roundtrips correctly through the API
+ *
+ * The integration fixture is configured with the color plugin and a
+ * "theme_color" field with widget "color:picker" on the posts collection.
+ */
+
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { TestServerContext } from "../server.js";
@@ -134,6 +147,7 @@ describe("Field Widgets Integration", () => {
 			});
 
 			const fetched = await ctx.client.get("posts", item.id);
+			// Color field is optional, so it should be null/undefined
 			expect(fetched.data.theme_color == null || fetched.data.theme_color === "").toBe(true);
 		});
 

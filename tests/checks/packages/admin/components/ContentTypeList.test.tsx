@@ -5,8 +5,21 @@ import {
 	ContentTypeList,
 	moveCollection,
 } from "../../../../../packages/admin/src/components/ContentTypeList";
+import { fetchRelations } from "../../../../../packages/admin/src/lib/api";
 import type { SchemaCollection, OrphanedTable } from "../../../../../packages/admin/src/lib/api";
+import type { RelationWithUsage } from "../../../../../packages/admin/src/lib/api/relations.js";
 import { render } from "../utils/render.tsx";
+
+vi.mock("../../../../../packages/admin/src/lib/api", async () => {
+	const actual = await vi.importActual<typeof import("../../../../../packages/admin/src/lib/api")>(
+		"../../../../../packages/admin/src/lib/api",
+	);
+	return { ...actual, fetchRelations: vi.fn(async () => []) };
+});
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const NO_CONTENT_TYPES_REGEX = /No content types yet/;
 
@@ -98,6 +111,17 @@ describe("ContentTypeList", () => {
 			await expect.element(screen.getByText("preview")).toBeInTheDocument();
 			await expect.element(screen.getByText("search")).toBeInTheDocument();
 		});
+
+		it("shows the seo badge from hasSeo, not from supports", async () => {
+			const collections = [
+				makeCollection({ id: "1", slug: "pages", supports: ["drafts"], hasSeo: true }),
+				makeCollection({ id: "2", slug: "posts", supports: ["drafts", "seo"], hasSeo: false }),
+			];
+			const screen = await render(<ContentTypeList collections={collections} />);
+			const seoBadges = screen.getByText("seo", { exact: true }).elements();
+			expect(seoBadges).toHaveLength(1);
+			expect(seoBadges[0]!.closest("tr")?.textContent).toContain("pages");
+		});
 	});
 
 	describe("navigation", () => {
@@ -126,7 +150,9 @@ describe("ContentTypeList", () => {
 				}),
 			];
 			const screen = await render(<ContentTypeList collections={collections} />);
+			// Code-sourced should have no delete button
 			expect(screen.getByRole("button", { name: "Delete From Code" }).query()).toBeNull();
+			// Dashboard-sourced should have delete button
 			await expect
 				.element(screen.getByRole("button", { name: "Delete From Dashboard" }))
 				.toBeInTheDocument();
@@ -143,8 +169,10 @@ describe("ContentTypeList", () => {
 
 			await screen.getByRole("button", { name: "Delete Posts" }).click();
 
+			// ConfirmDialog should appear
 			await expect.element(screen.getByText("Delete Content Type?")).toBeInTheDocument();
 
+			// Direct DOM click to bypass Base UI inert overlay
 			screen.getByRole("button", { name: "Delete" }).element().click();
 
 			expect(onDelete).toHaveBeenCalledWith("posts");
@@ -161,8 +189,10 @@ describe("ContentTypeList", () => {
 
 			await screen.getByRole("button", { name: "Delete Posts" }).click();
 
+			// ConfirmDialog should appear
 			await expect.element(screen.getByText("Delete Content Type?")).toBeInTheDocument();
 
+			// Direct DOM click to bypass Base UI inert overlay
 			screen.getByRole("button", { name: "Cancel" }).element().click();
 
 			expect(onDelete).not.toHaveBeenCalled();
@@ -219,6 +249,33 @@ describe("ContentTypeList", () => {
 		});
 	});
 
+	describe("icon aspect ratio", () => {
+		it("pins the icon width and lets the description wrap in the name cell", async () => {
+			// Long description reproduces the over-constrained Name cell from #3447.
+			const collections = [
+				makeCollection({
+					id: "1",
+					slug: "albums",
+					label: "Albums",
+					description:
+						"A detailed description that is much wider than a squeezed name cell can hold without wrapping.",
+				}),
+			];
+			const screen = await render(<ContentTypeList collections={collections} />);
+
+			// Locate the text wrapper via its description, then select the icon sibling.
+			const description = screen.getByText(/much wider than a squeezed name cell/);
+			const textWrapper = description.element().closest("div")!;
+			const icon = textWrapper.previousElementSibling as HTMLElement;
+			expect(icon).not.toBeNull();
+
+			// The icon stays 32×32 because shrink-0 prevents flex shrinking.
+			expect(icon.classList.contains("shrink-0")).toBe(true);
+			// min-w-0 allows the text wrapper to shrink below its min-content and wrap.
+			expect(textWrapper.classList.contains("min-w-0")).toBe(true);
+		});
+	});
+
 	describe("reordering", () => {
 		const twoCollections = [
 			makeCollection({ id: "1", slug: "posts", label: "Posts" }),
@@ -230,6 +287,8 @@ describe("ContentTypeList", () => {
 				<ContentTypeList collections={twoCollections} onReorder={vi.fn()} />,
 			);
 
+			// The accessible name carries the collection, so screen-reader users
+			// know which row the handle moves.
 			await expect
 				.element(screen.getByRole("button", { name: "Reorder Posts" }))
 				.toBeInTheDocument();
@@ -253,6 +312,7 @@ describe("ContentTypeList", () => {
 		});
 
 		it("renders collections in the order given, not alphabetically", async () => {
+			// The server already returns them ordered; the list must not re-sort.
 			const screen = await render(
 				<ContentTypeList collections={twoCollections} onReorder={vi.fn()} />,
 			);
@@ -273,9 +333,63 @@ describe("ContentTypeList", () => {
 
 		it("returns the same reference when the move is a no-op", () => {
 			const slugs = ["a", "b", "c"];
+			// Same identity lets the caller skip both the state update and the
+			// network request on a drop that changes nothing.
 			expect(moveCollection(slugs, "b", "b")).toBe(slugs);
 			expect(moveCollection(slugs, "b", "missing")).toBe(slugs);
 			expect(moveCollection(slugs, "missing", "b")).toBe(slugs);
 		});
+	});
+});
+
+describe("ContentTypeList relationship warning", () => {
+	const relation: RelationWithUsage = {
+		id: "rel-1",
+		slug: "posts_authors",
+		parentCollection: "posts",
+		childCollection: "authors",
+		parentLabel: "Posts",
+		parentLabelSingular: "Post",
+		childLabel: "Authors",
+		childLabelSingular: "Author",
+		maxChildrenPerParent: 1,
+		maxParentsPerChild: null,
+		boundFields: [
+			{ collectionSlug: "posts", fieldSlug: "author", side: "parent" },
+			{ collectionSlug: "authors", fieldSlug: "posts", side: "child" },
+		],
+		linkCount: 4,
+	};
+
+	beforeEach(() => {
+		vi.mocked(fetchRelations).mockResolvedValue([relation]);
+	});
+
+	// Deleting a content type cascades through every relationship it is an end
+	// of, which takes reference fields off *other* content types.
+	it("names the relationships and the fields on other content types that go with them", async () => {
+		const screen = await render(
+			<ContentTypeList collections={[makeCollection({ slug: "posts", label: "Posts" })]} />,
+		);
+
+		await screen.getByRole("button", { name: /Delete Posts/i }).click();
+		await expect.element(screen.getByText("Delete Content Type?")).toBeInTheDocument();
+
+		await expect.element(screen.getByText("posts_authors")).toBeInTheDocument();
+		await expect
+			.element(screen.getByText(/the posts field on authors, which lists entries that link to it/))
+			.toBeInTheDocument();
+		await expect.element(screen.getByText("4 links")).toBeInTheDocument();
+	});
+
+	it("says nothing about relationships for a content type in none", async () => {
+		const screen = await render(
+			<ContentTypeList collections={[makeCollection({ slug: "pages", label: "Pages" })]} />,
+		);
+
+		await screen.getByRole("button", { name: /Delete Pages/i }).click();
+		await expect.element(screen.getByText("Delete Content Type?")).toBeInTheDocument();
+
+		expect(screen.getByText("posts_authors").query()).toBeNull();
 	});
 });

@@ -14,6 +14,7 @@ describe("SeoRepository", () => {
 
 	beforeEach(async () => {
 		db = await setupTestDatabaseWithCollections();
+		// Enable SEO on the post collection — createCollection defaults has_seo to 0.
 		await db
 			.updateTable("_emdash_collections")
 			.set({ has_seo: 1 })
@@ -28,6 +29,7 @@ describe("SeoRepository", () => {
 	});
 
 	it("getMany handles more IDs than SQL_BATCH_SIZE", async () => {
+		// Create a few real content entries with SEO rows
 		const realIds: string[] = [];
 		for (let i = 0; i < 3; i++) {
 			const content = await contentRepo.create({
@@ -42,6 +44,7 @@ describe("SeoRepository", () => {
 			realIds.push(content.id);
 		}
 
+		// Build an ID list larger than SQL_BATCH_SIZE with real IDs spread across chunks
 		const ids: string[] = [];
 		for (let i = 0; i < SQL_BATCH_SIZE + 10; i++) {
 			ids.push(`fake-id-${i}`);
@@ -52,12 +55,15 @@ describe("SeoRepository", () => {
 
 		const result = await seoRepo.getMany("post", ids);
 
+		// All input IDs should be present in the result Map
 		expect(result.size).toBe(ids.length);
 
+		// Real IDs should have their SEO data resolved
 		expect(result.get(realIds[0]!)?.title).toBe("SEO Title 0");
 		expect(result.get(realIds[1]!)?.title).toBe("SEO Title 1");
 		expect(result.get(realIds[2]!)?.title).toBe("SEO Title 2");
 
+		// Fake IDs should get default values
 		expect(result.get("fake-id-5")?.title).toBeNull();
 		expect(result.get("fake-id-5")?.description).toBeNull();
 		expect(result.get("fake-id-5")?.noIndex).toBe(false);
@@ -102,6 +108,7 @@ describe("SeoRepository", () => {
 
 		const result = await seoRepo.getMany("post", ids);
 
+		// The real entry should resolve to its SEO row regardless of the duplicate input
 		expect(result.get(content.id)?.title).toBe("Duplicate SEO");
 	});
 });

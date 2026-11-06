@@ -4,6 +4,7 @@ import {
 	handleContentCreate,
 	handleContentList,
 } from "../../../../../../packages/core/src/api/handlers/content.js";
+import { handleSchemaFieldCreate } from "../../../../../../packages/core/src/api/handlers/schema.js";
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 import {
 	describeEachDialect,
@@ -12,6 +13,10 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
+// The server-side content-list `q` filter must match against a
+// configured `titleField`, not just the conventional `title`/`name` fields.
+// Otherwise searching a collection whose title comes from e.g. `full_name`
+// can't find an entry by the title the admin actually renders.
 describeEachDialect("content list search honours a custom titleField", (dialect) => {
 	let ctx: DialectTestContext;
 
@@ -30,6 +35,8 @@ describeEachDialect("content list search honours a custom titleField", (dialect)
 		});
 		await registry.updateCollection("employees", { titleField: "full_name" });
 
+		// Seed enough rows that the needle sits past the first page, so a match
+		// can only come from the server-side filter, not client-side paging.
 		for (let i = 0; i < 60; i++) {
 			const created = await handleContentCreate(ctx.db, "employees", {
 				slug: `employee-${String(i).padStart(3, "0")}`,
@@ -64,5 +71,39 @@ describeEachDialect("content list search honours a custom titleField", (dialect)
 	it("matches the titleField case-insensitively", async () => {
 		const result = await handleContentList(ctx.db, "employees", { q: "jane", limit: 20 });
 		expect(namesOf(result)).toContain("Jane Doe");
+	});
+});
+
+// A reference field bound to a relation keeps its values in a relation table,
+// so a `name` field of that kind has no column to match against.
+describeEachDialect("content list search with a reference field named like a title", (dialect) => {
+	let ctx: DialectTestContext;
+
+	beforeEach(async () => {
+		ctx = await setupForDialect(dialect);
+		const registry = new SchemaRegistry(ctx.db);
+		await registry.createCollection({ slug: "people", label: "People" });
+		await registry.createCollection({ slug: "credits", label: "Credits" });
+		const field = await handleSchemaFieldCreate(ctx.db, "credits", {
+			slug: "name",
+			label: "Name",
+			type: "reference",
+			validation: { targetCollection: "people" },
+		});
+		if (!field.success) throw new Error("field create failed");
+		const created = await handleContentCreate(ctx.db, "credits", {
+			slug: "lead-actor",
+			data: {},
+		});
+		if (!created.success) throw new Error("seed failed");
+	});
+
+	afterEach(async () => {
+		await teardownForDialect(ctx);
+	});
+
+	it("searches the columns the collection has", async () => {
+		const result = await handleContentList(ctx.db, "credits", { q: "lead" });
+		expect(result.success && result.data.items.map((i) => i.slug)).toEqual(["lead-actor"]);
 	});
 });

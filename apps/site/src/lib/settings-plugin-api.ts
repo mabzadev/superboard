@@ -8,6 +8,7 @@ import {
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 import { createFetchRouter, type FetchRouteHandler } from "@superboard/contracts/route-registry";
 import type { APIContext } from "astro";
+import type { SettingField } from "emdash";
 import { unwrapResult } from "emdash/api/error";
 import {
 	requirePerm,
@@ -15,7 +16,6 @@ import {
 	handlePluginSettingsGet,
 	handlePluginSettingsUpdate,
 } from "emdash/api/plugin-settings";
-import * as settings from "emdash/routes/api/admin/plugins/_id_/settings";
 
 import { resolveConfiguredPluginSettingKey } from "./configured-plugin.js";
 import { registerSiteRouteSource } from "./site-route-registry.js";
@@ -111,13 +111,7 @@ async function handleSettings(
 			},
 		});
 	}
-	const target = { ...context, request, url, params: { id: owner?.id ?? pluginId } };
-	if (!owner)
-		return request.method === "GET"
-			? settings.GET(target)
-			: request.method === "PUT"
-				? settings.PUT(target)
-				: Response.json({ error: { code: "METHOD_NOT_ALLOWED" } }, { status: 405 });
+	if (!owner) return handleEmDashPluginSettings(context, request, pluginId);
 	const denied = requirePerm(context.locals.user, "plugins:manage");
 	if (denied) return denied;
 	const runtime = context.locals.emdash;
@@ -192,6 +186,41 @@ async function handleSettings(
 		});
 	}
 	return Response.json({ error: { code: "METHOD_NOT_ALLOWED" } }, { status: 405 });
+}
+
+async function handleEmDashPluginSettings(
+	context: APIContext,
+	request: Request,
+	pluginId: string,
+): Promise<Response> {
+	const denied = requirePerm(context.locals.user, "plugins:manage");
+	if (denied) return denied;
+	const runtime = context.locals.emdash;
+	const runtimeSchema = runtime.getRuntimePluginSettingsSchema(pluginId);
+	const schema =
+		getPluginSettingsSchema(runtime.configuredPlugins, runtime.sandboxedPluginEntries, pluginId) ??
+		(runtimeSchema && isSettingsSchema(runtimeSchema) ? runtimeSchema : null);
+	if (schema === null)
+		return Response.json(
+			{ error: { code: "NOT_FOUND", message: `Plugin not found: ${pluginId}` } },
+			{ status: 404 },
+		);
+	if (request.method === "GET")
+		return unwrapResult(await handlePluginSettingsGet(runtime.db, pluginId, schema));
+	if (request.method !== "PUT")
+		return Response.json({ error: { code: "METHOD_NOT_ALLOWED" } }, { status: 405 });
+	const body = await readJsonObjectLimited(request, 65536);
+	if (!body.values || typeof body.values !== "object" || Array.isArray(body.values))
+		return Response.json({ error: { code: "INVALID_REQUEST" } }, { status: 422 });
+	const values: Record<string, unknown> = Object.fromEntries(Object.entries(body.values));
+	return unwrapResult(await handlePluginSettingsUpdate(runtime.db, pluginId, schema, values));
+}
+
+function isSettingsSchema(schema: Record<string, unknown>): schema is Record<string, SettingField> {
+	return Object.values(schema).every(
+		(field) =>
+			typeof field === "object" && field !== null && typeof Reflect.get(field, "type") === "string",
+	);
 }
 
 function filterComponentSettings<T>(values: Record<string, T>, prefix: string) {

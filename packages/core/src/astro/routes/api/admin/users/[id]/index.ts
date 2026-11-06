@@ -1,3 +1,10 @@
+/**
+ * User management detail endpoint
+ *
+ * GET /_emdash/api/admin/users/:id - Get user details
+ * PUT /_emdash/api/admin/users/:id - Update user
+ */
+
 import { Role } from "@emdash-cms/auth";
 import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
 import type { APIRoute } from "astro";
@@ -35,6 +42,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
 			return apiError("NOT_FOUND", "User not found", 404);
 		}
 
+		// Transform for JSON serialization
 		const item = {
 			id: result.user.id,
 			email: result.user.email,
@@ -85,6 +93,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 	}
 
 	try {
+		// Get target user
 		const targetUser = await adapter.getUserById(id);
 		if (!targetUser) {
 			return apiError("NOT_FOUND", "User not found", 404);
@@ -93,12 +102,15 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 		const body = await parseBody(request, userUpdateBody);
 		if (isParseError(body)) return body;
 
+		// Role is already validated as RoleLevel by Zod schema
 		const role = body.role;
 
+		// Prevent editing own role (security: prevents self-demotion/lockout)
 		if (role !== undefined && id === currentUser.id) {
 			return apiError("SELF_ROLE_CHANGE", "Cannot change your own role", 400);
 		}
 
+		// Check email uniqueness if changing email
 		if (body.email && body.email !== targetUser.email) {
 			const existing = await adapter.getUserByEmail(body.email);
 			if (existing) {
@@ -106,6 +118,8 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 			}
 		}
 
+		// Wrap admin demotion guard + update in a transaction to prevent
+		// two concurrent demotions from both passing the count check.
 		const isDemotingAdmin =
 			role !== undefined && role < Role.ADMIN && targetUser.role === Role.ADMIN;
 
@@ -131,6 +145,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 			);
 		}
 
+		// Fetch updated user
 		const updated = await adapter.getUserById(id);
 
 		return apiSuccess({

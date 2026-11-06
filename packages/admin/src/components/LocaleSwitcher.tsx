@@ -1,5 +1,14 @@
+/**
+ * Locale switcher component for i18n-enabled sites.
+ *
+ * Used in both the content list (to filter by locale) and the content editor
+ * (to switch between locale versions of a content item).
+ *
+ * Only renders when i18n is configured (manifest.i18n is present).
+ */
+
 import { useLingui } from "@lingui/react/macro";
-import { GlobeSimple } from "@phosphor-icons/react";
+import { CaretDown, GlobeSimple } from "@phosphor-icons/react";
 import React from "react";
 
 import { cn } from "../lib/utils.js";
@@ -9,11 +18,17 @@ interface LocaleSwitcherProps {
 	defaultLocale: string;
 	value: string;
 	onChange: (locale: string) => void;
+	/** Show "All locales" option (for list filtering) */
 	showAll?: boolean;
 	className?: string;
+	/** Size variant */
 	size?: "sm" | "md";
 }
 
+/**
+ * Get a display label for a locale code.
+ * Uses Intl.DisplayNames when available, falls back to uppercase code.
+ */
 function getLocaleLabel(code: string): string {
 	try {
 		const names = new Intl.DisplayNames(["en"], { type: "language" });
@@ -39,29 +54,43 @@ export function LocaleSwitcher({
 				className={cn("text-kumo-subtle shrink-0", size === "sm" ? "size-3.5" : "size-4")}
 				weight="bold"
 			/>
-			<select
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				aria-label={t`Locale`}
-				className={cn(
-					"rounded-md border bg-transparent font-medium transition-colors",
-					"focus:ring-kumo-ring focus:outline-none focus:ring-2 focus:ring-offset-1",
-					"hover:bg-kumo-tint/50 cursor-pointer",
-					size === "sm" ? "px-1.5 py-0.5 text-xs" : "px-2 py-1 text-sm",
+			<div className="relative flex items-center">
+				<select
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					aria-label={t`Locale`}
+					className={cn(
+						"rounded-md border bg-transparent font-medium transition-colors",
+						"focus:ring-kumo-ring focus:outline-none focus:ring-2 focus:ring-offset-1",
+						"hover:bg-kumo-tint/50 cursor-pointer",
+						size === "sm"
+							? "px-1.5 py-0.5 text-xs"
+							: "h-9 appearance-none rounded-lg ps-3 pe-9 text-base",
+					)}
+				>
+					{showAll && <option value="">{t`All locales`}</option>}
+					{locales.map((locale) => (
+						<option key={locale} value={locale}>
+							{locale.toUpperCase()}
+							{locale === defaultLocale ? t` (default)` : ""}
+						</option>
+					))}
+				</select>
+				{size !== "sm" && (
+					<CaretDown
+						className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-kumo-subtle"
+						aria-hidden="true"
+					/>
 				)}
-			>
-				{showAll && <option value="">{t`All locales`}</option>}
-				{locales.map((locale) => (
-					<option key={locale} value={locale}>
-						{locale.toUpperCase()}
-						{locale === defaultLocale ? t` (default)` : ""}
-					</option>
-				))}
-			</select>
+			</div>
 		</div>
 	);
 }
 
+/**
+ * Compact locale badges showing which translations exist for a content item.
+ * Renders as a row of small locale codes, with existing translations highlighted.
+ */
 export function LocaleBadges({
 	locales,
 	existingLocales,
@@ -103,6 +132,10 @@ export function LocaleBadges({
 	);
 }
 
+/**
+ * Hook to get i18n config from the manifest query.
+ * Returns null if i18n is not configured.
+ */
 export function useI18nConfig(
 	manifest: { i18n?: { defaultLocale: string; locales: string[] } } | undefined,
 ) {

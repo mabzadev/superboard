@@ -1,4 +1,10 @@
 ---
+/**
+ * YouTube embed component for Portable Text
+ *
+ * Wraps astro-embed's YouTube component, extracting props from the PT block node.
+ * astro-portabletext passes `node` (not `value`) for custom type components.
+ */
 import { YouTube as AstroYouTube } from "astro-embed";
 import type { YouTubeBlock } from "../schemas.js";
 

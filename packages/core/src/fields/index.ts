@@ -1,3 +1,4 @@
+// Field type exports
 export { text } from "./text.js";
 export { textarea } from "./textarea.js";
 export { number } from "./number.js";
@@ -14,6 +15,7 @@ export { json } from "./json.js";
 export { richText } from "./richtext.js";
 export { portableText } from "./portable-text.js";
 
+// Type exports
 export type {
 	FieldDefinition,
 	FieldUIHints,
@@ -23,6 +25,7 @@ export type {
 	FileValue,
 } from "./types.js";
 
+// MediaValue is canonical in media/types.ts but re-exported here for convenience
 export type { MediaValue } from "../media/types.js";
 
 export type { TextOptions } from "./text.js";

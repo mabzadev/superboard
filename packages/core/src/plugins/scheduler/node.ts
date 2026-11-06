@@ -1,8 +1,28 @@
+/**
+ * Node.js cron scheduler — setTimeout-based.
+ *
+ * Queries the executor for the next due time and sets a timeout. Re-arms
+ * after each tick and when reschedule() is called (new task scheduled or
+ * cancelled).
+ *
+ * Suitable for single-process deployments (local dev, single-node).
+ *
+ */
+
 import type { CronExecutor } from "../cron.js";
 import type { CronScheduler, SystemCleanupFn } from "./types.js";
 
+/** Minimum polling interval (ms) — prevents tight loops if next_run_at is in the past */
 const MIN_INTERVAL_MS = 1000;
 
+/**
+ * Maximum polling interval (ms). Each wake runs the maintenance pass — stale
+ * lock recovery *and* the scheduled-publishing sweep + system cleanup. The cap
+ * is the worst-case latency for scheduled content when no plugin cron task is
+ * due sooner (`getNextDueTime()` only knows about cron tasks, not content
+ * `scheduled_at`). Held at 60s so Node publish latency matches the Cloudflare
+ * Cron Trigger cadence (`* * * * *`) rather than lagging up to five minutes.
+ */
 const MAX_INTERVAL_MS = 60 * 1000;
 
 export class NodeCronScheduler implements CronScheduler {
@@ -31,6 +51,7 @@ export class NodeCronScheduler implements CronScheduler {
 
 	reschedule(): void {
 		if (!this.running) return;
+		// Clear existing timer and re-arm with fresh next due time
 		if (this.timer) {
 			clearTimeout(this.timer);
 			this.timer = null;
@@ -41,6 +62,7 @@ export class NodeCronScheduler implements CronScheduler {
 	private arm(): void {
 		if (!this.running) return;
 
+		// Query the next due time, then schedule a wake-up
 		void this.executor
 			.getNextDueTime()
 			.then((nextDue) => {
@@ -52,6 +74,7 @@ export class NodeCronScheduler implements CronScheduler {
 					delayMs = Math.max(dueAt - Date.now(), MIN_INTERVAL_MS);
 					delayMs = Math.min(delayMs, MAX_INTERVAL_MS);
 				} else {
+					// No tasks scheduled — poll at max interval for stale lock recovery
 					delayMs = MAX_INTERVAL_MS;
 				}
 
@@ -60,6 +83,7 @@ export class NodeCronScheduler implements CronScheduler {
 					this.executeTick();
 				}, delayMs);
 
+				// Don't prevent process exit
 				if (this.timer && typeof this.timer === "object" && "unref" in this.timer) {
 					this.timer.unref();
 				}
@@ -68,6 +92,7 @@ export class NodeCronScheduler implements CronScheduler {
 			})
 			.catch((error: unknown) => {
 				console.error("[cron:node] Failed to get next due time:", error);
+				// Retry after max interval
 				if (this.running) {
 					this.timer = setTimeout(() => this.arm(), MAX_INTERVAL_MS);
 					if (this.timer && typeof this.timer === "object" && "unref" in this.timer) {
@@ -80,6 +105,7 @@ export class NodeCronScheduler implements CronScheduler {
 	private executeTick(): void {
 		if (!this.running) return;
 
+		// Run tick + stale lock recovery + system cleanup, then re-arm
 		const tasks: Promise<unknown>[] = [this.executor.tick(), this.executor.recoverStaleLocks()];
 		if (this.systemCleanup) {
 			tasks.push(this.systemCleanup());

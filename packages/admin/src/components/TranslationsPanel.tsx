@@ -1,3 +1,9 @@
+/**
+ * Shared "Translations" sidebar panel. Matches the look of the translations
+ * section in ContentEditor — reused across content edit, menu edit and
+ * taxonomy term edit so the admin shows one consistent affordance.
+ */
+
 import { Button, Text } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import * as React from "react";
@@ -10,14 +16,24 @@ interface PanelTranslation {
 }
 
 export interface TranslationsPanelProps {
+	/** Heading shown above the list (default: "Translations"). */
 	title?: string;
+	/** Extra classes for the heading, e.g. the content editor's muted panel label style. */
 	headingClassName?: string;
+	/** All configured locales. */
 	locales: string[];
+	/** Marked as "(default)" in the list. */
 	defaultLocale: string;
+	/** Locale of the row being edited — rendered with the "current" highlight. */
 	currentLocale: string | undefined;
+	/** Locale variants that already exist (may include the current locale).
+	 * The panel only needs `id` + `locale`; callers may pass richer summaries. */
 	translations: PanelTranslation[];
+	/** Called when the user clicks "Edit" on a sibling translation. */
 	onOpen?: (summary: PanelTranslation) => void;
+	/** Called when the user clicks "Translate" for a missing locale. */
 	onCreate?: (locale: string) => void;
+	/** Locale currently being created; used to disable its button. */
 	pendingLocale?: string | null;
 }
 
@@ -40,7 +56,7 @@ export function TranslationsPanel({
 
 	return (
 		<div>
-			<Text bold as="h3" DANGEROUS_className={cn("mb-4", headingClassName)}>
+			<Text as="h3" DANGEROUS_className={cn("mb-4 font-semibold", headingClassName)}>
 				{title ?? t`Translations`}
 			</Text>
 			<div className="space-y-2">
@@ -51,7 +67,7 @@ export function TranslationsPanel({
 						<div
 							key={locale}
 							className={cn(
-								"-mx-3 flex items-center justify-between rounded-md px-3 py-2 text-sm",
+								"-mx-3 flex items-center justify-between rounded-md px-3 py-2 text-base",
 								isCurrent
 									? "bg-kumo-brand/10 font-medium"
 									: translation
@@ -62,9 +78,11 @@ export function TranslationsPanel({
 							<div className="flex items-center gap-2">
 								<span className="text-xs font-semibold uppercase">{locale}</span>
 								{locale === defaultLocale && (
-									<span className="text-[10px] text-kumo-subtle">{t` (default)`}</span>
+									<span className="text-xs leading-4 text-kumo-subtle">{t` (default)`}</span>
 								)}
-								{isCurrent && <span className="text-[10px] text-kumo-link">{t`current`}</span>}
+								{isCurrent && (
+									<span className="text-xs leading-4 text-kumo-link">{t`current`}</span>
+								)}
 							</div>
 							{isCurrent ? null : translation && onOpen ? (
 								<Button

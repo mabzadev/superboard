@@ -1,12 +1,33 @@
+/**
+ * Seed file validation
+ *
+ * Validates a seed file structure before applying it.
+ */
+
 import { getI18nConfig, resolveConfiguredLocale } from "../i18n/config.js";
-import { FIELD_TYPES, isIndexableFieldType, MAX_COLLECTION_LIST_COLUMNS } from "../schema/types.js";
-import type { SeedFile, SeedMenuItem, ValidationResult } from "./types.js";
+import { isSiteRelativeDestination } from "../redirects/destination.js";
+import { isPattern, validateDestinationParams, validatePattern } from "../redirects/patterns.js";
+import { validateBlockFields } from "../schema/block-type-contract.js";
+import {
+	FIELD_TYPES,
+	isIndexableFieldType,
+	MAX_COLLECTION_GROUP_LENGTH,
+	MAX_COLLECTION_ICON_LENGTH,
+	MAX_COLLECTION_LIST_COLUMNS,
+	RESERVED_COLLECTION_SLUGS,
+	RESERVED_FIELD_SLUGS,
+} from "../schema/types.js";
+import { compileUrlPattern } from "../schema/url-pattern.js";
+import type { SeedFile, SeedMenuItem, SeedTaxonomy, ValidationResult } from "./types.js";
 
 const COLLECTION_FIELD_SLUG_PATTERN = /^[a-z][a-z0-9_]*$/;
+/** Matches `SchemaRegistry.validateSlug`, which collection and field slugs go through. */
+const MAX_SLUG_LENGTH = 63;
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 const REDIRECT_TYPES = new Set([301, 302, 307, 308]);
 const CRLF_PATTERN = /[\r\n]/;
 
+/** Type guard for Record<string, unknown> */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -23,10 +44,52 @@ function isValidRedirectPath(path: string): boolean {
 	}
 }
 
+/**
+ * The entry that declares `taxonomy`'s `hierarchical` and `collections`: the last
+ * entry of its `translationOf` chain within the taxonomy's name, or undefined when
+ * the chain loops.
+ */
+export function findTaxonomyStructureSource<T extends Pick<SeedTaxonomy, "name" | "translationOf">>(
+	taxonomy: T,
+	taxonomiesById: ReadonlyMap<string, T>,
+): T | undefined {
+	const visited = new Set<T>();
+	let current = taxonomy;
+	while (!visited.has(current)) {
+		visited.add(current);
+		const source = current.translationOf ? taxonomiesById.get(current.translationOf) : undefined;
+		if (!source || source.name !== current.name) return current;
+		current = source;
+	}
+	return undefined;
+}
+
+/** Whether `a` and `b` disagree on `hierarchical` or `collections`, comparing only fields both declare. */
+function declaresDifferentStructure(a: SeedTaxonomy, b: SeedTaxonomy): boolean {
+	if (
+		a.hierarchical !== undefined &&
+		b.hierarchical !== undefined &&
+		a.hierarchical !== b.hierarchical
+	) {
+		return true;
+	}
+	if (!Array.isArray(a.collections) || !Array.isArray(b.collections)) return false;
+	const own = new Set(a.collections);
+	const other = new Set(b.collections);
+	return own.size !== other.size || [...own].some((collection) => !other.has(collection));
+}
+
+/**
+ * Validate a seed file
+ *
+ * @param data - Unknown data to validate as a seed file
+ * @returns Validation result with errors and warnings
+ */
 export function validateSeed(data: unknown): ValidationResult {
 	const errors: string[] = [];
 	const warnings: string[] = [];
 
+	// Basic type check
 	if (!data || typeof data !== "object") {
 		return {
 			valid: false,
@@ -40,12 +103,16 @@ export function validateSeed(data: unknown): ValidationResult {
 		getI18nConfig()?.defaultLocale ??
 		(typeof seed.defaultLocale === "string" ? seed.defaultLocale : "en");
 
+	// Required fields
 	if (!seed.version) {
 		errors.push("Seed must have a version field");
 	} else if (seed.version !== "1") {
 		errors.push(`Unsupported seed version: ${String(seed.version)}`);
 	}
 
+	// defaultLocale backfills the locale of rows that omit one, so a blank or
+	// whitespace-padded value would silently write empty/invalid locales to the DB.
+	// Exported seeds never hit this, but it's part of the public schema now.
 	if (seed.defaultLocale !== undefined) {
 		if (
 			typeof seed.defaultLocale !== "string" ||
@@ -58,6 +125,50 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
+	if (seed.blockTypes !== undefined) {
+		if (!Array.isArray(seed.blockTypes)) {
+			errors.push("blockTypes must be an array");
+		} else {
+			const slugs = new Set<string>();
+			for (const [index, blockType] of seed.blockTypes.entries()) {
+				const prefix = `blockTypes[${index}]`;
+				if (!blockType.slug || !COLLECTION_FIELD_SLUG_PATTERN.test(blockType.slug)) {
+					errors.push(`${prefix}.slug: must be a valid block type slug`);
+				} else if (slugs.has(blockType.slug)) {
+					errors.push(`${prefix}.slug: duplicate block type slug "${blockType.slug}"`);
+				} else {
+					slugs.add(blockType.slug);
+				}
+				if (!blockType.label) errors.push(`${prefix}.label: is required`);
+				if (!Array.isArray(blockType.versions) || blockType.versions.length === 0) {
+					errors.push(`${prefix}.versions: must be a non-empty array`);
+					continue;
+				}
+				const numbers = blockType.versions.map((version) => version.version);
+				const sorted = [...numbers].toSorted((left, right) => left - right);
+				if (
+					sorted[0] !== 1 ||
+					sorted.some((version, versionIndex) => version !== versionIndex + 1)
+				) {
+					errors.push(`${prefix}.versions: numbers must be contiguous and start at 1`);
+				}
+				if (!numbers.includes(blockType.currentVersion)) {
+					errors.push(`${prefix}.currentVersion: must name a declared version`);
+				}
+				for (const [versionIndex, version] of blockType.versions.entries()) {
+					try {
+						validateBlockFields(version.fields);
+					} catch (error) {
+						errors.push(
+							`${prefix}.versions[${versionIndex}].${error instanceof Error ? error.message : "invalid fields"}`,
+						);
+					}
+				}
+			}
+		}
+	}
+
+	// Validate collections
 	if (seed.collections) {
 		if (!Array.isArray(seed.collections)) {
 			errors.push("collections must be an array");
@@ -71,12 +182,19 @@ export function validateSeed(data: unknown): ValidationResult {
 				if (!collection.slug) {
 					errors.push(`${prefix}: slug is required`);
 				} else {
+					// Check for valid slug format
 					if (!COLLECTION_FIELD_SLUG_PATTERN.test(collection.slug)) {
 						errors.push(
 							`${prefix}.slug: must start with a letter and contain only lowercase letters, numbers, and underscores`,
 						);
 					}
 
+					// Reserved slugs pass the format check but are rejected by the schema registry on apply
+					if (RESERVED_COLLECTION_SLUGS.includes(collection.slug)) {
+						errors.push(`${prefix}.slug: collection slug "${collection.slug}" is reserved`);
+					}
+
+					// Check for duplicate slugs
 					if (collectionSlugs.has(collection.slug)) {
 						errors.push(`${prefix}.slug: duplicate collection slug "${collection.slug}"`);
 					}
@@ -86,8 +204,40 @@ export function validateSeed(data: unknown): ValidationResult {
 				if (!collection.label) {
 					errors.push(`${prefix}: label is required`);
 				}
+				if (collection.editLocking !== undefined && typeof collection.editLocking !== "boolean") {
+					errors.push(`${prefix}.editLocking: must be a boolean`);
+				}
 				if (collection.routable !== undefined && typeof collection.routable !== "boolean") {
 					errors.push(`${prefix}.routable: must be a boolean`);
+				}
+				if (collection.urlPattern !== undefined) {
+					if (typeof collection.urlPattern !== "string") {
+						errors.push(`${prefix}.urlPattern: must be a string`);
+					} else if (collection.urlPattern) {
+						try {
+							compileUrlPattern(collection.urlPattern);
+						} catch (error) {
+							errors.push(
+								`${prefix}.urlPattern: ${error instanceof Error ? error.message : "invalid URL pattern"}`,
+							);
+						}
+					}
+				}
+				if (collection.group !== undefined) {
+					if (typeof collection.group !== "string") {
+						errors.push(`${prefix}.group: must be a string`);
+					} else if (collection.group.trim().length > MAX_COLLECTION_GROUP_LENGTH) {
+						errors.push(
+							`${prefix}.group: must be at most ${MAX_COLLECTION_GROUP_LENGTH} characters`,
+						);
+					}
+				}
+				if (collection.icon !== undefined) {
+					if (typeof collection.icon !== "string") {
+						errors.push(`${prefix}.icon: must be a string`);
+					} else if (collection.icon.trim().length > MAX_COLLECTION_ICON_LENGTH) {
+						errors.push(`${prefix}.icon: must be at most ${MAX_COLLECTION_ICON_LENGTH} characters`);
+					}
 				}
 
 				const declaredFieldSlugs = new Set(
@@ -122,8 +272,16 @@ export function validateSeed(data: unknown): ValidationResult {
 							}
 						}
 					}
+					if (
+						isRecord(collection.admin) &&
+						collection.admin.quickCreate !== undefined &&
+						typeof collection.admin.quickCreate !== "boolean"
+					) {
+						errors.push(`${prefix}.admin.quickCreate: must be a boolean`);
+					}
 				}
 
+				// Validate fields
 				if (!Array.isArray(collection.fields)) {
 					errors.push(`${prefix}.fields: must be an array`);
 				} else {
@@ -136,12 +294,19 @@ export function validateSeed(data: unknown): ValidationResult {
 						if (!field.slug) {
 							errors.push(`${fieldPrefix}: slug is required`);
 						} else {
+							// Check for valid slug format
 							if (!COLLECTION_FIELD_SLUG_PATTERN.test(field.slug)) {
 								errors.push(
 									`${fieldPrefix}.slug: must start with a letter and contain only lowercase letters, numbers, and underscores`,
 								);
 							}
 
+							// Reserved slugs pass the format check but are rejected by the schema registry on apply
+							if (RESERVED_FIELD_SLUGS.includes(field.slug)) {
+								errors.push(`${fieldPrefix}.slug: field slug "${field.slug}" is reserved`);
+							}
+
+							// Check for duplicate field slugs
 							if (fieldSlugs.has(field.slug)) {
 								errors.push(
 									`${fieldPrefix}.slug: duplicate field slug "${field.slug}" in collection "${collection.slug}"`,
@@ -158,12 +323,40 @@ export function validateSeed(data: unknown): ValidationResult {
 							errors.push(`${fieldPrefix}.indexed: must be a boolean`);
 						}
 
+						if (field.translatable !== undefined && typeof field.translatable !== "boolean") {
+							errors.push(`${fieldPrefix}.translatable: must be a boolean`);
+						}
+
 						if (!field.type) {
 							errors.push(`${fieldPrefix}: type is required`);
 						} else if (!(FIELD_TYPES as readonly string[]).includes(field.type)) {
 							errors.push(`${fieldPrefix}.type: unsupported field type "${field.type}"`);
 						} else if (field.indexed === true && !isIndexableFieldType(field.type)) {
 							errors.push(`${fieldPrefix}.indexed: type "${field.type}" cannot be indexed`);
+						} else if (
+							field.indexed === true &&
+							field.type === "reference" &&
+							typeof field.validation?.targetCollection === "string"
+						) {
+							// A targetCollection makes this field storage-less on apply: its
+							// selection becomes relation edges, leaving no column to index.
+							// Without one it stays a plain entry-id column, which can be.
+							errors.push(
+								`${fieldPrefix}.indexed: a reference field with a targetCollection stores no column to index`,
+							);
+						}
+
+						if (field.type === "repeater") {
+							const subFields = field.validation?.subFields;
+							if ("fields" in field) {
+								warnings.push(
+									`${fieldPrefix}.fields: repeater sub-fields must be defined in validation.subFields; these fields are ignored`,
+								);
+							} else if (!Array.isArray(subFields) || subFields.length === 0) {
+								warnings.push(
+									`${fieldPrefix}.validation.subFields: repeater needs a non-empty array of sub-fields, so its rows have nothing to edit`,
+								);
+							}
 						}
 					}
 				}
@@ -171,11 +364,76 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
+	// Validate relations
+	if (seed.relations) {
+		if (!Array.isArray(seed.relations)) {
+			errors.push("relations must be an array");
+		} else {
+			const relationSlugs = new Set<string>();
+
+			for (let i = 0; i < seed.relations.length; i++) {
+				const relation = seed.relations[i];
+				const prefix = `relations[${i}]`;
+				if (!relation) continue;
+
+				if (!relation.slug) {
+					errors.push(`${prefix}: slug is required`);
+				} else {
+					if (!COLLECTION_FIELD_SLUG_PATTERN.test(relation.slug)) {
+						errors.push(
+							`${prefix}.slug: must start with a letter and contain only lowercase letters, numbers, and underscores`,
+						);
+					}
+					if (relation.slug.length > MAX_SLUG_LENGTH) {
+						errors.push(`${prefix}.slug: must be ${MAX_SLUG_LENGTH} characters or fewer`);
+					}
+					if (relationSlugs.has(relation.slug)) {
+						errors.push(`${prefix}.slug: duplicate relation slug "${relation.slug}"`);
+					}
+					relationSlugs.add(relation.slug);
+				}
+
+				for (const end of ["parentCollection", "childCollection"] as const) {
+					const value = relation[end];
+					if (!value) {
+						errors.push(`${prefix}: ${end} is required`);
+					} else if (!COLLECTION_FIELD_SLUG_PATTERN.test(value)) {
+						errors.push(`${prefix}.${end}: "${value}" is not a valid collection slug`);
+					}
+				}
+
+				for (const label of ["parentLabel", "childLabel"] as const) {
+					if (!relation[label]) errors.push(`${prefix}: ${label} is required`);
+				}
+				for (const label of ["parentLabelSingular", "childLabelSingular"] as const) {
+					const value = relation[label];
+					if (value !== undefined && typeof value !== "string") {
+						errors.push(`${prefix}.${label}: must be a string`);
+					}
+				}
+
+				for (const limit of ["maxChildrenPerParent", "maxParentsPerChild"] as const) {
+					const value = relation[limit];
+					if (value === undefined || value === null) continue;
+					if (!Number.isInteger(value) || value < 1) {
+						errors.push(`${prefix}.${limit}: must be a positive integer, or null for unlimited`);
+					}
+				}
+			}
+		}
+	}
+
+	// Validate taxonomies
 	if (seed.taxonomies) {
 		if (!Array.isArray(seed.taxonomies)) {
 			errors.push("taxonomies must be an array");
 		} else {
 			const taxonomyNames = new Set<string>();
+			const taxonomiesById = new Map<string, SeedTaxonomy>();
+			for (const taxonomy of seed.taxonomies) {
+				if (taxonomy.id) taxonomiesById.set(taxonomy.id, taxonomy);
+			}
+			const structureDeclarations = new Map<string, SeedTaxonomy>();
 
 			for (let i = 0; i < seed.taxonomies.length; i++) {
 				const taxonomy = seed.taxonomies[i];
@@ -184,6 +442,7 @@ export function validateSeed(data: unknown): ValidationResult {
 				if (!taxonomy.name) {
 					errors.push(`${prefix}: name is required`);
 				} else {
+					// Uniqueness is per (name, locale).
 					const locale = resolveConfiguredLocale(taxonomy.locale ?? defaultLocale);
 					const key = `${taxonomy.name}::${locale}`;
 					if (taxonomyNames.has(key)) {
@@ -200,18 +459,59 @@ export function validateSeed(data: unknown): ValidationResult {
 					errors.push(`${prefix}: label is required`);
 				}
 
-				if (taxonomy.hierarchical === undefined) {
+				const structureSource = findTaxonomyStructureSource(taxonomy, taxonomiesById);
+
+				// A translation takes its taxonomy's structure, so it may omit both, but only
+				// from an entry of the same taxonomy.
+				if (
+					taxonomy.translationOf &&
+					(taxonomy.hierarchical === undefined || taxonomy.collections === undefined)
+				) {
+					if (!structureSource) {
+						errors.push(
+							`${prefix}.translationOf: the translationOf chain from "${taxonomy.translationOf}" loops, so hierarchical and collections are required`,
+						);
+					} else if (structureSource === taxonomy) {
+						errors.push(
+							`${prefix}.translationOf: "${taxonomy.translationOf}" is not an entry of taxonomy "${taxonomy.name}", so hierarchical and collections are required`,
+						);
+					}
+				}
+
+				if (taxonomy.hierarchical === undefined && !taxonomy.translationOf) {
 					errors.push(`${prefix}: hierarchical is required`);
 				}
 
-				if (!Array.isArray(taxonomy.collections)) {
+				if (taxonomy.collections === undefined) {
+					if (!taxonomy.translationOf) errors.push(`${prefix}.collections: must be an array`);
+				} else if (!Array.isArray(taxonomy.collections)) {
 					errors.push(`${prefix}.collections: must be an array`);
-				} else if (taxonomy.collections.length === 0) {
+				} else if (taxonomy.collections.length === 0 && !taxonomy.translationOf) {
 					warnings.push(
 						`${prefix}.collections: taxonomy "${taxonomy.name}" is not assigned to any collections`,
 					);
 				}
 
+				if (structureSource && structureSource !== taxonomy) {
+					if (declaresDifferentStructure(taxonomy, structureSource)) {
+						warnings.push(
+							`${prefix}: hierarchical and collections come from taxonomies[${seed.taxonomies.indexOf(structureSource)}], so the values declared here are ignored`,
+						);
+					}
+				} else if (structureSource && taxonomy.name) {
+					const declaring = structureDeclarations.get(taxonomy.name);
+					if (!declaring) {
+						structureDeclarations.set(taxonomy.name, taxonomy);
+					} else if (declaresDifferentStructure(taxonomy, declaring)) {
+						warnings.push(
+							`${prefix}: hierarchical and collections differ from taxonomies[${seed.taxonomies.indexOf(declaring)}]; every locale of taxonomy "${taxonomy.name}" shares them, so only one entry's values apply`,
+						);
+					}
+				}
+
+				const hierarchical = (structureSource ?? taxonomy).hierarchical;
+
+				// Validate terms if present
 				if (taxonomy.terms) {
 					if (!Array.isArray(taxonomy.terms)) {
 						errors.push(`${prefix}.terms: must be an array`);
@@ -225,6 +525,8 @@ export function validateSeed(data: unknown): ValidationResult {
 							if (!term.slug) {
 								errors.push(`${termPrefix}: slug is required`);
 							} else {
+								// Uniqueness is per (slug, locale) so the same slug can repeat
+								// across locale variants of the def.
 								const locale = resolveConfiguredLocale(
 									term.locale ?? taxonomy.locale ?? defaultLocale,
 								);
@@ -241,14 +543,18 @@ export function validateSeed(data: unknown): ValidationResult {
 								errors.push(`${termPrefix}: label is required`);
 							}
 
-							if (term.parent && !taxonomy.hierarchical) {
+							// Check parent reference validity (for hierarchical taxonomies)
+							if (term.parent && hierarchical) {
+								// Parent will be validated in a second pass
+							} else if (term.parent && !hierarchical) {
 								warnings.push(
 									`${termPrefix}.parent: taxonomy "${taxonomy.name}" is not hierarchical, parent will be ignored`,
 								);
 							}
 						}
 
-						if (taxonomy.hierarchical && taxonomy.terms) {
+						// Second pass: validate parent references (within the same locale).
+						if (hierarchical && taxonomy.terms) {
 							for (let j = 0; j < taxonomy.terms.length; j++) {
 								const term = taxonomy.terms[j];
 								const termLocale = resolveConfiguredLocale(
@@ -260,6 +566,7 @@ export function validateSeed(data: unknown): ValidationResult {
 									);
 								}
 
+								// Check for circular references
 								if (term.parent === term.slug) {
 									errors.push(`${prefix}.terms[${j}].parent: term cannot be its own parent`);
 								}
@@ -271,6 +578,7 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
+	// Validate menus
 	if (seed.menus) {
 		if (!Array.isArray(seed.menus)) {
 			errors.push("menus must be an array");
@@ -284,6 +592,8 @@ export function validateSeed(data: unknown): ValidationResult {
 				if (!menu.name) {
 					errors.push(`${prefix}: name is required`);
 				} else {
+					// Uniqueness is per (name, locale) — siblings of a translation
+					// group share name but differ in locale.
 					const locale = resolveConfiguredLocale(menu.locale ?? defaultLocale);
 					const key = `${menu.name}::${locale}`;
 					if (menuNames.has(key)) {
@@ -309,6 +619,7 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
+	// Validate redirects
 	if (seed.redirects) {
 		if (!Array.isArray(seed.redirects)) {
 			errors.push("redirects must be an array");
@@ -345,10 +656,22 @@ export function validateSeed(data: unknown): ValidationResult {
 
 				if (!destination) {
 					errors.push(`${prefix}: destination is required`);
-				} else if (!isValidRedirectPath(destination)) {
+				} else if (!isValidRedirectPath(destination) || !isSiteRelativeDestination(destination)) {
 					errors.push(
-						`${prefix}.destination: must be a path starting with / (no protocol-relative URLs, path traversal, or newlines)`,
+						`${prefix}.destination: must be a path starting with / (no protocol-relative URLs, backslash prefixes, path traversal, or control characters)`,
 					);
+				}
+
+				if (source && isPattern(source)) {
+					const patternError = validatePattern(source);
+					if (patternError) {
+						errors.push(`${prefix}.source: invalid pattern: ${patternError}`);
+					} else if (destination) {
+						const destinationError = validateDestinationParams(source, destination);
+						if (destinationError) {
+							errors.push(`${prefix}.destination: ${destinationError}`);
+						}
+					}
 				}
 
 				if (redirect.type !== undefined) {
@@ -372,6 +695,7 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
+	// Validate widget areas
 	if (seed.widgetAreas) {
 		if (!Array.isArray(seed.widgetAreas)) {
 			errors.push("widgetAreas must be an array");
@@ -385,6 +709,7 @@ export function validateSeed(data: unknown): ValidationResult {
 				if (!area.name) {
 					errors.push(`${prefix}: name is required`);
 				} else {
+					// Check for duplicate area names
 					if (areaNames.has(area.name)) {
 						errors.push(`${prefix}.name: duplicate widget area name "${area.name}"`);
 					}
@@ -408,6 +733,7 @@ export function validateSeed(data: unknown): ValidationResult {
 							errors.push(`${widgetPrefix}.type: must be "content", "menu", or "component"`);
 						}
 
+						// Type-specific validation
 						if (widget.type === "menu" && !widget.menuName) {
 							errors.push(`${widgetPrefix}: menuName is required for menu widgets`);
 						}
@@ -415,12 +741,19 @@ export function validateSeed(data: unknown): ValidationResult {
 						if (widget.type === "component" && !widget.componentId) {
 							errors.push(`${widgetPrefix}: componentId is required for component widgets`);
 						}
+
+						if ("settings" in widget) {
+							warnings.push(
+								`${widgetPrefix}.settings: not applied; widget options belong in "props"`,
+							);
+						}
 					}
 				}
 			}
 		}
 	}
 
+	// Validate sections
 	if (seed.sections) {
 		if (!Array.isArray(seed.sections)) {
 			errors.push("sections must be an array");
@@ -453,13 +786,15 @@ export function validateSeed(data: unknown): ValidationResult {
 					errors.push(`${prefix}.content: must be an array`);
 				}
 
-				if (section.source && !["theme", "import"].includes(section.source)) {
-					errors.push(`${prefix}.source: must be "theme" or "import"`);
+				// Validate source
+				if (section.source && !["theme", "user", "import"].includes(section.source)) {
+					errors.push(`${prefix}.source: must be "theme", "user", or "import"`);
 				}
 			}
 		}
 	}
 
+	// Validate bylines
 	if (seed.bylines) {
 		if (!Array.isArray(seed.bylines)) {
 			errors.push("bylines must be an array");
@@ -502,6 +837,8 @@ export function validateSeed(data: unknown): ValidationResult {
 					if (!isRecord(avatar)) {
 						errors.push(`${prefix}.avatar: must be an object`);
 					} else {
+						// storageKey is used verbatim in a `where storage_key = ?` lookup,
+						// so surrounding whitespace would silently never match a real key.
 						if (
 							typeof avatar.storageKey !== "string" ||
 							avatar.storageKey.length === 0 ||
@@ -516,6 +853,9 @@ export function validateSeed(data: unknown): ValidationResult {
 								errors.push(`${prefix}.avatar.${key}: must be a string`);
 							}
 						}
+						// filename/mimeType are used verbatim, so reject blank or
+						// whitespace-padded values (an empty filename would create a
+						// media row with no basename; a padded mime type is invalid).
 						for (const key of ["filename", "mimeType"] as const) {
 							const v = avatar[key];
 							if (typeof v === "string" && (v.length === 0 || v !== v.trim())) {
@@ -534,6 +874,7 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
+	// Validate content
 	if (seed.content) {
 		if (typeof seed.content !== "object" || Array.isArray(seed.content)) {
 			errors.push("content must be an object (collection -> entries)");
@@ -556,6 +897,7 @@ export function validateSeed(data: unknown): ValidationResult {
 					if (!entry.id) {
 						errors.push(`${prefix}: id is required`);
 					} else {
+						// Check for duplicate entry IDs
 						if (entryIds.has(entry.id)) {
 							errors.push(
 								`${prefix}.id: duplicate entry id "${entry.id}" in collection "${collectionSlug}"`,
@@ -576,6 +918,7 @@ export function validateSeed(data: unknown): ValidationResult {
 						errors.push(`${prefix}: data must be an object`);
 					}
 
+					// Validate i18n fields
 					if (entry.translationOf) {
 						if (!entry.locale) {
 							errors.push(`${prefix}: locale is required when translationOf is set`);
@@ -583,6 +926,7 @@ export function validateSeed(data: unknown): ValidationResult {
 					}
 				}
 
+				// Second pass: validate translationOf references within this collection
 				for (let i = 0; i < entries.length; i++) {
 					const entry = entries[i];
 					if (entry.translationOf && !entryIds.has(entry.translationOf)) {
@@ -595,6 +939,7 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
+	// Validate cross-references (content refs in menus)
 	if (seed.menus && seed.content) {
 		const allContentIds = new Set<string>();
 		for (const entries of Object.values(seed.content)) {
@@ -607,6 +952,7 @@ export function validateSeed(data: unknown): ValidationResult {
 			}
 		}
 
+		// Check menu item refs
 		for (const menu of seed.menus) {
 			if (Array.isArray(menu.items)) {
 				validateMenuItemRefs(menu.items, allContentIds, warnings);
@@ -614,6 +960,7 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
+	// Validate byline refs in content
 	if (seed.content) {
 		const seedBylineIds = new Set<string>((seed.bylines ?? []).map((byline) => byline.id));
 		for (const [collectionSlug, entries] of Object.entries(seed.content)) {
@@ -647,6 +994,9 @@ export function validateSeed(data: unknown): ValidationResult {
 	};
 }
 
+/**
+ * Validate menu items recursively
+ */
 function validateMenuItems(
 	items: unknown[],
 	prefix: string,
@@ -674,6 +1024,7 @@ function validateMenuItems(
 			);
 		}
 
+		// Type-specific validation
 		if (itemType === "custom" && !item.url) {
 			errors.push(`${itemPrefix}: url is required for custom menu items`);
 		}
@@ -682,12 +1033,16 @@ function validateMenuItems(
 			errors.push(`${itemPrefix}: ref is required for page/post menu items`);
 		}
 
+		// Validate children recursively
 		if (Array.isArray(item.children)) {
 			validateMenuItems(item.children, itemPrefix, errors, warnings);
 		}
 	}
 }
 
+/**
+ * Validate menu item references exist in content
+ */
 function validateMenuItemRefs(
 	items: SeedMenuItem[],
 	contentIds: Set<string>,

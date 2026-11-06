@@ -1,3 +1,19 @@
+/**
+ * Inline editor plugin-block round-trip tests.
+ *
+ * Regression tests for the bug where the visual-editing inline editor
+ * coerced unknown Portable Text block types (e.g. `marketing.hero`) into
+ * `pluginBlock` ProseMirror nodes that only carried `{ blockType, id }`,
+ * silently dropping every other field. On save, `pmToPortableText` then
+ * serialised the block back as `{ _type, _key, id }`, persisting the data
+ * loss.
+ *
+ * The fix preserves all non-well-known fields on a `data` attribute and
+ * spreads them back out during the PM → PT direction. See
+ * `InlinePortableTextEditor.tsx` `case "pluginBlock"` and the unknown-block
+ * fallback in `convertPTBlock`.
+ */
+
 import { describe, it, expect } from "vitest";
 
 import {
@@ -114,6 +130,7 @@ describe("inline editor: PM → PT (pluginBlock)", () => {
 	});
 
 	it("handles non-object data gracefully", () => {
+		// Defensive: data could be malformed if persisted from a buggy source.
 		const doc = pmDoc({
 			type: "pluginBlock",
 			attrs: { blockType: "embed", id: "u", data: null },
@@ -171,6 +188,51 @@ describe("inline editor: round-trip preserves plugin block payloads", () => {
 			primaryCta: { label: "Sign up", url: "/signup" },
 			image: { url: "/hero.png", alt: "Hero" },
 		});
+	});
+
+	it("a url-identified embed keeps url and does not gain an id", () => {
+		const original = {
+			_type: "embed",
+			_key: "e1",
+			url: "https://www.youtube.com/watch?v=abc",
+			provider: "youtube",
+			html: "<iframe></iframe>",
+		};
+
+		const [roundTripped] = pmToPortableText(portableTextToPM([original]));
+
+		expect(roundTripped).toMatchObject({
+			_type: "embed",
+			url: "https://www.youtube.com/watch?v=abc",
+			provider: "youtube",
+			html: "<iframe></iframe>",
+		});
+		expect(roundTripped).not.toHaveProperty("id");
+	});
+
+	it("a block with both id and url keeps both", () => {
+		const original = { _type: "embed", _key: "e1", id: "vid-1", url: "https://youtu.be/abc" };
+
+		const [roundTripped] = pmToPortableText(portableTextToPM([original]));
+
+		expect(roundTripped).toMatchObject({ id: "vid-1", url: "https://youtu.be/abc" });
+	});
+
+	it("a non-string id is kept as data", () => {
+		const original = { _type: "embed", _key: "e1", id: 5, url: "https://youtu.be/abc" };
+
+		const [roundTripped] = pmToPortableText(portableTextToPM([original]));
+
+		expect(roundTripped).toMatchObject({ id: 5, url: "https://youtu.be/abc" });
+	});
+
+	it("a block without id or url does not gain one", () => {
+		const original = { _type: "marketing.hero", _key: "hero", headline: "Hi" };
+
+		const [roundTripped] = pmToPortableText(portableTextToPM([original]));
+
+		expect(roundTripped).not.toHaveProperty("id");
+		expect(roundTripped).not.toHaveProperty("url");
 	});
 
 	it("repeated round-trips are stable (no _-key leakage)", () => {

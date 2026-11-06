@@ -1,3 +1,9 @@
+/**
+ * emdash media
+ *
+ * Manage media items via the EmDash API
+ */
+
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 

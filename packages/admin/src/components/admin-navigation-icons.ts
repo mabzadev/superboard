@@ -42,8 +42,10 @@ import {
 import type { Icon } from "@phosphor-icons/react";
 import * as React from "react";
 
+/** Shared icon vocabulary for first-party admin entities and navigation surfaces. */
 export const ADMIN_NAV_ICONS = {
 	dashboard: SquaresFour,
+	calendar: CalendarBlank,
 	collection: Files,
 	pages: Browser,
 	posts: Newspaper,
@@ -60,6 +62,7 @@ export const ADMIN_NAV_ICONS = {
 	contentTypes: Database,
 	plugins: Plug,
 	import: Download,
+	folder: Folder,
 } as const satisfies Record<string, Icon>;
 
 const COLLECTION_NAV_ICON_OVERRIDES: Record<string, Icon> = {
@@ -67,14 +70,24 @@ const COLLECTION_NAV_ICON_OVERRIDES: Record<string, Icon> = {
 	posts: ADMIN_NAV_ICONS.posts,
 };
 
-export function getCollectionNavIcon(name: string): Icon {
-	return COLLECTION_NAV_ICON_OVERRIDES[name] ?? ADMIN_NAV_ICONS.collection;
+/**
+ * A collection's declared icon wins; built-in collections have distinct
+ * defaults and custom collections share the generic one. An icon name that
+ * does not resolve falls back to that default.
+ */
+export function getCollectionNavIcon(name: string, iconName?: string): React.ElementType {
+	const fallback = Object.hasOwn(COLLECTION_NAV_ICON_OVERRIDES, name)
+		? COLLECTION_NAV_ICON_OVERRIDES[name]!
+		: ADMIN_NAV_ICONS.collection;
+	return iconName ? resolveNavIcon(iconName, fallback) : fallback;
 }
 
+/** Tags have a distinct meaning; other taxonomies are collections of terms. */
 export function getTaxonomyNavIcon(name: string): Icon {
 	return name === "tag" ? ADMIN_NAV_ICONS.tags : ADMIN_NAV_ICONS.taxonomy;
 }
 
+/** Common plugin-declared icon names that should resolve without loading another chunk. */
 const PLUGIN_NAV_ICON_MAP: Record<string, React.ElementType> = {
 	settings: Gear,
 	gear: Gear,
@@ -108,6 +121,7 @@ const PLUGIN_NAV_ICON_MAP: Record<string, React.ElementType> = {
 
 const ICON_NAME_SEPARATOR = /[-_\s]+/;
 
+/** Convert kebab, snake, or space-separated names to Phosphor's PascalCase exports. */
 export function toPhosphorIconName(name: string): string {
 	return name
 		.split(ICON_NAME_SEPARATOR)
@@ -116,7 +130,7 @@ export function toPhosphorIconName(name: string): string {
 		.join("");
 }
 
-const lazyIconCache = new Map<string, React.ElementType>();
+const lazyIconCache = new Map<React.ComponentType, Map<string, React.ElementType>>();
 
 function isIconComponent(value: unknown): value is React.ComponentType<{ className?: string }> {
 	return (
@@ -125,23 +139,34 @@ function isIconComponent(value: unknown): value is React.ComponentType<{ classNa
 	);
 }
 
-export function resolveNavIcon(name?: string): React.ElementType {
+/**
+ * Resolve a declared icon name while keeping uncommon Phosphor icons
+ * code-split. Missing or unknown names render `fallback`.
+ */
+export function resolveNavIcon(
+	name?: string,
+	fallback: React.ComponentType = ADMIN_NAV_ICONS.plugins,
+): React.ElementType {
 	if (!name) {
-		return ADMIN_NAV_ICONS.plugins;
+		return fallback;
 	}
-	const mapped = PLUGIN_NAV_ICON_MAP[name];
-	if (mapped) {
-		return mapped;
+	if (Object.hasOwn(PLUGIN_NAV_ICON_MAP, name)) {
+		return PLUGIN_NAV_ICON_MAP[name]!;
 	}
 	const componentName = toPhosphorIconName(name);
-	let icon = lazyIconCache.get(componentName);
+	let perFallback = lazyIconCache.get(fallback);
+	if (!perFallback) {
+		perFallback = new Map();
+		lazyIconCache.set(fallback, perFallback);
+	}
+	let icon = perFallback.get(componentName);
 	if (!icon) {
 		icon = React.lazy(async () => {
 			const mod = await import("@phosphor-icons/react");
 			const candidate: unknown = (mod as Record<string, unknown>)[componentName];
-			return { default: isIconComponent(candidate) ? candidate : ADMIN_NAV_ICONS.plugins };
+			return { default: isIconComponent(candidate) ? candidate : fallback };
 		});
-		lazyIconCache.set(componentName, icon);
+		perFallback.set(componentName, icon);
 	}
 	return icon;
 }

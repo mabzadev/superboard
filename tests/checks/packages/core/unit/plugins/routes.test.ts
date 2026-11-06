@@ -1,3 +1,13 @@
+/**
+ * Plugin Routes Tests
+ *
+ * Tests the v2 route system for:
+ * - Route registration and invocation
+ * - Input validation with Zod schemas
+ * - Error handling (PluginRouteError)
+ * - Route registry management
+ */
+
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 
@@ -10,10 +20,14 @@ import {
 	PluginRouteRegistry,
 	PluginRouteError,
 	createRouteRegistry,
+	pluginPublicRouteAcknowledgementSchema,
 	toRouteCallerInfo,
 } from "../../../../../../packages/core/src/plugins/routes.js";
 import type { ResolvedPlugin } from "../../../../../../packages/core/src/plugins/types.js";
 
+/**
+ * Create a minimal resolved plugin for testing
+ */
 function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlugin {
 	return {
 		id: overrides.id ?? "test-plugin",
@@ -32,9 +46,12 @@ function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlug
 	};
 }
 
+/**
+ * Create mock factory options (routes need DB for context)
+ */
 function createMockFactoryOptions(): PluginContextFactoryOptions {
 	return {
-		db: {} as any,
+		db: {} as any, // Mock DB - routes will fail if they try to use DB features
 	};
 }
 
@@ -115,6 +132,15 @@ describe("PluginRouteError", () => {
 	});
 });
 
+describe("public route acknowledgement", () => {
+	it("accepts every route-name set allowed by the manifest contract", () => {
+		const routes = Array.from({ length: 101 }, (_, index) =>
+			index === 0 ? "a".repeat(257) : `route-${index}`,
+		);
+		expect(pluginPublicRouteAcknowledgementSchema.parse(routes)).toEqual(routes);
+	});
+});
+
 describe("toRouteCallerInfo", () => {
 	it("maps the host user to the plugin-facing UserInfo shape", () => {
 		const info = toRouteCallerInfo({
@@ -135,6 +161,7 @@ describe("toRouteCallerInfo", () => {
 	});
 
 	it("passes string createdAt through and strips extra fields", () => {
+		// Extra host-side fields (avatarUrl, data, …) must not leak to plugins.
 		const hostUser = {
 			id: "u1",
 			email: "a@b.c",
@@ -216,6 +243,8 @@ describe("PluginRouteHandler", () => {
 		});
 
 		it("never exposes cacheControl for private routes", () => {
+			// Private responses are per-user; a route that sets both flags must
+			// not become cacheable.
 			const plugin = createTestPlugin({
 				routes: {
 					admin: { cacheControl: "public, max-age=60", handler: vi.fn() },
@@ -224,6 +253,32 @@ describe("PluginRouteHandler", () => {
 			const handler = new PluginRouteHandler(plugin, createMockFactoryOptions());
 
 			expect(handler.getRouteMeta("admin")).toEqual({ public: false });
+		});
+
+		it("exposes declared method, request, and response policy", () => {
+			const plugin = createTestPlugin({
+				routes: {
+					webhook: {
+						public: true,
+						methods: ["POST"],
+						request: {
+							body: "bytes",
+							maxBytes: 4096,
+							headers: ["x-signature"],
+						},
+						response: "raw",
+						handler: vi.fn(),
+					},
+				},
+			});
+			const handler = new PluginRouteHandler(plugin, createMockFactoryOptions());
+
+			expect(handler.getRouteMeta("webhook")).toEqual({
+				public: true,
+				methods: ["POST"],
+				request: { body: "bytes", maxBytes: 4096, headers: ["x-signature"] },
+				response: "raw",
+			});
 		});
 	});
 
@@ -293,7 +348,7 @@ describe("PluginRouteHandler", () => {
 					create: {
 						input: z.object({
 							name: z.string().min(1),
-							email: z.string().email(),
+							email: z.email(),
 						}),
 						handler: vi.fn(),
 					},
@@ -301,6 +356,7 @@ describe("PluginRouteHandler", () => {
 			});
 			const handler = new PluginRouteHandler(plugin, createMockFactoryOptions());
 
+			// Invalid input
 			const result = await handler.invoke("create", {
 				request: new Request("http://test.com"),
 				body: { name: "", email: "not-an-email" },
@@ -331,6 +387,68 @@ describe("PluginRouteHandler", () => {
 			expect(result.status).toBe(403);
 			expect(result.error?.code).toBe("FORBIDDEN");
 			expect(result.error?.message).toBe("No access");
+		});
+
+		it("handles a PluginRouteError from a separate copy of the module", async () => {
+			// Under `astro dev`, a plugin's `emdash` import can resolve to a separate
+			// module instance, so the class it throws is not this module's PluginRouteError.
+			class ForeignPluginRouteError extends Error {
+				constructor(
+					public code: string,
+					message: string,
+					public status: number,
+					public details?: unknown,
+				) {
+					super(message);
+					this.name = "PluginRouteError";
+				}
+			}
+			const plugin = createTestPlugin({
+				routes: {
+					fail: {
+						handler: async () => {
+							throw new ForeignPluginRouteError("BAD_REQUEST", "Invalid URL", 400, {
+								field: "url",
+							});
+						},
+					},
+				},
+			});
+			const handler = new PluginRouteHandler(plugin, createMockFactoryOptions());
+
+			const result = await handler.invoke("fail", {
+				request: new Request("http://test.com"),
+			});
+
+			expect(result.success).toBe(false);
+			expect(result.status).toBe(400);
+			expect(result.error).toEqual({
+				code: "BAD_REQUEST",
+				message: "Invalid URL",
+				details: { field: "url" },
+			});
+		});
+
+		it("treats an error that only borrows the PluginRouteError name as unknown", async () => {
+			const plugin = createTestPlugin({
+				routes: {
+					crash: {
+						handler: async () => {
+							const error = new Error("Not a route error");
+							error.name = "PluginRouteError";
+							throw error;
+						},
+					},
+				},
+			});
+			const handler = new PluginRouteHandler(plugin, createMockFactoryOptions());
+
+			const result = await handler.invoke("crash", {
+				request: new Request("http://test.com"),
+			});
+
+			expect(result.status).toBe(500);
+			expect(result.error?.code).toBe("INTERNAL_ERROR");
 		});
 
 		it("handles unknown errors from handler", async () => {
@@ -430,6 +548,11 @@ describe("PluginRouteHandler", () => {
 		});
 
 		it("surfaces an actionable error when a handler reads the consumed request body (#1293)", async () => {
+			// EmDash parses the body once and exposes it as ctx.input; the same
+			// Request is then handed to the handler with its stream already spent.
+			// A handler that instinctively calls ctx.request.json() should get a
+			// message pointing at ctx.input, not the runtime's opaque
+			// "body already read" error.
 			const bodyMethods = ["json", "text", "arrayBuffer", "formData", "blob"] as const;
 			const plugin = createTestPlugin({
 				routes: {
@@ -467,10 +590,13 @@ describe("PluginRouteHandler", () => {
 				expect(data.errors[method]).toContain("ctx.input");
 				expect(data.errors[method]).toContain("[emdash]");
 			}
+			// The parsed body is still available as ctx.input.
 			expect(data.input).toEqual({ hello: "world" });
 		});
 
 		it("passes request url, method, and headers through the body guard (#1293)", async () => {
+			// The guard must not interfere with non-body members — notably the
+			// `headers.forEach` the sandbox-entry adapter relies on.
 			const plugin = createTestPlugin({
 				routes: {
 					meta: {
@@ -639,6 +765,8 @@ describe("PluginRouteRegistry", () => {
 
 			registry.register(plugin);
 
+			// This will fail because handler tries to create context with mock DB
+			// But we can verify it attempts to invoke
 			const result = await registry.invoke("my-plugin", "non-existent", {
 				request: new Request("http://test.com"),
 			});

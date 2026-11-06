@@ -1,3 +1,10 @@
+/**
+ * Email settings page
+ *
+ * Shows current email pipeline status, provider info, and allows
+ * sending a test email through the full pipeline.
+ */
+
 import { Banner, Button, Input, Loader, useKumoToastManager } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { CheckCircle, PaperPlaneTilt, PlugsConnected, WarningCircle } from "@phosphor-icons/react";
@@ -97,6 +104,7 @@ export function EmailSettings() {
 							>
 								<div className="min-w-0 flex-1">
 									<Input
+										dir="ltr"
 										label={t`Recipient email`}
 										type="email"
 										value={testEmail}

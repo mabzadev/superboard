@@ -1,4 +1,20 @@
 #!/usr/bin/env node
+/**
+ * Sibling of scripts/query-counts.mjs that dumps raw query events to JSON
+ * files under scripts/query-dumps/{target}/{routeSlug}.{phase}.json
+ *
+ * Each file is an array of { sql, params, durationMs, route, method, phase }.
+ * The harness assumes the fixture is already built and seeded -- we only
+ * spin servers, hit routes, and partition events. For sqlite, the main
+ * `query-counts.mjs --target sqlite` flow builds and seeds; for d1, run
+ * `query-counts.mjs --target d1` once first (or `build-perf-d1.mjs` to
+ * build only) so wrangler state and dist/ exist.
+ *
+ * The dump JSON itself is gitignored — it's an analysis artifact that
+ * regenerates from the harness in seconds. The helper scripts in
+ * `query-dumps/` (classify.mjs, cold-only.mjs, inspect-other.mjs) are
+ * the things worth keeping in source.
+ */
 
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -96,7 +112,9 @@ function startServer(events) {
 			const payload = line.slice(idx + QUERY_LOG_PREFIX.length);
 			try {
 				events.push(JSON.parse(payload));
-			} catch {}
+			} catch {
+				// ignore
+			}
 			return;
 		}
 		process.stdout.write(line + "\n");

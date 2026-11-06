@@ -1,3 +1,13 @@
+/**
+ * Inline editor blockquote grouping tests (#1884).
+ *
+ * Mirrors tests/unit/converters/blockquote-grouping.test.ts against the
+ * inline (visual-editing) editor's own PT ⇄ PM converters: consecutive
+ * blockquote-styled Portable Text blocks must load as ONE blockquote
+ * node, and the PT → PM → PT round-trip must be stable so a merged
+ * quote doesn't split again on reload.
+ */
+
 import { describe, it, expect } from "vitest";
 
 import {
@@ -56,6 +66,7 @@ describe("blockquote grouping (inline editor seam)", () => {
 		expect(once.every((b) => b.style === "blockquote")).toBe(true);
 		expect(once.map((b) => b.children?.[0]?.text)).toEqual(["First", "Second"]);
 
+		// Second round-trip must not change the shape further.
 		const twice = pmToPortableText(portableTextToPM(once as never));
 		expect(twice).toHaveLength(2);
 	});

@@ -1,3 +1,11 @@
+/**
+ * GET/POST /_emdash/api/admin/allowed-domains
+ *
+ * Admin endpoints for managing allowed signup domains.
+ * GET - List all allowed domains
+ * POST - Add a new allowed domain
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -11,6 +19,9 @@ import { allowedDomainCreateBody } from "#api/schemas.js";
 
 const DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9-]+)+$/;
 
+/**
+ * GET - List all allowed domains
+ */
 export const GET: APIRoute = async ({ locals }) => {
 	const { emdash, user } = locals;
 
@@ -41,6 +52,9 @@ export const GET: APIRoute = async ({ locals }) => {
 	}
 };
 
+/**
+ * POST - Add a new allowed domain
+ */
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
 
@@ -58,13 +72,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const body = await parseBody(request, allowedDomainCreateBody);
 		if (isParseError(body)) return body;
 
+		// Role is already validated as RoleLevel by Zod schema
 		const defaultRole = body.defaultRole;
 
+		// Validate domain format (no protocol, just domain)
 		const cleanDomain = body.domain.toLowerCase().trim();
 		if (!DOMAIN_REGEX.test(cleanDomain)) {
 			return apiError("VALIDATION_ERROR", "Invalid domain format", 400);
 		}
 
+		// Check if domain already exists
 		const existing = await adapter.getAllowedDomain(cleanDomain);
 		if (existing) {
 			return apiError("CONFLICT", "Domain already exists", 409);

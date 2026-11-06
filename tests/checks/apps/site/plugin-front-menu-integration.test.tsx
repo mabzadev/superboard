@@ -30,6 +30,7 @@ import { setupTestDatabase, teardownTestDatabase } from "../../packages/core/uti
 const anchorPattern = /<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gu;
 const markupPattern = /<[^>]+>/gu;
 
+vi.mock("virtual:emdash/config", () => ({ default: {} }));
 vi.mock("virtual:emdash/wait-until", () => ({ waitUntil: undefined }), { virtual: true });
 let db: Awaited<ReturnType<typeof setupTestDatabase>> | undefined;
 afterEach(async () => {

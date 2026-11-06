@@ -1,3 +1,10 @@
+/**
+ * RepeaterField — renders a list of repeating sub-field groups in the content editor.
+ *
+ * Each item is a collapsible card containing the defined sub-fields.
+ * Items can be added, removed, and reordered via drag-and-drop.
+ */
+
 import { Button, Combobox, Input, InputArea, Switch } from "@cloudflare/kumo";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
@@ -35,6 +42,7 @@ export interface RepeaterFieldProps {
 	subFields: RepeaterSubFieldDef[];
 	minItems?: number;
 	maxItems?: number;
+	timezone?: string;
 }
 
 type RepeaterItem = Record<string, unknown> & { _key: string };
@@ -58,12 +66,16 @@ export function RepeaterField({
 	subFields,
 	minItems = 0,
 	maxItems,
+	timezone = "UTC",
 }: RepeaterFieldProps) {
 	const { t } = useLingui();
 	const rawItems = Array.isArray(value) ? value : [];
 	const [items, setItems] = React.useState<RepeaterItem[]>(() => ensureKeys(rawItems));
 	const [collapsedItems, setCollapsedItems] = React.useState<Set<string>>(new Set());
 
+	// Sync from external value changes.
+	// Preserve each item's _key by position so round-trips through onChange
+	// (which strips _key) don't remount children on every keystroke.
 	React.useEffect(() => {
 		const incoming = Array.isArray(value) ? value : [];
 		setItems((prev) =>
@@ -93,7 +105,10 @@ export function RepeaterField({
 			newItem[sf.slug] =
 				sf.type === "boolean"
 					? false
-					: sf.type === "number" || sf.type === "integer" || sf.type === "image"
+					: sf.type === "number" ||
+						  sf.type === "integer" ||
+						  sf.type === "image" ||
+						  sf.type === "datetime"
 						? null
 						: "";
 		}
@@ -135,10 +150,10 @@ export function RepeaterField({
 	return (
 		<div className="space-y-2">
 			<div className="flex items-center justify-between">
-				<label htmlFor={id} className="text-sm font-medium">
+				<label htmlFor={id} className="text-base font-medium text-kumo-default">
 					{label}
 					{items.length > 0 && (
-						<span className="ms-2 text-kumo-subtle font-normal">
+						<span className="ms-2 text-xs font-normal leading-4 text-kumo-subtle">
 							{plural(items.length, { one: "(# item)", other: "(# items)" })}
 						</span>
 					)}
@@ -152,7 +167,7 @@ export function RepeaterField({
 
 			{items.length === 0 ? (
 				<div className="border-2 border-dashed rounded-lg p-6 text-center text-kumo-subtle">
-					<p className="text-sm">{t`No items yet`}</p>
+					<p className="text-xs leading-4">{t`No items yet`}</p>
 					{canAdd && (
 						<Button
 							variant="outline"
@@ -177,6 +192,7 @@ export function RepeaterField({
 									key={item._key}
 									item={item}
 									index={index}
+									pathPrefix={id}
 									subFields={subFields}
 									isCollapsed={collapsedItems.has(item._key)}
 									onToggleCollapse={() => toggleCollapse(item._key)}
@@ -184,6 +200,7 @@ export function RepeaterField({
 									onChange={(fieldSlug, fieldValue) =>
 										handleItemChange(item._key, fieldSlug, fieldValue)
 									}
+									timezone={timezone}
 								/>
 							))}
 						</div>
@@ -197,21 +214,25 @@ export function RepeaterField({
 interface SortableRepeaterItemProps {
 	item: RepeaterItem;
 	index: number;
+	pathPrefix: string;
 	subFields: RepeaterSubFieldDef[];
 	isCollapsed: boolean;
 	onToggleCollapse: () => void;
 	onRemove?: () => void;
 	onChange: (fieldSlug: string, value: unknown) => void;
+	timezone: string;
 }
 
 function SortableRepeaterItem({
 	item,
 	index,
+	pathPrefix,
 	subFields,
 	isCollapsed,
 	onToggleCollapse,
 	onRemove,
 	onChange,
+	timezone,
 }: SortableRepeaterItemProps) {
 	const { t } = useLingui();
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -223,6 +244,7 @@ function SortableRepeaterItem({
 		transition,
 	};
 
+	// Use the first text sub-field as the item summary label
 	const summaryField = subFields.find((sf) => sf.type === "string" || sf.type === "text");
 	const summaryValue = summaryField ? (item[summaryField.slug] as string) || "" : "";
 	const summaryLabel = summaryValue || t`Item ${index + 1}`;
@@ -236,6 +258,7 @@ function SortableRepeaterItem({
 				isDragging && "opacity-50 ring-2 ring-kumo-brand",
 			)}
 		>
+			{/* Header */}
 			<div
 				className="flex items-center gap-2 px-3 py-2 border-b cursor-pointer"
 				onClick={onToggleCollapse}
@@ -251,7 +274,7 @@ function SortableRepeaterItem({
 				) : (
 					<CaretDown className="h-4 w-4 text-kumo-subtle shrink-0" />
 				)}
-				<span className="text-sm font-medium flex-1 truncate">{summaryLabel}</span>
+				<span className="flex-1 truncate text-base font-medium">{summaryLabel}</span>
 				{onRemove && (
 					<Button
 						variant="ghost"
@@ -267,14 +290,17 @@ function SortableRepeaterItem({
 				)}
 			</div>
 
+			{/* Sub-fields */}
 			{!isCollapsed && (
 				<div className="p-3 space-y-3">
 					{subFields.map((sf) => (
 						<SubFieldInput
 							key={sf.slug}
+							id={`${pathPrefix}.${index}.${sf.slug}`}
 							subField={sf}
 							value={item[sf.slug]}
 							onChange={(v) => onChange(sf.slug, v)}
+							timezone={timezone}
 						/>
 					))}
 				</div>
@@ -284,17 +310,20 @@ function SortableRepeaterItem({
 }
 
 interface SubFieldInputProps {
+	id: string;
 	subField: RepeaterSubFieldDef;
 	value: unknown;
 	onChange: (value: unknown) => void;
+	timezone: string;
 }
 
-function SubFieldInput({ subField, value, onChange }: SubFieldInputProps) {
+function SubFieldInput({ id, subField, value, onChange, timezone }: SubFieldInputProps) {
 	const { t } = useLingui();
 	switch (subField.type) {
 		case "string":
 			return (
 				<Input
+					id={id}
 					label={subField.label}
 					value={typeof value === "string" ? value : ""}
 					onChange={(e) => onChange(e.target.value)}
@@ -305,6 +334,7 @@ function SubFieldInput({ subField, value, onChange }: SubFieldInputProps) {
 		case "text":
 			return (
 				<InputArea
+					id={id}
 					label={subField.label}
 					value={typeof value === "string" ? value : ""}
 					onChange={(e) => onChange(e.target.value)}
@@ -317,6 +347,7 @@ function SubFieldInput({ subField, value, onChange }: SubFieldInputProps) {
 		case "integer":
 			return (
 				<Input
+					id={id}
 					label={subField.label}
 					type="number"
 					value={typeof value === "number" ? String(value) : ""}
@@ -328,25 +359,37 @@ function SubFieldInput({ subField, value, onChange }: SubFieldInputProps) {
 		case "boolean":
 			return (
 				<Switch
+					id={id}
 					checked={Boolean(value)}
 					onCheckedChange={(checked) => onChange(checked)}
-					label={<span className="text-sm">{subField.label}</span>}
+					label={<span className="text-base">{subField.label}</span>}
 				/>
 			);
 		case "datetime":
 			return (
 				<Input
+					id={id}
 					label={subField.label}
 					type="datetime-local"
-					value={toDatetimeLocalInputValue(value)}
-					onChange={(e) => onChange(fromDatetimeLocalInputValue(e.target.value))}
+					value={toDatetimeLocalInputValue(value, timezone)}
+					onChange={(e) => {
+						try {
+							onChange(fromDatetimeLocalInputValue(e.target.value, timezone));
+						} catch {
+							onChange(e.target.value);
+						}
+					}}
 					required={subField.required}
 				/>
 			);
 		case "select": {
+			// Searchable combobox so long option lists (e.g. taxonomy-derived
+			// options) stay usable inside repeater rows, rather than a plain
+			// scrolling select.
 			const options = Array.isArray(subField.options) ? subField.options : [];
 			return (
 				<Combobox
+					id={id}
 					label={subField.label}
 					value={typeof value === "string" && value ? value : null}
 					onValueChange={(v) => onChange(typeof v === "string" ? v : "")}
@@ -370,7 +413,11 @@ function SubFieldInput({ subField, value, onChange }: SubFieldInputProps) {
 		case "image":
 			return (
 				<ImageFieldRenderer
+					id={id}
+					fieldId={id}
 					label={subField.label}
+					// Same backwards-compat contract as top-level image fields:
+					// objects are MediaValues, strings are legacy URLs.
 					value={
 						value != null && typeof value === "object"
 							? (value as ImageFieldValue)
@@ -385,6 +432,7 @@ function SubFieldInput({ subField, value, onChange }: SubFieldInputProps) {
 		default:
 			return (
 				<Input
+					id={id}
 					label={subField.label}
 					value={typeof value === "string" ? value : ""}
 					onChange={(e) => onChange(e.target.value)}

@@ -1,3 +1,18 @@
+/**
+ * Theme preview signing endpoint
+ *
+ * POST /_emdash/api/themes/preview
+ *
+ * Generates a signed preview URL for the "Try with my data" feature.
+ *
+ * Uses the resolved preview secret: env override (`EMDASH_PREVIEW_SECRET`)
+ * wins, otherwise an auto-generated stable per-site value persisted in the
+ * options table is used. Processes that share the same database converge on
+ * the same auto-generated value; only set `EMDASH_PREVIEW_SECRET` in both
+ * processes when the verifying side runs without access to the EmDash DB
+ * (e.g. a remote preview Worker).
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -17,6 +32,8 @@ export const POST: APIRoute = async ({ request, url, locals }) => {
 	const denied = requirePerm(user, "plugins:read");
 	if (denied) return denied;
 
+	// Always non-empty after resolution; env override wins, otherwise a
+	// stable DB-stored value is used.
 	const { previewSecret: secret } = await resolveSecretsCached(emdash.db);
 
 	let body: { previewUrl: string };
@@ -30,6 +47,7 @@ export const POST: APIRoute = async ({ request, url, locals }) => {
 		return apiError("INVALID_REQUEST", "previewUrl is required", 400);
 	}
 
+	// Validate previewUrl is a valid HTTPS URL
 	let parsedPreviewUrl: URL;
 	try {
 		parsedPreviewUrl = new URL(body.previewUrl);
@@ -42,9 +60,10 @@ export const POST: APIRoute = async ({ request, url, locals }) => {
 	}
 
 	const source = getPublicOrigin(url, emdash?.config);
-	const ttl = 3600;
+	const ttl = 3600; // 1 hour
 	const exp = Math.floor(Date.now() / 1000) + ttl;
 
+	// HMAC-SHA256 sign: message = "source:exp"
 	const encoder = new TextEncoder();
 	const key = await crypto.subtle.importKey(
 		"raw",

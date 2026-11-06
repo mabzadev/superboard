@@ -1,3 +1,10 @@
+/**
+ * emdash doctor
+ *
+ * Diagnose database health (connection, migrations, schema integrity) and
+ * Cloudflare Worker scheduler wiring (Cron Trigger + scheduled() handler).
+ */
+
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -7,6 +14,10 @@ import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { parse as parseToml } from "smol-toml";
 
 import { createDatabase } from "../../database/connection.js";
+import {
+	formatDatetimeStorageReport,
+	scanDatetimeStorage,
+} from "../../database/datetime-storage.js";
 import { listTablesLike } from "../../database/dialect-helpers.js";
 import { getMigrationStatus } from "../../database/migrations/runner.js";
 
@@ -221,6 +232,7 @@ function printResult(result: CheckResult): void {
 async function checkDatabase(dbPath: string): Promise<CheckResult[]> {
 	const results: CheckResult[] = [];
 
+	// Check database file exists
 	if (!(await fileExists(dbPath))) {
 		results.push({
 			name: "database",
@@ -236,6 +248,7 @@ async function checkDatabase(dbPath: string): Promise<CheckResult[]> {
 		message: dbPath,
 	});
 
+	// Connect and check migrations
 	let db;
 	try {
 		db = createDatabase({ url: `file:${dbPath}` });
@@ -257,6 +270,7 @@ async function checkDatabase(dbPath: string): Promise<CheckResult[]> {
 
 		const { sql } = await import("kysely");
 
+		// Check collections exist
 		try {
 			const collectionsResult = await sql<{
 				count: number;
@@ -276,6 +290,7 @@ async function checkDatabase(dbPath: string): Promise<CheckResult[]> {
 			});
 		}
 
+		// Check for orphaned ec_ tables without matching collection records
 		try {
 			const tableNames = await listTablesLike(db, "ec_%");
 			const collectionsResult = await sql<{
@@ -291,8 +306,32 @@ async function checkDatabase(dbPath: string): Promise<CheckResult[]> {
 					message: `found ${orphaned.length}: ${orphaned.join(", ")}`,
 				});
 			}
-		} catch {}
 
+			try {
+				const report = await scanDatetimeStorage(db);
+				const clean =
+					report.noncanonicalCount === 0 &&
+					report.manualReviewCount === 0 &&
+					report.inspectionErrorCount === 0;
+				results.push({
+					name: "datetime storage",
+					status: clean ? "pass" : "fail",
+					message: clean
+						? `all stored content datetimes are canonical (${report.timezone})`
+						: formatDatetimeStorageReport(report),
+				});
+			} catch (error) {
+				results.push({
+					name: "datetime storage",
+					status: "fail",
+					message: `could not inspect stored datetimes: ${error instanceof Error ? error.message : String(error)}`,
+				});
+			}
+		} catch {
+			// Non-critical — tables may not exist on fresh DB
+		}
+
+		// Check users exist
 		try {
 			const usersResult = await sql<{
 				count: number;
@@ -368,6 +407,7 @@ export const doctorCommand = defineCommand({
 			printResult(result);
 		}
 
+		// Summary
 		const warns = results.filter((r) => r.status === "warn");
 
 		consola.log("");

@@ -1,11 +1,15 @@
 import { Toasty } from "@cloudflare/kumo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { page } from "vitest/browser";
 
+import "../../../../../packages/admin/dist/styles.css";
 import type { AdminManifest, Section } from "../../../../../packages/admin/src/lib/api";
 import { render } from "../utils/render.tsx";
 
+// Capture props passed to PortableTextEditor so the test can invoke the
+// block-sidebar callbacks the way the image node view does at runtime.
 const portableTextProps: { current: Record<string, unknown> | null } = { current: null };
 
 vi.mock("../../../../../packages/admin/src/components/PortableTextEditor", () => ({
@@ -47,6 +51,7 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	};
 });
 
+// Import after mocks so the module under test picks up the mocked deps.
 const { SectionEditor } =
 	await import("../../../../../packages/admin/src/components/SectionEditor");
 
@@ -94,10 +99,44 @@ describe("SectionEditor", () => {
 		mockFetchSection.mockResolvedValue(makeSection());
 		mockFetchManifest.mockResolvedValue(makeManifest());
 	});
+	afterEach(async () => {
+		await page.viewport(1280, 800);
+	});
+
+	it.each(["ltr", "rtl"])(
+		"keeps detail inputs within their panel at a narrow width in %s",
+		async (direction) => {
+			await page.viewport(938, 880);
+			const screen = await render(
+				<div dir={direction} style={{ display: "flex", width: "100vw" }}>
+					<aside style={{ width: 260, flexShrink: 0 }} />
+					<main style={{ flex: 1, minWidth: 0, padding: 24 }}>
+						<SectionEditor />
+					</main>
+				</div>,
+				{ wrapper: Wrapper },
+			);
+			await expect.element(screen.getByRole("textbox", { name: "Keywords" })).toBeInTheDocument();
+
+			const panel = screen
+				.getByRole("heading", { name: "Section Details" })
+				.element().parentElement!;
+			const panelBounds = panel.getBoundingClientRect();
+			const styles = getComputedStyle(panel);
+			const contentStart = panelBounds.left + parseFloat(styles.paddingLeft);
+			const contentEnd = panelBounds.right - parseFloat(styles.paddingRight);
+			for (const name of ["Title", "Slug", "Description", "Keywords"]) {
+				const fieldBounds = screen.getByRole("textbox", { name }).element().getBoundingClientRect();
+				expect(fieldBounds.left).toBeGreaterThanOrEqual(contentStart - 1);
+				expect(fieldBounds.right).toBeLessThanOrEqual(contentEnd + 1);
+			}
+		},
+	);
 
 	it("opens the image settings panel when a block requests the sidebar", async () => {
 		const screen = await render(<SectionEditor />, { wrapper: Wrapper });
 
+		// Editor must mount (and capture its props) before we can simulate.
 		await expect.element(screen.getByTestId("portable-text-editor")).toBeInTheDocument();
 
 		const onBlockSidebarOpen = portableTextProps.current?.onBlockSidebarOpen as
@@ -107,9 +146,14 @@ describe("SectionEditor", () => {
 			| (() => void)
 			| undefined;
 
+		// Both callbacks must be wired — without them, clicking the image-settings
+		// icon in the editor is a silent no-op (#845).
 		expect(typeof onBlockSidebarOpen).toBe("function");
 		expect(typeof onBlockSidebarClose).toBe("function");
 
+		// Simulate the image node view asking for sidebar space, the same shape
+		// it sends from ImageNode.openSidebar(). expect.element below polls until
+		// React flushes the state update, so we don't need an explicit act wrapper.
 		onBlockSidebarOpen!({
 			type: "image",
 			attrs: {
@@ -125,6 +169,8 @@ describe("SectionEditor", () => {
 			onClose: vi.fn(),
 		});
 
+		// The Image Settings panel should now be rendered in the sidebar slot.
+		// The panel renders the image preview using the src we passed.
 		await expect.element(screen.getByRole("img", { name: "Logo" })).toBeInTheDocument();
 	});
 

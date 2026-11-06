@@ -1,3 +1,13 @@
+/**
+ * WordPress media import endpoint
+ *
+ * POST /_emdash/api/import/wordpress/media
+ *
+ * Downloads media attachments from WordPress URLs and uploads to EmDash storage.
+ * Streams progress updates as newline-delimited JSON (NDJSON).
+ * Each line is either a progress update or the final result.
+ */
+
 import * as path from "node:path";
 
 import type { APIRoute } from "astro";
@@ -17,6 +27,7 @@ import type { AttachmentInfo } from "./analyze.js";
 
 export const prerender = false;
 
+/** Progress update sent during streaming */
 export interface MediaImportProgress {
 	type: "progress";
 	current: number;
@@ -26,19 +37,23 @@ export interface MediaImportProgress {
 	error?: string;
 }
 
+/** Final result sent at end of stream */
 export interface MediaImportResult {
 	type?: "result";
+	/** Successfully imported items */
 	imported: Array<{
 		wpId?: number;
 		originalUrl: string;
 		newUrl: string;
 		mediaId: string;
 	}>;
+	/** Failed items */
 	failed: Array<{
 		wpId?: number;
 		originalUrl: string;
 		error: string;
 	}>;
+	/** Map of old URLs to new URLs (for content rewriting) */
 	urlMap: Record<string, string>;
 }
 
@@ -62,9 +77,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 		const attachments = body.attachments as AttachmentInfo[];
 
+		// Check if streaming is requested (default: true)
 		const shouldStream = body.stream !== false;
 
 		if (shouldStream) {
+			// Stream progress updates as NDJSON
 			const stream = new ReadableStream({
 				async start(controller) {
 					const encoder = new TextEncoder();
@@ -79,6 +96,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 						sendProgress,
 					);
 
+					// Send final result
 					controller.enqueue(encoder.encode(JSON.stringify({ ...result, type: "result" }) + "\n"));
 					controller.close();
 				},
@@ -94,7 +112,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			});
 		}
 
-		const result = await importMediaWithProgress(attachments, emdash.db, emdash.storage, () => {});
+		// Non-streaming mode
+		const result = await importMediaWithProgress(
+			attachments,
+			emdash.db,
+			emdash.storage,
+			() => {}, // No-op progress callback
+		);
 
 		return apiSuccess(result);
 	} catch (error) {
@@ -140,6 +164,7 @@ export async function importMediaWithProgress(
 		}
 
 		try {
+			// SSRF: validate URL before fetching
 			try {
 				validateExternalUrl(attachment.url);
 			} catch (e) {
@@ -160,6 +185,7 @@ export async function importMediaWithProgress(
 				continue;
 			}
 
+			// Report downloading
 			onProgress({
 				type: "progress",
 				current,
@@ -168,6 +194,7 @@ export async function importMediaWithProgress(
 				status: "downloading",
 			});
 
+			// Download from WordPress (ssrfSafeFetch re-validates redirect targets)
 			const response = await ssrfSafeFetch(attachment.url, {
 				headers: {
 					"User-Agent": "EmDash-Importer/1.0",
@@ -191,16 +218,21 @@ export async function importMediaWithProgress(
 				continue;
 			}
 
+			// Get content type from response or guess from filename
 			const contentType =
 				response.headers.get("content-type") || attachment.mimeType || "application/octet-stream";
 
+			// Get the file data
 			const buffer = await response.arrayBuffer();
 			const size = buffer.byteLength;
 
+			// Compute content hash for deduplication
 			const contentHash = await computeContentHash(buffer);
 
+			// Check if we already have this exact content
 			const existing = await repo.findByContentHash(contentHash);
 			if (existing) {
+				// Same content already exists - reuse it
 				const existingUrl = `/_emdash/api/media/file/${existing.storageKey}`;
 				result.urlMap[attachment.url] = existingUrl;
 				result.imported.push({
@@ -219,6 +251,7 @@ export async function importMediaWithProgress(
 				continue;
 			}
 
+			// Report uploading
 			onProgress({
 				type: "progress",
 				current,
@@ -227,20 +260,24 @@ export async function importMediaWithProgress(
 				status: "uploading",
 			});
 
+			// Generate storage key
 			const id = ulid();
 			const ext = attachment.filename
 				? path.extname(attachment.filename)
 				: getExtensionFromMimeType(contentType);
 			const storageKey = `${id}${ext}`;
 
+			// Upload to storage
 			await storage.upload({
 				key: storageKey,
 				body: new Uint8Array(buffer),
 				contentType,
 			});
 
+			// Derive dimensions + LQIP placeholders (no-op for non-images).
 			const enriched = await enrichImageMetadata(new Uint8Array(buffer), contentType);
 
+			// Create media record with content hash
 			const mediaItem = await repo.create({
 				filename: attachment.filename || `media-${attachment.id}${ext}`,
 				mimeType: contentType,
@@ -253,6 +290,7 @@ export async function importMediaWithProgress(
 				dominantColor: enriched.dominantColor,
 			});
 
+			// Build the new URL
 			const newUrl = `/_emdash/api/media/file/${storageKey}`;
 
 			result.imported.push({
@@ -262,8 +300,10 @@ export async function importMediaWithProgress(
 				mediaId: mediaItem.id,
 			});
 
+			// Add to URL map
 			result.urlMap[attachment.url] = newUrl;
 
+			// Report done
 			onProgress({
 				type: "progress",
 				current,

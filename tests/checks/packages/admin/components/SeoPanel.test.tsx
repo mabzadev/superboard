@@ -6,6 +6,9 @@ import { userEvent } from "vitest/browser";
 import { SeoPanel } from "../../../../../packages/admin/src/components/SeoPanel";
 import { render } from "../utils/render";
 
+// SeoPanel renders SeoImageField, which uses MediaPickerModal -- that hooks
+// into react-query. Tests need a QueryClient in scope even when the modal is
+// not opened, because the hook is called on the initial render.
 function QueryWrapper({ children }: { children: React.ReactNode }) {
 	const queryClient = React.useMemo(
 		() =>
@@ -23,6 +26,9 @@ describe("SeoPanel", () => {
 	});
 
 	it("renders an OG image control regardless of collection fields", async () => {
+		// The OG image picker used to live next to a `featured_image` content
+		// field, so collections without that field (e.g. typical Pages) had no
+		// way to set it. It now lives inside SeoPanel itself.
 		const screen = await render(
 			<QueryWrapper>
 				<SeoPanel
@@ -34,7 +40,7 @@ describe("SeoPanel", () => {
 		);
 
 		screen.getByText("OG Image");
-		screen.getByRole("button", { name: "Select OG image" });
+		screen.getByRole("button", { name: "Drop an image here or browse for OG Image" });
 	});
 
 	it("associates visible SEO labels with their fields", async () => {
@@ -89,6 +95,8 @@ describe("SeoPanel", () => {
 			</QueryWrapper>,
 		);
 
+		// The decorative <img> has alt="" so it doesn't have role="img" --
+		// query the DOM directly after confirming the panel rendered.
 		screen.getByText("OG Image");
 		const img = document.querySelector("img");
 		expect(img).not.toBeNull();

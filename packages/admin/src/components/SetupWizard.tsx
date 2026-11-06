@@ -1,13 +1,32 @@
-import { Button, Checkbox, Input, Loader } from "@cloudflare/kumo";
+/**
+ * Setup Wizard - Multi-step first-run setup page
+ *
+ * This component is NOT wrapped in the admin Shell.
+ * It's a standalone page for initial site configuration.
+ *
+ * Steps:
+ * 1. Site Configuration (title, tagline, how to start: sample content, empty, or import)
+ * 2. Create admin account — user picks any available auth method:
+ *    - Passkey (always available)
+ *    - Any configured auth provider (AT Protocol, GitHub, Google, etc.)
+ */
+
+import { Button, Input, Loader, Meter, Radio } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as React from "react";
 
-import { apiFetch, fetchManifest, parseApiResponse } from "../lib/api/client";
+import { useAdminBranding } from "../lib/admin-branding-context.js";
+import { apiFetch, parseApiResponse } from "../lib/api/client";
 import { useAuthProviderList, type AuthProviderModule } from "../lib/auth-provider-context";
+import { navigateTo } from "../lib/navigation.js";
 import { PasskeyRegistration } from "./auth/PasskeyRegistration";
 import { BrandLogo } from "./Logo.js";
+
+// ============================================================================
+// Types
+// ============================================================================
 
 interface SetupStatusResponse {
 	needsSetup: boolean;
@@ -20,6 +39,7 @@ interface SetupStatusResponse {
 		title?: string;
 		tagline?: string;
 	};
+	/** Auth mode - "cloudflare-access" or "passkey" */
 	authMode?: "cloudflare-access" | "passkey";
 }
 
@@ -32,7 +52,11 @@ interface SetupSiteRequest {
 interface SetupSiteResponse {
 	success: boolean;
 	error?: string;
+	/** In Access mode, setup is complete after site config */
 	setupComplete?: boolean;
+	/** False while sample content remains; post again to continue */
+	seedComplete?: boolean;
+	seedProgress?: SeedProgress;
 	result?: {
 		collections: { created: number; skipped: number };
 		fields: { created: number; skipped: number };
@@ -44,6 +68,11 @@ interface SetupSiteResponse {
 	};
 }
 
+interface SeedProgress {
+	done: number;
+	total: number;
+}
+
 interface SetupAdminRequest {
 	email: string;
 	name?: string;
@@ -52,23 +81,39 @@ interface SetupAdminRequest {
 interface SetupAdminResponse {
 	success: boolean;
 	error?: string;
-	options?: unknown;
+	options?: unknown; // WebAuthn registration options
 }
 
 type WizardStep = "site" | "admin" | "passkey";
 
-interface SiteStepProps {
-	seedInfo?: SetupStatusResponse["seedInfo"];
-	onNext: (data: SetupSiteRequest) => void;
-	isLoading: boolean;
-	error?: string;
+type StartWith = "sample" | "empty" | "import";
+
+const ADMIN_HOME_URL = "/_emdash/admin";
+const START_IMPORT_URL = "/_emdash/admin/settings/transfer?start=import";
+
+function completionUrl(startWith: StartWith): string {
+	return startWith === "import" ? START_IMPORT_URL : ADMIN_HOME_URL;
 }
 
-function SiteStep({ seedInfo, onNext, isLoading, error }: SiteStepProps) {
-	const { t } = useLingui();
+// ============================================================================
+// Step Components
+// ============================================================================
+
+interface SiteStepProps {
+	seedInfo?: SetupStatusResponse["seedInfo"];
+	onNext: (data: SetupSiteRequest, startWith: StartWith) => void;
+	isLoading: boolean;
+	error?: string;
+	seedProgress?: SeedProgress;
+}
+
+function SiteStep({ seedInfo, onNext, isLoading, error, seedProgress }: SiteStepProps) {
+	const { t, i18n } = useLingui();
 	const [title, setTitle] = React.useState(seedInfo?.title ?? "");
 	const [tagline, setTagline] = React.useState(seedInfo?.tagline ?? "");
-	const [includeContent, setIncludeContent] = React.useState(true);
+	const [startWith, setStartWith] = React.useState<StartWith>(
+		seedInfo?.hasContent ? "sample" : "empty",
+	);
 	const [errors, setErrors] = React.useState<Record<string, string>>({});
 
 	const validate = (): boolean => {
@@ -83,7 +128,7 @@ function SiteStep({ seedInfo, onNext, isLoading, error }: SiteStepProps) {
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!validate()) return;
-		onNext({ title, tagline, includeContent });
+		onNext({ title, tagline, includeContent: startWith === "sample" }, startWith);
 	};
 
 	return (
@@ -110,22 +155,64 @@ function SiteStep({ seedInfo, onNext, isLoading, error }: SiteStepProps) {
 				/>
 			</div>
 
-			{seedInfo?.hasContent && (
-				<Checkbox
-					label={t`Include sample content (recommended for new sites)`}
-					checked={includeContent}
-					onCheckedChange={(checked) => setIncludeContent(checked)}
-					disabled={isLoading}
+			<Radio.Group
+				legend={t`How do you want to start?`}
+				appearance="card"
+				value={startWith}
+				onValueChange={(value: StartWith) => setStartWith(value)}
+				disabled={isLoading}
+			>
+				{seedInfo?.hasContent && (
+					<Radio.Item
+						value="sample"
+						label={t`Sample content`}
+						description={t`Start with the template’s example posts and pages. Recommended for new sites.`}
+					/>
+				)}
+				<Radio.Item
+					value="empty"
+					label={t`Empty site`}
+					description={t`Start with the template’s content types and no content.`}
 				/>
-			)}
+				<Radio.Item
+					value="import"
+					label={t`Import an existing EmDash site`}
+					description={t`Once setup is done, upload a .emdash package exported from another EmDash site.`}
+				/>
+			</Radio.Group>
 
 			{error && (
-				<div className="rounded-lg bg-kumo-danger/10 p-4 text-sm text-kumo-danger">{error}</div>
+				<div className="rounded-lg bg-kumo-danger/10 p-4 text-sm text-kumo-danger">
+					<p>{error}</p>
+					{seedProgress && seedProgress.done > 0 && (
+						<p className="mt-2">
+							{t`The sample content added so far is kept. Continue to add the rest.`}
+						</p>
+					)}
+				</div>
 			)}
 
-			<Button type="submit" className="w-full justify-center" loading={isLoading} variant="primary">
-				{isLoading ? <>{t`Setting up...`}</> : t`Continue →`}
-			</Button>
+			<div>
+				<Button
+					type="submit"
+					className="w-full justify-center"
+					loading={isLoading}
+					variant="primary"
+				>
+					{isLoading ? <>{t`Setting up...`}</> : t`Continue →`}
+				</Button>
+				<div role="status" aria-live="polite">
+					{seedProgress && seedProgress.total > 0 && (
+						<Meter
+							className="mt-6"
+							label={t`Sample content`}
+							value={seedProgress.done}
+							max={seedProgress.total}
+							customValue={t`${i18n.number(seedProgress.done)} of ${i18n.number(seedProgress.total)} items`}
+						/>
+					)}
+				</div>
+			</div>
 
 			{seedInfo && (
 				<p className="text-xs text-kumo-subtle text-center">
@@ -171,6 +258,7 @@ function AdminStep({ onNext, onBack, isLoading, error }: AdminStepProps) {
 		<form onSubmit={handleSubmit} className="space-y-6">
 			<div className="space-y-4">
 				<Input
+					dir="ltr"
 					label={t`Your Email`}
 					type="email"
 					value={email}
@@ -214,19 +302,18 @@ function AdminStep({ onNext, onBack, isLoading, error }: AdminStepProps) {
 	);
 }
 
-function handleSetupSuccess() {
-	window.location.href = "/_emdash/admin";
-}
-
 interface AuthMethodStepProps {
 	adminData: SetupAdminRequest;
 	providers: AuthProviderModule[];
+	startWith: StartWith;
 	onBack: () => void;
 }
 
-function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
+function AuthMethodStep({ adminData, providers, startWith, onBack }: AuthMethodStepProps) {
 	const { t } = useLingui();
+	const handleSetupSuccess = () => navigateTo(completionUrl(startWith));
 	const [activeProvider, setActiveProvider] = React.useState<string | null>(null);
+	const [passkeyComplete, setPasskeyComplete] = React.useState(false);
 	const [emailSent, setEmailSent] = React.useState(false);
 	const emailSetup = useMutation({
 		mutationFn: async () => {
@@ -259,6 +346,7 @@ function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
 		);
 	}
 
+	// Show provider form (full card replacement)
 	if (activeProvider) {
 		const provider = providers.find((p) => p.id === activeProvider);
 		if (provider && (provider.SetupStep || provider.LoginForm)) {
@@ -287,42 +375,46 @@ function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
 
 	return (
 		<div className="space-y-6">
-			<div className="text-center">
-				<h3 className="text-lg font-medium">{t`Choose how to sign in`}</h3>
-				<p className="text-sm text-kumo-subtle mt-1">
-					{t`Pick any method to create your admin account.`}
-				</p>
-			</div>
-
 			<PasskeyRegistration
 				optionsEndpoint="/_emdash/api/setup/admin"
 				verifyEndpoint="/_emdash/api/setup/admin/verify"
 				onSuccess={handleSetupSuccess}
-				buttonText={t`Create Passkey`}
 				additionalData={{ ...adminData }}
+				showEducation
+				showSuccessStep
+				successButtonText={startWith === "import" ? t`Continue to import` : t`Open the dashboard`}
+				onSuccessReady={() => setPasskeyComplete(true)}
+				onBack={onBack}
 			/>
 
-			<div className="relative">
-				<div className="absolute inset-0 flex items-center">
-					<span className="w-full border-t" />
-				</div>
-				<div className="relative flex justify-center text-xs uppercase">
-					<span className="bg-kumo-base px-2 text-kumo-subtle">{t`Or continue with`}</span>
-				</div>
-			</div>
+			{!passkeyComplete && (
+				<>
+					<div className="relative">
+						<div className="absolute inset-0 flex items-center">
+							<span className="w-full border-t" />
+						</div>
+						<div className="relative flex justify-center text-xs uppercase">
+							<span className="bg-kumo-base px-2 text-kumo-subtle">{t`Or continue with`}</span>
+						</div>
+					</div>
 
-			<Button
-				type="button"
-				variant="secondary"
-				className="w-full justify-center"
-				disabled={emailSetup.isPending}
-				onClick={() => emailSetup.mutate()}
-			>
-				{emailSetup.isPending ? t`Sending...` : t`Send a sign-in link by email`}
-			</Button>
-			{emailSetup.error && <p className="text-sm text-kumo-danger">{emailSetup.error.message}</p>}
+					<Button
+						type="button"
+						variant="secondary"
+						className="w-full justify-center"
+						disabled={emailSetup.isPending}
+						onClick={() => emailSetup.mutate()}
+					>
+						{emailSetup.isPending ? t`Sending...` : t`Send a sign-in link by email`}
+					</Button>
+					{emailSetup.error && (
+						<p className="text-sm text-kumo-danger">{emailSetup.error.message}</p>
+					)}
+				</>
+			)}
 
-			{hasProviders && (
+			{/* Auth provider options */}
+			{!passkeyComplete && hasProviders && (
 				<>
 					<div
 						className={`grid gap-3 ${buttonProviders.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}
@@ -340,13 +432,13 @@ function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
 					</div>
 				</>
 			)}
-
-			<Button type="button" variant="ghost" onClick={onBack} className="w-full">
-				{t`← Back`}
-			</Button>
 		</div>
 	);
 }
+
+// ============================================================================
+// Progress Indicator
+// ============================================================================
 
 interface StepIndicatorProps {
 	currentStep: WizardStep;
@@ -355,6 +447,7 @@ interface StepIndicatorProps {
 
 function StepIndicator({ currentStep, useAccessAuth }: StepIndicatorProps) {
 	const { t } = useLingui();
+	// In Access mode, only show the site step
 	const steps = useAccessAuth
 		? ([{ key: "site", label: t`Site Settings` }] as const)
 		: ([
@@ -414,16 +507,24 @@ function StepIndicator({ currentStep, useAccessAuth }: StepIndicatorProps) {
 	);
 }
 
+// ============================================================================
+// Main Component
+// ============================================================================
+
 export function SetupWizard() {
 	const { t } = useLingui();
+	const { logo: brandLogo, siteName: brandSiteName } = useAdminBranding();
 	const [currentStep, setCurrentStep] = React.useState<WizardStep>("site");
-	const [_siteData, setSiteData] = React.useState<SetupSiteRequest | null>(null);
+	const [startWith, setStartWith] = React.useState<StartWith>("sample");
 	const [adminData, setAdminData] = React.useState<SetupAdminRequest | null>(null);
 	const [error, setError] = React.useState<string | undefined>();
+	const [seedProgress, setSeedProgress] = React.useState<SeedProgress | undefined>();
 	const [urlError, setUrlError] = React.useState<string | null>(null);
 
+	// Auth provider components from virtual module (via context)
 	const authProviderList = useAuthProviderList();
 
+	// Check for error in URL (from OAuth/provider redirect)
 	React.useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
 		const errorParam = params.get("error");
@@ -431,10 +532,12 @@ export function SetupWizard() {
 
 		if (errorParam) {
 			setUrlError(message || `Authentication error: ${errorParam}`);
+			// Clean up URL
 			window.history.replaceState({}, "", window.location.pathname);
 		}
 	}, []);
 
+	// Check setup status
 	const {
 		data: status,
 		isLoading: statusLoading,
@@ -448,28 +551,39 @@ export function SetupWizard() {
 		retry: false,
 	});
 
-	const { data: manifest } = useQuery({
-		queryKey: ["manifest"],
-		queryFn: fetchManifest,
-	});
-
+	// Check if using Cloudflare Access auth
 	const useAccessAuth = status?.authMode === "cloudflare-access";
 
+	// Site setup mutation
 	const siteMutation = useMutation({
-		mutationFn: async (data: SetupSiteRequest) => {
-			const response = await apiFetch("/_emdash/api/setup", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(data),
-			});
-			return parseApiResponse<SetupSiteResponse>(response, t`Setup failed`);
+		mutationFn: async ({ data }: { data: SetupSiteRequest; startWith: StartWith }) => {
+			// A seed too large for one request is applied over several, each
+			// continuing after the items the previous ones wrote.
+			let lastDone = -1;
+			for (;;) {
+				const response = await apiFetch("/_emdash/api/setup", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(data),
+				});
+				const result = await parseApiResponse<SetupSiteResponse>(response, t`Setup failed`);
+				if (result.seedComplete !== false) return result;
+				if (!result.seedProgress || result.seedProgress.done <= lastDone) {
+					throw new Error(t`Setup failed`);
+				}
+				lastDone = result.seedProgress.done;
+				setSeedProgress(result.seedProgress);
+			}
 		},
-		onSuccess: (data) => {
+		onSuccess: (data, variables) => {
 			setError(undefined);
+			setSeedProgress(undefined);
+			// In Access mode, setup is complete after the site step
 			if (data.setupComplete) {
-				window.location.href = "/_emdash/admin";
+				navigateTo(completionUrl(variables.startWith));
 				return;
 			}
+			// Continue to admin account creation
 			setCurrentStep("admin");
 		},
 		onError: (err: Error) => {
@@ -477,6 +591,7 @@ export function SetupWizard() {
 		},
 	});
 
+	// Admin setup mutation
 	const adminMutation = useMutation({
 		mutationFn: async (data: SetupAdminRequest) => {
 			const response = await apiFetch("/_emdash/api/setup/admin", {
@@ -495,21 +610,25 @@ export function SetupWizard() {
 		},
 	});
 
-	const handleSiteNext = (data: SetupSiteRequest) => {
-		setSiteData(data);
-		siteMutation.mutate(data);
+	// Handle site step completion
+	const handleSiteNext = (data: SetupSiteRequest, choice: StartWith) => {
+		setStartWith(choice);
+		siteMutation.mutate({ data, startWith: choice });
 	};
 
+	// Handle admin step completion
 	const handleAdminNext = (data: SetupAdminRequest) => {
 		setAdminData(data);
 		adminMutation.mutate(data);
 	};
 
+	// Redirect if setup already complete
 	if (!statusLoading && status && !status.needsSetup) {
 		window.location.href = "/_emdash/admin";
 		return null;
 	}
 
+	// Loading state
 	if (statusLoading) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-kumo-base">
@@ -521,6 +640,7 @@ export function SetupWizard() {
 		);
 	}
 
+	// Error state
 	if (statusError) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-kumo-base">
@@ -537,12 +657,9 @@ export function SetupWizard() {
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-kumo-base p-4">
 			<div className="w-full max-w-lg">
+				{/* Header */}
 				<div className="text-center mb-6">
-					<BrandLogo
-						logoUrl={manifest?.admin?.logo}
-						siteName={manifest?.admin?.siteName}
-						className="h-10 mx-auto mb-2"
-					/>
+					<BrandLogo logoUrl={brandLogo} siteName={brandSiteName} className="h-10 mx-auto mb-2" />
 					<h1 className="text-2xl font-semibold text-kumo-default">
 						{currentStep === "site" && t`Set up your site`}
 						{currentStep === "admin" && t`Create your account`}
@@ -553,14 +670,17 @@ export function SetupWizard() {
 					)}
 				</div>
 
+				{/* Error from URL (provider failure) */}
 				{urlError && (
 					<div className="mb-6 rounded-lg bg-kumo-danger/10 border border-kumo-danger/20 p-4 text-sm text-kumo-danger">
 						{urlError}
 					</div>
 				)}
 
+				{/* Progress */}
 				<StepIndicator currentStep={currentStep} useAccessAuth={useAccessAuth} />
 
+				{/* Form Card */}
 				<div className="bg-kumo-base border rounded-lg shadow-sm p-6">
 					{currentStep === "site" && (
 						<SiteStep
@@ -568,6 +688,7 @@ export function SetupWizard() {
 							onNext={handleSiteNext}
 							isLoading={siteMutation.isPending}
 							error={error}
+							seedProgress={seedProgress}
 						/>
 					)}
 
@@ -587,6 +708,7 @@ export function SetupWizard() {
 						<AuthMethodStep
 							adminData={adminData}
 							providers={authProviderList}
+							startWith={startWith}
 							onBack={() => {
 								setError(undefined);
 								setCurrentStep("admin");

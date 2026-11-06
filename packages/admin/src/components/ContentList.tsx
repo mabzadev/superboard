@@ -4,7 +4,7 @@ import {
 	Checkbox,
 	DatePicker,
 	Dialog,
-	LinkButton,
+	DropdownMenu,
 	Loader,
 	Popover,
 	Select,
@@ -24,6 +24,8 @@ import {
 	CaretUp,
 	CaretDown,
 	CaretUpDown,
+	CircleDashed,
+	Tag,
 	Upload,
 	X,
 } from "@phosphor-icons/react";
@@ -37,6 +39,7 @@ import type {
 	ContentItem,
 	TrashedContentItem,
 } from "../lib/api.js";
+import { getDraftStatus } from "../lib/api.js";
 import {
 	ContentListColumnBoundary,
 	resolveContentListColumns,
@@ -44,12 +47,14 @@ import {
 } from "../lib/content-list-columns.js";
 import { getEntryTitle } from "../lib/entryTitle.js";
 import { useDebouncedValue } from "../lib/hooks.js";
+import { inlineLabel } from "../lib/inline-label.js";
 import { usePluginAdmins } from "../lib/plugin-context.js";
 import { contentUrl } from "../lib/url.js";
-import { cn, parseTimestamp } from "../lib/utils";
+import { cn, formatDate, parseTimestamp } from "../lib/utils.js";
 import { getLocaleDir } from "../locales/config.js";
-import { getDayPickerLocale } from "../locales/day-picker.js";
+import { useDateLocale } from "../locales/date-locale.js";
 import { CaretNext, CaretPrev } from "./ArrowIcons.js";
+import { BulkTagDialog, type BulkTagTaxonomy, type SelectedBulkTagPost } from "./BulkTagDialog.js";
 import {
 	BylineFilter,
 	EMPTY_BYLINE_FILTER,
@@ -61,10 +66,18 @@ import {
 	ContentStatusLabel,
 	isContentStatusState,
 } from "./ContentStatusBadge.js";
+import { DataTable, DataTableMessage, RowActionsMenu } from "./DataTable.js";
+import { ListPaginationFooter, type ListPagination } from "./ListPaginationFooter.js";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { RouterLinkButton } from "./RouterLinkButton.js";
+import { declaredLabelTranslator } from "./Sidebar.js";
 import { TableToolbar, TableToolbarSearch } from "./TableToolbar.js";
 
+/**
+ * Sortable content list columns. The named values map to the server's system
+ * order fields; a collection's configured titleField/dateField slug is also
+ * accepted, which the server validates against the collection.
+ */
 export type ContentListSortField = "title" | "status" | "locale" | "updatedAt" | (string & {});
 export interface ContentListSort {
 	field: ContentListSortField;
@@ -78,26 +91,36 @@ export interface ContentListColumn {
 	options?: Array<{ value: string; label: string }>;
 }
 
+/** Status filter values. `"all"` clears the status filter. */
 export type ContentStatusFilter = "all" | "published" | "draft" | "scheduled" | "archived";
 
+/**
+ * Date-range filter state. `from`/`to` are raw `YYYY-MM-DD` values from the
+ * date inputs (empty string = unset); the parent converts them to UTC day
+ * boundaries before calling the API.
+ */
 export interface ContentDateFilter {
 	field: ContentDateField;
 	from: string;
 	to: string;
 }
 
+/** An empty (inactive) date filter, defaulting to the created-at column. */
 export const EMPTY_DATE_FILTER: ContentDateFilter = { field: "createdAt", from: "", to: "" };
 
 export interface ContentListProps {
 	collection: string;
 	collectionLabel: string;
 	items: ContentItem[];
+	/** Validated custom-field columns from the collection manifest. */
 	listColumns?: ContentListColumn[];
 	trashedItems?: TrashedContentItem[];
 	isLoading?: boolean;
 	isTrashedLoading?: boolean;
 	onDelete?: (id: string) => void;
 	onDuplicate?: (id: string) => void;
+	/** Whether to offer Duplicate on an entry's row. Offered on every row when omitted. */
+	canDuplicate?: (item: ContentItem) => boolean;
 	onRestore?: (id: string) => void;
 	onPermanentDelete?: (id: string) => void;
 	onLoadMore?: () => void;
@@ -105,31 +128,89 @@ export interface ContentListProps {
 	hasMore?: boolean;
 	hasMoreTrashed?: boolean;
 	trashedCount?: number;
-	i18n?: { defaultLocale: string; locales: string[] };
+	/** i18n config — present when multiple locales are configured */
+	i18n?: { defaultLocale: string; locales: string[]; prefixDefaultLocale?: boolean };
+	/** Currently active locale filter */
 	activeLocale?: string;
+	/** Callback when locale filter changes */
 	onLocaleChange?: (locale: string) => void;
+	/** URL pattern for published content links (e.g. `/blog/{slug}`) */
 	urlPattern?: string;
 	routable?: boolean;
+	/** Collection field slug powering the Title column (falls back to the title chain). */
 	titleField?: string;
+	/** Collection field slug (datetime) powering the Date column (falls back to updated date). */
 	dateField?: string;
+	/**
+	 * Controlled sort state. When `onSortChange` is also provided, the column
+	 * headers become sort controls that invoke it. Uncontrolled sort keeps
+	 * the backward-compatible "static headers, server-default ordering"
+	 * behavior for callers that haven't opted in yet.
+	 */
 	sort?: ContentListSort;
 	onSortChange?: (sort: ContentListSort) => void;
+	/**
+	 * Total rows matching the current filters (ignoring pagination). When
+	 * set, the pagination denominator reflects this stable count instead of
+	 * growing as more API pages are fetched.
+	 */
 	total?: number;
+	/**
+	 * When provided, search is performed server-side: the (debounced) query is
+	 * reported here so the caller can refetch, and `items`/`total` are assumed
+	 * to already reflect the filter. Without it, the list falls back to
+	 * filtering the loaded page client-side (legacy behavior).
+	 */
 	onSearchChange?: (q: string) => void;
+	/**
+	 * Filter controls. The whole bar is opt-in: it only renders when
+	 * `onStatusFilterChange` is provided, keeping the component
+	 * backward-compatible for callers that haven't wired filters yet. Each
+	 * control renders independently based on the presence of its callback
+	 * (and, for the author filter, a non-empty `authors` list).
+	 */
 	statusFilter?: ContentStatusFilter;
 	onStatusFilterChange?: (status: ContentStatusFilter) => void;
+	/** Authors who have content in this collection, for the author filter. */
 	authors?: ContentAuthor[];
+	/** Selected author id; empty string means "all authors". */
 	authorFilter?: string;
 	onAuthorFilterChange?: (authorId: string) => void;
+	/** Controlled date-range filter state. */
 	dateFilter?: ContentDateFilter;
 	onDateFilterChange?: (filter: ContentDateFilter) => void;
+	/** Controlled byline filter state. */
 	bylineFilter?: BylineFilterState;
 	onBylineFilterChange?: (filter: BylineFilterState) => void;
+	/**
+	 * Bulk actions. Each is opt-in: the selection checkboxes only appear when at
+	 * least one bulk handler is provided, and each toolbar button renders only
+	 * when its handler is present. Handlers receive the selected entry ids and
+	 * resolve with the ids that failed (empty array on full success); those
+	 * rows stay selected so a partial failure can be retried.
+	 */
 	onBulkPublish?: BulkActionHandler;
 	onBulkUnpublish?: BulkActionHandler;
 	onBulkDelete?: BulkActionHandler;
+	/** Taxonomies editors can bulk-assign terms from; empty disables the action. */
+	bulkTagTaxonomies?: BulkTagTaxonomy[];
+	/** Current role used only for contributed-column visibility, not authorization. */
 	userRole?: number;
+	/** Manifest state used to omit disabled or stale trusted-plugin contributions. */
 	pluginStates?: AdminManifest["plugins"];
+	/**
+	 * Server-side numbered pages for the All tab. `items` is then exactly the
+	 * current page, search is expected to be server-side (`onSearchChange`), and
+	 * `total`, `hasMore`, and `onLoadMore` are ignored. Selections persist across
+	 * pages and clear when the search, filters, locale, or collection change.
+	 */
+	pagination?: ListPagination;
+	/**
+	 * Server-side numbered pages for the Trash tab. `trashedItems` is then
+	 * exactly the current page; `hasMoreTrashed` and `onLoadMoreTrashed` are
+	 * ignored.
+	 */
+	trashPagination?: ListPagination;
 }
 
 type BulkActionHandler = (ids: string[]) => Promise<string[]>;
@@ -138,8 +219,17 @@ type ViewTab = "all" | "trash";
 
 const PAGE_SIZE = 20;
 
+/** Page sizes offered with `pagination`; the first is the default. */
+export const CONTENT_LIST_PAGE_SIZES = [20, 50, 100];
+
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Parse a dateField value for the Date column. Returns null if missing or
+ * unparseable (so the caller falls back to a system date instead of showing
+ * "Invalid Date"). Bare `YYYY-MM-DD` is read as local midnight to avoid a
+ * previous-day shift in negative-UTC timezones.
+ */
 function parseListDate(value: unknown): Date | null {
 	if (typeof value !== "string" || !value) return null;
 	const normalized = DATE_ONLY_RE.test(value) ? `${value}T00:00:00` : value;
@@ -165,6 +255,9 @@ function formatDateOnly(date: Date | undefined): string {
 	return `${year}-${month}-${day}`;
 }
 
+/**
+ * Content list view with table display and trash tab
+ */
 export function ContentList({
 	collection,
 	collectionLabel,
@@ -175,6 +268,7 @@ export function ContentList({
 	isTrashedLoading,
 	onDelete,
 	onDuplicate,
+	canDuplicate,
 	onRestore,
 	onPermanentDelete,
 	onLoadMore,
@@ -205,24 +299,40 @@ export function ContentList({
 	onBulkPublish,
 	onBulkUnpublish,
 	onBulkDelete,
+	bulkTagTaxonomies = [],
 	userRole = 0,
 	pluginStates,
+	pagination,
+	trashPagination,
 }: ContentListProps) {
-	const { t } = useLingui();
+	const { t, i18n: lingui } = useLingui();
 	const pluginAdmins = usePluginAdmins();
 	const [activeTab, setActiveTab] = React.useState<ViewTab>("all");
 	const [searchQuery, setSearchQuery] = React.useState("");
 	const [page, setPage] = React.useState(0);
 	const [selectedIds, setSelectedIds] = React.useState<Set<string>>(() => new Set());
+	const [bulkTagSelection, setBulkTagSelection] = React.useState<SelectedBulkTagPost[] | null>(
+		null,
+	);
+	const [bulkTagOpen, setBulkTagOpen] = React.useState(false);
+	const bulkTagEnabled = bulkTagTaxonomies.length > 0;
+	const soleBulkTagTaxonomy = bulkTagTaxonomies.length === 1 ? bulkTagTaxonomies[0] : undefined;
 
-	const bulkEnabled = !!(onBulkPublish || onBulkUnpublish || onBulkDelete);
+	// Bulk selection is opt-in: the checkbox column + toolbar only render when
+	// the parent wired at least one bulk handler.
+	const bulkEnabled = !!(onBulkPublish || onBulkUnpublish || onBulkDelete || bulkTagEnabled);
 
+	// Server-side search mode: the caller refetches based on the (debounced)
+	// query, so `items`/`total` already reflect the filter and we must not
+	// re-filter client-side (that would re-introduce the "only matches the
+	// loaded page" bug for non-title columns).
 	const serverSearch = !!onSearchChange;
 	const debouncedSearch = useDebouncedValue(searchQuery, 300);
 	React.useEffect(() => {
 		if (onSearchChange) onSearchChange(debouncedSearch.trim());
 	}, [debouncedSearch, onSearchChange]);
 
+	// Reset page when search changes
 	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setSearchQuery(e.target.value);
 		setPage(0);
@@ -234,27 +344,51 @@ export function ContentList({
 		return items.filter((item) => getEntryTitle(item, titleField).toLowerCase().includes(query));
 	}, [items, searchQuery, serverSearch, titleField]);
 
+	// The query the current `items` reflect: server-side filtering lags behind
+	// typing by the debounce, so the empty-state message must use the debounced
+	// term; client-side filtering is immediate, so it uses the live query.
 	const activeSearch = serverSearch ? debouncedSearch.trim() : searchQuery;
 
+	// When the server reports a total, it's the source of truth for the
+	// denominator. In server-search mode that total already reflects the query,
+	// so we use it even while searching; in client mode an active query falls
+	// back to the filtered client count.
 	const effectiveTotal =
 		typeof total === "number" && (serverSearch || !searchQuery) ? total : filteredItems.length;
 	const totalPages = Math.max(1, Math.ceil(effectiveTotal / PAGE_SIZE));
 
+	// Clamp the current page in case filters collapse the count (user was on
+	// page 5 of 10, then typed a query narrowing to 1 page). Without clamping
+	// we'd render an empty table until the next refetch.
 	const clampedPage = Math.min(page, totalPages - 1);
-	const paginatedItems = filteredItems.slice(
-		clampedPage * PAGE_SIZE,
-		(clampedPage + 1) * PAGE_SIZE,
-	);
+	const paged = !!pagination;
+	const paginatedItems = paged
+		? filteredItems
+		: filteredItems.slice(clampedPage * PAGE_SIZE, (clampedPage + 1) * PAGE_SIZE);
 
+	// Auto-fetch the next API page when the user is on a client page whose
+	// items haven't been loaded yet. Skip during client-side search because
+	// filtering can collapse `filteredItems` below the loaded count and
+	// trigger a spurious fetch.
+	//
+	// Safety: relies on `onLoadMore` being deduped against concurrent calls.
+	// The router wires this to TanStack Query's `fetchNextPage`, which is
+	// idempotent while a fetch is in flight.
 	React.useEffect(() => {
-		if (!hasMore || !onLoadMore || (!serverSearch && searchQuery)) return;
+		// In client-search mode we skip auto-fetch while a query is active
+		// (filtering can collapse the list). In server-search mode the loaded
+		// items already are the matches, so paging forward should keep fetching.
+		if (paged || !hasMore || !onLoadMore || (!serverSearch && searchQuery)) return;
 		const loadedPages = Math.ceil(filteredItems.length / PAGE_SIZE);
 		if (clampedPage >= loadedPages - 1) {
 			onLoadMore();
 		}
-	}, [clampedPage, filteredItems.length, hasMore, onLoadMore, searchQuery, serverSearch]);
+	}, [clampedPage, filteredItems.length, hasMore, onLoadMore, paged, searchQuery, serverSearch]);
 
+	// Drop selections for rows that left the current result set (filter/locale
+	// change, deletion) so a bulk action never targets a now-hidden id.
 	React.useEffect(() => {
+		if (paged) return;
 		setSelectedIds((prev) => {
 			if (prev.size === 0) return prev;
 			const present = new Set(items.map((i) => i.id));
@@ -266,25 +400,62 @@ export function ContentList({
 			}
 			return changed ? next : prev;
 		});
-	}, [items]);
+	}, [items, paged]);
+
+	// With server pages `items` holds one page, so selections on other pages
+	// can't be checked against it. Clear them when the result set changes.
+	const selectionScope = JSON.stringify([
+		collection,
+		activeLocale ?? null,
+		activeSearch,
+		statusFilter,
+		authorFilter,
+		dateFilter.from || dateFilter.to ? dateFilter : null,
+		isBylineFilterActive(bylineFilter) ? bylineFilter : null,
+	]);
+	const selectedRowsRef = React.useRef(new Map<string, ContentItem>());
+	React.useEffect(() => {
+		if (!paged) return;
+		setSelectedIds((prev) => (prev.size === 0 ? prev : new Set()));
+		selectedRowsRef.current.clear();
+	}, [paged, selectionScope]);
 
 	const clearSelection = React.useCallback(() => setSelectedIds(new Set()), []);
-	const toggleOne = (id: string) =>
+	const rememberRows = (rows: readonly ContentItem[]) => {
+		if (!paged) return;
+		for (const row of rows) selectedRowsRef.current.set(row.id, row);
+	};
+	const toggleOne = (id: string) => {
+		rememberRows(paginatedItems.filter((item) => item.id === id));
 		setSelectedIds((prev) => {
 			const next = new Set(prev);
 			if (next.has(id)) next.delete(id);
 			else next.add(id);
 			return next;
 		});
+	};
 	const pageIds = paginatedItems.map((i) => i.id);
 	const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
-	const togglePage = () =>
+	const togglePage = () => {
+		rememberRows(paginatedItems);
 		setSelectedIds((prev) => {
 			const next = new Set(prev);
 			if (allPageSelected) for (const id of pageIds) next.delete(id);
 			else for (const id of pageIds) next.add(id);
 			return next;
 		});
+	};
+	const deleteRow = onDelete
+		? (id: string) => {
+				setSelectedIds((prev) => {
+					if (!prev.has(id)) return prev;
+					const next = new Set(prev);
+					next.delete(id);
+					return next;
+				});
+				onDelete(id);
+			}
+		: undefined;
 	const selectedCount = selectedIds.size;
 	const extensionColumns = React.useMemo(
 		() => resolveContentListColumns(pluginAdmins, collection, userRole, pluginStates),
@@ -297,9 +468,14 @@ export function ContentList({
 		setBulkBusy(true);
 		void (async () => {
 			try {
+				// Clear only after the batch settles, keeping the failed ids
+				// selected — a partial failure stays retryable instead of the
+				// selection vanishing while requests are still in flight.
 				const failedIds = await fn(ids);
 				setSelectedIds(new Set(failedIds));
 			} catch {
+				// Unexpected (non-per-item) error: keep the selection for a retry.
+				// The parent's mutation surfaces the error toast.
 			} finally {
 				setBulkBusy(false);
 			}
@@ -307,9 +483,19 @@ export function ContentList({
 	};
 	const colSpan =
 		(i18n ? 5 : 4) + listColumns.length + extensionColumns.length + (bulkEnabled ? 1 : 0);
+	const trashColSpan = i18n ? 4 : 3;
+	const tabPagination = activeTab === "all" ? pagination : trashPagination;
+	const showPaginationFooter = !!tabPagination && tabPagination.totalCount > 0;
 
 	return (
-		<div className="space-y-4">
+		<div
+			className={
+				showPaginationFooter
+					? "flex min-h-full flex-col gap-4 [&_tbody_*]:scroll-mb-48"
+					: "space-y-4"
+			}
+		>
+			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-4">
 					<h1 className="text-2xl font-semibold leading-tight">{collectionLabel}</h1>
@@ -333,6 +519,7 @@ export function ContentList({
 				</RouterLinkButton>
 			</div>
 
+			{/* Tabs */}
 			<Tabs
 				variant="underline"
 				value={activeTab}
@@ -354,14 +541,15 @@ export function ContentList({
 				]}
 			/>
 
+			{/* Content based on active tab */}
 			{activeTab === "all" ? (
 				<>
 					{(serverSearch || items.length > 0 || onStatusFilterChange) && (
 						<TableToolbar>
 							{(serverSearch || items.length > 0) && (
 								<TableToolbarSearch
-									placeholder={t`Search ${collectionLabel.toLowerCase()}...`}
-									aria-label={t`Search ${collectionLabel.toLowerCase()}`}
+									placeholder={t`Search ${inlineLabel(collectionLabel, lingui.locale)}...`}
+									aria-label={t`Search ${inlineLabel(collectionLabel, lingui.locale)}`}
 									value={searchQuery}
 									onChange={handleSearchChange}
 								/>
@@ -383,8 +571,9 @@ export function ContentList({
 						</TableToolbar>
 					)}
 
+					{/* Bulk action toolbar — appears once one or more rows are selected */}
 					{bulkEnabled && selectedCount > 0 && (
-						<div className="flex flex-wrap items-center gap-3 rounded-md border bg-kumo-tint/40 px-4 py-2">
+						<div className="flex flex-wrap items-center gap-3 rounded-xl bg-kumo-elevated px-4 py-2 ring ring-kumo-line">
 							<span className="text-sm font-medium">
 								{bulkBusy
 									? t`Working on ${selectedCount} items…`
@@ -408,9 +597,43 @@ export function ContentList({
 										variant="secondary"
 										disabled={bulkBusy}
 										onClick={() => runBulk(onBulkUnpublish)}
+										icon={<CircleDashed aria-hidden="true" />}
 									>
 										{t`Set to draft`}
 									</Button>
+								)}
+								{bulkTagEnabled && (
+									<Button
+										size="sm"
+										variant="secondary"
+										disabled={bulkBusy || selectedCount > 50}
+										icon={<Tag aria-hidden="true" />}
+										onClick={() => {
+											setBulkTagSelection(
+												Array.from(selectedIds, (id) => {
+													const item =
+														items.find((candidate) => candidate.id === id) ??
+														selectedRowsRef.current.get(id);
+													return {
+														collection,
+														id,
+														title: item ? getEntryTitle(item, titleField) : id,
+														locale: item?.locale,
+													};
+												}),
+											);
+											setBulkTagOpen(true);
+										}}
+									>
+										{soleBulkTagTaxonomy
+											? t`Add ${inlineLabel(soleBulkTagTaxonomy.labelSingular || soleBulkTagTaxonomy.label, lingui.locale)}`
+											: t`Add term`}
+									</Button>
+								)}
+								{bulkTagEnabled && selectedCount > 50 && (
+									<span role="status" className="text-sm text-kumo-danger">
+										{t`Select up to 50 posts at a time.`}
+									</span>
 								)}
 								{onBulkDelete && (
 									<Dialog.Root disablePointerDismissal>
@@ -444,16 +667,12 @@ export function ContentList({
 													)}
 												/>
 												<Dialog.Close
-													render={(p) => (
-														<Button
-															{...p}
-															variant="destructive"
-															onClick={() => runBulk(onBulkDelete)}
-														>
-															{t`Move to Trash`}
-														</Button>
-													)}
-												/>
+													render={
+														<Button variant="destructive" onClick={() => runBulk(onBulkDelete)} />
+													}
+												>
+													{t`Move to Trash`}
+												</Dialog.Close>
 											</div>
 										</Dialog>
 									</Dialog.Root>
@@ -470,131 +689,145 @@ export function ContentList({
 							</div>
 						</div>
 					)}
+					<BulkTagDialog
+						taxonomies={bulkTagTaxonomies}
+						open={bulkTagOpen}
+						selected={bulkTagSelection ?? undefined}
+						activeLocale={activeLocale}
+						defaultLocale={i18n?.defaultLocale}
+						onClose={() => setBulkTagOpen(false)}
+						onClosed={() => setBulkTagSelection(null)}
+						onApplied={(results) => {
+							setSelectedIds(
+								new Set(
+									results.flatMap((result) =>
+										(result.status === "failed" || result.status === "unmatched") &&
+										"id" in result.input
+											? [result.input.id]
+											: [],
+									),
+								),
+							);
+						}}
+					/>
 
-					<div className="rounded-md border bg-kumo-base overflow-x-auto">
-						<table className="w-full">
-							<thead>
-								<tr className="border-b bg-kumo-tint/50">
-									{bulkEnabled && (
-										<th scope="col" className="w-10 px-4 py-3">
-											<Checkbox
-												checked={allPageSelected}
-												onCheckedChange={togglePage}
-												aria-label={t`Select all on this page`}
-											/>
-										</th>
-									)}
-									<SortableTh
-										field={titleField ?? "title"}
-										sort={sort}
-										onSortChange={onSortChange}
-										label={t`Title`}
-									/>
-									{listColumns.map((column) => (
-										<th
-											key={column.slug}
-											scope="col"
-											className="px-4 py-3 text-start text-sm font-medium"
-										>
-											{column.label}
-										</th>
-									))}
-									<SortableTh
-										field="status"
-										sort={sort}
-										onSortChange={onSortChange}
-										label={t`Status`}
-									/>
-									{i18n && (
-										<SortableTh
-											field="locale"
-											sort={sort}
-											onSortChange={onSortChange}
-											label={t`Locale`}
+					{/* Table */}
+					<DataTable aria-busy={pagination?.isPending || undefined}>
+						<thead>
+							<tr>
+								{bulkEnabled && (
+									<th scope="col" className="w-10" inert={pagination?.isPending || undefined}>
+										<Checkbox
+											checked={allPageSelected}
+											onCheckedChange={togglePage}
+											aria-label={t`Select all on this page`}
 										/>
-									)}
-									<SortableTh
-										field={dateField ?? "updatedAt"}
-										sort={sort}
-										onSortChange={onSortChange}
-										label={t`Date`}
-									/>
-									{extensionColumns.map((column) => (
-										<ExtensionColumnHeader
-											key={`${column.pluginId}:${column.extension.id}`}
-											column={column}
-											collection={collection}
-											locale={activeLocale}
-										/>
-									))}
-									<th scope="col" className="px-4 py-3 text-end text-sm font-medium">
-										{t`Actions`}
 									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-kumo-line">
-								{isLoading && items.length === 0 ? (
-									<tr>
-										<td colSpan={colSpan} className="px-4 py-8 text-center text-kumo-subtle">
-											<span className="inline-flex items-center gap-2">
-												<Loader size="sm" />
-												{t`Loading...`}
-											</span>
-										</td>
-									</tr>
-								) : items.length === 0 ? (
-									<tr>
-										<td colSpan={colSpan} className="px-4 py-8 text-center text-kumo-subtle">
-											{activeSearch ? (
-												t`No results for "${activeSearch}"`
-											) : (
-												<>
-													{t`No ${collectionLabel.toLowerCase()} yet.`}{" "}
-													<Link
-														to="/content/$collection/new"
-														params={{ collection }}
-														search={{ locale: activeLocale }}
-														className="text-kumo-link underline"
-													>
-														{t`Create your first one`}
-													</Link>
-												</>
-											)}
-										</td>
-									</tr>
-								) : paginatedItems.length === 0 ? (
-									<tr>
-										<td colSpan={colSpan} className="px-4 py-8 text-center text-kumo-subtle">
-											{t`No results for "${activeSearch}"`}
-										</td>
-									</tr>
-								) : (
-									paginatedItems.map((item) => (
-										<ContentListItem
-											key={item.id}
-											item={item}
-											visibleItems={paginatedItems}
-											collection={collection}
-											onDelete={onDelete}
-											onDuplicate={onDuplicate}
-											showLocale={!!i18n}
-											urlPattern={urlPattern}
-											routable={routable}
-											titleField={titleField}
-											dateField={dateField}
-											listColumns={listColumns}
-											selectable={bulkEnabled}
-											selected={selectedIds.has(item.id)}
-											onToggleSelect={toggleOne}
-											extensionColumns={extensionColumns}
-										/>
-									))
 								)}
-							</tbody>
-						</table>
-					</div>
+								{/* The Title/Date columns sort by the collection's configured
+								    titleField/dateField when set */}
+								<SortableTh
+									field={titleField ?? "title"}
+									sort={sort}
+									onSortChange={onSortChange}
+									label={t`Title`}
+								/>
+								{listColumns.map((column) => (
+									<th key={column.slug} scope="col">
+										{column.label}
+									</th>
+								))}
+								<SortableTh
+									field="status"
+									sort={sort}
+									onSortChange={onSortChange}
+									label={t`Status`}
+								/>
+								{i18n && (
+									<SortableTh
+										field="locale"
+										sort={sort}
+										onSortChange={onSortChange}
+										label={t`Locale`}
+									/>
+								)}
+								<SortableTh
+									field={dateField ?? "updatedAt"}
+									sort={sort}
+									onSortChange={onSortChange}
+									label={t`Date`}
+								/>
+								{extensionColumns.map((column) => (
+									<ExtensionColumnHeader
+										key={`${column.pluginId}:${column.extension.id}`}
+										column={column}
+										collection={collection}
+										locale={activeLocale}
+									/>
+								))}
+								<th scope="col" className="w-0">
+									<span className="sr-only">{t`Actions`}</span>
+								</th>
+							</tr>
+						</thead>
+						<tbody inert={pagination?.isPending || undefined}>
+							{items.length === 0 && (isLoading || pagination?.isPending) ? (
+								<DataTableMessage colSpan={colSpan}>
+									<span className="inline-flex items-center gap-2">
+										<Loader size="sm" />
+										{t`Loading...`}
+									</span>
+								</DataTableMessage>
+							) : items.length === 0 ? (
+								<DataTableMessage colSpan={colSpan}>
+									{activeSearch ? (
+										t`No results for "${activeSearch}"`
+									) : (
+										<>
+											{t`No ${inlineLabel(collectionLabel, lingui.locale)} yet.`}{" "}
+											<Link
+												to="/content/$collection/new"
+												params={{ collection }}
+												search={{ locale: activeLocale }}
+												className="text-kumo-link underline"
+											>
+												{t`Create your first one`}
+											</Link>
+										</>
+									)}
+								</DataTableMessage>
+							) : paginatedItems.length === 0 ? (
+								<DataTableMessage colSpan={colSpan}>
+									{t`No results for "${activeSearch}"`}
+								</DataTableMessage>
+							) : (
+								paginatedItems.map((item) => (
+									<ContentListItem
+										key={item.id}
+										item={item}
+										visibleItems={paginatedItems}
+										collection={collection}
+										onDelete={deleteRow}
+										onDuplicate={!canDuplicate || canDuplicate(item) ? onDuplicate : undefined}
+										showLocale={!!i18n}
+										i18n={i18n}
+										urlPattern={urlPattern}
+										routable={routable}
+										titleField={titleField}
+										dateField={dateField}
+										listColumns={listColumns}
+										selectable={bulkEnabled}
+										selected={selectedIds.has(item.id)}
+										onToggleSelect={toggleOne}
+										extensionColumns={extensionColumns}
+									/>
+								))
+							)}
+						</tbody>
+					</DataTable>
 
-					{totalPages > 1 && (
+					{/* Pagination */}
+					{!pagination && totalPages > 1 && (
 						<div className="flex items-center justify-between">
 							<span className="text-sm text-kumo-subtle">
 								{renderItemCount({
@@ -631,68 +864,79 @@ export function ContentList({
 						</div>
 					)}
 
-					{hasMore && (
+					{/* Load more */}
+					{!pagination && hasMore && (
 						<div className="flex justify-center">
 							<Button variant="outline" onClick={onLoadMore} disabled={isLoading}>
 								{isLoading ? t`Loading...` : t`Load More`}
 							</Button>
 						</div>
 					)}
+
+					{pagination && pagination.totalCount > 0 && (
+						<ListPaginationFooter
+							key="all"
+							pagination={pagination}
+							pageSizes={CONTENT_LIST_PAGE_SIZES}
+							label={t`${collectionLabel} pagination`}
+						/>
+					)}
 				</>
 			) : (
 				<>
-					<div className="rounded-md border bg-kumo-base overflow-x-auto">
-						<table className="w-full">
-							<thead>
-								<tr className="border-b bg-kumo-tint/50">
-									<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
-										{t`Title`}
-									</th>
-									<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
-										{t`Deleted`}
-									</th>
-									<th scope="col" className="px-4 py-3 text-end text-sm font-medium">
-										{t`Actions`}
-									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-kumo-line">
-								{isTrashedLoading && trashedItems.length === 0 ? (
-									<tr>
-										<td colSpan={3} className="px-4 py-8 text-center text-kumo-subtle">
-											<span className="inline-flex items-center gap-2">
-												<Loader size="sm" />
-												{t`Loading...`}
-											</span>
-										</td>
-									</tr>
-								) : trashedItems.length === 0 ? (
-									<tr>
-										<td colSpan={3} className="px-4 py-8 text-center text-kumo-subtle">
-											{t`Trash is empty`}
-										</td>
-									</tr>
-								) : (
-									trashedItems.map((item) => (
-										<TrashedListItem
-											key={item.id}
-											item={item}
-											titleField={titleField}
-											onRestore={onRestore}
-											onPermanentDelete={onPermanentDelete}
-										/>
-									))
-								)}
-							</tbody>
-						</table>
-					</div>
+					{/* Trash Table */}
+					<DataTable aria-busy={trashPagination?.isPending || undefined}>
+						<thead>
+							<tr>
+								<th scope="col">{t`Title`}</th>
+								{i18n && <th scope="col">{t`Locale`}</th>}
+								<th scope="col">{t`Deleted`}</th>
+								<th scope="col" className="w-0">
+									<span className="sr-only">{t`Actions`}</span>
+								</th>
+							</tr>
+						</thead>
+						<tbody inert={trashPagination?.isPending || undefined}>
+							{trashedItems.length === 0 && (isTrashedLoading || trashPagination?.isPending) ? (
+								<DataTableMessage colSpan={trashColSpan}>
+									<span className="inline-flex items-center gap-2">
+										<Loader size="sm" />
+										{t`Loading...`}
+									</span>
+								</DataTableMessage>
+							) : trashedItems.length === 0 ? (
+								<DataTableMessage colSpan={trashColSpan}>{t`Trash is empty`}</DataTableMessage>
+							) : (
+								trashedItems.map((item) => (
+									<TrashedListItem
+										key={item.id}
+										item={item}
+										titleField={titleField}
+										showLocale={!!i18n}
+										onRestore={onRestore}
+										onPermanentDelete={onPermanentDelete}
+									/>
+								))
+							)}
+						</tbody>
+					</DataTable>
 
-					{hasMoreTrashed && (
+					{/* Load more trashed */}
+					{!trashPagination && hasMoreTrashed && (
 						<div className="flex justify-center">
 							<Button variant="outline" onClick={onLoadMoreTrashed} disabled={isTrashedLoading}>
 								{isTrashedLoading ? t`Loading...` : t`Load More`}
 							</Button>
 						</div>
+					)}
+
+					{trashPagination && trashPagination.totalCount > 0 && (
+						<ListPaginationFooter
+							key="trash"
+							pagination={trashPagination}
+							pageSizes={CONTENT_LIST_PAGE_SIZES}
+							label={t`Trash pagination`}
+						/>
 					)}
 				</>
 			)}
@@ -710,9 +954,17 @@ interface FilterBarProps {
 	onDateFilterChange?: (filter: ContentDateFilter) => void;
 	bylineFilter: BylineFilterState;
 	onBylineFilterChange?: (filter: BylineFilterState) => void;
+	/** Locale the list is showing, so the byline picker offers matching rows. */
 	locale?: string;
 }
 
+/**
+ * Filter controls for the content list: status, author, byline, and a date
+ * range over a chosen timestamp column. All controls report changes to
+ * the parent, which owns the state and refetches. Filtering happens
+ * server-side, so it works across the whole collection rather than the loaded
+ * page.
+ */
 function FilterBar({
 	statusFilter,
 	onStatusFilterChange,
@@ -757,6 +1009,8 @@ function FilterBar({
 		onStatusFilterChange("all");
 		onAuthorFilterChange?.("");
 		onDateFilterChange?.(EMPTY_DATE_FILTER);
+		// Clearing drops the selection but keeps the inferred-byline
+		// preference, which is a display choice rather than an active filter.
 		onBylineFilterChange?.({
 			...EMPTY_BYLINE_FILTER,
 			includeInferred: bylineFilter.includeInferred,
@@ -864,7 +1118,7 @@ function DateRangeFilter({
 			? t`Until ${formatter.format(to)}`
 			: t`Date range`;
 	const selected: DateRange | undefined = from ? { from, to } : to ? { from: to, to } : undefined;
-	const dayPickerLocale = getDayPickerLocale(i18n.locale);
+	const dayPickerLocale = useDateLocale();
 	const direction = getLocaleDir(i18n.locale);
 	const isUpperBoundOnly = !from && !!to;
 	const canUseAsEndDate = !!from && (!to || value.from === value.to);
@@ -952,16 +1206,23 @@ interface SortableThProps {
 	label: string;
 }
 
+/**
+ * Table header that doubles as a sort control when the parent opted in by
+ * passing `onSortChange`. When no callback is provided we fall back to a
+ * plain `<th>` so legacy callers (and screen readers) see exactly the same
+ * markup as before this change.
+ *
+ * The button's accessible name is just the column label — the sort state
+ * is conveyed via `aria-sort` on the <th>, which screen readers announce
+ * automatically. Adding a verbose aria-label would make each header re-read
+ * the sort instruction on every focus, which is noisy.
+ */
 function SortableTh({ field, sort, onSortChange, label }: SortableThProps) {
 	const isActive = sort?.field === field;
 	const direction = isActive ? sort?.direction : undefined;
 
 	if (!onSortChange) {
-		return (
-			<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
-				{label}
-			</th>
-		);
+		return <th scope="col">{label}</th>;
 	}
 
 	const ariaSort: "ascending" | "descending" | "none" = isActive
@@ -971,6 +1232,8 @@ function SortableTh({ field, sort, onSortChange, label }: SortableThProps) {
 		: "none";
 
 	const handleClick = () => {
+		// Default to descending for a new column; toggle direction when
+		// clicking the already-active one.
 		if (isActive) {
 			onSortChange({ field, direction: direction === "asc" ? "desc" : "asc" });
 		} else {
@@ -981,17 +1244,17 @@ function SortableTh({ field, sort, onSortChange, label }: SortableThProps) {
 	const Icon = isActive ? (direction === "asc" ? CaretUp : CaretDown) : CaretUpDown;
 
 	return (
-		<th scope="col" aria-sort={ariaSort} className="px-4 py-3 text-start text-sm font-medium">
+		<th scope="col" aria-sort={ariaSort}>
 			<button
 				type="button"
 				onClick={handleClick}
 				className={cn(
-					"inline-flex items-center gap-1 rounded text-kumo-default hover:text-kumo-link",
+					"inline-flex items-center gap-1.5 rounded hover:text-kumo-default",
 					"focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kumo-brand",
 				)}
 			>
 				<span>{label}</span>
-				<Icon className="h-3 w-3" aria-hidden="true" />
+				<Icon className={cn("size-3.5", !isActive && "opacity-50")} aria-hidden="true" />
 			</button>
 		</th>
 	);
@@ -1007,16 +1270,13 @@ function ExtensionColumnHeader({ column, collection, locale }: ExtensionColumnHe
 	const { i18n } = useLingui();
 	const { pluginId, extension } = column;
 	const Header = extension.header;
-	const label = i18n._(extension.label);
+	const label = declaredLabelTranslator(i18n, (id) => i18n._(id))(extension.label);
 
 	return (
 		<th
 			scope="col"
 			aria-label={label}
-			className={cn(
-				"px-4 py-3 text-sm font-medium",
-				extension.align === "end" ? "text-end" : "text-start",
-			)}
+			className={extension.align === "end" ? "text-end" : "text-start"}
 		>
 			<ContentListColumnBoundary
 				key={`${collection}:${locale ?? ""}:${pluginId}:${extension.id}`}
@@ -1030,6 +1290,16 @@ function ExtensionColumnHeader({ column, collection, locale }: ExtensionColumnHe
 	);
 }
 
+/**
+ * Render the row-count line above pagination. The rules are:
+ * - A search query always wins — say how many matches there are. In
+ *   server-search mode the server reports the full match count via `total`;
+ *   `filteredCount` is only the loaded page, so it would undercount.
+ * - When the server reported a total, use it (no `+` suffix needed —
+ *   we know the count).
+ * - Otherwise fall back to the pre-refactor behavior: loaded count,
+ *   with `+` when there are more pages the user hasn't fetched yet.
+ */
 function renderItemCount({
 	searchQuery,
 	filteredCount,
@@ -1069,6 +1339,7 @@ interface ContentListItemProps {
 	onDelete?: (id: string) => void;
 	onDuplicate?: (id: string) => void;
 	showLocale?: boolean;
+	i18n?: { defaultLocale: string; locales: string[]; prefixDefaultLocale?: boolean };
 	urlPattern?: string;
 	routable?: boolean;
 	titleField?: string;
@@ -1087,6 +1358,7 @@ function ContentListItem({
 	onDelete,
 	onDuplicate,
 	showLocale,
+	i18n,
 	urlPattern,
 	routable,
 	titleField,
@@ -1097,15 +1369,18 @@ function ContentListItem({
 	onToggleSelect,
 	extensionColumns,
 }: ContentListItemProps) {
-	const { t } = useLingui();
+	const { t, i18n: lingui } = useLingui();
 	const title = getEntryTitle(item, titleField);
+	// A configured dateField drives the Date column; fall back to the
+	// last-updated / created date when it's unset, empty, or unparseable.
 	const customDate = dateField ? parseListDate(item.data[dateField]) : null;
 	const date = customDate ?? parseTimestamp(item.updatedAt || item.createdAt);
+	const [trashOpen, setTrashOpen] = React.useState(false);
 
 	return (
-		<tr className={cn("hover:bg-kumo-tint/25", selected && "bg-kumo-tint/40")}>
+		<tr data-selected={selected || undefined}>
 			{selectable && (
-				<td className="px-4 py-3">
+				<td>
 					<Checkbox
 						checked={!!selected}
 						onCheckedChange={() => onToggleSelect?.(item.id)}
@@ -1113,7 +1388,7 @@ function ContentListItem({
 					/>
 				</td>
 			)}
-			<td className="px-4 py-3">
+			<td>
 				<Link
 					to="/content/$collection/$id"
 					params={{ collection, id: item.id }}
@@ -1126,31 +1401,28 @@ function ContentListItem({
 			{listColumns.map((column) => (
 				<ContentListCustomCell key={column.slug} column={column} value={item.data[column.slug]} />
 			))}
-			<td className="px-4 py-3">
+			<td>
 				<StatusBadge
 					status={item.status}
-					hasPendingChanges={!!item.draftRevisionId && item.draftRevisionId !== item.liveRevisionId}
+					hasPendingChanges={getDraftStatus(item) === "published_with_changes"}
 				/>
 			</td>
 			{showLocale && (
-				<td className="px-4 py-3">
+				<td>
 					<span className="bg-kumo-tint rounded px-1.5 py-0.5 text-xs font-semibold uppercase">
 						{item.locale}
 					</span>
 				</td>
 			)}
-			<td data-testid="content-updated" className="px-4 py-3 text-sm text-kumo-subtle">
-				{date.toLocaleDateString()}
+			<td data-testid="content-updated" className="whitespace-nowrap text-kumo-subtle">
+				<bdi>{formatDate(date, lingui.locale)}</bdi>
 			</td>
 			{extensionColumns?.map(({ pluginId, extension }) => {
 				const Cell = extension.cell;
 				return (
 					<td
 						key={`${pluginId}:${extension.id}`}
-						className={cn(
-							"px-4 py-3 text-sm",
-							extension.align === "end" ? "text-end" : "text-start",
-						)}
+						className={extension.align === "end" ? "text-end" : "text-start"}
 					>
 						<ContentListColumnBoundary
 							key={`${collection}:${item.locale}:${item.id}:${pluginId}:${extension.id}`}
@@ -1168,72 +1440,76 @@ function ContentListItem({
 					</td>
 				);
 			})}
-			<td className="px-4 py-3 text-end">
-				<div className="flex items-center justify-end space-x-1">
-					{routable !== false && item.status === "published" && item.slug && (
-						<LinkButton
-							href={contentUrl(collection, item.slug, urlPattern)}
-							external
-							variant="ghost"
-							shape="square"
-							aria-label={t`View published ${title}`}
-							icon={<ArrowSquareOut />}
-						/>
-					)}
-					<RouterLinkButton
-						to="/content/$collection/$id"
-						params={{ collection, id: item.id }}
-						search={{ locale: item.locale }}
-						aria-label={t`Edit ${title}`}
-						variant="ghost"
-						shape="square"
-						icon={<Pencil />}
-					/>
-					<Button
-						variant="ghost"
-						shape="square"
-						aria-label={t`Duplicate ${title}`}
-						onClick={() => onDuplicate?.(item.id)}
+			<td className="text-end">
+				<RowActionsMenu label={t`Actions for ${title}`}>
+					<DropdownMenu.LinkItem
+						closeOnClick
+						icon={<Pencil className="me-2 size-4" aria-hidden="true" />}
+						render={
+							<Link
+								to="/content/$collection/$id"
+								params={{ collection, id: item.id }}
+								search={{ locale: item.locale }}
+							/>
+						}
 					>
-						<Copy className="h-4 w-4" aria-hidden="true" />
-					</Button>
-					<Dialog.Root disablePointerDismissal>
-						<Dialog.Trigger
-							render={(p) => (
-								<Button
-									{...p}
-									variant="ghost"
-									shape="square"
-									aria-label={t`Move ${title} to trash`}
-								>
-									<Trash className="h-4 w-4 text-kumo-danger" aria-hidden="true" />
-								</Button>
-							)}
-						/>
-						<Dialog className="p-6" size="sm">
-							<Dialog.Title className="text-lg font-semibold">{t`Move to Trash?`}</Dialog.Title>
-							<Dialog.Description className="text-kumo-subtle">
-								{t`Move "${title}" to trash? You can restore it later.`}
-							</Dialog.Description>
-							<div className="mt-6 flex justify-end gap-2">
-								<Dialog.Close
-									render={(p) => (
-										<Button {...p} variant="secondary">
-											{t`Cancel`}
-										</Button>
-									)}
-								/>
-								<Dialog.Close
-									render={(p) => (
-										<Button {...p} variant="destructive" onClick={() => onDelete?.(item.id)}>
-											{t`Move to Trash`}
-										</Button>
-									)}
-								/>
-							</div>
-						</Dialog>
-					</Dialog.Root>
-				</div>
+						{t`Edit`}
+					</DropdownMenu.LinkItem>
+					{routable !== false && item.status === "published" && item.slug && (
+						<DropdownMenu.LinkItem
+							closeOnClick
+							icon={<ArrowSquareOut className="me-2 size-4" aria-hidden="true" />}
+							href={contentUrl(collection, item.slug, urlPattern, {
+								locale: item.locale,
+								i18n,
+								id: item.id,
+								date: item.publishedAt,
+							})}
+							target="_blank"
+							rel="noreferrer"
+						>
+							{t`View published`}
+						</DropdownMenu.LinkItem>
+					)}
+					{onDuplicate && (
+						<DropdownMenu.Item
+							icon={<Copy className="me-2 size-4" aria-hidden="true" />}
+							onClick={() => onDuplicate(item.id)}
+						>
+							{t`Duplicate`}
+						</DropdownMenu.Item>
+					)}
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item
+						variant="danger"
+						icon={<Trash className="me-2 size-4" aria-hidden="true" />}
+						onClick={() => setTrashOpen(true)}
+					>
+						{t`Move to trash`}
+					</DropdownMenu.Item>
+				</RowActionsMenu>
+				<Dialog.Root open={trashOpen} onOpenChange={setTrashOpen} disablePointerDismissal>
+					<Dialog className="p-6" size="sm">
+						<Dialog.Title className="text-lg font-semibold">{t`Move to Trash?`}</Dialog.Title>
+						<Dialog.Description className="text-kumo-subtle">
+							{t`Move "${title}" to trash? You can restore it later.`}
+						</Dialog.Description>
+						<div className="mt-6 flex justify-end gap-2">
+							<Dialog.Close
+								render={(p) => (
+									<Button {...p} variant="secondary">
+										{t`Cancel`}
+									</Button>
+								)}
+							/>
+							<Dialog.Close
+								render={<Button variant="destructive" onClick={() => onDelete?.(item.id)} />}
+							>
+								{t`Move to Trash`}
+							</Dialog.Close>
+						</div>
+					</Dialog>
+				</Dialog.Root>
 			</td>
 		</tr>
 	);
@@ -1254,7 +1530,7 @@ function ContentListCustomCell({
 		trueLabel: t`Yes`,
 	});
 	return (
-		<td className="max-w-48 px-4 py-3 text-sm">
+		<td className="max-w-48">
 			<span className="block truncate" title={text}>
 				{text}
 			</span>
@@ -1338,74 +1614,79 @@ function scalarListColumnValue(value: unknown): string | undefined {
 interface TrashedListItemProps {
 	item: TrashedContentItem;
 	titleField?: string;
+	showLocale?: boolean;
 	onRestore?: (id: string) => void;
 	onPermanentDelete?: (id: string) => void;
 }
 
-function TrashedListItem({ item, titleField, onRestore, onPermanentDelete }: TrashedListItemProps) {
-	const { t } = useLingui();
+function TrashedListItem({
+	item,
+	titleField,
+	showLocale,
+	onRestore,
+	onPermanentDelete,
+}: TrashedListItemProps) {
+	const { t, i18n } = useLingui();
 	const title = getEntryTitle(item, titleField);
 	const deletedDate = parseTimestamp(item.deletedAt);
+	const [deleteOpen, setDeleteOpen] = React.useState(false);
 
 	return (
-		<tr className="hover:bg-kumo-tint/25">
-			<td className="px-4 py-3">
+		<tr>
+			<td>
 				<span className="font-medium text-kumo-subtle">{title}</span>
 			</td>
-			<td className="px-4 py-3 text-sm text-kumo-subtle">{deletedDate.toLocaleDateString()}</td>
-			<td className="px-4 py-3 text-end">
-				<div className="flex items-center justify-end space-x-1">
-					<Button
-						variant="ghost"
-						shape="square"
-						aria-label={t`Restore ${title}`}
+			{showLocale && (
+				<td>
+					<span className="bg-kumo-tint rounded px-1.5 py-0.5 text-xs font-semibold uppercase">
+						{item.locale}
+					</span>
+				</td>
+			)}
+			<td className="whitespace-nowrap text-kumo-subtle">
+				<bdi>{formatDate(deletedDate, i18n.locale)}</bdi>
+			</td>
+			<td className="text-end">
+				<RowActionsMenu label={t`Actions for ${title}`}>
+					<DropdownMenu.Item
+						icon={<ArrowCounterClockwise className="me-2 size-4" aria-hidden="true" />}
 						onClick={() => onRestore?.(item.id)}
 					>
-						<ArrowCounterClockwise className="h-4 w-4 text-kumo-link" aria-hidden="true" />
-					</Button>
-					<Dialog.Root disablePointerDismissal>
-						<Dialog.Trigger
-							render={(p) => (
-								<Button
-									{...p}
-									variant="ghost"
-									shape="square"
-									aria-label={t`Permanently delete ${title}`}
-								>
-									<Trash className="h-4 w-4 text-kumo-danger" aria-hidden="true" />
-								</Button>
-							)}
-						/>
-						<Dialog className="p-6" size="sm">
-							<Dialog.Title className="text-lg font-semibold">
-								{t`Delete Permanently?`}
-							</Dialog.Title>
-							<Dialog.Description className="text-kumo-subtle">
-								{t`Permanently delete "${title}"? This cannot be undone.`}
-							</Dialog.Description>
-							<div className="mt-6 flex justify-end gap-2">
-								<Dialog.Close
-									render={(p) => (
-										<Button {...p} variant="secondary">
-											{t`Cancel`}
-										</Button>
-									)}
-								/>
-								<Dialog.Close
-									render={(p) => (
-										<Button
-											{...p}
-											variant="destructive"
-											onClick={() => onPermanentDelete?.(item.id)}
-										>
-											{t`Delete Permanently`}
-										</Button>
-									)}
-								/>
-							</div>
-						</Dialog>
-					</Dialog.Root>
-				</div>
+						{t`Restore`}
+					</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item
+						variant="danger"
+						icon={<Trash className="me-2 size-4" aria-hidden="true" />}
+						onClick={() => setDeleteOpen(true)}
+					>
+						{t`Delete permanently`}
+					</DropdownMenu.Item>
+				</RowActionsMenu>
+				<Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen} disablePointerDismissal>
+					<Dialog className="p-6" size="sm">
+						<Dialog.Title className="text-lg font-semibold">{t`Delete Permanently?`}</Dialog.Title>
+						<Dialog.Description className="text-kumo-subtle">
+							{t`Permanently delete "${title}"? This cannot be undone.`}
+						</Dialog.Description>
+						<div className="mt-6 flex justify-end gap-2">
+							<Dialog.Close
+								render={(p) => (
+									<Button {...p} variant="secondary">
+										{t`Cancel`}
+									</Button>
+								)}
+							/>
+							<Dialog.Close
+								render={
+									<Button variant="destructive" onClick={() => onPermanentDelete?.(item.id)} />
+								}
+							>
+								{t`Delete Permanently`}
+							</Dialog.Close>
+						</div>
+					</Dialog>
+				</Dialog.Root>
 			</td>
 		</tr>
 	);

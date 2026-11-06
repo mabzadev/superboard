@@ -8,6 +8,8 @@ import { bylineUpdateBody } from "#api/schemas.js";
 import { invalidateBylineCache } from "#bylines/index.js";
 import { BylineRepository } from "#db/repositories/byline.js";
 
+import { after } from "../../../../../../after.js";
+
 export const prerender = false;
 
 export const GET: APIRoute = async ({ params, locals }) => {
@@ -48,10 +50,21 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 		websiteUrl: body.websiteUrl ?? null,
 		userId: body.userId ?? null,
 		isGuest: body.isGuest,
+		// Forward `customFields` only when present so the repo treats an
+		// omitted key as "leave existing values untouched". An empty
+		// object also no-ops by repo convention — see
+		// `BylineRepository.update`. Validation (unknown slug, type
+		// mismatch, select-choice) happens inside the repo and surfaces
+		// as `EmDashValidationError`, which the handler maps to a 400
+		// `VALIDATION_ERROR` for `unwrapResult` / `mapErrorStatus`.
 		customFields: body.customFields,
 	});
 
-	if (result.success) invalidateBylineCache();
+	if (result.success) {
+		invalidateBylineCache();
+		const byline = result.data;
+		after(() => emdash.hooks.runBylineAfterSave(byline, false));
+	}
 	return unwrapResult(result);
 };
 
@@ -66,9 +79,13 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
 	try {
 		const repo = new BylineRepository(emdash.db);
+		const existing = emdash.hooks.hasHooks("byline:afterDelete")
+			? await repo.findById(params.id!)
+			: null;
 		const deleted = await repo.delete(params.id!);
 		if (!deleted) return apiError("NOT_FOUND", "Byline not found", 404);
 		invalidateBylineCache();
+		if (existing) after(() => emdash.hooks.runBylineAfterDelete(existing));
 		return apiSuccess({ deleted: true });
 	} catch (error) {
 		return handleError(error, "Failed to delete byline", "BYLINE_DELETE_ERROR");

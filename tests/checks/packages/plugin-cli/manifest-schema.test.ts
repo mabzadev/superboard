@@ -1,8 +1,23 @@
+/**
+ * Coverage for the `emdash-plugin.jsonc` Zod schema.
+ *
+ * The schema is the authoring contract with plugin publishers. A regression
+ * here means user-visible behaviour change in the field names, validation
+ * rules, or error messages that publishers rely on. Tests are organised by
+ * field so a future field add lands cleanly alongside its own test block.
+ *
+ * Where applicable, tests assert on the EXACT Zod issue path / message
+ * because those strings surface in `emdash-plugin validate` output --
+ * users see them, and silently changing them breaks anyone who built
+ * tooling around the strings.
+ */
+
 import { describe, expect, it } from "vitest";
 
 import {
 	ArtifactFileSchema,
 	ArtifactsSchema,
+	AdminSchema,
 	AuthorSchema,
 	LicenseSchema,
 	ManifestSchema,
@@ -12,6 +27,134 @@ import {
 	SectionsSchema,
 	SecurityContactSchema,
 } from "../../../../packages/plugin-cli/src/manifest/schema.js";
+
+describe("AdminSchema", () => {
+	it("accepts settings and declarative field widgets", () => {
+		const admin = {
+			settingsSchema: {
+				enabled: { type: "boolean", label: "Enabled", default: true },
+			},
+			fieldWidgets: [
+				{
+					name: "event-picker",
+					label: "Event",
+					fieldTypes: ["string"],
+					elements: [{ type: "input", action_id: "event" }],
+				},
+			],
+		};
+
+		expect(AdminSchema.parse(admin)).toEqual(admin);
+	});
+
+	it("accepts bounded saved-entry panels and confirmed actions", () => {
+		const admin = {
+			editorPanels: [
+				{
+					id: "health",
+					title: "Health",
+					route: "entry/health",
+					collections: ["posts"],
+					draft: { read: { translatable: true }, patch: { fields: ["title"] } },
+				},
+			],
+			editorActions: [
+				{
+					id: "repair",
+					label: "Repair",
+					route: "entry/repair",
+					placement: "overflow",
+					style: "danger",
+					confirm: { title: "Repair?", text: "Change entry", confirm: "Repair", deny: "Cancel" },
+				},
+			],
+		};
+		expect(AdminSchema.parse(admin)).toEqual(admin);
+	});
+
+	it("requires explicit collections and a bounded selector for draft access", () => {
+		expect(
+			AdminSchema.safeParse({
+				editorPanels: [
+					{
+						id: "translate",
+						title: "Translate",
+						route: "translate",
+						collections: ["posts"],
+						draft: {},
+					},
+				],
+			}).success,
+		).toBe(false);
+		expect(
+			AdminSchema.safeParse({
+				editorPanels: [
+					{
+						id: "translate",
+						title: "Translate",
+						route: "translate",
+						draft: { read: { translatable: true } },
+					},
+				],
+			}).success,
+		).toBe(false);
+		expect(
+			AdminSchema.safeParse({
+				editorActions: [
+					{
+						id: "translate",
+						label: "Translate",
+						route: "translate",
+						placement: "toolbar",
+						collections: ["posts"],
+						draft: { patch: {} },
+					},
+				],
+			}).success,
+		).toBe(false);
+	});
+
+	it.each([
+		[
+			"duplicate panel ids",
+			{
+				editorPanels: [
+					{ id: "health", title: "Health", route: "health" },
+					{ id: "health", title: "Other", route: "other" },
+				],
+			},
+		],
+		[
+			"danger action without confirmation",
+			{
+				editorActions: [
+					{
+						id: "repair",
+						label: "Repair",
+						route: "repair",
+						placement: "toolbar",
+						style: "danger",
+					},
+				],
+			},
+		],
+		[
+			"duplicate collection filters",
+			{
+				editorPanels: [
+					{
+						id: "health",
+						title: "Health",
+						route: "health",
+						collections: ["posts", "posts"],
+					},
+				],
+			},
+		],
+	])("rejects %s", (_label, admin) => {
+		expect(AdminSchema.safeParse(admin).success).toBe(false);
+	});
+});
 
 describe("LicenseSchema", () => {
 	it("accepts a typical SPDX expression", () => {
@@ -88,6 +231,7 @@ describe("SecurityContactSchema", () => {
 		const result = SecurityContactSchema.safeParse({});
 		expect(result.success).toBe(false);
 		if (!result.success) {
+			// The exact message users see at validate-time; pin it.
 			expect(result.error.issues[0]?.message).toContain("at least one of `url` or `email`");
 		}
 	});
@@ -243,6 +387,9 @@ describe("SectionsSchema", () => {
 	});
 
 	it("rejects an inline section over the 20000-byte cap while under the grapheme cap", () => {
+		// A 25-byte family emoji (one grapheme via ZWJ). 1000 of them = 25000
+		// bytes (over the byte cap) but only 1000 graphemes (under the
+		// grapheme cap), so the byte check is the one that fires.
 		const result = SectionsSchema.safeParse({ description: "👨‍👩‍👧‍👦".repeat(1000) });
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -251,6 +398,9 @@ describe("SectionsSchema", () => {
 	});
 
 	it("rejects an inline section over the 2000-grapheme cap while under the byte cap", () => {
+		// 2001 emoji. Each emoji is one grapheme but several UTF-8 bytes, so
+		// this trips the grapheme cap without reaching 20000 bytes (2001 * 4
+		// = 8004 bytes).
 		const result = SectionsSchema.safeParse({ faq: "😀".repeat(2001) });
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -259,6 +409,8 @@ describe("SectionsSchema", () => {
 	});
 
 	it("accepts an inline section exactly at the grapheme cap", () => {
+		// 2000 ASCII chars: 2000 graphemes (at the cap) and 2000 bytes (under
+		// the byte cap). Both limits satisfied.
 		const result = SectionsSchema.safeParse({ changelog: "a".repeat(2000) });
 		expect(result.success).toBe(true);
 	});
@@ -282,6 +434,15 @@ describe("ManifestSchema (full document)", () => {
 	it("accepts the minimal required shape", () => {
 		const result = ManifestSchema.safeParse(minimal);
 		expect(result.success).toBe(true);
+	});
+
+	it("accepts redirect read and write capabilities", () => {
+		expect(
+			ManifestSchema.safeParse({
+				...minimal,
+				capabilities: ["redirects:read", "redirects:write"],
+			}).success,
+		).toBe(true);
 	});
 
 	it("accepts a manifest with a release.artifacts block", () => {
@@ -394,7 +555,7 @@ describe("ManifestSchema (full document)", () => {
 	it("rejects unknown top-level keys (strict mode catches typos)", () => {
 		const result = ManifestSchema.safeParse({
 			...minimal,
-			licens: "MIT",
+			licens: "MIT", // typo
 		});
 		expect(result.success).toBe(false);
 	});
@@ -424,6 +585,45 @@ describe("ManifestSchema (full document)", () => {
 			keywords: ["a", "b", "c", "d", "e", "f"],
 		});
 		expect(result.success).toBe(false);
+	});
+
+	it.each([
+		["name", { name: "n".repeat(101) }, ["name"], "name must be <= 100 graphemes"],
+		[
+			"description",
+			{ description: "d".repeat(141) },
+			["description"],
+			"description must be <= 140 graphemes",
+		],
+		[
+			"author.name",
+			{ author: { name: "a".repeat(65) } },
+			["author", "name"],
+			"author.name must be <= 64 graphemes",
+		],
+		[
+			"a keyword",
+			{ keywords: ["k".repeat(65)] },
+			["keywords", 0],
+			"each keyword must be <= 64 graphemes",
+		],
+	])("rejects %s over the registry profile limit", (_field, fields, path, message) => {
+		const result = ManifestSchema.safeParse({ ...minimal, ...fields });
+		expect(result.error?.issues).toEqual([expect.objectContaining({ path, message })]);
+	});
+
+	it.each([
+		["name", { name: "n".repeat(100) }],
+		["description", { description: "d".repeat(140) }],
+		["author.name", { author: { name: "a".repeat(64) } }],
+		["a keyword", { keywords: ["k".repeat(64)] }],
+	])("accepts %s at the registry profile limit", (_field, fields) => {
+		expect(ManifestSchema.safeParse({ ...minimal, ...fields }).success).toBe(true);
+	});
+
+	it("counts a letter with a combining accent as one grapheme", () => {
+		const result = ManifestSchema.safeParse({ ...minimal, description: "e\u0301".repeat(140) });
+		expect(result.success).toBe(true);
 	});
 
 	it("accepts a full populated manifest", () => {

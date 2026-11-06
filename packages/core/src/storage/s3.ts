@@ -1,3 +1,10 @@
+/**
+ * S3-Compatible Storage Implementation
+ *
+ * Uses the AWS SDK v3 for S3 operations.
+ * Works with AWS S3, Cloudflare R2, Minio, and other S3-compatible services.
+ */
+
 import {
 	S3Client,
 	type S3ClientConfig,
@@ -15,6 +22,8 @@ import type {
 	Storage,
 	S3StorageConfig,
 	UploadResult,
+	ByteRange,
+	DownloadOptions,
 	DownloadResult,
 	ListResult,
 	ListOptions,
@@ -49,6 +58,12 @@ function isConfigKey(key: unknown): key is keyof S3StorageConfig {
 	return typeof key === "string" && key in ENV_KEYS;
 }
 
+/**
+ * Build the merged config: for each field, use the explicit value if present,
+ * otherwise fall back to the corresponding S3_* env var.  Validate once on the
+ * final merged result so a malformed env var never breaks the build when the
+ * caller provides that field explicitly.
+ */
 export function resolveS3Config(partial: Record<string, unknown>): S3StorageConfig {
 	const raw: Record<string, unknown> = {};
 	for (const [field, envKey] of Object.entries(ENV_KEYS)) {
@@ -99,11 +114,31 @@ export function resolveS3Config(partial: Record<string, unknown>): S3StorageConf
 }
 
 const TRAILING_SLASH_PATTERN = /\/$/;
+const CONTENT_RANGE_PATTERN = /^bytes (\d+)-(\d+)\/(\d+)$/;
 
+/** Type guard for AWS SDK errors (have a `name` property) */
 function hasErrorName(error: unknown): error is Error & { name: string } {
 	return error instanceof Error && typeof error.name === "string";
 }
 
+function formatRangeHeader(range: ByteRange): string {
+	if ("suffix" in range) return `bytes=-${range.suffix}`;
+	const end = range.length === undefined ? "" : range.offset + range.length - 1;
+	return `bytes=${range.offset}-${end}`;
+}
+
+function parseContentRange(
+	header: string,
+): { offset: number; length: number; size: number } | undefined {
+	const match = CONTENT_RANGE_PATTERN.exec(header);
+	if (!match) return undefined;
+	const offset = Number(match[1]);
+	return { offset, length: Number(match[2]) - offset + 1, size: Number(match[3]) };
+}
+
+/**
+ * S3-compatible storage implementation
+ */
 export class S3Storage implements Storage {
 	private client: S3Client;
 	private bucket: string;
@@ -115,10 +150,13 @@ export class S3Storage implements Storage {
 		this.publicUrl = config.publicUrl;
 		this.endpoint = config.endpoint;
 
+		// S3ClientConfig types `credentials` as required, but the SDK accepts
+		// omitted credentials at runtime (falls back to the provider chain).
 		/* eslint-disable typescript/no-unsafe-type-assertion -- upstream @aws-sdk/client-s3 overstates required fields */
 		const clientConfig = {
 			endpoint: config.endpoint,
 			region: config.region || "auto",
+			// Required for R2 and some S3-compatible services
 			forcePathStyle: true,
 			...(config.accessKeyId && config.secretAccessKey
 				? {
@@ -137,8 +175,10 @@ export class S3Storage implements Storage {
 		key: string;
 		body: Buffer | Uint8Array | ReadableStream<Uint8Array>;
 		contentType: string;
+		cacheControl?: string;
 	}): Promise<UploadResult> {
 		try {
+			// Convert ReadableStream to Buffer if needed
 			let body: Buffer | Uint8Array;
 			if (options.body instanceof ReadableStream) {
 				const chunks: Uint8Array[] = [];
@@ -159,6 +199,7 @@ export class S3Storage implements Storage {
 					Key: options.key,
 					Body: body,
 					ContentType: options.contentType,
+					CacheControl: options.cacheControl,
 				}),
 			);
 
@@ -172,25 +213,33 @@ export class S3Storage implements Storage {
 		}
 	}
 
-	async download(key: string): Promise<DownloadResult> {
+	async download(key: string, options: DownloadOptions = {}): Promise<DownloadResult> {
 		try {
-			const response = await this.client.send(
-				new GetObjectCommand({
-					Bucket: this.bucket,
-					Key: key,
-				}),
-			);
+			const { response, served } = await this.getObject(key, options.range);
 
 			if (!response.Body) {
 				throw new EmDashStorageError(`File not found: ${key}`, "NOT_FOUND");
 			}
 
+			// Convert SDK stream to web ReadableStream
 			const body = response.Body.transformToWebStream();
+			const contentType = response.ContentType || "application/octet-stream";
+
+			if (served) {
+				return {
+					body,
+					contentType,
+					size: served.size,
+					lastModified: response.LastModified,
+					range: { offset: served.offset, length: served.length },
+				};
+			}
 
 			return {
 				body,
-				contentType: response.ContentType || "application/octet-stream",
+				contentType,
 				size: response.ContentLength || 0,
+				lastModified: response.LastModified,
 			};
 		} catch (error) {
 			if (
@@ -203,6 +252,25 @@ export class S3Storage implements Storage {
 		}
 	}
 
+	/** Get the object, or all of it when the service can't serve `range` */
+	private async getObject(key: string, range: ByteRange | undefined) {
+		const get = (rangeHeader?: string) =>
+			this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key, Range: rangeHeader }));
+		if (range) {
+			try {
+				const response = await get(formatRangeHeader(range));
+				// A service that ignores `Range` sends the whole object without `Content-Range`.
+				if (!response.ContentRange) return { response };
+				const served = parseContentRange(response.ContentRange);
+				if (served) return { response, served };
+				await response.Body?.transformToWebStream().cancel();
+			} catch (error) {
+				if (!hasErrorName(error) || error.name !== "InvalidRange") throw error;
+			}
+		}
+		return { response: await get() };
+	}
+
 	async delete(key: string): Promise<void> {
 		try {
 			await this.client.send(
@@ -212,6 +280,7 @@ export class S3Storage implements Storage {
 				}),
 			);
 		} catch (error) {
+			// S3 delete is idempotent, so we ignore "not found" errors
 			if (!hasErrorName(error) || error.name !== "NoSuchKey") {
 				throw new EmDashStorageError(`Failed to delete file: ${key}`, "DELETE_FAILED", error);
 			}
@@ -265,7 +334,7 @@ export class S3Storage implements Storage {
 
 	async getSignedUploadUrl(options: SignedUploadOptions): Promise<SignedUploadUrl> {
 		try {
-			const expiresIn = options.expiresIn || 3600;
+			const expiresIn = options.expiresIn || 3600; // 1 hour default
 
 			const command = new PutObjectCommand({
 				Bucket: this.bucket,
@@ -300,10 +369,16 @@ export class S3Storage implements Storage {
 		if (this.publicUrl) {
 			return `${this.publicUrl.replace(TRAILING_SLASH_PATTERN, "")}/${key}`;
 		}
+		// No public URL configured; defer to the /_emdash/api/media/file route.
 		return `/_emdash/api/media/file/${key}`;
 	}
 }
 
+/**
+ * Create S3 storage adapter
+ * This is the factory function called at runtime.
+ * Config fields are merged with S3_* env vars; env vars fill in any missing fields.
+ */
 export function createStorage(config: Record<string, unknown>): Storage {
 	return new S3Storage(resolveS3Config(config));
 }

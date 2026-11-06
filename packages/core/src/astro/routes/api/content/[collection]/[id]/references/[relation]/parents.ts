@@ -1,3 +1,9 @@
+/**
+ * Content-entry reference parents endpoint (child side, read-only backlink)
+ *
+ * GET /_emdash/api/content/:collection/:id/references/:relation/parents
+ */
+
 import { hasPermission } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 

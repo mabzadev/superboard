@@ -1,3 +1,9 @@
+/**
+ * Trash endpoints for content collection - injected by EmDash integration
+ *
+ * GET /_emdash/api/content/{collection}/trash - List trashed items
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

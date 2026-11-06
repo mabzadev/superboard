@@ -1,10 +1,20 @@
+/**
+ * Plugin Block Node for TipTap
+ *
+ * Renders embed blocks (YouTube, Vimeo, tweets, etc.) with:
+ * - Selection indicator with ring
+ * - Inline URL editing via popover
+ * - Drag handle in left gutter
+ * - Action buttons on hover/selection
+ * - Keyboard support
+ */
+
 import { Button, Input } from "@cloudflare/kumo";
 import type { Element } from "@emdash-cms/blocks";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import {
-	DotsSixVertical,
 	Trash,
 	Pencil,
 	X,
@@ -23,7 +33,13 @@ import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
 import * as React from "react";
 
 import { cn } from "../../lib/utils";
+import { PORTABLE_TEXT_BLOCK_ATTR } from "./portableTextIdentity.js";
 
+const EMPTY_REGISTRY = new Map<string, PluginBlockDef>();
+
+/**
+ * Plugin block definition for slash commands
+ */
 export interface PluginBlockDef {
 	type: string;
 	pluginId: string;
@@ -31,10 +47,19 @@ export interface PluginBlockDef {
 	icon?: string;
 	description?: string;
 	placeholder?: string;
+	/** Block Kit form fields. If declared, replaces the simple URL input. */
 	fields?: Element[];
+	/**
+	 * Optional display category in the slash menu. Defaults to "Embeds" when omitted.
+	 */
 	category?: string;
 }
 
+// =============================================================================
+// Plugin Block Registry (stored per-editor instance via TipTap extension storage)
+// =============================================================================
+
+/** Register plugin block definitions into editor storage so the node view can look up metadata */
 export function registerPluginBlocks(
 	editor: { storage: Record<string, Record<string, unknown>> },
 	blocks: PluginBlockDef[],
@@ -46,16 +71,20 @@ export function registerPluginBlocks(
 	const storage = editor.storage.pluginBlock;
 	if (storage) {
 		storage.registry = registry;
+		const listeners = storage.registryListeners as Set<() => void> | undefined;
+		listeners?.forEach((listener) => listener());
 	}
 }
 
+/** Read the registry from editor storage */
 function getRegistry(editor: {
 	storage: Record<string, Record<string, unknown>>;
 }): Map<string, PluginBlockDef> {
 	const storage = editor.storage.pluginBlock;
-	return (storage?.registry as Map<string, PluginBlockDef>) ?? new Map();
+	return (storage?.registry as Map<string, PluginBlockDef>) ?? EMPTY_REGISTRY;
 }
 
+/** Named icon map: icon key → React component */
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 	video: YoutubeLogo,
 	code: Code,
@@ -64,6 +93,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 	form: ListBullets,
 };
 
+/** Resolve an icon key to a React component */
 function resolveIcon(iconKey?: string): React.ComponentType<{ className?: string }> {
 	if (iconKey && ICON_MAP[iconKey]) {
 		return ICON_MAP[iconKey];
@@ -71,6 +101,10 @@ function resolveIcon(iconKey?: string): React.ComponentType<{ className?: string
 	return Cube;
 }
 
+/**
+ * Get icon component and metadata for embed block types.
+ * Reads from the plugin block registry in editor storage.
+ */
 function getEmbedMeta(
 	blockType: string,
 	registry: Map<string, PluginBlockDef>,
@@ -78,7 +112,9 @@ function getEmbedMeta(
 	Icon: React.ComponentType<{ className?: string }>;
 	label: string;
 	color: string;
+	/** Plugin-supplied placeholder (rendered as-is, not translated). */
 	placeholder?: string;
+	/** Translated fallback when no plugin placeholder is supplied. */
 	placeholderFallback: MessageDescriptor;
 } {
 	const def = registry.get(blockType);
@@ -92,6 +128,7 @@ function getEmbedMeta(
 		};
 	}
 
+	// Fallback for unregistered block types
 	return {
 		Icon: Cube,
 		label: blockType.charAt(0).toUpperCase() + blockType.slice(1),
@@ -100,19 +137,25 @@ function getEmbedMeta(
 	};
 }
 
+/**
+ * Extract display ID from URL for cleaner presentation
+ */
 function getDisplayId(id: string, blockType: string): string {
 	try {
 		const url = new URL(id);
 
 		switch (blockType) {
 			case "youtube": {
+				// youtube.com/watch?v=VIDEO_ID or youtu.be/VIDEO_ID
 				const videoId = url.searchParams.get("v") || url.pathname.split("/").pop();
 				return videoId || id;
 			}
 			case "vimeo": {
+				// vimeo.com/VIDEO_ID
 				return url.pathname.split("/").find(Boolean) || id;
 			}
 			case "tweet": {
+				// twitter.com/user/status/TWEET_ID
 				const parts = url.pathname.split("/");
 				const statusIndex = parts.indexOf("status");
 				const tweetId = parts[statusIndex + 1];
@@ -122,6 +165,7 @@ function getDisplayId(id: string, blockType: string): string {
 				return id;
 			}
 			case "gist": {
+				// gist.github.com/user/GIST_ID
 				const parts = url.pathname.split("/").filter(Boolean);
 				if (parts.length >= 2 && parts[0] && parts[1]) {
 					return `${parts[0]}/${parts[1].slice(0, 8)}...`;
@@ -129,13 +173,18 @@ function getDisplayId(id: string, blockType: string): string {
 				return id;
 			}
 			default:
+				// Show hostname + truncated path
 				return url.hostname + (url.pathname.length > 20 ? "..." : url.pathname);
 		}
 	} catch {
+		// Not a valid URL, show as-is but truncated
 		return id.length > 30 ? id.slice(0, 27) + "..." : id;
 	}
 }
 
+/**
+ * React component for the plugin block node view
+ */
 function PluginBlockNodeView({
 	node,
 	updateAttributes,
@@ -151,21 +200,39 @@ function PluginBlockNodeView({
 		typeof node.attrs.data === "object" && node.attrs.data !== null
 			? (node.attrs.data as Record<string, unknown>)
 			: {};
-	const registry = getRegistry(
-		editor as unknown as { storage: Record<string, Record<string, unknown>> },
+	const registryEditor = editor as unknown as { storage: Record<string, Record<string, unknown>> };
+	const subscribe = React.useCallback(
+		(listener: () => void) => {
+			const listeners = registryEditor.storage.pluginBlock?.registryListeners as
+				| Set<() => void>
+				| undefined;
+			listeners?.add(listener);
+			return () => {
+				listeners?.delete(listener);
+			};
+		},
+		[registryEditor],
 	);
+	const getSnapshot = React.useCallback(() => getRegistry(registryEditor), [registryEditor]);
+	const registry = React.useSyncExternalStore(subscribe, getSnapshot);
 	const { Icon, label, color, placeholder, placeholderFallback } = getEmbedMeta(
 		blockType,
 		registry,
 	);
 
+	// Check if this block type has fields defined in the registry
 	const blockDef = registry.get(blockType);
 	const hasFields = blockDef?.fields && blockDef.fields.length > 0;
+	const original = node.attrs[PORTABLE_TEXT_BLOCK_ATTR] as Record<string, unknown> | null;
+	const hasIdentity = !!id || typeof original?.id === "string" || typeof original?.url === "string";
+	const canEditUrl = !hasFields && (!!blockDef || hasIdentity);
+	const canEdit = !!blockDef || canEditUrl;
 
 	const [isEditing, setIsEditing] = React.useState(false);
 	const [editValue, setEditValue] = React.useState(id || "");
 	const inputRef = React.useRef<HTMLInputElement>(null);
 
+	// Focus input when editing starts
 	React.useEffect(() => {
 		if (isEditing) {
 			setEditValue(id || "");
@@ -174,7 +241,7 @@ function PluginBlockNodeView({
 	}, [isEditing, id]);
 
 	const handleSave = () => {
-		if (editValue.trim()) {
+		if (canEditUrl && editValue.trim()) {
 			updateAttributes({ id: editValue.trim() });
 		}
 		setIsEditing(false);
@@ -206,36 +273,26 @@ function PluginBlockNodeView({
 	const displayId = id
 		? getDisplayId(id, blockType)
 		: Object.values(data)
-				.filter((v) => typeof v === "string" && v.length > 0)
+				.filter(
+					(v): v is string | number =>
+						(typeof v === "string" && v.length > 0) ||
+						(typeof v === "number" && Number.isFinite(v)),
+				)
+				.map(String)
 				.join(", ") || blockType;
 
 	return (
 		<NodeViewWrapper
-			className={cn(
-				"plugin-block relative my-3",
-				selected && "ring-2 ring-kumo-brand ring-offset-2 rounded-lg",
-			)}
+			className="plugin-block relative my-4"
 			contentEditable={false}
 			data-drag-handle
 		>
 			<div className="relative group">
-				<div
-					className={cn(
-						"absolute -start-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing",
-						selected && "opacity-100",
-					)}
-					data-drag-handle
-				>
-					<DotsSixVertical className="h-5 w-5 text-kumo-subtle/50" />
-				</div>
-
-				<div
-					className={cn(
-						"rounded-lg border bg-kumo-base transition-colors",
-						selected ? "border-kumo-brand/50 bg-kumo-tint/30" : "hover:border-kumo-line",
-					)}
-				>
+				{/* Main block content */}
+				<div className="rounded-lg border bg-kumo-base">
+					{/* Header with icon, label, and actions */}
 					<div className="flex items-center gap-3 px-4 py-3">
+						{/* Icon */}
 						<div
 							className={cn(
 								"flex-shrink-0 w-10 h-10 rounded-lg bg-kumo-tint flex items-center justify-center",
@@ -245,20 +302,28 @@ function PluginBlockNodeView({
 							<Icon className="h-5 w-5" />
 						</div>
 
+						{/* Label and ID */}
 						<div className="flex-1 min-w-0">
 							<div className="text-sm font-medium">{label}</div>
-							{!isEditing && (
-								<div className="text-xs text-kumo-subtle truncate font-mono">{displayId}</div>
-							)}
+							{!canEdit ? (
+								<p className="text-xs text-kumo-subtle">
+									{t`No editor is available for this block type. Its content is preserved.`}
+								</p>
+							) : !isEditing ? (
+								<div className="text-xs text-kumo-subtle truncate font-mono">
+									<bdi dir="ltr">{displayId}</bdi>
+								</div>
+							) : null}
 						</div>
 
+						{/* Action buttons - visible on hover or when selected */}
 						<div
 							className={cn(
 								"flex items-center gap-1 transition-opacity",
 								selected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
 							)}
 						>
-							{id && (
+							{canEdit && id && (
 								<>
 									<Button
 										type="button"
@@ -284,37 +349,40 @@ function PluginBlockNodeView({
 									</Button>
 								</>
 							)}
-							<Button
-								type="button"
-								variant="ghost"
-								shape="square"
-								className="h-8 w-8"
-								onClick={() => {
-									if (hasFields) {
-										const storage = (
-											editor.storage as unknown as Record<string, Record<string, unknown>>
-										).pluginBlock;
-										const onEdit = storage?.onEditBlock as
-											| ((attrs: {
-													blockType: string;
-													id: string;
-													data: Record<string, unknown>;
-													pos: number;
-											  }) => void)
-											| null;
-										if (onEdit) {
-											const pos = (typeof getPos === "function" ? getPos() : 0) ?? 0;
-											onEdit({ blockType, id, data, pos });
+							{canEdit && (
+								<Button
+									type="button"
+									variant="ghost"
+									shape="square"
+									className="h-8 w-8"
+									onClick={() => {
+										if (hasFields) {
+											// Open Block Kit modal via editor storage callback
+											const storage = (
+												editor.storage as unknown as Record<string, Record<string, unknown>>
+											).pluginBlock;
+											const onEdit = storage?.onEditBlock as
+												| ((attrs: {
+														blockType: string;
+														id: string;
+														data: Record<string, unknown>;
+														pos: number;
+												  }) => void)
+												| null;
+											if (onEdit) {
+												const pos = (typeof getPos === "function" ? getPos() : 0) ?? 0;
+												onEdit({ blockType, id, data, pos });
+											}
+										} else {
+											setIsEditing(true);
 										}
-									} else {
-										setIsEditing(true);
-									}
-								}}
-								title={hasFields ? t`Edit` : t`Edit URL`}
-								aria-label={hasFields ? t`Edit` : t`Edit URL`}
-							>
-								<Pencil className="h-4 w-4" />
-							</Button>
+									}}
+									title={hasFields ? t`Edit` : t`Edit URL`}
+									aria-label={hasFields ? t`Edit` : t`Edit URL`}
+								>
+									<Pencil className="h-4 w-4" />
+								</Button>
+							)}
 							<Button
 								type="button"
 								variant="ghost"
@@ -329,10 +397,12 @@ function PluginBlockNodeView({
 						</div>
 					</div>
 
-					{isEditing && (
+					{/* Inline URL editor - slides down when editing */}
+					{canEditUrl && isEditing && (
 						<div className="px-4 pb-3 pt-0">
 							<div className="flex gap-2">
 								<Input
+									dir="ltr"
 									ref={inputRef}
 									type="url"
 									value={editValue}
@@ -372,6 +442,9 @@ function PluginBlockNodeView({
 	);
 }
 
+/**
+ * TipTap Node extension for plugin blocks (embeds)
+ */
 export const PluginBlockExtension = Node.create({
 	name: "pluginBlock",
 	group: "block",
@@ -399,7 +472,10 @@ export const PluginBlockExtension = Node.create({
 
 	addStorage() {
 		return {
+			/** Per-editor registry of plugin block definitions */
 			registry: new Map<string, PluginBlockDef>(),
+			registryListeners: new Set<() => void>(),
+			/** Callback set by PortableTextEditor to open the Block Kit modal for editing */
 			onEditBlock: null as
 				| ((attrs: {
 						blockType: string;
@@ -429,6 +505,7 @@ export const PluginBlockExtension = Node.create({
 
 	addKeyboardShortcuts() {
 		return {
+			// Delete block on backspace when selected (not editing)
 			Backspace: () => {
 				const { selection } = this.editor.state;
 				const node = this.editor.state.doc.nodeAt(selection.from);
@@ -438,6 +515,7 @@ export const PluginBlockExtension = Node.create({
 				}
 				return false;
 			},
+			// Also handle Delete key
 			Delete: () => {
 				const { selection } = this.editor.state;
 				const node = this.editor.state.doc.nodeAt(selection.from);
@@ -451,4 +529,5 @@ export const PluginBlockExtension = Node.create({
 	},
 });
 
+// Re-export helpers for use elsewhere
 export { getEmbedMeta, resolveIcon };

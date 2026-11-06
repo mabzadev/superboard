@@ -6,6 +6,7 @@ export const EXTENSION_TO_MIME: Readonly<Record<string, string>> = {
 	".gif": "image/gif",
 	".webp": "image/webp",
 	".avif": "image/avif",
+	".jxl": "image/jxl",
 	".svg": "image/svg+xml",
 	".mp3": "audio/mpeg",
 	".wav": "audio/wav",
@@ -29,6 +30,7 @@ export const EXTENSION_TO_MIME: Readonly<Record<string, string>> = {
 
 export const VALID_MIME_RE = /^[a-z0-9][a-z0-9!#$&^_+\-.]*\/[a-z0-9!#$&^_+\-.]*$/i;
 
+/** Mirror of core matchesMimeAllowlist — kept in sync for client-side pre-validation. */
 export function matchesMimeAllowlist(mime: string, allowList: readonly string[]): boolean {
 	const normalized = mime.split(";")[0]!.trim().toLowerCase();
 	for (const entry of allowList) {
@@ -43,6 +45,7 @@ export function matchesMimeAllowlist(mime: string, allowList: readonly string[])
 	return false;
 }
 
+/** Try to resolve a MIME type from a URL's file extension. Returns null on failure. */
 export function mimeFromUrl(url: URL): string | null {
 	const lastSegment = url.pathname.split("/").pop() ?? "";
 	const dotIdx = lastSegment.lastIndexOf(".");

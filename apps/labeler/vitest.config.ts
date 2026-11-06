@@ -47,6 +47,7 @@ export default centralTests(
 							return new Response("not found", { status: 404 });
 						},
 					},
+					REGISTRY_BLOB_CACHE: () => new Response("not found", { status: 404 }),
 				},
 			}),
 		],

@@ -1,3 +1,11 @@
+/**
+ * Inline editor htmlBlock round-trip tests.
+ *
+ * Tests the Portable Text ↔ ProseMirror conversion for `htmlBlock` through
+ * the seams the inline (visual-editing) editor actually exercises. Mirrors the
+ * core converter round-trip test against the in-file converters.
+ */
+
 import { describe, it, expect } from "vitest";
 
 import {
@@ -69,5 +77,36 @@ describe("HTML block round-trip (inline editor seam)", () => {
 		expect(pt).toHaveLength(3);
 		expect(pt[1]!._type).toBe("htmlBlock");
 		expect((pt[1] as { html?: string }).html).toBe("<hr><p>Injected</p>");
+	});
+
+	it("preserves css, js and isolated through PT → PM → PT", () => {
+		const block = {
+			_type: "htmlBlock",
+			_key: "html004",
+			html: '<button id="go">Go</button>',
+			css: "button { color: red; }",
+			js: "document.getElementById('go').addEventListener('click', () => {});",
+			isolated: true,
+		};
+
+		const pt = pmToPortableText(portableTextToPM([block]));
+
+		expect(pt).toStrictEqual([{ ...block, _key: expect.any(String) }]);
+	});
+
+	it("round-trips a legacy block without adding fields", () => {
+		const pt = pmToPortableText({
+			type: "doc",
+			content: [
+				{
+					type: "htmlBlock",
+					attrs: { html: "<p>Legacy</p>", css: "", js: "", isolated: false },
+				},
+			],
+		});
+
+		expect(pt).toStrictEqual([
+			{ _type: "htmlBlock", _key: expect.any(String), html: "<p>Legacy</p>" },
+		]);
 	});
 });

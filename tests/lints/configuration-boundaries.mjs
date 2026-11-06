@@ -59,7 +59,10 @@ export async function auditConfigurationBoundaries({
 	validateTargetInjectionBoundaries(targets, secretNames, errors);
 	await validateWranglerSecretBoundaries(workspaceRoot, contract, secretNames, errors);
 
-	const ownership = buildTargetOwnership(targets, referenceTargetName);
+	const ownership = {
+		...buildTargetOwnership(targets, referenceTargetName),
+		publicIdentifiers: (contract.scan.publicIdentifiers ?? []).map(({ value }) => value),
+	};
 	await validateRootCommandPortability(workspaceRoot, targets, errors);
 	const sharedFiles = await sharedRuntimeFiles(workspaceRoot, contract, targets);
 	const occurrences = await scanSharedRuntime(workspaceRoot, sharedFiles, ownership);
@@ -121,6 +124,9 @@ export function collectSecretBindingNames(targets) {
 export function findForbiddenSharedOccurrences({ path, source, ownership }) {
 	const occurrences = [];
 	const ownedValues = new Set(ownership.exactLiterals.map(({ value }) => value.toLowerCase()));
+	const publicValues = new Set(
+		(ownership.publicIdentifiers ?? []).map((value) => value.toLowerCase()),
+	);
 	for (const suffix of ownership.domainSuffixes) {
 		const pattern = new RegExp(`(?:[a-z0-9-]+\\.)*${escapePattern(suffix)}\\b`, "giu");
 		for (const match of source.matchAll(pattern)) {
@@ -150,6 +156,7 @@ export function findForbiddenSharedOccurrences({ path, source, ownership }) {
 		const value = match[1];
 		if (
 			ownedValues.has(value.toLowerCase()) ||
+			publicValues.has(value.toLowerCase()) ||
 			/^0{32}$/u.test(value) ||
 			/^0{8}-0{4}-[0-9a-f]{4}-[0-9a-f]{4}-0{12}$/iu.test(value)
 		) {

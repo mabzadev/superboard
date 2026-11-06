@@ -25,6 +25,8 @@ describe("normalizeAdminHref", () => {
 	});
 
 	it("preserves admin-relative paths for TanStack Router", () => {
+		// These paths do NOT start with /_emdash/ and should be passed through
+		// unchanged so TanStack Router prepends the admin basepath.
 		expect(normalizeAdminHref("/media")).toBe("/media");
 		expect(normalizeAdminHref("/settings")).toBe("/settings");
 		expect(normalizeAdminHref("/content/posts")).toBe("/content/posts");

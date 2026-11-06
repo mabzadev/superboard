@@ -1,3 +1,17 @@
+/**
+ * MCP tool input schema tests.
+ *
+ * The MCP SDK validates `arguments` against each tool's `inputSchema`
+ * (Zod) before the handler runs. These tests pin down what happens at
+ * that boundary: missing required fields, wrong types, invalid enum
+ * values, out-of-range numeric inputs, etc.
+ *
+ * The expected behavior is consistent: invalid arguments produce a
+ * structured error response (`isError: true`) with a message that names
+ * the offending field. We assert specifically that errors at this layer
+ * remain user-friendly across the omnibus fix.
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -77,6 +91,25 @@ describe("MCP input schema validation", () => {
 		expect(result.isError).toBe(true);
 	});
 
+	it("content_list accepts every sort field its orderBy description names", async () => {
+		const { tools } = await harness.client.listTools();
+		const orderBy = tools.find((tool) => tool.name === "content_list")?.inputSchema.properties
+			?.orderBy as { description?: string } | undefined;
+		const fields = Array.from(
+			(orderBy?.description ?? "").matchAll(/'(\w+)'/g),
+			([, field]) => field,
+		);
+		expect(fields).not.toHaveLength(0);
+
+		for (const field of fields) {
+			const result = await harness.client.callTool({
+				name: "content_list",
+				arguments: { collection: "post", orderBy: field },
+			});
+			expect(result.isError, `${field}: ${extractText(result)}`).toBeFalsy();
+		}
+	});
+
 	it("schema_create_collection rejects supports value outside enum", async () => {
 		const result = await harness.client.callTool({
 			name: "schema_create_collection",
@@ -118,6 +151,19 @@ describe("MCP input schema validation", () => {
 		expect(result.isError).toBe(true);
 	});
 
+	it("content_schedule rejects a datetime without an offset", async () => {
+		const result = await harness.client.callTool({
+			name: "content_schedule",
+			arguments: {
+				collection: "post",
+				id: "01ANY",
+				scheduledAt: "2030-01-01T09:00",
+			},
+		});
+		expect(result.isError).toBe(true);
+		expect(extractText(result)).toContain("scheduledAt");
+	});
+
 	it("media_list with limit > 100 is rejected by inputSchema", async () => {
 		const result = await harness.client.callTool({
 			name: "media_list",
@@ -140,6 +186,9 @@ describe("MCP input schema validation", () => {
 			arguments: { slug: "Has-Caps", label: "Bad" },
 		});
 		expect(result.isError).toBe(true);
+		// Ideally the error names the field "slug" or shows the regex /
+		// pattern violation. Today the SDK error usually does — pin that
+		// behavior so it doesn't regress.
 		expect(extractText(result)).toMatch(/slug|pattern|regex|invalid/i);
 	});
 });

@@ -1,4 +1,6 @@
 import { Toasty } from "@cloudflare/kumo";
+import { i18n } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -11,6 +13,8 @@ import {
 	TaxonomyManager,
 } from "../../../../../packages/admin/src/components/TaxonomyManager";
 import type { TaxonomyTerm } from "../../../../../packages/admin/src/lib/api/taxonomies.js";
+
+import "../../../../../packages/admin/dist/styles.css";
 import { render } from "../utils/render.tsx";
 
 const taxonomyResponse = JSON.stringify({
@@ -28,6 +32,81 @@ const taxonomyResponse = JSON.stringify({
 	},
 });
 
+const tagTaxonomyResponse = JSON.stringify({
+	data: {
+		taxonomies: [
+			{
+				id: "tag",
+				name: "tag",
+				label: "Tags",
+				labelSingular: "Tag",
+				hierarchical: false,
+				collections: ["posts", "pages"],
+			},
+		],
+	},
+});
+
+const topicsTaxonomyResponse = JSON.stringify({
+	data: {
+		taxonomies: [
+			{
+				id: "topics",
+				name: "topics",
+				label: "Schlagwörter",
+				hierarchical: false,
+				collections: ["posts"],
+			},
+		],
+	},
+});
+
+const hierarchicalTagTaxonomyResponse = JSON.stringify({
+	data: {
+		taxonomies: [
+			{
+				id: "tag",
+				name: "tag",
+				label: "Tags",
+				labelSingular: "Tag",
+				hierarchical: true,
+				collections: ["posts"],
+			},
+		],
+	},
+});
+
+let manifestI18n: { defaultLocale: string; locales: string[] } | undefined;
+
+const turkishTermsResponse = JSON.stringify({
+	data: {
+		terms: [
+			{
+				id: "permission",
+				name: "permission",
+				slug: "permission",
+				label: "İzin",
+				parentId: null,
+				locale: "tr",
+				translationGroup: "permission",
+				children: [],
+				count: 1,
+			},
+			{
+				id: "music",
+				name: "music",
+				slug: "INDIE",
+				label: "Music",
+				parentId: null,
+				locale: "tr",
+				translationGroup: "music",
+				children: [],
+				count: 1,
+			},
+		],
+	},
+});
+
 const termsResponse = JSON.stringify({
 	data: {
 		terms: [
@@ -37,6 +116,32 @@ const termsResponse = JSON.stringify({
 				slug: "tech",
 				label: "Technology",
 				parentId: null,
+				children: [],
+				count: 5,
+			},
+			{
+				id: "2",
+				name: "science",
+				slug: "science",
+				label: "Science",
+				parentId: null,
+				children: [],
+				count: 3,
+			},
+		],
+	},
+});
+
+const termsWithDescriptionResponse = JSON.stringify({
+	data: {
+		terms: [
+			{
+				id: "1",
+				name: "tech",
+				slug: "tech",
+				label: "Technology",
+				parentId: null,
+				description: "Previously saved description",
 				children: [],
 				count: 5,
 			},
@@ -102,6 +207,7 @@ const hierarchicalTermsResponse = JSON.stringify({
 	},
 });
 
+/** Two siblings under one parent, so a nested group can actually be reordered. */
 const nestedSiblingsTermsResponse = JSON.stringify({
 	data: {
 		terms: [
@@ -150,6 +256,11 @@ const nestedSiblingsTermsResponse = JSON.stringify({
 	},
 });
 
+/**
+ * A term whose parent has no row in this locale, rendered between two real
+ * roots. The server lists it at the top level so it isn't lost, but it belongs
+ * to its parent's group and can't be moved or named from here.
+ */
 const untranslatedParentTermsResponse = JSON.stringify({
 	data: {
 		terms: [
@@ -192,11 +303,16 @@ vi.mock("../../../../../packages/admin/src/lib/api/client.js", async () => {
 	return {
 		...actual,
 		apiFetch: vi.fn(),
+		fetchManifest: vi.fn(async () => ({ collections: {}, i18n: manifestI18n })),
 	};
 });
 
 import { apiFetch } from "../../../../../packages/admin/src/lib/api/client.js";
 
+/**
+ * Hold the reorder responses until `release()` is called, so a test can look at
+ * the list while the request is still in flight.
+ */
 function deferReorders() {
 	const pending: Array<() => void> = [];
 	let open = false;
@@ -207,6 +323,8 @@ function deferReorders() {
 		});
 	return {
 		hold: (): Promise<Response> => {
+			// `scope` serializes the reorder mutation, so a queued move only calls
+			// this once the one before it settles — stay open so those land too.
 			if (open) return Promise.resolve(ok());
 			return new Promise((resolve) => pending.push(() => resolve(ok())));
 		},
@@ -220,7 +338,11 @@ function deferReorders() {
 	};
 }
 
-function mockApiFetch(overrideTerms?: string, defer?: ReturnType<typeof deferReorders>) {
+function mockApiFetch(
+	overrideTerms?: string,
+	defer?: ReturnType<typeof deferReorders>,
+	overrideTaxonomies?: string,
+) {
 	vi.mocked(apiFetch).mockImplementation((url: string, init?: RequestInit) => {
 		const urlStr = typeof url === "string" ? url : "";
 		if (defer && urlStr.includes("/reorder")) return defer.hold();
@@ -234,7 +356,7 @@ function mockApiFetch(overrideTerms?: string, defer?: ReturnType<typeof deferReo
 		}
 		if (urlStr.includes("/taxonomies") && (!init || !init.method || init.method === "GET")) {
 			return Promise.resolve(
-				new Response(taxonomyResponse, {
+				new Response(overrideTaxonomies ?? taxonomyResponse, {
 					status: 200,
 					headers: { "Content-Type": "application/json" },
 				}),
@@ -271,6 +393,7 @@ const DELETE_TECHNOLOGY_DESC_REGEX = /permanently delete "Technology"/;
 describe("TaxonomyManager", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		manifestI18n = undefined;
 		mockApiFetch();
 	});
 
@@ -282,12 +405,324 @@ describe("TaxonomyManager", () => {
 		await expect.element(screen.getByRole("heading", { name: "Categories" })).toBeInTheDocument();
 	});
 
+	it("wraps the hierarchical term list in a horizontally scrollable container", async () => {
+		mockApiFetch(hierarchicalTermsResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="categories" />, {
+			wrapper: Wrapper,
+		});
+
+		await expect.element(screen.getByRole("heading", { name: "Categories" })).toBeInTheDocument();
+
+		const container = document.querySelector(".border.rounded-lg.overflow-x-auto");
+		expect(container).not.toBeNull();
+		expect(container!.firstElementChild).toHaveClass("min-w-[560px]");
+	});
+
+	it("keeps the two tag actions together and moves taxonomy creation into More", async () => {
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+
+		await expect.element(screen.getByRole("button", { name: "Add tag" })).toBeInTheDocument();
+		await expect.element(screen.getByRole("button", { name: "Add to posts" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "New Taxonomy" }).query()).toBeNull();
+
+		await screen.getByRole("button", { name: "More actions for Tags" }).click();
+		await screen.getByRole("menuitem", { name: "New taxonomy" }).click();
+		await expect.element(screen.getByRole("dialog")).toBeInTheDocument();
+		await expect
+			.element(screen.getByRole("heading", { name: "Create Taxonomy" }))
+			.toBeInTheDocument();
+	});
+
+	it("creates a taxonomy from the dialog footer", async () => {
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		await screen.getByRole("button", { name: "More actions for Tags" }).click();
+		await screen.getByRole("menuitem", { name: "New taxonomy" }).click();
+
+		const dialog = screen.getByRole("dialog");
+		await dialog.getByRole("textbox", { name: "Label" }).fill("Topics");
+		await expect.element(dialog.getByRole("textbox", { name: "Name" })).toHaveValue("topics");
+		await dialog.getByRole("button", { name: "Create Taxonomy" }).click();
+
+		await vi.waitFor(() => {
+			const call = vi
+				.mocked(apiFetch)
+				.mock.calls.find(
+					([url, init]) =>
+						typeof url === "string" && url.endsWith("/taxonomies") && init?.method === "POST",
+				);
+			expect(call).toBeDefined();
+			const body = typeof call?.[1]?.body === "string" ? JSON.parse(call[1].body) : undefined;
+			expect(body).toMatchObject({ name: "topics", label: "Topics", hierarchical: false });
+		});
+	});
+
+	it("shows slug guidance beside the label only when requested", async () => {
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		await screen.getByRole("button", { name: "Add tag" }).click();
+
+		const nameInput = screen.getByRole("textbox", { name: "Name" });
+		const slugInput = screen.getByRole("textbox", { name: "Slug" });
+		await expect.element(nameInput).toBeInTheDocument();
+		await expect.element(slugInput).toBeInTheDocument();
+		expect(screen.getByText("Auto-generated from name (you can edit)").query()).toBeNull();
+
+		await screen.getByRole("button", { name: "How is the slug generated?" }).hover();
+		await expect.element(screen.getByText("Auto-generated from name (you can edit)")).toBeVisible();
+		await screen.getByText("Slug", { exact: true }).click();
+		await expect.element(slugInput).toHaveFocus();
+	});
+
+	it("creates a tag from the dialog footer", async () => {
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		await screen.getByRole("button", { name: "Add tag" }).click();
+		await screen.getByRole("textbox", { name: "Name" }).fill("Internship Experience");
+		await screen.getByRole("dialog").getByRole("button", { name: "Create" }).click();
+
+		await vi.waitFor(() => {
+			const call = vi
+				.mocked(apiFetch)
+				.mock.calls.find(
+					([url, init]) =>
+						typeof url === "string" &&
+						url.endsWith("/taxonomies/tag/terms") &&
+						init?.method === "POST",
+				);
+			expect(call).toBeDefined();
+			const body = typeof call?.[1]?.body === "string" ? JSON.parse(call[1].body) : undefined;
+			expect(body).toMatchObject({ label: "Internship Experience" });
+			expect(body).not.toHaveProperty("slug");
+		});
+	});
+
+	it("opens an empty form after creating a tag without leaving the page", async () => {
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		await screen.getByRole("button", { name: "Add tag" }).click();
+		await screen.getByRole("textbox", { name: "Name" }).fill("Internship Experience");
+		await expect
+			.element(screen.getByRole("textbox", { name: "Slug" }))
+			.toHaveValue("internship-experience");
+		await screen.getByRole("dialog").getByRole("button", { name: "Create" }).click();
+		await expect.element(screen.getByRole("dialog")).not.toBeInTheDocument();
+
+		await screen.getByRole("button", { name: "Add tag" }).click();
+		await expect.element(screen.getByRole("textbox", { name: "Name" })).toHaveValue("");
+		await expect.element(screen.getByRole("textbox", { name: "Slug" })).toHaveValue("");
+	});
+
+	it.each(["Create", "Cancel", "Close", "Escape"])(
+		"resets every create field after %s",
+		async (action) => {
+			const screen = await render(<TaxonomyManager taxonomyName="categories" />, {
+				wrapper: Wrapper,
+			});
+			await screen.getByRole("button", { name: ADD_CATEGORY_BUTTON_REGEX }).click();
+			await screen.getByRole("textbox", { name: "Name" }).fill("Music");
+			await screen.getByRole("textbox", { name: "Slug" }).fill("custom-music");
+			await screen.getByRole("textbox", { name: "Description (optional)" }).fill("Music news");
+			await screen.getByRole("combobox", { name: "Parent" }).click();
+			await screen.getByRole("option", { name: "Technology" }).click();
+			if (action === "Escape") {
+				await userEvent.keyboard("{Escape}");
+			} else {
+				await screen.getByRole("dialog").getByRole("button", { name: action, exact: true }).click();
+			}
+			await expect.element(screen.getByRole("dialog")).not.toBeInTheDocument();
+
+			await screen.getByRole("button", { name: ADD_CATEGORY_BUTTON_REGEX }).click();
+			await expect.element(screen.getByRole("textbox", { name: "Name" })).toHaveValue("");
+			await expect.element(screen.getByRole("textbox", { name: "Slug" })).toHaveValue("");
+			await expect
+				.element(screen.getByRole("textbox", { name: "Description (optional)" }))
+				.toHaveValue("");
+			await expect
+				.element(screen.getByRole("combobox", { name: "Parent" }))
+				.toHaveTextContent("None (top level)");
+			await screen.getByRole("textbox", { name: "Name" }).fill("New term");
+			await expect.element(screen.getByRole("textbox", { name: "Slug" })).toHaveValue("new-term");
+		},
+	);
+
+	it("preserves a failed create for retry but clears its values and error on reopening", async () => {
+		const screen = await render(<TaxonomyManager taxonomyName="categories" />, {
+			wrapper: Wrapper,
+		});
+		await screen.getByRole("button", { name: ADD_CATEGORY_BUTTON_REGEX }).click();
+		await screen.getByRole("textbox", { name: "Name" }).fill("Music");
+		await screen.getByRole("textbox", { name: "Slug" }).fill("custom-music");
+		vi.mocked(apiFetch).mockResolvedValueOnce(
+			new Response(JSON.stringify({ error: { message: "Term already exists" } }), {
+				status: 409,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		await screen.getByRole("dialog").getByRole("button", { name: "Create", exact: true }).click();
+		await expect.element(screen.getByText("Term already exists")).toBeVisible();
+		await expect.element(screen.getByRole("textbox", { name: "Name" })).toHaveValue("Music");
+		await expect.element(screen.getByRole("textbox", { name: "Slug" })).toHaveValue("custom-music");
+		await screen.getByRole("button", { name: "Cancel", exact: true }).click();
+		await expect.element(screen.getByRole("dialog")).not.toBeInTheDocument();
+		await screen.getByRole("button", { name: ADD_CATEGORY_BUTTON_REGEX }).click();
+		await expect.element(screen.getByRole("textbox", { name: "Name" })).toHaveValue("");
+		await expect.element(screen.getByText("Term already exists")).not.toBeInTheDocument();
+	});
+
+	it("reloads saved values after cancelling an edit of the same term", async () => {
+		mockApiFetch(termsWithDescriptionResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="categories" />, {
+			wrapper: Wrapper,
+		});
+		await screen.getByRole("button", { name: "Edit Technology", exact: true }).click();
+		await screen.getByRole("textbox", { name: "Name" }).fill("Unsaved name");
+		await screen
+			.getByRole("textbox", { name: "Description (optional)" })
+			.fill("Unsaved description");
+		await screen.getByRole("button", { name: "Cancel", exact: true }).click();
+		await expect.element(screen.getByRole("dialog")).not.toBeInTheDocument();
+		await screen.getByRole("button", { name: "Edit Technology", exact: true }).click();
+		await expect.element(screen.getByRole("textbox", { name: "Name" })).toHaveValue("Technology");
+		await expect.element(screen.getByRole("textbox", { name: "Slug" })).toHaveValue("tech");
+		await expect
+			.element(screen.getByRole("textbox", { name: "Description (optional)" }))
+			.toHaveValue("Previously saved description");
+		await screen.getByRole("textbox", { name: "Name" }).fill("New name");
+		await expect.element(screen.getByRole("textbox", { name: "Slug" })).toHaveValue("tech");
+	});
+
+	it("filters tags by label or slug without changing their stored order", async () => {
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		const search = screen.getByRole("searchbox", { name: "Search tags" });
+		const visibleOrder = () =>
+			Array.from(
+				document.querySelectorAll("tbody tr"),
+				(row) => row.querySelector("td span")?.textContent,
+			);
+
+		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
+		await expect.element(screen.getByText("Count", { exact: true })).toBeInTheDocument();
+		expect(visibleOrder()).toEqual(["Technology", "Science"]);
+		expect(screen.getByText("2 tags").query()).toBeNull();
+		await search.fill("sci");
+		await expect.element(screen.getByText("Science", { exact: true })).toBeInTheDocument();
+		expect(screen.getByText("Technology", { exact: true }).query()).toBeNull();
+		expect(screen.getByText("1 of 2 tags").query()).toBeNull();
+		await screen.getByRole("button", { name: "More actions for Science" }).click();
+		expect(screen.getByRole("menuitem", { name: "Move up Science" }).query()).toBeNull();
+		await userEvent.keyboard("{Escape}");
+		await search.fill("tech");
+		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
+		expect(screen.getByText("Science", { exact: true }).query()).toBeNull();
+		await search.fill("missing");
+		await expect.element(screen.getByRole("table")).toBeInTheDocument();
+		await expect.element(screen.getByText("Name", { exact: true })).toBeInTheDocument();
+		await expect.element(screen.getByText("No matching tags")).toBeInTheDocument();
+		screen.getByRole("button", { name: "Clear search" }).element().focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(search).toHaveFocus();
+		await expect.element(screen.getByText("Science", { exact: true })).toBeInTheDocument();
+		expect(visibleOrder()).toEqual(["Technology", "Science"]);
+		expect(screen.getByText("2 tags").query()).toBeNull();
+	});
+
+	it("finds nested tags without showing unrelated siblings or losing ancestors", async () => {
+		mockApiFetch(hierarchicalTermsResponse, undefined, hierarchicalTagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		const search = screen.getByRole("searchbox", { name: "Search tags" });
+
+		await search.fill("Test child");
+		await expect.element(screen.getByText("Design", { exact: true })).toBeInTheDocument();
+		await expect.element(screen.getByText("Test", { exact: true })).toBeInTheDocument();
+		await expect.element(screen.getByText("Test child", { exact: true })).toBeInTheDocument();
+		expect(screen.getByText("Development", { exact: true }).query()).toBeNull();
+
+		await search.fill("Design");
+		await expect.element(screen.getByText("Design", { exact: true })).toBeInTheDocument();
+		expect(screen.getByText("Test", { exact: true }).query()).toBeNull();
+		expect(screen.getByText("Test child", { exact: true }).query()).toBeNull();
+	});
+
+	it("searches labels using the active content locale and announces result counts", async () => {
+		manifestI18n = {
+			defaultLocale: "tr",
+			locales: ["tr", "en"],
+		};
+		mockApiFetch(turkishTermsResponse, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		const search = screen.getByRole("searchbox", { name: "Search tags" });
+		const status = screen.getByRole("status");
+		await expect.element(screen.getByRole("combobox", { name: "Locale" })).toHaveValue("tr");
+		await expect.element(screen.getByText("İzin", { exact: true })).toBeInTheDocument();
+		await search.fill("izin");
+		await expect.element(screen.getByText("İzin", { exact: true })).toBeInTheDocument();
+		await expect.element(status).toHaveTextContent("1 matching tag");
+		await search.fill("indie");
+		await expect.element(screen.getByText("Music", { exact: true })).toBeInTheDocument();
+		await expect.element(status).toHaveTextContent("1 matching tag");
+		await search.fill("missing");
+		await expect.element(status).toHaveTextContent("0 matching tags");
+	});
+
+	it("does not crash on a configured locale that Intl cannot canonicalize", async () => {
+		manifestI18n = { defaultLocale: "en-US-US", locales: ["en-US-US", "en"] };
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
+		await screen.getByRole("searchbox", { name: "Search tags" }).fill("tech");
+		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
+	});
+
+	it("keeps the leading slash of a tag slug in RTL", async () => {
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const previousDirection = document.documentElement.dir;
+		document.documentElement.dir = "rtl";
+		try {
+			const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+			await expect.element(screen.getByText("/tech", { exact: true })).toBeInTheDocument();
+			expect(getComputedStyle(screen.getByText("/tech", { exact: true }).element()).direction).toBe(
+				"ltr",
+			);
+		} finally {
+			document.documentElement.dir = previousDirection;
+		}
+	});
+
+	it("keeps tag editing visible and reorders from the row menu", async () => {
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		await expect
+			.element(screen.getByRole("button", { name: "Edit Technology" }))
+			.toBeInTheDocument();
+		await screen.getByRole("button", { name: "More actions for Technology" }).click();
+		await expect
+			.element(screen.getByRole("menuitem", { name: "Move up Technology" }))
+			.toBeDisabled();
+		await screen.getByRole("menuitem", { name: "Move down Technology" }).click();
+		expect(reorderRequestBody()).toEqual({ parentId: null, ids: ["2", "1"] });
+	});
+
+	it("keeps deleting a tag behind its confirmation dialog", async () => {
+		mockApiFetch(undefined, undefined, tagTaxonomyResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="tag" />, { wrapper: Wrapper });
+		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
+
+		await screen.getByRole("button", { name: "More actions for Technology" }).click();
+		await screen.getByRole("menuitem", { name: "Delete tag Technology" }).click();
+		await expect.element(screen.getByText(DELETE_TECHNOLOGY_DESC_REGEX)).toBeInTheDocument();
+	});
+
 	it("shows list of terms with labels", async () => {
 		const screen = await render(<TaxonomyManager taxonomyName="categories" />, {
 			wrapper: Wrapper,
 		});
 
+		// Use locators that target the specific label spans (font-medium class)
 		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
+		// "Science" also appears in "(science)" slug, so target the font-medium span
 		await expect.element(screen.getByText("(science)")).toBeInTheDocument();
 	});
 
@@ -305,10 +740,12 @@ describe("TaxonomyManager", () => {
 			wrapper: Wrapper,
 		});
 
+		// Wait for content to load, then click the button
 		await expect.element(screen.getByRole("heading", { name: "Categories" })).toBeInTheDocument();
 
 		await screen.getByRole("button", { name: ADD_CATEGORY_BUTTON_REGEX }).click();
 
+		// Verify the dialog heading opened
 		await expect
 			.element(screen.getByRole("heading", { name: ADD_CATEGORY_HEADING_REGEX }))
 			.toBeInTheDocument();
@@ -324,7 +761,8 @@ describe("TaxonomyManager", () => {
 		await screen.getByRole("button", { name: ADD_CATEGORY_BUTTON_REGEX }).click();
 
 		await expect.element(screen.getByLabelText("Name")).toBeInTheDocument();
-		await expect.element(screen.getByLabelText("Slug")).toBeInTheDocument();
+		await expect.element(screen.getByRole("textbox", { name: "Slug" })).toBeInTheDocument();
+		// The InputArea uses "Description (optional)" as label
 		await expect.element(screen.getByText("Description (optional)")).toBeInTheDocument();
 	});
 
@@ -334,7 +772,7 @@ describe("TaxonomyManager", () => {
 		});
 		await screen.getByRole("button", { name: ADD_CATEGORY_BUTTON_REGEX }).click();
 		await screen.getByLabelText("Name").fill("音楽");
-		await expect.element(screen.getByLabelText("Slug")).toHaveValue("音楽");
+		await expect.element(screen.getByRole("textbox", { name: "Slug" })).toHaveValue("音楽");
 
 		await userEvent.keyboard("{Enter}");
 
@@ -353,7 +791,7 @@ describe("TaxonomyManager", () => {
 		});
 		await screen.getByRole("button", { name: ADD_CATEGORY_BUTTON_REGEX }).click();
 		await screen.getByLabelText("Name").fill("Music");
-		await screen.getByLabelText("Slug").fill("custom-music");
+		await screen.getByRole("textbox", { name: "Slug" }).fill("custom-music");
 
 		await userEvent.keyboard("{Enter}");
 
@@ -411,9 +849,33 @@ describe("TaxonomyManager", () => {
 
 		await screen.getByRole("button", { name: "Edit Technology" }).click();
 
+		// Should open the edit dialog with "Edit Category" heading
 		await expect
 			.element(screen.getByRole("heading", { name: EDIT_CATEGORY_HEADING_REGEX }))
 			.toBeInTheDocument();
+	});
+
+	it('sends description: "" when the description field is cleared in the edit dialog', async () => {
+		mockApiFetch(termsWithDescriptionResponse);
+		const screen = await render(<TaxonomyManager taxonomyName="categories" />, {
+			wrapper: Wrapper,
+		});
+
+		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
+		await screen.getByRole("button", { name: "Edit Technology" }).click();
+
+		const descInput = screen.getByPlaceholder("Optional description");
+		await expect.element(descInput).toHaveValue("Previously saved description");
+		await descInput.fill("");
+
+		await screen.getByRole("button", { name: "Update" }).click();
+
+		await vi.waitFor(() => {
+			const call = vi.mocked(apiFetch).mock.calls.find(([, init]) => init?.method === "PUT");
+			expect(call).toBeDefined();
+			const body = typeof call?.[1]?.body === "string" ? JSON.parse(call[1].body) : undefined;
+			expect(body).toMatchObject({ slug: "tech", label: "Technology", description: "" });
+		});
 	});
 
 	it("delete button opens confirm dialog", async () => {
@@ -425,6 +887,7 @@ describe("TaxonomyManager", () => {
 
 		await screen.getByRole("button", { name: "Delete Technology" }).click();
 
+		// Should open a ConfirmDialog (not window.confirm)
 		await expect
 			.element(screen.getByRole("heading", { name: DELETE_CATEGORY_HEADING_REGEX }))
 			.toBeInTheDocument();
@@ -433,6 +896,7 @@ describe("TaxonomyManager", () => {
 		await expect.element(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
 	});
 
+	/** Parsed body of the reorder request, or undefined if none was sent. */
 	function reorderRequestBody(): unknown {
 		const call = vi
 			.mocked(apiFetch)
@@ -441,6 +905,7 @@ describe("TaxonomyManager", () => {
 		return typeof body === "string" ? JSON.parse(body) : undefined;
 	}
 
+	/** Parsed bodies of every reorder request, in the order they were sent. */
 	function reorderRequestBodies(): unknown[] {
 		return vi
 			.mocked(apiFetch)
@@ -448,6 +913,7 @@ describe("TaxonomyManager", () => {
 			.map(([, init]) => (typeof init?.body === "string" ? JSON.parse(init.body) : undefined));
 	}
 
+	/** How many times the term list has been fetched. */
 	function termFetchCount(): number {
 		return vi
 			.mocked(apiFetch)
@@ -460,6 +926,10 @@ describe("TaxonomyManager", () => {
 			).length;
 	}
 
+	/**
+	 * Labels of the rendered rows, top to bottom, read off each row's move
+	 * button rather than the markup around it.
+	 */
 	function renderedOrder(): string[] {
 		const buttons = document.querySelectorAll<HTMLElement>('button[aria-label$=" up"]');
 		return Array.from(buttons, (button) =>
@@ -491,6 +961,7 @@ describe("TaxonomyManager", () => {
 
 		await screen.getByRole("button", { name: "Move Technology down" }).click();
 
+		// Still in flight, and the list has already moved.
 		expect(defer.inFlight).toBe(1);
 		expect(renderedOrder()).toEqual(["Science", "Technology"]);
 
@@ -507,6 +978,8 @@ describe("TaxonomyManager", () => {
 		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
 		const fetchesBefore = termFetchCount();
 
+		// Two clicks before either response lands: down, then back up. The list
+		// tracks both without waiting for the round trip.
 		await screen.getByRole("button", { name: "Move Technology down" }).click();
 		expect(renderedOrder()).toEqual(["Science", "Technology"]);
 		await screen.getByRole("button", { name: "Move Technology up" }).click();
@@ -515,11 +988,15 @@ describe("TaxonomyManager", () => {
 		defer.release();
 		await vi.waitFor(() => expect(reorderRequestBodies()).toHaveLength(2));
 
+		// Each body is an absolute order taken from the list at click time, so
+		// applying them in click order is what makes the last one win.
 		expect(reorderRequestBodies()).toEqual([
 			{ parentId: null, ids: ["2", "1"] },
 			{ parentId: null, ids: ["1", "2"] },
 		]);
 
+		// Only the last of the queued moves refetches; an earlier one would serve
+		// a stale order and snap the list back.
 		expect(termFetchCount()).toBe(fetchesBefore + 1);
 	});
 
@@ -577,6 +1054,8 @@ describe("TaxonomyManager", () => {
 
 		await expect.element(screen.getByText("Nino", { exact: true })).toBeInTheDocument();
 
+		// The label carries the reason: a disabled caret with no explanation is
+		// two dead buttons on an arbitrary row.
 		const up = screen.getByRole("button", {
 			name: "Move Nino up — unavailable, its parent has no translation in this locale",
 		});
@@ -595,6 +1074,8 @@ describe("TaxonomyManager", () => {
 
 		await expect.element(screen.getByText("Gamma", { exact: true })).toBeInTheDocument();
 
+		// Beta and Gamma are the only real roots, so Beta's "down" is enabled even
+		// though Nino sits between them, and Nino is not named in the request.
 		await screen.getByRole("button", { name: "Move Beta down" }).click();
 
 		expect(reorderRequestBody()).toEqual({
@@ -620,6 +1101,8 @@ describe("TaxonomyManager", () => {
 
 		const next = reorderWithinSlots(terms, movable, [gamma!, beta!]);
 
+		// Nino keeps the slot it was rendered in; Beta and Gamma swap the two
+		// slots they held around it.
 		expect(next.map((term) => term.label)).toEqual(["Gamma", "Nino", "Beta"]);
 		expect(next[1]).toBe(nino);
 	});
@@ -640,5 +1123,50 @@ describe("TaxonomyManager", () => {
 		});
 
 		await expect.element(screen.getByText(NO_CATEGORIES_REGEX)).toBeInTheDocument();
+	});
+
+	it("keeps the taxonomy label capitalized and falls back to the translated Term for a German admin", async () => {
+		mockApiFetch(JSON.stringify({ data: { terms: [] } }), undefined, topicsTaxonomyResponse);
+		const previousLocale = i18n.locale;
+		i18n.load("de", { [msg`Term`.id!]: "Begriff" });
+		i18n.activate("de");
+
+		try {
+			const screen = await render(<TaxonomyManager taxonomyName="topics" />, { wrapper: Wrapper });
+			await expect
+				.element(screen.getByText("Manage Schlagwörter for posts", { exact: true }))
+				.toBeInTheDocument();
+			await expect
+				.element(
+					screen.getByText("No Schlagwörter yet. Create one to get started.", { exact: true }),
+				)
+				.toBeInTheDocument();
+
+			await screen.getByRole("button", { name: "Add Begriff", exact: true }).click();
+			await expect
+				.element(screen.getByText("Create a new Begriff", { exact: true }))
+				.toBeInTheDocument();
+		} finally {
+			i18n.activate(previousLocale);
+		}
+	});
+
+	it("titles the delete confirmation with the translated Term for a taxonomy without a singular label", async () => {
+		mockApiFetch(undefined, undefined, topicsTaxonomyResponse);
+		const previousLocale = i18n.locale;
+		i18n.load("de", { [msg`Term`.id!]: "Begriff" });
+		i18n.activate("de");
+
+		try {
+			const screen = await render(<TaxonomyManager taxonomyName="topics" />, { wrapper: Wrapper });
+			await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
+
+			await screen.getByRole("button", { name: "Delete Technology", exact: true }).click();
+			await expect
+				.element(screen.getByRole("heading", { name: "Delete Begriff?", exact: true }))
+				.toBeInTheDocument();
+		} finally {
+			i18n.activate(previousLocale);
+		}
 	});
 });

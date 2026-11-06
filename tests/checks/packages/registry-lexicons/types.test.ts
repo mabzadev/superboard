@@ -17,12 +17,28 @@ describe("delegated release permission", () => {
 
 		expect(permission).toEqual({
 			collection: NSID.packageRelease,
-			scope: "atproto repo:com.emdashcms.experimental.package.release?action=create",
+			scope:
+				"atproto repo:com.emdashcms.experimental.package.release?action=create blob:application/gzip blob:image/*",
 		});
 		expect(Object.isFrozen(permission)).toBe(true);
 		expect(permission.scope).not.toContain("transition:generic");
 	});
 });
+
+/**
+ * Smoke tests over the generated types and validation schemas. The goal isn't
+ * exhaustive coverage of the lexicons (the JSON files are the spec; codegen is
+ * deterministic) -- it's to catch:
+ *
+ *   1. Codegen drift: if a regen produces something importable but broken.
+ *   2. Schema-vs-type drift: types and runtime schemas come from the same
+ *      generation, so they should always agree.
+ *   3. NSID typos in our hand-maintained `NSID` map.
+ *
+ * Each test builds a representative record, validates it via the runtime
+ * schema, and uses the inferred type for the variable so a TS error surfaces
+ * if the shape ever changes incompatibly.
+ */
 
 describe("PackageProfile", () => {
 	it("validates a minimal valid profile", () => {
@@ -45,6 +61,7 @@ describe("PackageProfile", () => {
 			id: "at://did:plc:abc123/com.emdashcms.experimental.package.profile/gallery",
 			type: "emdash-plugin",
 			license: "MIT",
+			// authors omitted
 			security: [{ email: "security@example.com" }],
 		};
 
@@ -110,6 +127,7 @@ describe("PackageProfile", () => {
 		};
 
 		expect(safeParse(PackageProfile.mainSchema, profile)).toMatchObject({ ok: true });
+		// Consumers validate an entry only after dispatching its NSID to this schema.
 		expect(
 			is(PackageProfileExtension.mainSchema, {
 				$type: NSID.packageProfileExtension,
@@ -210,14 +228,93 @@ describe("PackageRelease", () => {
 					url: "https://example.com/icon.png",
 					checksum: "bcixyz",
 				},
+				// no `package` artifact
 			},
 		};
 
 		expect(is(PackageRelease.mainSchema, bad)).toBe(false);
 	});
+
+	it("validates blob-hosted package and image artifacts", () => {
+		const release: PackageRelease.Main = {
+			$type: NSID.packageRelease,
+			package: "gallery",
+			version: "1.0.0",
+			artifacts: {
+				package: {
+					blob: {
+						$type: "blob",
+						ref: { $link: "bafkreibm6jg3ux5qu5wzvikphw4qjzx6i7htc4w4e4c4pv7a7uynxqevmy" },
+						mimeType: "application/gzip",
+						size: 24_000,
+					},
+					checksum: "bciqft3cnxjpwrjxnsvfdz5xeckn7shz3rxfxbyjyb4x35ap2mlnucfwq",
+				},
+				icon: {
+					blob: {
+						$type: "blob",
+						ref: { $link: "bafkreifxfs7hxymrqjjxjoz2nalc4o5n2hzqctqc74wp5bsvoodw7rr3me" },
+						mimeType: "image/webp",
+						size: 4_096,
+					},
+					checksum: "bciqlole7pprrdbetoys3bifrodo3xiptafhadxzmp2dfk44hn6ohoyq",
+				},
+			},
+		};
+
+		expect(is(PackageRelease.mainSchema, release)).toBe(true);
+	});
+
+	it("accepts an unknown authentication variant", () => {
+		const release: PackageRelease.Main = {
+			$type: NSID.packageRelease,
+			package: "gallery",
+			version: "1.0.0",
+			artifacts: {
+				package: {
+					url: "https://example.com/gallery.tar.gz",
+					checksum: "bciqinvalid",
+				},
+			},
+			auth: {
+				$type: "com.example.package.auth",
+				hint: "Sign in to the publisher account",
+				hint_url: "https://example.com/help",
+			},
+		};
+
+		expect(is(PackageRelease.mainSchema, release)).toBe(true);
+	});
 });
 
 describe("PackageReleaseExtension", () => {
+	it("accepts explicit comment personal-data and moderation authority", () => {
+		expect(
+			is(PackageReleaseExtension.mainSchema, {
+				$type: NSID.packageReleaseExtension,
+				declaredAccess: { comments: { read: {}, moderate: {} } },
+			}),
+		).toBe(true);
+	});
+
+	it("validates redirect read and write authority", () => {
+		const extension: PackageReleaseExtension.Main = {
+			$type: NSID.packageReleaseExtension,
+			declaredAccess: { redirects: { read: {}, write: {} } },
+		};
+
+		expect(safeParse(PackageReleaseExtension.mainSchema, extension)).toMatchObject({ ok: true });
+	});
+
+	it("validates publication policy authority as a separate content operation", () => {
+		const extension: PackageReleaseExtension.Main = {
+			$type: NSID.packageReleaseExtension,
+			declaredAccess: { content: { policy: {} } },
+		};
+
+		expect(is(PackageReleaseExtension.mainSchema, extension)).toBe(true);
+	});
+
 	it("intentionally leaves unknown provenance predicates for consumer verification", () => {
 		const extension: PackageReleaseExtension.Main = {
 			$type: NSID.packageReleaseExtension,
@@ -249,6 +346,7 @@ describe("PackageReleaseExtension", () => {
 	});
 
 	it("does not enforce profile policy across records", () => {
+		// requireProvenance is enforced by later consumers, not a cross-record Lexicon rule.
 		expect(
 			is(PackageProfileExtension.mainSchema, {
 				$type: NSID.packageProfileExtension,
@@ -267,6 +365,8 @@ describe("PackageReleaseExtension", () => {
 
 describe("PublisherProfile", () => {
 	it("validates a publisher profile with only required fields", () => {
+		// Only `displayName` is required by the lexicon. Verification records bind
+		// against this value, so it's the one field a publisher must commit to.
 		const profile: PublisherProfile.Main = {
 			$type: NSID.publisherProfile,
 			displayName: "Acme Plugin Co.",
@@ -287,6 +387,9 @@ describe("PublisherProfile", () => {
 
 describe("NSID map", () => {
 	it("has every NSID we generated a module for", () => {
+		// If you add a lexicon, regen, and forget to update the NSID map, this
+		// test reminds you. It's a coarse check by count, but the values are
+		// also sanity-checked in the schema modules' `$type` literals above.
 		const expected = [
 			"com.emdashcms.experimental.package.profile",
 			"com.emdashcms.experimental.package.profileExtension",

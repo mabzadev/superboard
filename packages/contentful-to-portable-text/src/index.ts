@@ -1,3 +1,26 @@
+/**
+ * Contentful Rich Text → Portable Text converter.
+ *
+ * Takes a Contentful Rich Text document + resolved includes map, returns
+ * Portable Text blocks. Uses canonical types from @contentful/rich-text-types
+ * and @portabletext/types.
+ *
+ * Handles:
+ * - Standard blocks: paragraph, headings, lists, blockquotes, hr, table
+ * - Standard marks: bold, italic, underline, code, superscript, subscript, strikethrough
+ * - Inline hyperlinks with internal/external detection
+ * - Entry hyperlinks and asset hyperlinks (resolved from includes)
+ * - Embedded entries: blogCodeBlock, blogEmbeddedHtml, blogImage (block-level)
+ * - Embedded inline entries and assets (preserved as custom PT blocks)
+ * - Embedded assets (legacy image pattern)
+ *
+ * Does NOT handle (by design):
+ * - Asset download/upload (that's the import source's job)
+ * - Heading anchor preservation (application-specific)
+ * - HTML sanitization (renderer's responsibility)
+ */
+
+// Re-export our own types + canonical types for consumer convenience
 export type {
 	ContentfulIncludes,
 	ContentfulEntry,
@@ -33,16 +56,30 @@ import {
 } from "./types.js";
 import type { ContentfulIncludes, ConvertOptions } from "./types.js";
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Any Contentful Rich Text node (block, inline, or text) */
 type ContentfulNode = Block | Inline | Text;
 
+/** Inline child: either a text span or a custom inline object (e.g. inlineEntry) */
 type InlineChild = PortableTextSpan | ArbitraryTypedObject;
 
+/** Output block: either a standard PT block or a custom typed object */
 type OutputBlock = PortableTextBlock | ArbitraryTypedObject;
 
+/**
+ * Create a call-scoped key generator.
+ *
+ * Each invocation of richTextToPortableText gets its own counter so that
+ * concatenating the output of multiple calls (e.g. body + sidebar, or
+ * stitching multi-locale documents) never produces duplicate _key values.
+ */
 function createKeyGenerator(): () => string {
 	let n = 0;
 	return () => `k${(n++).toString(36)}`;
 }
+
+// ── Contentful node type → PT style mapping ─────────────────────────────────
 
 const HEADING_MAP: Record<string, string> = {
 	[BLOCKS.HEADING_1]: "h1",
@@ -63,6 +100,11 @@ const MARK_MAP: Record<string, string> = {
 	[MARKS.STRIKETHROUGH]: "s",
 };
 
+// ── Main converter ──────────────────────────────────────────────────────────
+
+/**
+ * Convert a Contentful Rich Text document to Portable Text blocks.
+ */
 export function richTextToPortableText(
 	document: Document,
 	includes: ContentfulIncludes,
@@ -84,6 +126,8 @@ export function richTextToPortableText(
 
 	return blocks;
 }
+
+// ── Node dispatcher ─────────────────────────────────────────────────────────
 
 function convertNode(
 	node: ContentfulNode,
@@ -136,6 +180,8 @@ function convertNode(
 	}
 }
 
+// ── Text block (paragraph, heading) ─────────────────────────────────────────
+
 function convertTextBlock(
 	node: ContentfulNode,
 	style: string,
@@ -146,6 +192,7 @@ function convertTextBlock(
 	const content = "content" in node ? (node.content as ContentfulNode[]) : [];
 	const { children, markDefs } = convertInlineContent(content, includes, options, generateKey);
 
+	// Skip empty paragraphs (Contentful emits these often)
 	if (style === "normal" && children.length === 1) {
 		const only = children[0]!;
 		if (only._type === "span" && typeof only.text === "string" && only.text === "") {
@@ -162,6 +209,8 @@ function convertTextBlock(
 	};
 }
 
+// ── Blockquote ──────────────────────────────────────────────────────────────
+
 function convertBlockquote(
 	node: ContentfulNode,
 	includes: ContentfulIncludes,
@@ -175,6 +224,7 @@ function convertBlockquote(
 			const block = convertTextBlock(child, "blockquote", includes, options, generateKey);
 			if (block) blocks.push(block);
 		} else {
+			// Blockquotes can contain lists, embedded entries, etc.
 			const converted = convertNode(child, includes, options, generateKey);
 			if (converted) {
 				if (Array.isArray(converted)) blocks.push(...converted);
@@ -184,6 +234,8 @@ function convertBlockquote(
 	}
 	return blocks;
 }
+
+// ── Lists ───────────────────────────────────────────────────────────────────
 
 function convertList(
 	node: ContentfulNode,
@@ -222,6 +274,7 @@ function convertList(
 				const nestedType = child.nodeType === BLOCKS.UL_LIST ? "bullet" : "number";
 				blocks.push(...convertList(child, nestedType, includes, options, generateKey, level + 1));
 			} else {
+				// List items can contain embedded entries, blockquotes, etc.
 				const converted = convertNode(child, includes, options, generateKey);
 				if (converted) {
 					if (Array.isArray(converted)) blocks.push(...converted);
@@ -233,6 +286,8 @@ function convertList(
 
 	return blocks;
 }
+
+// ── Table ───────────────────────────────────────────────────────────────────
 
 function convertTable(
 	node: ContentfulNode,
@@ -262,6 +317,8 @@ function convertTable(
 
 	return { _type: "table", _key: generateKey(), rows };
 }
+
+// ── Embedded entry ──────────────────────────────────────────────────────────
 
 function convertEmbeddedEntry(
 	node: ContentfulNode,
@@ -296,6 +353,8 @@ function convertEmbeddedEntry(
 	}
 }
 
+// ── Embedded asset (legacy image) ───────────────────────────────────────────
+
 function convertEmbeddedAsset(
 	node: ContentfulNode,
 	includes: ContentfulIncludes,
@@ -322,6 +381,8 @@ function convertEmbeddedAsset(
 		},
 	};
 }
+
+// ── Inline content (spans + marks + links) ──────────────────────────────────
 
 function convertInlineContent(
 	nodes: ContentfulNode[],
@@ -434,6 +495,7 @@ function convertInlineContent(
 				referenceId: targetId ?? "",
 			});
 		} else if (node.nodeType === INLINES.RESOURCE_HYPERLINK) {
+			// Can't resolve the href, but preserve the visible text
 			console.warn(
 				`[rich-text-to-pt] Resource hyperlink encountered — link dropped, text preserved.`,
 			);
@@ -454,6 +516,7 @@ function convertInlineContent(
 		}
 	}
 
+	// Ensure at least one child (PT requires non-empty children array)
 	if (children.length === 0) {
 		children.push({
 			_type: "span",
@@ -466,8 +529,12 @@ function convertInlineContent(
 	return { children, markDefs };
 }
 
+// ── Link classification ─────────────────────────────────────────────────────
+
 function isExternalLink(uri: string, blogHostname?: string): boolean {
 	if (!uri || uri === "#") return false;
+	// Defense-in-depth: sanitizeUri already blocks //-prefixed URLs, but
+	// this check guards against direct callers or future call-order changes.
 	if (uri.startsWith("//")) return true;
 	if (!uri.startsWith("http")) return false;
 
@@ -480,12 +547,21 @@ function isExternalLink(uri: string, blogHostname?: string): boolean {
 	}
 }
 
+/** Recursively extract plain text from a Contentful inline node. */
 function extractText(node: ContentfulNode): string {
 	if ("value" in node && node.value != null) return node.value;
 	const content = "content" in node ? (node.content as ContentfulNode[]) : [];
 	return content.map(extractText).join("");
 }
 
+// ── Build includes map from raw Contentful response ─────────────────────────
+
+/**
+ * Build typed includes maps from a raw Contentful API response.
+ * Call this once per response, pass the result to richTextToPortableText.
+ *
+ * Works with both CDA responses (`includes.Entry[]`) and items arrays.
+ */
 export function buildIncludes(raw: {
 	Entry?: Array<Record<string, unknown>>;
 	Asset?: Array<Record<string, unknown>>;

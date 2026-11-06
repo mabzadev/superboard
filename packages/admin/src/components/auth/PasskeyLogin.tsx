@@ -1,4 +1,15 @@
-import { Button, Input } from "@cloudflare/kumo";
+/**
+ * PasskeyLogin - WebAuthn authentication component
+ *
+ * Handles the passkey login flow:
+ * 1. Fetches authentication options from server
+ * 2. Triggers browser's WebAuthn credential assertion
+ * 3. Sends assertion back to server for verification
+ *
+ * Uses discoverable credentials, so no email or username is needed.
+ */
+
+import { Button } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import * as React from "react";
 
@@ -9,11 +20,18 @@ import {
 } from "../../lib/webauthn-environment";
 import { InsecurePasskeyContextMessage } from "./PasskeyContextMessage.js";
 
+// ============================================================================
+// Constants
+// ============================================================================
+
 const BASE64URL_DASH_REGEX = /-/g;
 const BASE64URL_UNDERSCORE_REGEX = /_/g;
 const BASE64_PLUS_REGEX = /\+/g;
 const BASE64_SLASH_REGEX = /\//g;
 
+// ============================================================================
+// WebAuthn types
+// ============================================================================
 interface PublicKeyCredentialRequestOptionsJSON {
 	challenge: string;
 	rpId: string;
@@ -40,11 +58,17 @@ interface AuthenticationResponse {
 }
 
 export interface PasskeyLoginProps {
+	/** Endpoint to get authentication options */
 	optionsEndpoint: string;
+	/** Endpoint to verify authentication */
 	verifyEndpoint: string;
+	/** Called on successful authentication */
 	onSuccess: (response: unknown) => void;
+	/** Called on error */
 	onError?: (error: Error) => void;
+	/** @deprecated Ignored. Sign-in always uses discoverable credentials. */
 	showEmailInput?: boolean;
+	/** Button text */
 	buttonText?: string;
 }
 
@@ -54,6 +78,9 @@ type LoginState =
 	| { status: "error"; message: string }
 	| { status: "success" };
 
+/**
+ * Check if conditional mediation (autofill) is supported
+ */
 async function isConditionalMediationSupported(): Promise<boolean> {
 	if (!isPasskeyEnvironmentUsable()) return false;
 	try {
@@ -63,6 +90,9 @@ async function isConditionalMediationSupported(): Promise<boolean> {
 	}
 }
 
+/**
+ * Convert base64url to ArrayBuffer
+ */
 function base64urlToBuffer(base64url: string): ArrayBuffer {
 	const base64 = base64url
 		.replace(BASE64URL_DASH_REGEX, "+")
@@ -76,6 +106,9 @@ function base64urlToBuffer(base64url: string): ArrayBuffer {
 	return bytes.buffer;
 }
 
+/**
+ * Convert ArrayBuffer to base64url (with padding for @oslojs/encoding compatibility)
+ */
 function bufferToBase64url(buffer: ArrayBuffer): string {
 	const bytes = new Uint8Array(buffer);
 	let binary = "";
@@ -83,21 +116,23 @@ function bufferToBase64url(buffer: ArrayBuffer): string {
 		binary += String.fromCharCode(bytes[i]!);
 	}
 	const base64 = btoa(binary);
+	// Convert to base64url but keep padding (required by @oslojs/encoding)
 	return base64.replace(BASE64_PLUS_REGEX, "-").replace(BASE64_SLASH_REGEX, "_");
 }
 
+/**
+ * PasskeyLogin Component
+ */
 export function PasskeyLogin({
 	optionsEndpoint,
 	verifyEndpoint,
 	onSuccess,
 	onError,
-	showEmailInput = false,
 	buttonText,
 }: PasskeyLoginProps) {
 	const { t } = useLingui();
 	const resolvedButtonText = buttonText ?? t`Sign in with Passkey`;
 	const [state, setState] = React.useState<LoginState>({ status: "idle" });
-	const [email, setEmail] = React.useState("");
 	const [supportsConditional, setSupportsConditional] = React.useState(false);
 
 	const isSupported = React.useMemo(() => isPasskeyEnvironmentUsable(), []);
@@ -106,6 +141,7 @@ export function PasskeyLogin({
 		[],
 	);
 
+	// Check conditional mediation support
 	React.useEffect(() => {
 		void isConditionalMediationSupported().then(setSupportsConditional);
 	}, []);
@@ -123,12 +159,13 @@ export function PasskeyLogin({
 			}
 
 			try {
+				// Step 1: Get authentication options from server
 				setState({ status: "loading", message: t`Preparing...` });
 
 				const optionsResponse = await apiFetch(optionsEndpoint, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ email: email || undefined }),
+					body: JSON.stringify({}),
 				});
 
 				const optionsData = await parseApiResponse<{
@@ -136,8 +173,10 @@ export function PasskeyLogin({
 				}>(optionsResponse, t`Failed to get authentication options`);
 				const { options } = optionsData;
 
+				// Step 2: Get assertion from browser
 				setState({ status: "loading", message: t`Waiting for passkey...` });
 
+				// Convert options to the format expected by the browser
 				const publicKeyOptions: PublicKeyCredentialRequestOptions = {
 					challenge: base64urlToBuffer(options.challenge),
 					rpId: options.rpId,
@@ -152,6 +191,7 @@ export function PasskeyLogin({
 
 				const credentialOptions: CredentialRequestOptions = {
 					publicKey: publicKeyOptions,
+					// Use conditional mediation if supported and requested
 					...(useConditional && supportsConditional ? { mediation: "conditional" } : {}),
 				};
 
@@ -164,11 +204,14 @@ export function PasskeyLogin({
 					return;
 				}
 
+				// Step 3: Send credential to server for verification
 				setState({ status: "loading", message: t`Verifying...` });
 
+				// navigator.credentials.get() with publicKey returns PublicKeyCredential
 				const credential = rawCredential as PublicKeyCredential;
 				const assertionResponse = credential.response as AuthenticatorAssertionResponse;
 
+				// authenticatorAttachment exists at runtime on PublicKeyCredential but isn't in the base type definition
 				const rawAttachment =
 					"authenticatorAttachment" in credential ? credential.authenticatorAttachment : undefined;
 				const authenticatorAttachment =
@@ -207,6 +250,7 @@ export function PasskeyLogin({
 			} catch (error) {
 				const message = error instanceof Error ? error.message : t`Authentication failed`;
 
+				// Handle specific WebAuthn errors
 				let userMessage = message;
 				if (error instanceof DOMException) {
 					switch (error.name) {
@@ -223,6 +267,7 @@ export function PasskeyLogin({
 							userMessage = t`Security error. Make sure you're on a secure connection.`;
 							break;
 						case "AbortError":
+							// User cancelled - don't show error
 							setState({ status: "idle" });
 							return;
 						default:
@@ -239,7 +284,6 @@ export function PasskeyLogin({
 			insecureContext,
 			optionsEndpoint,
 			verifyEndpoint,
-			email,
 			supportsConditional,
 			onSuccess,
 			onError,
@@ -266,29 +310,14 @@ export function PasskeyLogin({
 
 	return (
 		<div className="space-y-4">
-			{showEmailInput && (
-				<div>
-					<Input
-						label={t`Email (optional)`}
-						type="email"
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
-						placeholder={t`you@example.com`}
-						disabled={state.status === "loading"}
-						autoComplete="username webauthn"
-					/>
-					<p className="mt-1 text-xs text-kumo-subtle">
-						{t`Leave blank to use a discoverable passkey.`}
-					</p>
-				</div>
-			)}
-
+			{/* Error message */}
 			{state.status === "error" && (
 				<div className="rounded-lg bg-kumo-danger/10 p-4 text-sm text-kumo-danger">
 					{state.message}
 				</div>
 			)}
 
+			{/* Login button */}
 			<Button
 				type="button"
 				onClick={() => handleLogin(false)}
@@ -299,6 +328,7 @@ export function PasskeyLogin({
 				{state.status === "loading" ? <>{state.message}</> : resolvedButtonText}
 			</Button>
 
+			{/* Help text */}
 			<p className="text-xs text-kumo-subtle text-center">
 				{t`Use your device's biometric authentication, security key, or PIN to sign in.`}
 			</p>

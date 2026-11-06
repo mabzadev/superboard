@@ -1,4 +1,18 @@
-import Database from "better-sqlite3";
+/**
+ * Query-plan shape of the admin content list's byline filter.
+ *
+ * The filter is a correlated `(NOT) EXISTS` from the content table precisely so
+ * the outer query keeps the composite index its `ORDER BY` needs and `LIMIT`
+ * short-circuits. Driving from the junction side instead (`FROM
+ * _emdash_content_bylines JOIN ec_*`) sorts in a temp b-tree, which on a large
+ * collection means reading the whole filtered set to return one page.
+ *
+ * These assertions pin that: every probe is an indexed seek and no shape sorts.
+ *
+ * SQLite-only: `EXPLAIN QUERY PLAN` is a SQLite concern and, being stats-blind
+ * here, the plan is schema-driven — matching D1 exactly.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -6,6 +20,7 @@ import { runMigrations } from "../../../../../../packages/core/src/database/migr
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
 import type { ContentBylineFilter } from "../../../../../../packages/core/src/database/repositories/types.js";
 import type { Database as DatabaseSchema } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 
 interface CapturedQuery {
@@ -13,7 +28,7 @@ interface CapturedQuery {
 	parameters: readonly unknown[];
 }
 
-let sqlite: Database.Database;
+let sqlite: Database;
 let db: Kysely<DatabaseSchema>;
 let repo: ContentRepository;
 let captured: CapturedQuery[];
@@ -30,6 +45,7 @@ beforeEach(async () => {
 		},
 	});
 
+	// No ANALYZE: matches D1, which never maintains sqlite_stat1.
 	await runMigrations(db);
 	const registry = new SchemaRegistry(db);
 	await registry.createCollection({ slug: "posts", label: "Posts", labelSingular: "Post" });
@@ -40,6 +56,7 @@ afterEach(async () => {
 	await db.destroy();
 });
 
+/** Normalize application values captured from Kysely for direct driver binding. */
 function bindable(p: unknown): unknown {
 	if (typeof p === "boolean") return p ? 1 : 0;
 	if (p instanceof Date) return p.toISOString();
@@ -47,6 +64,10 @@ function bindable(p: unknown): unknown {
 	return p;
 }
 
+/**
+ * Plan of the page query the repository actually emitted — matched on its
+ * `limit`, which the parallel unbounded `count` doesn't carry.
+ */
 async function planOfPageQuery(bylineFilter: ContentBylineFilter): Promise<string> {
 	captured = [];
 	await repo.findMany("posts", { where: { locale: "en", bylineFilter }, limit: 20 });
@@ -64,6 +85,8 @@ const GROUP = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
 it("seeks the junction and the byline row for a selected byline", async () => {
 	const plan = await planOfPageQuery({ mode: "any", bylineIds: [GROUP], locale: "en" });
 
+	// Junction seek on (collection_slug, content_id, byline_id) — the unique
+	// from migration 031 — then the byline group at the list's locale.
 	expect(plan).toContain("sqlite_autoindex__emdash_content_bylines_2");
 	expect(plan).toContain("idx_bylines_group_locale_unique");
 	expect(plan).not.toContain("SCAN cb");
@@ -89,6 +112,9 @@ it("seeks the author's byline when inference is opted into", async () => {
 		locale: "en",
 	});
 
+	// With groups to narrow to, the inferred branch seeks the author's byline
+	// through the (translation_group, locale) unique and checks `user_id` off
+	// the row, rather than scanning the byline table.
 	expect(plan).toContain("idx_bylines_group_locale_unique");
 	expect(plan).not.toContain("SCAN cb");
 	expect(plan).not.toContain("SCAN b");

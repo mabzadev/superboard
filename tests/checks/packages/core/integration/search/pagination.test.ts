@@ -13,6 +13,12 @@ import {
 import { createPostFixture } from "../../utils/fixtures.js";
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../../utils/test-db.js";
 
+/**
+ * `search()` / `searchCollection()` advertise keyset pagination via
+ * `options.cursor` and `SearchResponse.nextCursor`. These tests pin that the
+ * advertised contract actually works: a cursor walks disjoint pages that cover
+ * every match exactly once, and the cursor stops at the end.
+ */
 describe("search pagination", () => {
 	let db: Kysely<Database>;
 	let repo: ContentRepository;
@@ -26,6 +32,7 @@ describe("search pagination", () => {
 		await registry.updateField("post", "title", { searchable: true });
 		await ftsManager.enableSearch("post");
 
+		// Five published posts that all match the query "report".
 		for (let i = 1; i <= 5; i++) {
 			await repo.create(
 				createPostFixture({

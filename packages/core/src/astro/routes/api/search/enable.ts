@@ -1,3 +1,9 @@
+/**
+ * Search enable/disable endpoint
+ *
+ * POST /_emdash/api/search/enable
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -8,6 +14,15 @@ import { FTSManager } from "#search/index.js";
 
 export const prerender = false;
 
+/**
+ * Enable or disable search for a collection
+ *
+ * Body:
+ * - collection: Collection slug (required)
+ * - enabled: boolean (required)
+ * - weights: Optional field weights for ranking
+ * - tokenize: Optional FTS5 tokenizer configuration
+ */
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
 
@@ -25,6 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 	try {
 		if (body.enabled) {
+			// Enable search - creates FTS table, triggers, and populates index
 			await ftsManager.enableSearch(body.collection, {
 				weights: body.weights,
 				tokenize: body.tokenize,
@@ -38,6 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 				indexed: stats?.indexed ?? 0,
 			});
 		} else {
+			// Disable search - drops FTS table and triggers
 			await ftsManager.disableSearch(body.collection);
 
 			return apiSuccess({

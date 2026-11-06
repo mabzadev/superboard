@@ -1,3 +1,15 @@
+/**
+ * Pivot-driven taxonomy listing (#1834).
+ *
+ * A taxonomy-filtered listing seeks group assignments on
+ * `content_taxonomies`, then resolves locale-specific content rows. Two
+ * invariants:
+ *
+ * 1. **Parity** — the seek returns the same rows as the correlated EXISTS shape.
+ * 2. **Correctness** — locale, status, deletion, and dates come from `ec_*`;
+ *    legacy per-row denormalized pivot values are ignored.
+ */
+
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -29,7 +41,7 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		ctx = await setupForDialectWithCollections(dialectName);
 		db = ctx.db;
 		await db
-			.updateTable("_emdash_taxonomy_defs")
+			.updateTable("_emdash_taxonomy_def_groups")
 			.set({ collections: JSON.stringify(["post"]) })
 			.where("name", "in", ["category", "tag"])
 			.execute();
@@ -45,6 +57,7 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		await teardownForDialect(ctx);
 	});
 
+	/** Insert a taxonomy term (translation_group = id) and return its id. */
 	async function term(name: string, slug: string) {
 		const id = `tax_${name}_${slug}_${termSeq++}`;
 		await db
@@ -87,8 +100,11 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		return result.entries.map((e) => e.data.title);
 	}
 
+	/** Order-insensitive comparison helper. */
 	const sortAsc = (values: unknown[]) =>
 		values.toSorted((a, b) => String(a).localeCompare(String(b)));
+
+	// --- Parity -------------------------------------------------------------
 
 	it("selective term: returns only the one tagged entry", async () => {
 		const news = await term("category", "news");
@@ -123,6 +139,7 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		await tax.attachToEntry("post", both.id, sports);
 
 		const result = await load({ category: ["news", "sports"] });
+		// One row despite matching two groups (GROUP BY dedup).
 		expect(titles(result)).toEqual(["Both"]);
 	});
 
@@ -166,6 +183,9 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		const a = await createPost("A");
 		const b = await createPost("B");
 		for (const p of [a, b]) await tax.attachToEntry("post", p.id, news);
+		// updated_at is read from the joined ec_* row in the temp-sort path (it is
+		// not a pivot column), so set distinct values directly for a deterministic
+		// order rather than relying on same-millisecond `now` timestamps.
 		await db
 			.updateTable("ec_post" as never)
 			.set({ updated_at: "2020-01-01T00:00:00Z" } as never)
@@ -182,6 +202,8 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 	});
 
 	it("filters by locale", async () => {
+		// A single term group with EN + FR variants sharing a slug, so the slug
+		// resolves in either locale (the loader scopes slug resolution by locale).
 		const group = "tax_category_news_group";
 		await db
 			.insertInto("taxonomies" as never)
@@ -211,6 +233,8 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		await tax.attachToEntry("post", en.id, group);
 		await tax.attachToEntry("post", fr.id, group);
 
+		// The FR listing returns only the FR entry — the pivot's `locale` column
+		// narrows it, even though both entries share the term group.
 		expect(titles(await load({ category: "news" }, { locale: "fr" }))).toEqual(["French"]);
 		expect(titles(await load({ category: "news" }, { locale: "en" }))).toEqual(["English"]);
 	});
@@ -228,6 +252,12 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		expect(titles(await load({ category: "news" }, { status: "draft" }))).toEqual(["Draft"]);
 	});
 
+	// --- Stale-pivot correctness (non-atomic-write guard) -------------------
+
+	/**
+	 * Desync the pivot from `ec_*` by writing `ec_*` directly (bypassing the
+	 * repository re-stamp) — the transient window a reader can observe on D1.
+	 */
 	async function desyncEcRow(id: string, set: Record<string, string | null>): Promise<void> {
 		await db
 			.updateTable("ec_post" as never)
@@ -240,6 +270,7 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		const news = await term("category", "news");
 		const post = await createPost("Ghost");
 		await tax.attachToEntry("post", post.id, news);
+		// Pivot still says live+published; ec_* is soft-deleted.
 		await desyncEcRow(post.id, { deleted_at: "2024-01-01T00:00:00Z" });
 
 		const result = await load({ category: "news" });
@@ -278,12 +309,16 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		}
 		const stale = await createPost("Stale", { publishedAt: "2020-09-01T00:00:00Z" });
 		await tax.attachToEntry("post", stale.id, news);
+		// Pivot says published; ec_* is a draft → dropped on the outer re-check.
 		await desyncEcRow(stale.id, { status: "draft" });
 
 		const result = await load({ category: "news" }, { orderBy: { published_at: "desc" } });
+		// The stale row is absent; every returned row is valid (may under-fill).
 		expect(titles(result)).not.toContain("Stale");
 		expect(sortAsc(titles(result))).toEqual(sortAsc(valid));
 	});
+
+	// --- Re-stamp sync ------------------------------------------------------
 
 	it("publish re-stamps the pivot so the entry appears in a published listing", async () => {
 		const news = await term("category", "news");
@@ -306,7 +341,8 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		expect(titles(await load({ category: "news" }))).toEqual([]);
 
 		await content.restore("post", post.id);
-		expect(titles(await load({ category: "news" }))).toEqual(["Toggle"]);
+		expect(titles(await load({ category: "news" }))).toEqual([]);
+		expect(titles(await load({ category: "news" }, { status: "draft" }))).toEqual(["Toggle"]);
 	});
 
 	it("schedule updates taxonomy-filtered status from the content row", async () => {
@@ -321,6 +357,8 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		expect(titles(await load({ category: "news" }, { status: "scheduled" }))).toEqual(["Later"]);
 	});
 
+	// --- Pagination ---------------------------------------------------------
+
 	it("paginates by keyset cursor over the pivot sort key without overlap", async () => {
 		const news = await term("category", "news");
 		const created: string[] = [];
@@ -329,7 +367,7 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 			await tax.attachToEntry("post", post.id, news);
 			created.push(`P${i}`);
 		}
-		const expectedOrder = created.toReversed();
+		const expectedOrder = created.toReversed(); // published_at desc
 
 		const seen: string[] = [];
 		let cursor: string | undefined;
@@ -343,10 +381,13 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 			if (!cursor) break;
 		}
 		expect(seen).toEqual(expectedOrder);
-		expect(new Set(seen).size).toBe(seen.length);
+		expect(new Set(seen).size).toBe(seen.length); // no overlap
 	});
 
 	it("paginates the OR-within-taxonomy (GROUP BY + HAVING cursor) path", async () => {
+		// Two matched terms → the multi-group branch (GROUP BY ct.entry_id, cursor
+		// in HAVING over MAX(sortval)). Each entry is tagged with BOTH terms so it
+		// fans out to two pivot rows and must still page as one row per entry.
 		const news = await term("category", "news");
 		const sports = await term("category", "sports");
 		const created: string[] = [];
@@ -370,8 +411,10 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 			if (!cursor) break;
 		}
 		expect(seen).toEqual(expectedOrder);
-		expect(new Set(seen).size).toBe(seen.length);
+		expect(new Set(seen).size).toBe(seen.length); // no dup fan-out, no overlap
 	});
+
+	// --- Byline filter rides along in the pivot CTE -------------------------
 
 	it("ANDs a byline filter with the taxonomy filter on the pivot path", async () => {
 		const news = await term("category", "news");
@@ -380,7 +423,7 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		const bylineOnly = await createPost("Bob Only");
 		await tax.attachToEntry("post", both.id, news);
 		await tax.attachToEntry("post", taxOnly.id, news);
-		await tax.attachToEntry("post", bylineOnly.id, news);
+		await tax.attachToEntry("post", bylineOnly.id, news); // tagged but wrong byline
 		const credit = async (id: string, group: string) =>
 			db
 				.insertInto("_emdash_content_bylines" as never)
@@ -399,13 +442,15 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 		expect(titles(result)).toEqual(["Bob News"]);
 	});
 
+	// --- Admin-shape parity (builder targeted directly) ---------------------
+
 	it("builder serves the trash shape (deleted_at IS NOT NULL)", async () => {
 		const news = await term("category", "news");
 		const live = await createPost("Live");
 		const trashed = await createPost("Trashed");
 		await tax.attachToEntry("post", live.id, news);
 		await tax.attachToEntry("post", trashed.id, news);
-		await content.delete("post", trashed.id);
+		await content.delete("post", trashed.id); // re-stamps pivot deleted_at
 
 		const rows = await buildTaxonomyPivotQuery({
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- schema vs Database type
@@ -416,8 +461,8 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 			orderBy: undefined,
 			cursor: undefined,
 			locale: undefined,
-			status: undefined,
-			deletedIsNull: false,
+			status: undefined, // all statuses
+			deletedIsNull: false, // trash
 			bylineGroups: null,
 			fetchLimit: undefined,
 			offset: undefined,
@@ -442,8 +487,8 @@ describeEachDialect("Loader taxonomy pivot-drive", (dialectName: DialectName) =>
 			orderBy: undefined,
 			cursor: undefined,
 			locale: undefined,
-			status: undefined,
-			deletedIsNull: true,
+			status: undefined, // all statuses
+			deletedIsNull: true, // live
 			bylineGroups: null,
 			fetchLimit: undefined,
 			offset: undefined,

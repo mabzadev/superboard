@@ -1,4 +1,13 @@
+/**
+ * Page metadata collection and rendering
+ *
+ * Collects typed metadata contributions from plugins via the page:metadata hook,
+ * validates them, and resolves them into a deduplicated structure ready to render.
+ */
+
 import type { PageMetadataContribution, PageMetadataLinkRel } from "../plugins/types.js";
+
+// ── Resolved output ─────────────────────────────────────────────
 
 export interface ResolvedPageMetadata {
 	meta: Array<{ name: string; content: string }>;
@@ -15,6 +24,9 @@ interface RenderPageMetadataOptions {
 	includeJsonLd?: boolean;
 }
 
+// ── Validation ──────────────────────────────────────────────────
+
+/** Schemes safe for use in link href attributes */
 const SAFE_HREF_RE = /^(https?|at):\/\//i;
 const HTML_ESCAPE_MAP: Record<string, string> = {
 	"&": "&amp;",
@@ -25,19 +37,31 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
 };
 const HTML_ESCAPE_RE = /[&<>"']/g;
 
+/** Escape a string for safe use in an HTML attribute value */
 export function escapeHtmlAttr(value: string): string {
 	return value.replace(HTML_ESCAPE_RE, (ch) => HTML_ESCAPE_MAP[ch] ?? ch);
 }
 
+/** Validate that a URL uses a safe scheme (http, https, at) */
 function isSafeHref(url: string): boolean {
 	return SAFE_HREF_RE.test(url);
 }
+
+// ── JSON-LD serialization ───────────────────────────────────────
 
 const JSONLD_LT_RE = /</g;
 const JSONLD_GT_RE = />/g;
 const JSONLD_U2028_RE = /\u2028/g;
 const JSONLD_U2029_RE = /\u2029/g;
 
+/**
+ * Safely serialize a value for embedding in a <script type="application/ld+json"> tag.
+ *
+ * Plain JSON.stringify is not sufficient because:
+ * - "</script>" in a nested string breaks out of the script tag
+ * - "<!--" can open an HTML comment
+ * - U+2028/U+2029 are line terminators in some JS engines
+ */
 export function safeJsonLdSerialize(value: unknown): string {
 	return JSON.stringify(value)
 		.replace(JSONLD_LT_RE, "\\u003c")
@@ -60,6 +84,12 @@ interface CspScriptHashSink {
 	insertScriptHash(hash: string): void;
 }
 
+/**
+ * Register JSON-LD hashes with Astro's CSP runtime when CSP is enabled.
+ *
+ * The getter stays lazy because Astro warns when `Astro.csp` is accessed on a
+ * project that has not enabled its built-in CSP support.
+ */
 export async function registerJsonLdCspHashes(
 	enabled: boolean,
 	getCsp: () => CspScriptHashSink | undefined,
@@ -77,6 +107,12 @@ export async function registerJsonLdCspHashes(
 	);
 }
 
+// ── Merge / dedupe ──────────────────────────────────────────────
+
+/**
+ * Resolve a flat list of contributions into deduplicated metadata.
+ * First contribution wins for any given dedupe key.
+ */
 export function resolvePageMetadata(
 	contributions: PageMetadataContribution[],
 ): ResolvedPageMetadata {
@@ -147,6 +183,9 @@ export function resolvePageMetadata(
 				break;
 			}
 			default:
+				// Unknown contribution kind -- skip silently at runtime.
+				// TypeScript catches this at compile time for typed callers,
+				// but sandboxed plugins may return unexpected shapes.
 				break;
 		}
 	}
@@ -154,6 +193,9 @@ export function resolvePageMetadata(
 	return result;
 }
 
+// ── HTML rendering ──────────────────────────────────────────────
+
+/** Render resolved metadata to an HTML string for embedding in <head> */
 export function renderPageMetadata(
 	metadata: ResolvedPageMetadata,
 	options: RenderPageMetadataOptions = {},

@@ -1,5 +1,12 @@
 ---
+/**
+ * Portable Text Cover block component
+ *
+ * Renders an image/video with text overlay from WordPress imports.
+ */
 import { PortableText } from "astro-portabletext";
+
+import { emdashMarkComponents } from "./marks.js";
 
 export interface Props {
 	node: {
@@ -56,7 +63,7 @@ const overlayStyle = overlayColor
 	}
 	{hasBackground && <div class="emdash-cover__overlay" style={overlayStyle} />}
 	<div class="emdash-cover__content">
-		<PortableText value={content} />
+		<PortableText value={content} components={{ mark: emdashMarkComponents }} />
 	</div>
 </div>
 

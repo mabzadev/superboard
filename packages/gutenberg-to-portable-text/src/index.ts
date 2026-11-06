@@ -1,6 +1,15 @@
+/**
+ * Gutenberg to Portable Text Converter
+ *
+ * Converts WordPress Gutenberg block content to Portable Text format.
+ * Uses @wordpress/block-serialization-default-parser to parse the hybrid
+ * HTML+JSON format that WordPress uses.
+ */
+
 import { parse } from "@wordpress/block-serialization-default-parser";
 
-import { parseInlineContent } from "./inline.js";
+import { extractText, parseInlineContent } from "./inline.js";
+import { table as tableTransformer } from "./transformers/core.js";
 import { getTransformer } from "./transformers/index.js";
 import type {
 	GutenbergBlock,
@@ -9,8 +18,20 @@ import type {
 	TransformContext,
 } from "./types.js";
 
+// Regex patterns for HTML parsing and conversion
 const BLOCK_ELEMENT_PATTERN =
 	/<(p|h[1-6]|blockquote|pre|ul|ol|figure|div|hr)[^>]*>([\s\S]*?)<\/\1>|<(hr|br)\s*\/?>|<img\s+[^>]+\/?>/gu;
+const WORD_CHARACTER_PATTERN = /\w/;
+const TABLE_BLOCK_CONTENT_PATTERN = /<(?:img|h[1-6]|ul|ol|pre|blockquote|hr)\b/i;
+const MERGED_CELL_PATTERN = /\b(?:colspan|rowspan)\s*=\s*(?:["']\s*)?(?:[2-9]|[1-9]\d)/i;
+const TABLE_ROW_TAG_PATTERN = /<tr\b/gi;
+const TABLE_CELL_TAG_PATTERN = /<t[dh]\b/gi;
+const TABLE_ROW_END_TAG_PATTERN = /<\/tr>/gi;
+const TABLE_CELL_END_TAG_PATTERN = /<\/t[dh]>/gi;
+const BLOCK_END_INSIDE_CELL_PATTERN = /<\/(?:p|div)>(?!\s*<\/(?:p|div|t[dh])>)/gi;
+const BLOCK_START_INSIDE_CELL_PATTERN =
+	/(?<!(?:<(?:t[dh]|p|div)\b[^>]*>|<br\s*\/?>)\s*)<(?:p|div)\b/gi;
+const ALL_WHITESPACE_PATTERN = /\s+/g;
 const LINKED_IMAGE_PATTERN = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>\s*<img\s+([^>]+)\/?>\s*<\/a>/gu;
 const STANDALONE_IMAGE_PATTERN = /<img\s+[^>]+\/?>/gu;
 const IMG_TAG_PATTERN = /<img[^>]+>/i;
@@ -29,6 +50,7 @@ const NUMERIC_AMP_ENTITY_PATTERN = /&#0?38;/g;
 const HEX_AMP_ENTITY_PATTERN = /&#x26;/gi;
 const NBSP_ENTITY_PATTERN = /&nbsp;/g;
 
+// Re-export types
 export type {
 	GutenbergBlock,
 	PortableTextBlock,
@@ -52,10 +74,12 @@ export type {
 	TransformContext,
 } from "./types.js";
 
+// Re-export transformers for customization
 export { defaultTransformers, fallbackTransformer } from "./transformers/index.js";
 export * as coreTransformers from "./transformers/core.js";
 export * as embedTransformers from "./transformers/embed.js";
 
+// Re-export inline utilities
 export {
 	parseInlineContent,
 	extractText,
@@ -64,6 +88,9 @@ export {
 	extractSrc,
 } from "./inline.js";
 
+/**
+ * Default key generator
+ */
 function createKeyGenerator(): () => string {
 	let counter = 0;
 	return () => {
@@ -72,6 +99,11 @@ function createKeyGenerator(): () => string {
 	};
 }
 
+/**
+ * Normalize parsed blocks from the WP parser into our GutenbergBlock type.
+ * The WP parser returns `attrs: Record<string, any> | null`, so we normalize
+ * null attrs to empty objects and recursively process innerBlocks.
+ */
 function normalizeBlocks(blocks: ReturnType<typeof parse>): GutenbergBlock[] {
 	return blocks.map(
 		(block): GutenbergBlock => ({
@@ -84,29 +116,56 @@ function normalizeBlocks(blocks: ReturnType<typeof parse>): GutenbergBlock[] {
 	);
 }
 
+/**
+ * Convert WordPress Gutenberg content to Portable Text
+ *
+ * @param content - WordPress post content (HTML with Gutenberg block comments)
+ * @param options - Conversion options
+ * @returns Array of Portable Text blocks
+ *
+ * @example
+ * ```ts
+ * const portableText = gutenbergToPortableText(`
+ *   <!-- wp:paragraph -->
+ *   <p>Hello <strong>world</strong>!</p>
+ *   <!-- /wp:paragraph -->
+ * `);
+ * // → [{ _type: "block", style: "normal", children: [...] }]
+ * ```
+ */
 export function gutenbergToPortableText(
 	content: string,
 	options: ConvertOptions = {},
 ): PortableTextBlock[] {
+	// Handle empty content
 	if (!content || !content.trim()) {
 		return [];
 	}
 
+	// Check if content has Gutenberg blocks
 	const hasBlocks = content.includes("<!-- wp:");
 
 	if (!hasBlocks) {
+		// Classic editor content - treat as HTML
 		return htmlToPortableText(content, options);
 	}
 
+	// Parse Gutenberg blocks
 	const blocks = normalizeBlocks(parse(content));
 
+	// Create key generator
 	const generateKey = options.keyGenerator || createKeyGenerator();
 
+	// Create transform context
 	const context = createTransformContext(options, generateKey);
 
+	// Transform blocks
 	return blocks.flatMap((block) => transformBlock(block, options, context));
 }
 
+/**
+ * Convert plain HTML (classic editor) to Portable Text
+ */
 export function htmlToPortableText(
 	html: string,
 	options: ConvertOptions = {},
@@ -114,14 +173,55 @@ export function htmlToPortableText(
 	const generateKey = options.keyGenerator || createKeyGenerator();
 	const blocks: PortableTextBlock[] = [];
 
+	// Split on block-level elements (including standalone img tags)
 	let lastIndex = 0;
 	let match;
 
+	const tables = findClassicTables(html);
+	let nextTable = 0;
+	// Tables that would lose content are skipped here and read as plain HTML by the scan below.
+	const pushTablesBefore = (end: number) => {
+		while (nextTable < tables.length && tables[nextTable]!.start < end) {
+			const table = tables[nextTable++]!;
+			if (table.start < lastIndex || table.nested) continue;
+			const tableBlocks = classicTableToPortableText(
+				html.slice(table.start, table.end),
+				options,
+				generateKey,
+			);
+			if (tableBlocks.length === 0) continue;
+
+			const between = html.slice(lastIndex, table.start).trim();
+			if (between) {
+				const { children, markDefs } = parseInlineContent(between, generateKey);
+				if (children.some((c) => c.text.trim())) {
+					blocks.push({
+						_type: "block",
+						_key: generateKey(),
+						style: "normal",
+						children,
+						markDefs: markDefs.length > 0 ? markDefs : undefined,
+					});
+				}
+			}
+			blocks.push(...tableBlocks);
+			lastIndex = table.end;
+		}
+	};
+
 	while ((match = BLOCK_ELEMENT_PATTERN.exec(html)) !== null) {
+		pushTablesBefore(match.index);
+		if (lastIndex > match.index) {
+			// A table took in this element: resume the scan after the table.
+			BLOCK_ELEMENT_PATTERN.lastIndex = lastIndex;
+			continue;
+		}
+
 		const fullMatch = match[0];
 		const tag = (match[1] || match[3] || "").toLowerCase();
 		const content = match[2] || "";
 
+		// Handle text between matches
 		const between = html.slice(lastIndex, match.index).trim();
 		if (between) {
 			const { children, markDefs } = parseInlineContent(between, generateKey);
@@ -137,6 +237,7 @@ export function htmlToPortableText(
 		}
 		lastIndex = match.index + match[0].length;
 
+		// Check for standalone <img> tag (not wrapped in figure/p)
 		if (fullMatch.toLowerCase().startsWith("<img")) {
 			const srcMatch = fullMatch.match(SRC_ATTR_PATTERN);
 			const altMatch = fullMatch.match(ALT_ATTR_PATTERN);
@@ -156,11 +257,16 @@ export function htmlToPortableText(
 			continue;
 		}
 
+		// Transform based on tag
 		switch (tag) {
 			case "p":
 			case "div": {
+				// Extract any images first (including those wrapped in <a> tags)
+				// Match: <a...><img...></a> or standalone <img...>
+				// Track positions of linked images so we don't double-process
 				const linkedImgPositions: Array<{ start: number; end: number }> = [];
 
+				// First extract linked images
 				let linkedMatch;
 				while ((linkedMatch = LINKED_IMAGE_PATTERN.exec(content)) !== null) {
 					const linkUrl = decodeUrlEntities(linkedMatch[1]!);
@@ -187,8 +293,10 @@ export function htmlToPortableText(
 					});
 				}
 
+				// Then extract standalone images (not inside <a> tags)
 				let imgMatch;
 				while ((imgMatch = STANDALONE_IMAGE_PATTERN.exec(content)) !== null) {
+					// Skip if this image is inside a linked image we already processed
 					const isLinked = linkedImgPositions.some(
 						(pos) => imgMatch!.index >= pos.start && imgMatch!.index < pos.end,
 					);
@@ -211,9 +319,10 @@ export function htmlToPortableText(
 					}
 				}
 
+				// Then handle the text content (with images and image links stripped)
 				let textContent = content
-					.replace(LINKED_IMAGE_PATTERN, "")
-					.replace(STANDALONE_IMAGE_PATTERN, "")
+					.replace(LINKED_IMAGE_PATTERN, "") // Remove linked images
+					.replace(STANDALONE_IMAGE_PATTERN, "") // Remove standalone images
 					.trim();
 				if (textContent) {
 					const { children, markDefs } = parseInlineContent(textContent, generateKey);
@@ -260,6 +369,7 @@ export function htmlToPortableText(
 			}
 
 			case "pre": {
+				// Extract code content
 				const codeMatch = content.match(CODE_TAG_PATTERN);
 				const code = codeMatch?.[1] || content;
 				blocks.push({
@@ -300,6 +410,7 @@ export function htmlToPortableText(
 			}
 
 			case "figure": {
+				// Check for image
 				const imgMatch = content.match(IMG_TAG_PATTERN);
 				if (imgMatch) {
 					const srcMatch = imgMatch[0].match(SRC_ATTR_PATTERN);
@@ -323,7 +434,9 @@ export function htmlToPortableText(
 			}
 		}
 	}
+	pushTablesBefore(html.length);
 
+	// Handle remaining text
 	const remaining = html.slice(lastIndex).trim();
 	if (remaining) {
 		const { children, markDefs } = parseInlineContent(remaining, generateKey);
@@ -341,6 +454,9 @@ export function htmlToPortableText(
 	return blocks;
 }
 
+/**
+ * Create transform context for recursive block transformation
+ */
 function createTransformContext(
 	options: ConvertOptions,
 	generateKey: () => string,
@@ -354,6 +470,103 @@ function createTransformContext(
 	return context;
 }
 
+interface ClassicTable {
+	start: number;
+	end: number;
+	nested: boolean;
+}
+
+/**
+ * Find each `<table` start tag outside HTML comments in source order, with the first `</table>`
+ * after it. A table whose span holds the start of another one ends at the inner table's end tag,
+ * so it is marked as nested and never converted itself. Searches with `indexOf` only: a regular
+ * expression for the span backtracks polynomially on unclosed tags.
+ */
+function findClassicTables(html: string): ClassicTable[] {
+	const tables: ClassicTable[] = [];
+	let tagEnd = -1;
+	let close = -1;
+	let commentStart = html.indexOf("<!--");
+	let commentEnd = -1;
+	for (
+		let start = html.indexOf("<table");
+		start !== -1;
+		start = html.indexOf("<table", start + 1)
+	) {
+		while (commentStart !== -1 && commentStart < start) {
+			// `<!-->` and `<!--->` end at their own `>`, as HTML parses them.
+			const commentClose = html.indexOf("-->", commentStart + 2);
+			if (commentClose === -1) return tables;
+			commentEnd = commentClose + 3;
+			commentStart = html.indexOf("<!--", commentEnd);
+		}
+		if (start < commentEnd) continue;
+		if (WORD_CHARACTER_PATTERN.test(html.charAt(start + 6))) continue;
+		if (tagEnd < start + 6) tagEnd = html.indexOf(">", start + 6);
+		if (tagEnd === -1) break;
+		if (close <= tagEnd) close = html.indexOf("</table>", tagEnd + 1);
+		if (close === -1) break;
+		const previous = tables.at(-1);
+		if (previous && start < previous.end) previous.nested = true;
+		tables.push({ start, end: close + "</table>".length, nested: false });
+	}
+	return tables;
+}
+
+/**
+ * Convert a classic-editor `<table>` with the `core/table` transformer, or return no blocks
+ * when the result would lose part of the table. The transformer emits text-only cells without
+ * colspan or rowspan, needs end tags on rows and cells, and skips text outside the rows it
+ * reads, such as a caption or footer rows.
+ */
+function classicTableToPortableText(
+	html: string,
+	options: ConvertOptions,
+	generateKey: () => string,
+): PortableTextBlock[] {
+	const rowTags = html.match(TABLE_ROW_TAG_PATTERN)?.length ?? 0;
+	const cellTags = html.match(TABLE_CELL_TAG_PATTERN)?.length ?? 0;
+	if (
+		TABLE_BLOCK_CONTENT_PATTERN.test(html) ||
+		MERGED_CELL_PATTERN.test(html) ||
+		// The transformer's row and cell patterns rescan the rest of the table from every start
+		// tag that has no end tag.
+		(html.match(TABLE_ROW_END_TAG_PATTERN)?.length ?? 0) < rowTags ||
+		(html.match(TABLE_CELL_END_TAG_PATTERN)?.length ?? 0) < cellTags
+	) {
+		return [];
+	}
+
+	// Cells keep inline content only, so paragraphs in one cell are separated by a line break.
+	const cellHtml = html
+		.replace(BLOCK_END_INSIDE_CELL_PATTERN, "$&<br>")
+		.replace(BLOCK_START_INSIDE_CELL_PATTERN, "<br>$&");
+	const block: GutenbergBlock = {
+		blockName: "core/table",
+		attrs: {},
+		innerHTML: cellHtml,
+		innerBlocks: [],
+		innerContent: [cellHtml],
+	};
+	const converted = tableTransformer(block, options, createTransformContext(options, generateKey));
+	const table = converted[0];
+	if (table?._type !== "table") {
+		return [];
+	}
+
+	const cells = table.rows.flatMap((row) => row.cells);
+	const cellText = cells.flatMap((cell) => cell.content.map((span) => span.text)).join("");
+	const withoutWhitespace = (text: string) => text.replace(ALL_WHITESPACE_PATTERN, "");
+	const keepsEverything =
+		table.rows.length === rowTags &&
+		cells.length === cellTags &&
+		withoutWhitespace(cellText) === withoutWhitespace(extractText(html));
+	return keepsEverything ? converted : [];
+}
+
+/**
+ * Transform a single block
+ */
 function transformBlock(
 	block: GutenbergBlock,
 	options: ConvertOptions,
@@ -363,6 +576,9 @@ function transformBlock(
 	return transformer(block, options, context);
 }
 
+/**
+ * Decode HTML entities
+ */
 function decodeHtmlEntities(html: string): string {
 	return html
 		.replace(LESS_THAN_ENTITY_PATTERN, "<")
@@ -370,11 +586,14 @@ function decodeHtmlEntities(html: string): string {
 		.replace(AMP_ENTITY_PATTERN, "&")
 		.replace(QUOTE_ENTITY_PATTERN, '"')
 		.replace(APOS_ENTITY_PATTERN, "'")
-		.replace(NUMERIC_AMP_ENTITY_PATTERN, "&")
-		.replace(HEX_AMP_ENTITY_PATTERN, "&")
+		.replace(NUMERIC_AMP_ENTITY_PATTERN, "&") // &#038; or &#38;
+		.replace(HEX_AMP_ENTITY_PATTERN, "&") // &#x26;
 		.replace(NBSP_ENTITY_PATTERN, " ");
 }
 
+/**
+ * Decode HTML entities in URLs (used for image src attributes)
+ */
 function decodeUrlEntities(url: string): string {
 	return url
 		.replace(AMP_ENTITY_PATTERN, "&")
@@ -382,6 +601,10 @@ function decodeUrlEntities(url: string): string {
 		.replace(HEX_AMP_ENTITY_PATTERN, "&");
 }
 
+/**
+ * Parse Gutenberg blocks without converting to Portable Text
+ * Useful for inspection and debugging
+ */
 export function parseGutenbergBlocks(content: string): GutenbergBlock[] {
 	if (!content || !content.trim()) {
 		return [];

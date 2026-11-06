@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ThemeProvider } from "../../../../../packages/admin/src/components/ThemeProvider";
 import { render } from "../utils/render.tsx";
 
+// Mock router
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual("@tanstack/react-router");
 	return {
@@ -19,6 +20,7 @@ vi.mock("@tanstack/react-router", async () => {
 	};
 });
 
+// Mock API
 vi.mock("../../../../../packages/admin/src/lib/api/client", async () => {
 	const actual = await vi.importActual("../../../../../packages/admin/src/lib/api/client");
 	return {
@@ -44,9 +46,14 @@ vi.mock("../../../../../packages/admin/src/lib/api/client", async () => {
 	};
 });
 
+// Import after mocks
 const { Header } = await import("../../../../../packages/admin/src/components/Header");
 
-const THEME_BUTTON_REGEX = /Toggle theme/;
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const THEME_BUTTON_REGEX = /Switch to (light|dark)/;
 
 function TestWrapper({ children }: { children: React.ReactNode }) {
 	const qc = new QueryClient({
@@ -73,6 +80,8 @@ describe("Header", () => {
 				<Header />
 			</TestWrapper>,
 		);
+		// ThemeToggle exposes its next action in the aria-label.
+		// (Kumo 2.x wraps `<Button title>` as a Tooltip popup, not a DOM title.)
 		const themeButton = screen.getByLabelText(THEME_BUTTON_REGEX);
 		await expect.element(themeButton).toBeInTheDocument();
 	});
@@ -83,6 +92,7 @@ describe("Header", () => {
 				<Header />
 			</TestWrapper>,
 		);
+		// User data loads async via react-query
 		await expect.element(screen.getByText("Matt Kane")).toBeInTheDocument();
 	});
 

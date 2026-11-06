@@ -4,7 +4,7 @@ import { UserPlus, Prohibit, CheckCircle } from "@phosphor-icons/react";
 import * as React from "react";
 
 import type { UserListItem } from "../../lib/api";
-import { cn } from "../../lib/utils";
+import { cn, formatDate } from "../../lib/utils.js";
 import { TableToolbar, TableToolbarSearch } from "../TableToolbar.js";
 import { RoleBadge } from "./RoleBadge";
 import { useRolesConfig } from "./useRolesConfig.js";
@@ -22,6 +22,9 @@ export interface UserListProps {
 	onLoadMore?: () => void;
 }
 
+/**
+ * User list component with search, filter, and table display
+ */
 export function UserList({
 	users,
 	isLoading,
@@ -47,6 +50,7 @@ export function UserList({
 
 	return (
 		<div className="space-y-4">
+			{/* Header */}
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-semibold leading-tight">{t`Users`}</h1>
 				<Button onClick={onInviteUser} icon={<UserPlus />}>
@@ -78,6 +82,7 @@ export function UserList({
 				</Select>
 			</TableToolbar>
 
+			{/* Table */}
 			<div className="rounded-md border bg-kumo-base overflow-x-auto">
 				<table className="w-full">
 					<thead>
@@ -150,6 +155,7 @@ export function UserList({
 				</table>
 			</div>
 
+			{/* Load more */}
 			{hasMore && !isLoading && (
 				<div className="flex justify-center">
 					<Button variant="outline" onClick={onLoadMore}>
@@ -168,13 +174,14 @@ interface UserListRowProps {
 
 function UserListRow({ user, onSelect }: UserListRowProps) {
 	const displayName = user.name || user.email;
-	const { t } = useLingui();
-	const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : t`Never`;
+	const { t, i18n } = useLingui();
+	const lastLogin = user.lastLogin ? formatDate(user.lastLogin, i18n.locale) : t`Never`;
 
 	return (
 		<tr className="hover:bg-kumo-tint/25 cursor-pointer" onClick={onSelect}>
 			<td className="px-4 py-3">
 				<div className="flex items-center gap-3">
+					{/* Avatar */}
 					{user.avatarUrl ? (
 						<img src={user.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
 					) : (
@@ -184,7 +191,11 @@ function UserListRow({ user, onSelect }: UserListRowProps) {
 					)}
 					<div>
 						<div className="font-medium">{displayName}</div>
-						{user.name && <div className="text-sm text-kumo-subtle">{user.email}</div>}
+						{user.name && (
+							<div className="text-sm text-kumo-subtle">
+								<bdi dir="ltr">{user.email}</bdi>
+							</div>
+						)}
 					</div>
 				</div>
 			</td>
@@ -204,7 +215,9 @@ function UserListRow({ user, onSelect }: UserListRowProps) {
 					</span>
 				)}
 			</td>
-			<td className="px-4 py-3 text-sm text-kumo-subtle">{lastLogin}</td>
+			<td className="px-4 py-3 text-sm text-kumo-subtle">
+				<bdi>{lastLogin}</bdi>
+			</td>
 			<td className="px-4 py-3">
 				<span className={cn("text-sm", user.credentialCount === 0 && "text-kumo-subtle")}>
 					{user.credentialCount}
@@ -214,19 +227,23 @@ function UserListRow({ user, onSelect }: UserListRowProps) {
 	);
 }
 
+/** Loading skeleton for user list */
 export function UserListSkeleton() {
 	return (
 		<div className="space-y-4">
+			{/* Header skeleton */}
 			<div className="flex items-center justify-between">
 				<div className="h-8 w-24 bg-kumo-tint animate-pulse rounded" />
 				<div className="h-10 w-32 bg-kumo-tint animate-pulse rounded" />
 			</div>
 
+			{/* Filters skeleton */}
 			<div className="flex gap-4">
 				<div className="h-10 w-64 bg-kumo-tint animate-pulse rounded" />
 				<div className="h-10 w-44 bg-kumo-tint animate-pulse rounded" />
 			</div>
 
+			{/* Table skeleton */}
 			<div className="rounded-md border bg-kumo-base">
 				<div className="border-b bg-kumo-tint/50 px-4 py-3">
 					<div className="h-4 w-full bg-kumo-tint animate-pulse rounded" />

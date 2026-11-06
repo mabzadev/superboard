@@ -104,6 +104,8 @@ export interface SearchOptions {
 	limit?: number;
 }
 
+// ── Theme types ─────────────────────────────────────────────────
+
 export interface ThemeRow {
 	id: string;
 	name: string;

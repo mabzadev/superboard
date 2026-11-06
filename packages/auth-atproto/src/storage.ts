@@ -1,3 +1,11 @@
+/**
+ * Auth provider storage accessor.
+ *
+ * Resolves the atproto auth provider's storage collections from the
+ * EmDash runtime config. Used by route handlers to get storage for
+ * the OAuth client.
+ */
+
 import type { Kysely } from "kysely";
 
 interface AuthProviderDescriptorLike {
@@ -10,6 +18,10 @@ interface EmdashLocals {
 	config: { authProviders?: AuthProviderDescriptorLike[] };
 }
 
+/**
+ * Get the auth provider storage collections for the atproto provider.
+ * Returns null if the provider has no storage declared or is not found.
+ */
 export async function getAtprotoStorage(
 	emdash: EmdashLocals,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

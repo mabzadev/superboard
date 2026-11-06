@@ -1,3 +1,16 @@
+/**
+ * Code block node view for the inline (visual editing) Portable Text editor.
+ *
+ * Mirrors the admin editor's `CodeBlockNode` but with no Kumo/Lingui deps,
+ * so it can ship as part of the SSR runtime. Wraps the Lowlight code block and
+ * overlays a small inline language picker in the top-right corner of each code
+ * block.
+ *
+ * Keep the language list in sync with
+ * `packages/admin/src/components/editor/codeBlockLanguages.ts`. Duplicated
+ * here so packages/core stays independent of the admin package.
+ */
+
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import type { NodeViewProps } from "@tiptap/react";
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
@@ -87,6 +100,7 @@ function findLanguage(value: string | null | undefined): CodeBlockLanguage | nul
 	return null;
 }
 
+// Hoisted to module scope to avoid re-compilation on every call.
 const DISALLOWED_CHARS_RE = /[^a-z0-9_-]+/g;
 const LEADING_TRAILING_HYPHENS_RE = /^-+|-+$/g;
 
@@ -96,6 +110,9 @@ function normalizeLanguage(value: string | null | undefined): string | undefined
 	if (!trimmed) return undefined;
 	const match = findLanguage(trimmed);
 	if (match) return match.id;
+	// Sanitize unknown input: lowercase, then collapse runs of disallowed
+	// characters into a single `-` so the result is always a single CSS class
+	// token (the frontend renders `language-{id}` on the <pre>/<code>).
 	const sanitized = trimmed
 		.toLowerCase()
 		.replace(DISALLOWED_CHARS_RE, "-")
@@ -209,6 +226,8 @@ function InlineCodeBlockNodeView({ node, updateAttributes }: NodeViewProps) {
 	const popoverRef = React.useRef<HTMLDivElement>(null);
 	const copyResetTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const copyRequestId = React.useRef(0);
+	// Per-instance datalist id so multiple code blocks (or multiple inline
+	// editors) on the same page don't create duplicate DOM ids.
 	const datalistId = React.useId();
 
 	React.useEffect(() => {
@@ -422,6 +441,13 @@ function InlineCodeBlockNodeView({ node, updateAttributes }: NodeViewProps) {
 	);
 }
 
+/**
+ * Code block extension with inline language picker for the visual editor.
+ *
+ * Use as a drop-in replacement for StarterKit's default `codeBlock`:
+ * configure `StarterKit.configure({ codeBlock: false })` and add this
+ * extension to the editor.
+ */
 export const InlineCodeBlockExtension = CodeBlockLowlight.extend({
 	addKeyboardShortcuts() {
 		const shortcuts = this.parent?.() ?? {};
@@ -432,6 +458,14 @@ export const InlineCodeBlockExtension = CodeBlockLowlight.extend({
 
 		return {
 			...shortcuts,
+			"Mod-a": () => {
+				if (!selectionIsInCodeBlock()) return false;
+				const { $from } = this.editor.state.selection;
+				return this.editor.commands.setTextSelection({
+					from: $from.start(),
+					to: $from.end(),
+				});
+			},
 			Tab: (props) => (selectionIsInCodeBlock() ? (shortcuts.Tab?.(props) ?? false) : false),
 			"Shift-Tab": (props) =>
 				selectionIsInCodeBlock() ? (shortcuts["Shift-Tab"]?.(props) ?? false) : false,

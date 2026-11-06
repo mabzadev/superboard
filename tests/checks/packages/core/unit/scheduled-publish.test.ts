@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import { handleContentPublish } from "../../../../../packages/core/src/api/handlers/content.js";
 import type { EmDashConfig } from "../../../../../packages/core/src/astro/integration/runtime.js";
+import { runSystemCleanup } from "../../../../../packages/core/src/cleanup.js";
 import { ContentRepository } from "../../../../../packages/core/src/database/repositories/content.js";
 import { OptionsRepository } from "../../../../../packages/core/src/database/repositories/options.js";
 import { RevisionRepository } from "../../../../../packages/core/src/database/repositories/revision.js";
@@ -22,7 +23,16 @@ import { SCHEDULER_HEARTBEAT_OPTION } from "../../../../../packages/core/src/sch
 import { createPostFixture, createPageFixture } from "../utils/fixtures.js";
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../utils/test-db.js";
 
-function buildRuntime(db: Kysely<Database>): EmDashRuntime {
+vi.mock("../../../../../packages/core/src/cleanup.js", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("../../../../../packages/core/src/cleanup.js")>();
+	return {
+		...actual,
+		runSystemCleanup: vi.fn().mockResolvedValue(undefined),
+	};
+});
+
+function buildRuntime(db: Kysely<Database>, now?: () => Date): EmDashRuntime {
 	const config: EmDashConfig = {};
 	const pipelineFactoryOptions = { db } as const;
 	const hooks = createHookPipeline([], pipelineFactoryOptions);
@@ -37,6 +47,7 @@ function buildRuntime(db: Kysely<Database>): EmDashRuntime {
 		sandboxEnabled: false,
 		sandboxedPluginEntries: [],
 		createSandboxRunner: null,
+		now,
 	};
 
 	return new EmDashRuntime({
@@ -77,6 +88,8 @@ describe("publishDueContent()", () => {
 
 	it("promotes a scheduled draft whose time has passed", async () => {
 		const post = await repo.create(createPostFixture());
+		// schedule() rejects past dates, so set the past schedule directly —
+		// this is the state a post reaches once its future schedule arrives.
 		const past = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
 
@@ -104,18 +117,21 @@ describe("publishDueContent()", () => {
 
 	it("records the scheduled time as published_at, not the (later) sweep time", async () => {
 		const post = await repo.create(createPostFixture());
+		// Scheduled for the past; the sweep runs "now", which is later.
 		const scheduledFor = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: scheduledFor });
 
 		await publishDueContent(db);
 
 		const updated = await repo.findById("post", post.id);
+		// First publication should preserve the intended publish time.
 		expect(updated?.publishedAt).toBe(scheduledFor);
 	});
 
 	it("routes each publish through the provided callback with requireScheduledDue", async () => {
 		const post = await repo.create(createPostFixture());
-		const scheduledFor = new Date(Date.now() - 60_000).toISOString();
+		const currentTime = new Date("2030-01-02T03:04:06.000Z");
+		const scheduledFor = "2030-01-02T03:04:05.000Z";
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: scheduledFor });
 
 		const calls: Array<{ collection: string; id: string; options: unknown }> = [];
@@ -124,7 +140,7 @@ describe("publishDueContent()", () => {
 			return handleContentPublish(db, collection, id, options);
 		};
 
-		const published = await publishDueContent(db, { publish: spy });
+		const published = await publishDueContent(db, { publish: spy, currentTime });
 
 		expect(published).toEqual([{ collection: "post", id: post.id }]);
 		expect(calls).toHaveLength(1);
@@ -132,6 +148,7 @@ describe("publishDueContent()", () => {
 			publishedAt: scheduledFor,
 			requireScheduledDue: true,
 			expectedScheduledAt: scheduledFor,
+			currentTime,
 		});
 	});
 
@@ -140,6 +157,8 @@ describe("publishDueContent()", () => {
 		const past = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
 
+		// Simulate the unschedule-during-sweep race: the callback reports the
+		// item is no longer due. The sweep must treat this as a quiet skip.
 		const published = await publishDueContent(db, {
 			publish: async () => ({
 				success: false,
@@ -161,8 +180,72 @@ describe("publishDueContent()", () => {
 		expect(first).toHaveLength(2);
 		expect(first.map((r) => r.collection).toSorted()).toEqual(["page", "post"]);
 
+		// A second sweep finds nothing — publish cleared scheduled_at.
 		const second = await publishDueContent(db);
 		expect(second).toEqual([]);
+	});
+
+	it("advances past a bounded window of repeatedly failing entries", async () => {
+		const scheduled = [];
+		for (let index = 0; index < 3; index++) {
+			const item = await repo.create(createPostFixture({ slug: `failing-${index}` }));
+			await repo.update("post", item.id, {
+				status: "scheduled",
+				scheduledAt: new Date(Date.now() - 60_000 + index).toISOString(),
+			});
+			scheduled.push(item.id);
+		}
+		const attempts: string[] = [];
+		const publish: ScheduledPublishFn = async (_collection, id) => {
+			attempts.push(id);
+			return { success: false, error: { code: "CONTENT_PUBLISH_ERROR" } };
+		};
+
+		await publishDueContent(db, { limit: 2, publish });
+		expect(attempts).toEqual(scheduled.slice(0, 2));
+		attempts.length = 0;
+
+		await publishDueContent(db, { limit: 2, publish });
+		expect(attempts.length).toBeLessThanOrEqual(2);
+		expect(attempts).toContain(scheduled[2]);
+	});
+
+	it("does not let an older concurrent sweep move the cursor backwards", async () => {
+		const scheduled = [];
+		for (let index = 0; index < 3; index++) {
+			const item = await repo.create(createPostFixture({ slug: `concurrent-${index}` }));
+			await repo.update("post", item.id, {
+				status: "scheduled",
+				scheduledAt: new Date(Date.now() - 60_000 + index).toISOString(),
+			});
+			scheduled.push(item.id);
+		}
+		let releaseOldest!: () => void;
+		const oldestBlocked = new Promise<void>((resolve) => {
+			releaseOldest = resolve;
+		});
+		let markOldestStarted!: () => void;
+		const oldestStarted = new Promise<void>((resolve) => {
+			markOldestStarted = resolve;
+		});
+		const failingResult = { success: false, error: { code: "CONTENT_PUBLISH_ERROR" } };
+		const oldSweep = publishDueContent(db, {
+			limit: 1,
+			publish: async () => {
+				markOldestStarted();
+				await oldestBlocked;
+				return failingResult;
+			},
+		});
+		await oldestStarted;
+		await publishDueContent(db, { limit: 1, publish: async () => failingResult });
+		await publishDueContent(db, { limit: 1, publish: async () => failingResult });
+		releaseOldest();
+		await oldSweep;
+
+		expect(
+			await new OptionsRepository(db).get("emdash:scheduled-publish-cursor:post"),
+		).toMatchObject({ id: scheduled[1] });
 	});
 
 	it("bounds promotions per collection per sweep and drains the rest on later sweeps", async () => {
@@ -172,6 +255,7 @@ describe("publishDueContent()", () => {
 			await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
 		}
 
+		// limit 2 → first sweep promotes 2, leaves 1 for the next tick.
 		const first = await publishDueContent(db, { limit: 2 });
 		expect(first).toHaveLength(2);
 
@@ -197,7 +281,9 @@ describe("publishDueContent()", () => {
 		});
 
 		expect(published).toHaveLength(2);
+		// One invocation per collection that published something.
 		expect(batches).toHaveLength(2);
+		// Each batch carries refs for exactly one collection (incremental purge).
 		for (const batch of batches) {
 			expect(new Set(batch.map((r) => r.collection)).size).toBe(1);
 		}
@@ -216,6 +302,7 @@ describe("publishDueContent()", () => {
 			},
 		});
 
+		// Both still published despite the hook throwing on every batch.
 		expect(published).toHaveLength(2);
 		expect((await repo.findById("post", post.id))?.status).toBe("published");
 		expect((await repo.findById("page", page.id))?.status).toBe("published");
@@ -235,6 +322,8 @@ describe("EmDashRuntime.runScheduledTasks()", () => {
 		await teardownTestDatabase(db);
 	});
 
+	// This is the exact method the Cloudflare scheduled() handler invokes via
+	// runScheduledTasks(). It must promote due content and report it.
 	it("promotes due content and returns it for cache invalidation", async () => {
 		const post = await repo.create(createPostFixture());
 		const past = new Date(Date.now() - 60_000).toISOString();
@@ -304,6 +393,38 @@ describe("EmDashRuntime.runScheduledTasks()", () => {
 			consoleError.mockRestore();
 		}
 	});
+
+	it("runs system cleanup only at the top of the hour", async () => {
+		const mockCleanup = vi.mocked(runSystemCleanup);
+		mockCleanup.mockClear();
+
+		const runtime = buildRuntime(db, () => new Date("2026-10-04T12:00:00.000Z"));
+		await runtime.runScheduledTasks();
+		expect(mockCleanup).toHaveBeenCalledTimes(1);
+
+		await buildRuntime(db, () => new Date("2026-10-04T12:15:00.000Z")).runScheduledTasks();
+		expect(mockCleanup).toHaveBeenCalledTimes(1);
+
+		await buildRuntime(db, () => new Date("2026-10-04T13:00:00.000Z")).runScheduledTasks();
+		expect(mockCleanup).toHaveBeenCalledTimes(2);
+	});
+
+	it("records a heartbeat on non-hour ticks without running system cleanup", async () => {
+		const mockCleanup = vi.mocked(runSystemCleanup);
+		mockCleanup.mockClear();
+
+		const options = new OptionsRepository(db);
+		const currentTime = new Date("2026-10-04T12:05:00.000Z");
+		const runtime = buildRuntime(db, () => currentTime);
+
+		const { published } = await runtime.runScheduledTasks();
+		expect(published).toEqual([]);
+		expect(mockCleanup).not.toHaveBeenCalled();
+
+		const heartbeat = await options.get<string>(SCHEDULER_HEARTBEAT_OPTION);
+		expect(heartbeat).not.toBeNull();
+		expect(Date.parse(heartbeat!)).toBe(currentTime.getTime());
+	});
 });
 
 describe("ContentRepository.publish() requireDue gate", () => {
@@ -333,6 +454,7 @@ describe("ContentRepository.publish() requireDue gate", () => {
 		const post = await repo.create(createPostFixture());
 		const past = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
+		// Editor unschedules between selection and publish.
 		await repo.unschedule("post", post.id);
 
 		await expect(repo.publish("post", post.id, undefined, true)).rejects.toBeInstanceOf(
@@ -387,6 +509,7 @@ describe("ContentRepository.publish() requireDue gate", () => {
 		const post = await repo.create(createPostFixture());
 		const past = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
+		// Pushed out to the future before the sweep reaches it.
 		const future = new Date(Date.now() + 86_400_000).toISOString();
 		await repo.update("post", post.id, { scheduledAt: future });
 
@@ -596,6 +719,7 @@ describe("ContentRepository.publish() requireDue gate", () => {
 
 	it("ignores the gate when requireDue is false (manual publish path)", async () => {
 		const post = await repo.create(createPostFixture());
+		// Plain draft, never scheduled.
 		const result = await repo.publish("post", post.id);
 		expect(result.status).toBe("published");
 	});

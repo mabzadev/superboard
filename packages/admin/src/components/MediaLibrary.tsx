@@ -5,7 +5,6 @@ import {
 	Grid,
 	LayerCard,
 	Loader,
-	Pagination,
 	Select,
 	Tabs,
 	Toasty,
@@ -69,32 +68,23 @@ import {
 	getFileIcon,
 	formatFileSize,
 	getMediaThumbnailUrl,
+	getMediaPreviewUrl,
 	getMediaObjectPosition,
 	fallbackToOriginalThumbnail,
-	MEDIA_THUMBNAIL_WIDTH,
 	metaNumber,
 } from "../lib/media-utils";
 import { cn } from "../lib/utils";
+import { ListPaginationFooter, type ListPagination } from "./ListPaginationFooter.js";
+import {
+	MEDIA_BROWSER_PAGE_SIZES,
+	MediaBrowserItem,
+	mimeForMediaTypeFilter,
+} from "./media/MediaBrowserItems.js";
 import { MediaDetailPanel } from "./MediaDetailPanel";
 import { MediaFolderDialog } from "./MediaFolderDialog.js";
 import { LOCAL_MEDIA_UPLOAD_ACCEPT, MediaUploadDialog } from "./MediaUploadDialog.js";
 import { RouterLinkButton } from "./RouterLinkButton.js";
 import { TableToolbar, TableToolbarSearch } from "./TableToolbar.js";
-
-function mimeForTypeFilter(value: string): string | string[] | undefined {
-	switch (value) {
-		case "image":
-			return "image/";
-		case "video":
-			return "video/";
-		case "audio":
-			return "audio/";
-		case "document":
-			return ["application/", "text/"];
-		default:
-			return undefined;
-	}
-}
 
 export interface MediaLibraryProps {
 	items?: MediaItem[];
@@ -102,11 +92,16 @@ export interface MediaLibraryProps {
 	onUpload?: (file: File, options?: MediaUploadOptions) => Promise<void> | void;
 	onSelect?: (item: MediaItem) => void;
 	onItemUpdated?: () => void;
+	/** True when more local-library items can be fetched via cursor pagination */
 	hasMore?: boolean;
+	/** Triggered to fetch the next page of local-library items */
 	onLoadMore?: () => void;
-	pagination?: MediaLibraryPagination;
+	pagination?: ListPagination;
+	/** Called (debounced) with the filename search term for the local library. */
 	onLocalSearchChange?: (q: string) => void;
+	/** Called with the MIME filter for the local library (undefined = all types). */
 	onLocalMimeFilterChange?: (mimeType: string | string[] | undefined) => void;
+	/** Bounded folder pages owned by the main local Media route. */
 	folders?: MediaFolder[];
 	foldersLoading?: boolean;
 	foldersError?: Error | null;
@@ -128,17 +123,6 @@ export interface MediaLibraryProps {
 	onMoveMedia?: (item: LocalMediaItem, folder: MediaFolder) => Promise<void>;
 }
 
-export interface MediaLibraryPagination {
-	page: number;
-	perPage: number;
-	totalCount: number;
-	isPending: boolean;
-	onPageChange: (page: number) => void;
-	onPageSizeChange: (perPage: number) => void;
-}
-
-const MEDIA_PAGE_SIZE_OPTIONS = [35, 70, 90];
-const MAX_DROPDOWN_PAGE_COUNT = 100;
 const MEDIA_DRAG_OVERLAY_MAX_WIDTH = 384;
 const MEDIA_DRAG_OVERLAY_HEIGHT = 36;
 let pendingMediaLibraryScrollTop: number | null = null;
@@ -185,6 +169,9 @@ const centerMediaOverlayOnCursor: Modifier = ({
 };
 const MEDIA_DRAG_OVERLAY_MODIFIERS = [centerMediaOverlayOnCursor];
 
+/**
+ * Media library component with upload, provider tabs, and grid view
+ */
 export function MediaLibrary({
 	items = [],
 	isLoading,
@@ -216,7 +203,8 @@ export function MediaLibrary({
 	onMoveMedia,
 }: MediaLibraryProps) {
 	const { t } = useLingui();
-	const isAdmin = (useCurrentUser().data?.role ?? 0) >= 50;
+	const currentUser = useCurrentUser().data;
+	const isAdmin = (currentUser?.role ?? 0) >= 50;
 	const [activeProvider, setActiveProvider] = React.useState<string>("local");
 	const activationQuery = useQuery({
 		queryKey: MEDIA_USAGE_ACTIVATION_QUERY_KEY,
@@ -257,11 +245,7 @@ export function MediaLibrary({
 	const [localTypeFilter, setLocalTypeFilter] = React.useState("all");
 	const mediaHeadingRef = React.useRef<HTMLHeadingElement>(null);
 	const detailOpenFrameRef = React.useRef<number | null>(null);
-	const paginationRequestedRef = React.useRef(false);
-	const paginationWasPendingRef = React.useRef(false);
-	const paginationRootRef = React.useRef<HTMLDivElement>(null);
-	const paginationFocusTargetRef = React.useRef<HTMLElement | null>(null);
-	const paginationFocusFallbackRef = React.useRef<"page" | "page-size">("page");
+	// Debounced filename search reported up for the local library's server query.
 	const debouncedSearch = useDebouncedValue(searchQuery, 300);
 	React.useEffect(() => {
 		if (activeProvider === "local" && onLocalSearchChange) {
@@ -285,16 +269,19 @@ export function MediaLibrary({
 	const suppressDragClickRef = React.useRef(false);
 	const suppressDragClickTimerRef = React.useRef<number | null>(null);
 	const movePendingRef = React.useRef(false);
+	// Track loaded image dimensions for providers that don't return them (e.g., CF Images)
 	const [loadedDimensions, setLoadedDimensions] = React.useState<
 		Record<string, { width: number; height: number }>
 	>({});
 
+	// Fetch available providers
 	const { data: providers } = useQuery({
 		queryKey: ["media-providers"],
 		queryFn: fetchMediaProviders,
 		placeholderData: [],
 	});
 
+	// Fetch provider media when a non-local provider is selected
 	const {
 		data: providerData,
 		isLoading: providerLoading,
@@ -309,6 +296,7 @@ export function MediaLibrary({
 		enabled: activeProvider !== "local",
 	});
 
+	// Get active provider info
 	const activeProviderInfo = React.useMemo(() => {
 		if (activeProvider === "local") {
 			return {
@@ -321,7 +309,7 @@ export function MediaLibrary({
 	}, [activeProvider, providers, t]);
 	const canUpload = activeProviderInfo?.capabilities.upload ?? false;
 	const canSearch = activeProviderInfo?.capabilities.search ?? false;
-	const canUploadHere = canUpload && (activeProvider !== "local" || !folderId);
+	const canUploadHere = canUpload;
 
 	const cancelPendingDetailOpen = React.useCallback(() => {
 		if (detailOpenFrameRef.current === null) return;
@@ -330,55 +318,6 @@ export function MediaLibrary({
 	}, []);
 
 	React.useEffect(() => cancelPendingDetailOpen, [cancelPendingDetailOpen]);
-	const requestPage = React.useCallback(
-		(nextPage: number) => {
-			if (!pagination || pagination.isPending) return;
-			const pageCount = Math.max(1, Math.ceil(pagination.totalCount / pagination.perPage));
-			if (!Number.isSafeInteger(nextPage) || nextPage < 1 || nextPage > pageCount) return;
-			paginationRequestedRef.current = true;
-			paginationFocusTargetRef.current =
-				document.activeElement instanceof HTMLElement ? document.activeElement : null;
-			paginationFocusFallbackRef.current = "page";
-			pagination.onPageChange(nextPage);
-		},
-		[pagination],
-	);
-	const requestPageSize = React.useCallback(
-		(nextPerPage: number) => {
-			if (!pagination || pagination.isPending || !MEDIA_PAGE_SIZE_OPTIONS.includes(nextPerPage)) {
-				return;
-			}
-			paginationRequestedRef.current = true;
-			paginationFocusTargetRef.current =
-				document.activeElement instanceof HTMLElement ? document.activeElement : null;
-			paginationFocusFallbackRef.current = "page-size";
-			pagination.onPageSizeChange(nextPerPage);
-		},
-		[pagination],
-	);
-	React.useEffect(() => {
-		const pending = pagination?.isPending ?? false;
-		if (activeProvider !== "local") {
-			paginationRequestedRef.current = false;
-			paginationFocusTargetRef.current = null;
-		} else if (paginationRequestedRef.current && paginationWasPendingRef.current && !pending) {
-			paginationRequestedRef.current = false;
-			let focusTarget = paginationFocusTargetRef.current;
-			if (!focusTarget?.isConnected || focusTarget.matches(":disabled")) {
-				const slot =
-					paginationFocusFallbackRef.current === "page-size"
-						? "pagination-page-size"
-						: "pagination-controls";
-				focusTarget =
-					paginationRootRef.current?.querySelector<HTMLElement>(
-						`[data-slot="${slot}"] [role="combobox"], [data-slot="${slot}"] input, [data-slot="${slot}"] button:not(:disabled)`,
-					) ?? null;
-			}
-			paginationFocusTargetRef.current = null;
-			focusTarget?.focus({ preventScroll: true });
-		}
-		paginationWasPendingRef.current = pending;
-	}, [activeProvider, pagination?.isPending]);
 
 	const openDetail = React.useCallback(
 		(item: MediaItem) => {
@@ -469,6 +408,7 @@ export function MediaLibrary({
 		};
 	}, [canUploadHere, enqueueFiles, uploadDialogOpen]);
 
+	// Build provider tabs
 	const providerTabs = React.useMemo(() => {
 		const tabs: Array<{ id: string; name: string; icon?: string }> = [
 			{ id: "local", name: t`Library`, icon: undefined },
@@ -483,6 +423,7 @@ export function MediaLibrary({
 		return tabs;
 	}, [providers, t]);
 
+	// Get current items based on active provider
 	const currentItems = activeProvider === "local" ? items : [];
 	const currentProviderItems = activeProvider !== "local" ? providerData?.items || [] : [];
 	const currentLoading = activeProvider === "local" ? isLoading : providerLoading;
@@ -520,7 +461,7 @@ export function MediaLibrary({
 		setSearchQuery("");
 		onLocalSearchChange?.("");
 		setLocalTypeFilter("all");
-		onLocalMimeFilterChange?.(mimeForTypeFilter("all"));
+		onLocalMimeFilterChange?.(mimeForMediaTypeFilter("all"));
 	};
 	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const next = e.target.value;
@@ -682,12 +623,12 @@ export function MediaLibrary({
 			if (!uploadTarget) throw new Error("Upload target unavailable");
 			if (uploadTarget.id === "local") {
 				if (!onUpload) throw new Error("Upload callback unavailable");
-				await onUpload(file, options);
+				await onUpload(file, { ...options, folderId: folderId ?? null });
 				return;
 			}
 			await uploadToProvider(uploadTarget.id, file, undefined, options);
 		},
-		[onUpload, uploadTarget],
+		[folderId, onUpload, uploadTarget],
 	);
 	const handleUploadDialogClosed = React.useCallback(() => {
 		setEnqueueRequest(null);
@@ -765,12 +706,16 @@ export function MediaLibrary({
 			onDragCancel: handleMediaDragCancel,
 		},
 		<div
-			className="space-y-4"
+			className={
+				activeProvider === "local" && pagination && pagination.totalCount > 0
+					? "flex min-h-full flex-col gap-4 [&_[data-media-layout]]:scroll-mb-48"
+					: "space-y-4"
+			}
 			data-media-library
 			aria-busy={currentLoading || moveMutation.isPending || undefined}
 			onClickCapture={handleRootClickCapture}
 		>
-			{onMoveMedia && <Toasty toastManager={toastManager}>{null}</Toasty>}
+			<Toasty toastManager={toastManager}>{null}</Toasty>
 			{isFileDragActive && canUploadHere && (
 				<div
 					className="pointer-events-none fixed inset-0 z-50 bg-kumo-base/70 p-4 backdrop-blur-sm sm:p-8"
@@ -784,6 +729,7 @@ export function MediaLibrary({
 					</div>
 				</div>
 			)}
+			{/* Header: page title (start) + primary actions (end) */}
 			<div className="flex items-center justify-between gap-2 sm:gap-4">
 				<div className="min-w-0">
 					{activeProvider === "local" && folderId && (
@@ -837,10 +783,11 @@ export function MediaLibrary({
 					{activeProvider === "local" && !folderId && folderActionsAvailable && (
 						<Button
 							variant="secondary"
+							size="base"
 							icon={<Plus className="hidden sm:block" aria-hidden="true" />}
 							aria-label={t`Add new folder`}
 							onClick={openCreateFolder}
-							className="h-6.5 shrink-0 gap-1 px-2 text-xs sm:h-9 sm:gap-1.5 sm:px-3 sm:text-base"
+							className="shrink-0"
 						>
 							<span className="sm:hidden">{t`New folder`}</span>
 							<span className="hidden sm:inline">{t`Add new folder`}</span>
@@ -849,9 +796,10 @@ export function MediaLibrary({
 					{canUploadHere && (
 						<Button
 							onClick={openUploadDialog}
+							size="base"
 							icon={<Upload className="hidden sm:block" aria-hidden="true" />}
 							aria-label={uploadActionLabel}
-							className="h-6.5 shrink-0 gap-1 px-2 text-xs sm:h-9 sm:gap-1.5 sm:px-3 sm:text-base"
+							className="shrink-0"
 						>
 							<span className="sm:hidden">{t`Upload`}</span>
 							<span className="hidden sm:inline">{uploadActionLabel}</span>
@@ -880,6 +828,7 @@ export function MediaLibrary({
 				/>
 			) : null}
 
+			{/* Provider tabs (only when an external provider is configured) */}
 			{providerTabs.length > 1 && (
 				<Tabs
 					variant="underline"
@@ -910,6 +859,8 @@ export function MediaLibrary({
 				/>
 			)}
 
+			{/* Toolbar: search + type filter (start) · view toggle (end).
+			    Local library search/filter is handled server-side. */}
 			{showToolbar && (
 				<TableToolbar
 					className="flex-row flex-nowrap gap-2"
@@ -947,6 +898,7 @@ export function MediaLibrary({
 				>
 					{(canSearch || activeProvider === "local") && (
 						<TableToolbarSearch
+							size="base"
 							placeholder={activeProvider === "local" ? t`Search by filename...` : t`Search...`}
 							aria-label={t`Search media`}
 							value={searchQuery}
@@ -957,12 +909,12 @@ export function MediaLibrary({
 					)}
 					{activeProvider === "local" && (
 						<Select
-							size="sm"
+							size="base"
 							value={localTypeFilter}
 							onValueChange={(v) => {
 								const next = v ?? "all";
 								setLocalTypeFilter(next);
-								onLocalMimeFilterChange?.(mimeForTypeFilter(next));
+								onLocalMimeFilterChange?.(mimeForMediaTypeFilter(next));
 							}}
 							items={{
 								all: t`All types`,
@@ -1016,7 +968,7 @@ export function MediaLibrary({
 							<Loader />
 						</div>
 					) : (
-						<Grid variant="4up" gap="sm">
+						<Grid variant="4up" gap="sm" className="2xl:grid-cols-6">
 							{visibleFolders.map((folder) => (
 								<MediaFolderCard
 									key={folder.id}
@@ -1048,6 +1000,7 @@ export function MediaLibrary({
 				</section>
 			)}
 
+			{/* Content */}
 			{currentLoading && currentItems.length === 0 && currentProviderItems.length === 0 ? (
 				<div className="flex items-center justify-center py-12">
 					<Loader />
@@ -1122,10 +1075,12 @@ export function MediaLibrary({
 					/>
 				)
 			) : viewMode === "grid" ? (
-				<div
+				<Grid
+					variant="4up"
+					gap="sm"
+					className="2xl:grid-cols-6"
 					data-media-grid
 					inert={currentLoading || undefined}
-					className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(160px,1fr))]"
 				>
 					{activeProvider === "local"
 						? currentItems.map((item) => (
@@ -1149,6 +1104,7 @@ export function MediaLibrary({
 									item={item}
 									selected={detailItem?.id === item.id}
 									onClick={() => {
+										// Merge loaded dimensions if provider didn't return them
 										const dims = loadedDimensions[item.id];
 										const itemWithDims = dims
 											? {
@@ -1167,7 +1123,7 @@ export function MediaLibrary({
 									}}
 								/>
 							))}
-				</div>
+				</Grid>
 			) : (
 				<div
 					inert={currentLoading || undefined}
@@ -1279,47 +1235,11 @@ export function MediaLibrary({
 			)}
 
 			{activeProvider === "local" && pagination && pagination.totalCount > 0 && (
-				<div ref={paginationRootRef} className="min-w-0">
-					<Pagination
-						page={pagination.page}
-						setPage={requestPage}
-						perPage={pagination.perPage}
-						totalCount={pagination.totalCount}
-						className="flex-wrap gap-y-3"
-						labels={{
-							navigation: t`Media pagination`,
-							firstPage: t`First page`,
-							previousPage: t`Previous page`,
-							nextPage: t`Next page`,
-							lastPage: t`Last page`,
-							pageNumber: t`Page number`,
-							pageSize: t`Page size`,
-						}}
-					>
-						<Pagination.Info className="min-w-fit">
-							{({ pageShowingRange, totalCount }) => (
-								<span role="status">{t`Showing ${pageShowingRange} of ${totalCount ?? 0}`}</span>
-							)}
-						</Pagination.Info>
-						<Pagination.Separator className="hidden sm:block" />
-						<div inert={pagination.isPending || undefined} className="contents">
-							<Pagination.PageSize
-								value={pagination.perPage}
-								onChange={requestPageSize}
-								options={MEDIA_PAGE_SIZE_OPTIONS}
-								label={t`Per page`}
-							/>
-							<Pagination.Controls
-								pageSelector={
-									Math.ceil(pagination.totalCount / pagination.perPage) <= MAX_DROPDOWN_PAGE_COUNT
-										? "dropdown"
-										: "input"
-								}
-								className="basis-full sm:basis-auto rtl:[&_svg]:-scale-x-100"
-							/>
-						</div>
-					</Pagination>
-				</div>
+				<ListPaginationFooter
+					pagination={pagination}
+					pageSizes={MEDIA_BROWSER_PAGE_SIZES}
+					label={t`Media pagination`}
+				/>
 			)}
 
 			{activeProvider === "local" && !pagination && hasMore && onLoadMore && (
@@ -1344,6 +1264,7 @@ export function MediaLibrary({
 				upload={uploadFile}
 			/>
 
+			{/* Detail Dialog */}
 			{detailItem && (
 				<MediaDetailPanel
 					open={isDetailOpen}
@@ -1351,11 +1272,25 @@ export function MediaLibrary({
 					providerName={detailItem.provider ? activeProviderInfo?.name : undefined}
 					canDelete={detailItem.provider ? activeProviderInfo?.capabilities.delete : undefined}
 					canMoveLocation={isLocalMediaItem(detailItem) ? canMoveMedia?.(detailItem) : undefined}
+					canReplaceOriginal={Boolean(
+						isLocalMediaItem(detailItem) &&
+						currentUser &&
+						(currentUser.role >= 40 ||
+							(currentUser.role >= 30 && detailItem.authorId === currentUser.id)),
+					)}
+					canDuplicateCrop={Boolean(isLocalMediaItem(detailItem) && (currentUser?.role ?? 0) >= 20)}
 					restoreFocusTargetRef={mediaHeadingRef}
 					onClose={closeDetail}
 					onClosed={handleDetailClosed}
 					onUpdated={onItemUpdated}
 					onItemRefreshed={handleDetailItemRefreshed}
+					onCroppedCopyCreated={() => {
+						toastManager.add({
+							title: t`Cropped copy created.`,
+							variant: "success",
+							timeout: 3000,
+						});
+					}}
 					onDeleted={detailItem.provider ? undefined : onItemUpdated}
 				/>
 			)}
@@ -1580,6 +1515,7 @@ function MediaDragOverlay({ item }: { item: LocalMediaItem }) {
 	);
 }
 
+/** Single-chip illustration: solid tinted circle + darker icon, decorative. */
 function MediaEmptyIllustration({ hero: Hero }: { hero: Icon }) {
 	return (
 		<div
@@ -1606,6 +1542,7 @@ interface MediaEmptyStateProps {
 	action?: React.ReactNode;
 }
 
+/** Centered empty / no-results panel with the media illustration. */
 function MediaEmptyState({ hero, title, description, action }: MediaEmptyStateProps) {
 	return (
 		<div
@@ -1631,7 +1568,6 @@ interface MediaGridItemProps {
 }
 
 function MediaGridItem({ item, selected, draggable, isMoving, onClick }: MediaGridItemProps) {
-	const isImage = item.mimeType.startsWith("image/");
 	const localItem = isLocalMediaItem(item) ? item : null;
 	const { setNodeRef, listeners, isDragging } = useDraggable({
 		id: mediaDragId(item.id),
@@ -1642,42 +1578,25 @@ function MediaGridItem({ item, selected, draggable, isMoving, onClick }: MediaGr
 	});
 
 	return (
-		<button
+		<div
 			ref={setNodeRef}
 			{...listeners}
-			type="button"
-			onClick={onClick}
 			aria-busy={isMoving || undefined}
 			data-media-draggable={draggable || undefined}
 			className={cn(
-				"group relative w-full max-w-[200px] overflow-hidden rounded-lg border bg-kumo-base text-start transition-opacity max-sm:max-w-none",
-				selected ? "ring-2 ring-kumo-brand border-kumo-brand" : "hover:border-kumo-brand/50",
+				"min-w-0 transition-opacity",
 				draggable && "cursor-grab touch-manipulation active:cursor-grabbing",
 				(isDragging || isMoving) && "opacity-40",
 			)}
 		>
-			<div className="aspect-square">
-				{isImage ? (
-					<img
-						src={getMediaThumbnailUrl(item.url, item.mimeType, MEDIA_THUMBNAIL_WIDTH)}
-						alt={item.alt || item.filename}
-						draggable={false}
-						className="h-full w-full object-cover"
-						style={{ objectPosition: getMediaObjectPosition(item) }}
-						onError={(e) => fallbackToOriginalThumbnail(e.currentTarget, item.url)}
-					/>
-				) : (
-					<div className="flex h-full w-full items-center justify-center bg-kumo-tint">
-						<span className="text-4xl">{getFileIcon(item.mimeType)}</span>
-					</div>
-				)}
-			</div>
-			<div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
-				<div className="w-full p-3">
-					<p className="truncate text-sm font-medium text-white">{item.filename}</p>
-				</div>
-			</div>
-		</button>
+			<MediaBrowserItem
+				item={item}
+				layout="grid"
+				selected={selected}
+				onClick={onClick}
+				mediaDraggable={draggable}
+			/>
+		</div>
 	);
 }
 
@@ -1685,46 +1604,19 @@ interface ProviderGridItemProps {
 	item: MediaProviderItem;
 	selected?: boolean;
 	onClick?: () => void;
+	/** Callback when image dimensions are loaded (for providers that don't return dimensions) */
 	onDimensionsLoaded?: (width: number, height: number) => void;
 }
 
 function ProviderGridItem({ item, selected, onClick, onDimensionsLoaded }: ProviderGridItemProps) {
-	const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-		const img = e.currentTarget;
-		if (onDimensionsLoaded && (!item.width || !item.height)) {
-			onDimensionsLoaded(img.naturalWidth, img.naturalHeight);
-		}
-	};
-
 	return (
-		<button
-			type="button"
+		<MediaBrowserItem
+			item={providerItemToMediaItem("provider", item)}
+			layout="grid"
+			selected={selected}
 			onClick={onClick}
-			className={cn(
-				"group relative overflow-hidden rounded-lg border bg-kumo-base text-start transition-all max-w-[200px]",
-				selected ? "ring-2 ring-kumo-brand border-kumo-brand" : "hover:border-kumo-brand/50",
-			)}
-		>
-			<div className="aspect-square">
-				{item.previewUrl ? (
-					<img
-						src={item.previewUrl}
-						alt={item.alt || item.filename}
-						className="h-full w-full object-cover"
-						onLoad={handleImageLoad}
-					/>
-				) : (
-					<div className="flex h-full w-full items-center justify-center bg-kumo-tint">
-						<span className="text-4xl">{getFileIcon(item.mimeType)}</span>
-					</div>
-				)}
-			</div>
-			<div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
-				<div className="w-full p-3">
-					<p className="truncate text-sm font-medium text-white">{item.filename}</p>
-				</div>
-			</div>
-		</button>
+			onDimensionsLoaded={onDimensionsLoaded}
+		/>
 	);
 }
 
@@ -1740,6 +1632,7 @@ function MediaListItem({ item, selected, draggable, isMoving, onClick }: MediaLi
 	const { t } = useLingui();
 	const isImage = item.mimeType.startsWith("image/");
 	const localItem = isLocalMediaItem(item) ? item : null;
+	const previewUrl = getMediaPreviewUrl(item.url, item.contentHash);
 	const { setNodeRef, listeners, isDragging } = useDraggable({
 		id: mediaDragId(item.id),
 		data: localItem
@@ -1766,12 +1659,12 @@ function MediaListItem({ item, selected, draggable, isMoving, onClick }: MediaLi
 				<div className="h-10 w-10 overflow-hidden rounded">
 					{isImage ? (
 						<img
-							src={getMediaThumbnailUrl(item.url, item.mimeType, 80)}
+							src={getMediaThumbnailUrl(item.url, item.mimeType, 80, item.contentHash)}
 							alt={item.alt || item.filename}
 							draggable={false}
-							className="h-full w-full object-cover"
+							className="emdash-media-transparency-grid h-full w-full object-cover"
 							style={{ objectPosition: getMediaObjectPosition(item) }}
-							onError={(e) => fallbackToOriginalThumbnail(e.currentTarget, item.url)}
+							onError={(e) => fallbackToOriginalThumbnail(e.currentTarget, previewUrl)}
 						/>
 					) : (
 						<div className="flex h-full w-full items-center justify-center bg-kumo-tint text-xl">
@@ -1798,6 +1691,7 @@ interface ProviderListItemProps {
 	item: MediaProviderItem;
 	selected?: boolean;
 	onClick?: () => void;
+	/** Callback when image dimensions are loaded (for providers that don't return dimensions) */
 	onDimensionsLoaded?: (width: number, height: number) => void;
 }
 
@@ -1826,7 +1720,7 @@ function ProviderListItem({ item, selected, onClick, onDimensionsLoaded }: Provi
 						<img
 							src={item.previewUrl}
 							alt={item.alt || item.filename}
-							className="h-full w-full object-cover"
+							className="emdash-media-transparency-grid h-full w-full object-cover"
 							onLoad={handleImageLoad}
 						/>
 					) : (

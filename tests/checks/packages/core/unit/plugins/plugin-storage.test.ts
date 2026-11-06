@@ -1,10 +1,16 @@
 import type { Kysely } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
-import { PluginStorageRepository } from "../../../../../../packages/core/src/database/repositories/plugin-storage.js";
+import {
+	PluginStorageRepository,
+	mapSerializationFailure,
+} from "../../../../../../packages/core/src/database/repositories/plugin-storage.js";
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { IdentifierError } from "../../../../../../packages/core/src/database/validate.js";
-import { StorageQueryError } from "../../../../../../packages/core/src/plugins/storage-query.js";
+import {
+	StorageQueryError,
+	StorageSerializationError,
+} from "../../../../../../packages/core/src/plugins/storage-query.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
 interface TestDocument {
@@ -158,6 +164,7 @@ describe("PluginStorageRepository", () => {
 	describe("putMany()", () => {
 		it("should handle empty array", async () => {
 			await repo.putMany([]);
+			// Should not throw
 		});
 
 		it("should store multiple documents atomically", async () => {
@@ -235,6 +242,7 @@ describe("PluginStorageRepository", () => {
 
 	describe("query()", () => {
 		beforeEach(async () => {
+			// Setup test data
 			await repo.putMany([
 				{
 					id: "doc1",
@@ -304,6 +312,8 @@ describe("PluginStorageRepository", () => {
 		});
 
 		it("should reject malicious orderBy field names (SQL injection defense)", async () => {
+			// Create a repo that declares a malicious index name to bypass the
+			// "field must be indexed" check and hit the jsonExtract validation
 			const evilRepo = new PluginStorageRepository<TestDocument>(db, "test-plugin", "items", [
 				"'); DROP TABLE _plugin_storage--",
 			]);
@@ -338,6 +348,7 @@ describe("PluginStorageRepository", () => {
 			expect(page2.items).toHaveLength(1);
 			expect(page2.cursor).toBeUndefined();
 
+			// Ensure no duplicates
 			const allIds = [...page1.items, ...page2.items].map((i) => i.id);
 			expect(new Set(allIds).size).toBe(3);
 		});
@@ -396,6 +407,9 @@ describe("PluginStorageRepository", () => {
 		});
 	});
 
+	// Note: v2 API removed async iterator list() in favor of paginated query()
+	// Use query() with cursor for iteration
+
 	describe("plugin isolation", () => {
 		it("should not see documents from other plugins", async () => {
 			const otherRepo = new PluginStorageRepository<TestDocument>(db, "other-plugin", "items", [
@@ -431,5 +445,52 @@ describe("PluginStorageRepository", () => {
 			const result = await otherRepo.get("doc1");
 			expect(result).toBeNull();
 		});
+	});
+});
+
+describe("mapSerializationFailure", () => {
+	// Pure/deterministic: proves the SQLSTATE trap without provoking a live race.
+	// node-pg sets `.code` on its DatabaseError and Kysely propagates it
+	// unwrapped, so a fake `{ code }` faithfully stands in for the real throw.
+
+	it("wraps a 40001 (serialization_failure) into StorageSerializationError, preserving cause", () => {
+		const original = { code: "40001", message: "could not serialize access" };
+		const mapped = mapSerializationFailure(original);
+		expect(mapped).toBeInstanceOf(StorageSerializationError);
+		const err = mapped as StorageSerializationError;
+		expect(err.sqlState).toBe("40001");
+		expect(err.cause).toBe(original);
+		expect(err.code).toBe("STORAGE_SERIALIZATION_FAILURE");
+		expect(err.retryable).toBe(true);
+		expect(err.message).toMatch(/Restart the transaction/);
+		expect(err.message).not.toContain(original.message);
+	});
+
+	it("wraps a 40P01 (deadlock_detected) into StorageSerializationError, preserving cause", () => {
+		const original = { code: "40P01", message: "deadlock detected" };
+		const mapped = mapSerializationFailure(original);
+		expect(mapped).toBeInstanceOf(StorageSerializationError);
+		const err = mapped as StorageSerializationError;
+		expect(err.sqlState).toBe("40P01");
+		expect(err.cause).toBe(original);
+		expect(err.message).toMatch(/retry/i);
+		expect(err.message).not.toMatch(/READ COMMITTED|REPEATABLE READ|SERIALIZABLE/);
+	});
+
+	it("detects the SQLSTATE nested on `.cause.code` too", () => {
+		const original = { cause: { code: "40001" } };
+		const mapped = mapSerializationFailure(original);
+		expect(mapped).toBeInstanceOf(StorageSerializationError);
+		expect((mapped as StorageSerializationError).sqlState).toBe("40001");
+	});
+
+	it("passes a non-serialization SQLSTATE (23505) through unchanged", () => {
+		const original = { code: "23505", message: "duplicate key" };
+		expect(mapSerializationFailure(original)).toBe(original);
+	});
+
+	it("passes a plain Error (no code) through unchanged", () => {
+		const original = new Error("boom");
+		expect(mapSerializationFailure(original)).toBe(original);
 	});
 });

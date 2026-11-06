@@ -1,39 +1,84 @@
+/**
+ * Media Value Normalization
+ *
+ * Normalizes media field values into a consistent shape regardless of
+ * creation path (seed scripts, media picker, WP import, URL input).
+ *
+ * Called at content create/update time when a media provider is available,
+ * filling in missing dimensions, storageKey, mimeType, and filename from
+ * the provider's `get()` method.
+ */
+
+import { syncMediaCaption } from "./caption.js";
 import { normalizeFocalPoint } from "./focal-point.js";
 import type { MediaProvider, MediaProviderItem, MediaValue } from "./types.js";
 
 export const INTERNAL_MEDIA_PREFIX = "/_emdash/api/media/file/";
 const URL_PATTERN = /^https?:\/\//;
 
+export function normalizeLegacyExternalMediaValue(value: MediaValue): MediaValue {
+	if (value.provider !== "external-url") return value;
+	const src = value.src ?? value.previewUrl;
+	return {
+		...value,
+		provider: "external",
+		...(src === undefined ? {} : { src }),
+	};
+}
+
+/**
+ * Normalize a media field value into a consistent MediaValue shape.
+ *
+ * - `null`/`undefined` → `null`
+ * - Empty or whitespace-only string → `null`
+ * - Bare URL string → `{ provider: "external", id: "", src: url }`
+ * - Bare internal media URL → resolved via local provider's `get()`
+ * - Bare local media ID → resolved via local provider's `get()`
+ * - Object with `provider` + `id` → enriched with missing fields from provider
+ */
 export async function normalizeMediaValue(
 	value: unknown,
 	getProvider: (id: string) => MediaProvider | undefined,
 ): Promise<MediaValue | null> {
 	if (value == null) return null;
 
+	// Bare string URL
 	if (typeof value === "string") {
+		if (value.trim() === "") return null;
 		return normalizeStringUrl(value, getProvider);
 	}
 
+	// Not an object — can't normalize
 	if (!isRecord(value)) return null;
 
+	// Must have at least an id to be a valid media value
 	if (!("id" in value) && !("src" in value)) return null;
 
-	const provider = (typeof value.provider === "string" ? value.provider : undefined) || "local";
-	const id = typeof value.id === "string" ? value.id : "";
+	const parsed = normalizeLegacyExternalMediaValue(recordToMediaValue(value));
+	const provider = parsed.provider || "local";
+	const id = parsed.id;
 
+	// External URLs — return as-is, no server-side dimension detection
 	if (provider === "external") {
-		return recordToMediaValue(value);
+		return parsed;
 	}
 
-	const result: MediaValue = { ...recordToMediaValue(value), provider };
+	// Build the base value from the input
+	const result: MediaValue = { ...parsed, provider };
 
+	// For local media, strip `src` — it's derived at display time from storageKey
 	if (provider === "local") {
 		delete result.src;
 	}
 
+	// Determine if we need to call the provider
 	const needsDimensions = result.width == null || result.height == null;
 	const needsStorageKey = provider === "local" && !result.meta?.storageKey;
 	const needsFileInfo = !result.mimeType || !result.filename;
+	// LQIP placeholders are immutable facts of the bytes: if an image record is
+	// missing them, the provider may have gained them since (e.g. content saved
+	// before LQIP backfill ran, or the row's blurhash was populated later). Pull
+	// them on every image lookup so the LQIP backfill in mergeProviderData runs.
 	const needsLqip =
 		(result.mimeType ?? "").startsWith("image/") &&
 		(result.blurhash == null || result.dominantColor == null);
@@ -41,6 +86,7 @@ export async function normalizeMediaValue(
 
 	if (!needsLookup || !id) return result;
 
+	// Try to enrich from provider
 	const mediaProvider = getProvider(provider);
 	if (!mediaProvider?.get) return result;
 
@@ -60,10 +106,12 @@ async function normalizeStringUrl(
 	url: string,
 	getProvider: (id: string) => MediaProvider | undefined,
 ): Promise<MediaValue | null> {
+	// Internal media URL — try to resolve via local provider
 	if (url.startsWith(INTERNAL_MEDIA_PREFIX)) {
 		return resolveInternalUrl(url, getProvider);
 	}
 
+	// External HTTP(S) URL
 	if (URL_PATTERN.test(url)) {
 		return Promise.resolve({
 			provider: "external",
@@ -75,6 +123,7 @@ async function normalizeStringUrl(
 	const localMedia = await resolveLocalId(url, getProvider);
 	if (localMedia) return localMedia;
 
+	// Unrecognized string — preserve legacy behavior and treat as external
 	return {
 		provider: "external",
 		id: "",
@@ -105,7 +154,7 @@ async function resolveInternalUrl(
 	}
 
 	const focalPoint = normalizeFocalPoint(item.focalX, item.focalY);
-	return {
+	return syncMediaCaption({
 		provider: "local",
 		id: item.id,
 		filename: item.filename,
@@ -116,8 +165,9 @@ async function resolveInternalUrl(
 		blurhash: item.blurhash,
 		dominantColor: item.dominantColor,
 		alt: item.alt,
+		caption: item.caption,
 		meta: item.meta,
-	};
+	});
 }
 
 async function resolveLocalId(
@@ -138,7 +188,7 @@ async function resolveLocalId(
 	if (!item) return null;
 
 	const focalPoint = normalizeFocalPoint(item.focalX, item.focalY);
-	return {
+	return syncMediaCaption({
 		provider: "local",
 		id: item.id,
 		filename: item.filename,
@@ -149,37 +199,54 @@ async function resolveLocalId(
 		blurhash: item.blurhash,
 		dominantColor: item.dominantColor,
 		alt: item.alt,
+		caption: item.caption,
 		meta: item.meta,
-	};
+	});
 }
 
+/**
+ * Fill missing media metadata from a provider.
+ * Caller captions, including empty strings, take priority over provider captions.
+ * Provider alt text fills missing or empty caller alt text.
+ */
 function mergeProviderData(existing: MediaValue, item: MediaProviderItem): MediaValue {
 	const result = { ...existing };
 
+	// Fill missing dimensions
 	if (result.width == null && item.width != null) result.width = item.width;
 	if (result.height == null && item.height != null) result.height = item.height;
 
+	// Fill missing LQIP placeholders (immutable facts of the bytes; caller wins)
 	if (result.blurhash == null && item.blurhash != null) result.blurhash = item.blurhash;
 	if (result.dominantColor == null && item.dominantColor != null) {
 		result.dominantColor = item.dominantColor;
 	}
 
+	// Fill missing file info
 	if (!result.filename && item.filename) result.filename = item.filename;
 	if (!result.mimeType && item.mimeType) result.mimeType = item.mimeType;
 
+	// Fill missing alt (provider alt is fallback, not override)
 	if (!result.alt && item.alt) result.alt = item.alt;
 
+	if (result.caption == null && item.caption != null) result.caption = item.caption;
+
+	// Fill missing meta (merge, don't replace)
 	if (item.meta) {
 		result.meta = { ...item.meta, ...result.meta };
 	}
 
-	return result;
+	return syncMediaCaption(result);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Extract known MediaValue fields from a runtime-checked record.
+ * Avoids unsafe `as MediaValue` cast by reading each property explicitly.
+ */
 function recordToMediaValue(obj: Record<string, unknown>): MediaValue {
 	const result: MediaValue = {
 		id: typeof obj.id === "string" ? obj.id : "",
@@ -199,6 +266,7 @@ function recordToMediaValue(obj: Record<string, unknown>): MediaValue {
 	if (typeof obj.blurhash === "string") result.blurhash = obj.blurhash;
 	if (typeof obj.dominantColor === "string") result.dominantColor = obj.dominantColor;
 	if (typeof obj.alt === "string") result.alt = obj.alt;
+	if (typeof obj.caption === "string") result.caption = obj.caption;
 	if (isRecord(obj.meta)) result.meta = obj.meta;
-	return result;
+	return syncMediaCaption(result);
 }

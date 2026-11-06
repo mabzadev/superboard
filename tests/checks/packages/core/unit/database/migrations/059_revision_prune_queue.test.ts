@@ -1,8 +1,11 @@
-import BetterSqlite3 from "better-sqlite3";
 import { Kysely, sql, SqliteDialect } from "kysely";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { down, up } from "../../../../../../../packages/core/src/database/migrations/059_revision_prune_queue.js";
+import {
+	down,
+	up,
+} from "../../../../../../../packages/core/src/database/migrations/059_revision_prune_queue.js";
+import { NodeSqliteCompatDatabase as BetterSqlite3 } from "../../../../../../../packages/core/src/db/node-sqlite-compat.js";
 
 describe("059_revision_prune_queue migration", () => {
 	let db: Kysely<Record<string, never>> | undefined;

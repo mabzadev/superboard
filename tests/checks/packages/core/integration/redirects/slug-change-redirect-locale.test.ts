@@ -1,3 +1,15 @@
+/**
+ * Slug-change auto-redirects must never point away from a URL that still
+ * serves content.
+ *
+ * A collection's `url_pattern` has no locale token, so every locale variant of
+ * an entry maps to the same generated URL. Slugs are unique per
+ * `(slug, locale)`, so a translation legitimately shares its canonical's slug
+ * — and renaming one of them would otherwise emit a 301 whose source is the
+ * other's live URL. The redirect middleware runs `order: "pre"`, so such a
+ * redirect takes the live page down with no way for routing to recover.
+ */
+
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -29,6 +41,7 @@ describe("slug-change auto-redirect — locale awareness", () => {
 			type: "string",
 		});
 
+		// Spanish canonical site: es is the default locale, en is a translation.
 		setI18nConfig({ locales: ["es", "en"], defaultLocale: "es" });
 	});
 
@@ -62,6 +75,7 @@ describe("slug-change auto-redirect — locale awareness", () => {
 		const result = await handleContentUpdate(db, "venue", twin.id, { slug: "cinematheque" });
 		expect(result.success).toBe(true);
 
+		// The canonical Spanish page still lives at /sede/cineteca-nacional/.
 		expect(await redirectSources()).not.toContain("/sede/cineteca-nacional");
 	});
 

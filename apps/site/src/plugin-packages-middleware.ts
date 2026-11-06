@@ -1,7 +1,6 @@
 import { pluginPackage, componentSettingKey } from "@superboard/contracts/plugin-packages";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 import type { MiddlewareHandler } from "astro";
-import { GET as getPlugin } from "emdash/routes/api/admin/plugins/_id_/index";
 
 import { resolveLocale } from "../../../packages/admin/src/locales/config.js";
 import {
@@ -97,7 +96,12 @@ export const onRequest = (async (context, next) => {
 	if (list || (detail && requestedPackage && context.request.method === "GET")) {
 		const response =
 			detail && requestedPackage
-				? await getPlugin({ ...context, params: { ...context.params, id: requestedPackage.id } })
+				? await next(
+						new URL(
+							`/_emdash/api/admin/plugins/${encodeURIComponent(requestedPackage.id)}${context.url.search}`,
+							context.url,
+						),
+					)
 				: await next();
 		if (!response.ok) return response;
 		const body = await readJsonObjectLimited(response, 2_000_000);

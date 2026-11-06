@@ -1,3 +1,14 @@
+/**
+ * `emdash-plugin bundle`
+ *
+ * Thin citty wrapper around `bundlePlugin` from `./api.js`. The interesting
+ * logic lives there; this file only handles arg parsing, consola formatting,
+ * and process exit on errors so the rest of the CLI can `await` it cleanly.
+ *
+ * If you're building tooling on top of bundling, import `bundlePlugin`
+ * directly -- this command is the terminal-output adapter, not the API.
+ */
+
 import { defineCommand } from "citty";
 import consola from "consola";
 import pc from "picocolors";
@@ -53,15 +64,9 @@ export const bundleCommand = defineCommand({
 
 		if (!args["validate-only"] && result.tarballPath) {
 			console.log();
-			consola.info("Next steps:");
-			console.log(`  1. Upload ${pc.cyan(result.tarballPath)} to a public URL.`);
-			console.log(
-				`  2. Publish the release record:\n` +
-					`     ${pc.cyan(`emdash-plugin publish --url <hosted-url>`)}`,
-			);
-			console.log(
-				`     ${pc.dim(`(or pass --local ${result.tarballPath} to verify the URL serves matching bytes before publishing)`)}`,
-			);
+			consola.info("Publish this plugin from its source directory:");
+			console.log(`  ${pc.cyan("emdash-plugin publish")}`);
+			console.log(pc.dim("  Publish rebuilds the bundle and uploads it to your PDS."));
 		}
 	},
 });

@@ -1,3 +1,20 @@
+/**
+ * MCP field-level validation tests.
+ *
+ * `EmDashRuntime.handleContentCreate` and `handleContentUpdate` validate
+ * `data` against the collection's schema before any write:
+ *
+ *   - required fields must be present and non-empty
+ *   - select / multiSelect values must match the configured options
+ *   - reference fields must resolve to a real, non-trashed target
+ *
+ * Failures return `{ code: "VALIDATION_ERROR", message: "<field>: <reason>" }`
+ * with all offending fields named in one message so callers can fix
+ * everything in a single round trip. These tests cover both REST and MCP
+ * because validation runs at the runtime layer and both transports go
+ * through it.
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -5,13 +22,23 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
-import { connectMcpHarness, extractText, type McpHarness } from "../../utils/mcp-runtime.js";
+import {
+	connectMcpHarness,
+	currentRev,
+	extractText,
+	revOf,
+	type McpHarness,
+} from "../../utils/mcp-runtime.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
 const ADMIN_ID = "user_admin";
 
 const VALIDATION_ERROR = /validation|required|invalid/i;
 const GENERIC_FAILURE = /^Failed to (create|update) content$/;
+
+// ---------------------------------------------------------------------------
+// Bug #4: required field validation
+// ---------------------------------------------------------------------------
 
 describe("MCP validation — required fields (bug #4)", () => {
 	let db: Kysely<Database>;
@@ -22,6 +49,7 @@ describe("MCP validation — required fields (bug #4)", () => {
 		const registry = new SchemaRegistry(db);
 
 		await registry.createCollection({ slug: "post", label: "Posts" });
+		// Required title, optional body
 		await registry.createField("post", {
 			slug: "title",
 			label: "Title",
@@ -76,6 +104,11 @@ describe("MCP validation — required fields (bug #4)", () => {
 	});
 
 	it("rejects create with non-string value for a string field", async () => {
+		// Zod's `z.string()` rejects numbers/booleans/objects. The MCP
+		// boundary lets these through (data is `z.record(z.string(),
+		// z.unknown())`), so the check has to live in the runtime
+		// validator. Guard against future regressions like swapping in
+		// `z.coerce.string()`.
 		const result = await harness.client.callTool({
 			name: "content_create",
 			arguments: {
@@ -109,12 +142,16 @@ describe("MCP validation — required fields (bug #4)", () => {
 
 		const updated = await harness.client.callTool({
 			name: "content_update",
-			arguments: { collection: "post", id, data: { title: "" } },
+			arguments: { collection: "post", id, data: { title: "" }, _rev: revOf(created) },
 		});
 		expect(updated.isError).toBe(true);
 		expect(extractText(updated)).toMatch(VALIDATION_ERROR);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Bug #5: select and multiSelect option enforcement
+// ---------------------------------------------------------------------------
 
 describe("MCP validation — select and multiSelect options (bug #5)", () => {
 	let db: Kysely<Database>;
@@ -213,12 +250,16 @@ describe("MCP validation — select and multiSelect options (bug #5)", () => {
 
 		const updated = await harness.client.callTool({
 			name: "content_update",
-			arguments: { collection: "post", id, data: { priority: "URGENT" } },
+			arguments: { collection: "post", id, data: { priority: "URGENT" }, _rev: revOf(created) },
 		});
 		expect(updated.isError).toBe(true);
 		expect(extractText(updated)).toMatch(VALIDATION_ERROR);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Bug #6: reference field target existence
+// ---------------------------------------------------------------------------
 
 describe("MCP validation — reference field targets (bug #6)", () => {
 	let db: Kysely<Database>;
@@ -269,12 +310,16 @@ describe("MCP validation — reference field targets (bug #6)", () => {
 		expect(result.isError).toBe(true);
 		const text = extractText(result);
 		expect(text).toMatch(VALIDATION_ERROR);
+		// Tight match: the error must specifically mention the offending field,
+		// echo the bad target id, AND say "not found" (one assertion per
+		// concern so a regression where any signal disappears is caught).
 		expect(text).toContain("parent_page");
 		expect(text).toContain("01NOTAREALPAGE");
 		expect(text).toMatch(/\bnot found\b/i);
 	});
 
 	it("accepts reference to a real target id (regression guard)", async () => {
+		// Create a page first
 		const page = await harness.client.callTool({
 			name: "content_create",
 			arguments: { collection: "page", data: { title: "Real page" } },
@@ -293,6 +338,7 @@ describe("MCP validation — reference field targets (bug #6)", () => {
 	});
 
 	it("rejects reference to id that exists in a different collection", async () => {
+		// Create a post (which is NOT the page collection the reference is scoped to)
 		const repo = new ContentRepository(db);
 		const otherPost = await repo.create({
 			type: "post",
@@ -309,6 +355,8 @@ describe("MCP validation — reference field targets (bug #6)", () => {
 				data: { title: "T", parent_page: otherPost.id },
 			},
 		});
+		// Reference points to a post id but field expects a page reference.
+		// After fix this should fail.
 		expect(result.isError).toBe(true);
 		expect(extractText(result)).toMatch(VALIDATION_ERROR);
 	});
@@ -319,6 +367,7 @@ describe("MCP validation — reference field targets (bug #6)", () => {
 			arguments: { collection: "page", data: { title: "Will be trashed" } },
 		});
 		const pageId = JSON.parse(extractText(page)).item.id as string;
+		// Trash via repo
 		const repo = new ContentRepository(db);
 		await repo.delete("page", pageId);
 
@@ -333,6 +382,10 @@ describe("MCP validation — reference field targets (bug #6)", () => {
 		expect(extractText(result)).toMatch(VALIDATION_ERROR);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Combined: error message is structured even when multiple fields fail
+// ---------------------------------------------------------------------------
 
 describe("MCP validation — multi-field error messaging", () => {
 	let db: Kysely<Database>;
@@ -368,16 +421,26 @@ describe("MCP validation — multi-field error messaging", () => {
 		const result = await harness.client.callTool({
 			name: "content_create",
 			arguments: {
+				// missing required title AND invalid priority
 				collection: "post",
 				data: { priority: "URGENT" },
 			},
 		});
 		expect(result.isError).toBe(true);
 		const text = extractText(result);
+		// Both field names should appear so a caller can fix everything in one round.
 		expect(text).toMatch(/title/i);
 		expect(text).toMatch(/priority/i);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// F4: validation runs on UPDATE for revision-supporting collections.
+//
+// Before the fix, the runtime wrote the draft revision *before* the API
+// handler ran (and called the handler with `data: undefined`), so update-
+// time validation was bypassed for any collection that supports revisions.
+// ---------------------------------------------------------------------------
 
 describe("MCP validation — UPDATE on revision-supporting collections (F4)", () => {
 	let db: Kysely<Database>;
@@ -417,11 +480,17 @@ describe("MCP validation — UPDATE on revision-supporting collections (F4)", ()
 	it("rejects update with empty required field BEFORE creating a draft revision", async () => {
 		const result = await harness.client.callTool({
 			name: "content_update",
-			arguments: { collection: "post", id: postId, data: { title: "" } },
+			arguments: {
+				collection: "post",
+				id: postId,
+				data: { title: "" },
+				_rev: await currentRev(harness.client, "post", postId),
+			},
 		});
 		expect(result.isError).toBe(true);
 		expect(extractText(result)).toMatch(VALIDATION_ERROR);
 
+		// And no draft revision was written — listing revisions returns empty.
 		const list = await harness.client.callTool({
 			name: "revision_list",
 			arguments: { collection: "post", id: postId },

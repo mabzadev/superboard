@@ -1,4 +1,29 @@
 #!/usr/bin/env node
+/**
+ * @emdash-cms/plugin-cli
+ *
+ * CLI for the experimental EmDash plugin registry. Entry point: `emdash-plugin`.
+ *
+ * Subcommands:
+ *   - login    — interactive atproto OAuth login
+ *   - logout   — revoke the active session
+ *   - whoami   — show stored sessions
+ *   - switch   — change the active publisher session
+ *   - search   — free-text search the aggregator
+ *   - info     — show details about a package
+ *   - init     — scaffold a new sandboxed plugin
+ *   - build    — produce the npm distribution artifacts (dist/index.mjs, dist/plugin.mjs, dist/manifest.json)
+ *   - dev      — watch sources and rebuild on change
+ *   - bundle         — bundle a plugin source directory into a tarball
+ *   - publish        — build, upload, and publish a release
+ *   - profile        — prepare a package profile for delegated releases
+ *   - release        — set up and manage delegated release workflows
+ *   - update-package — edit an already-published package without a new release
+ *   - validate       — validate an emdash-plugin.jsonc manifest against the v1 schema
+ *
+ * EXPERIMENTAL: this CLI targets `com.emdashcms.experimental.*` and the
+ * experimental aggregator. Pin to an exact version while RFC 0001 is in flight.
+ */
 
 import { defineCommand, runMain } from "citty";
 
@@ -8,7 +33,10 @@ import { infoCommand } from "./commands/info.js";
 import { initCommand } from "./commands/init.js";
 import { loginCommand } from "./commands/login.js";
 import { logoutCommand } from "./commands/logout.js";
+import { pdsConformanceCommand } from "./commands/pds-conformance.js";
+import { profileCommand } from "./commands/profile.js";
 import { publishCommand } from "./commands/publish.js";
+import { releaseCommand } from "./commands/release.js";
 import { searchCommand } from "./commands/search.js";
 import { switchCommand } from "./commands/switch.js";
 import { updatePackageCommand } from "./commands/update-package.js";
@@ -24,6 +52,8 @@ const main = defineCommand({
 	subCommands: {
 		login: loginCommand,
 		logout: logoutCommand,
+		"pds-conformance": pdsConformanceCommand,
+		profile: profileCommand,
 		whoami: whoamiCommand,
 		switch: switchCommand,
 		search: searchCommand,
@@ -33,9 +63,18 @@ const main = defineCommand({
 		dev: devCommand,
 		bundle: bundleCommand,
 		publish: publishCommand,
+		release: releaseCommand,
 		"update-package": updatePackageCommand,
 		validate: validateCommand,
 	},
 });
 
+// citty's `runMain` only force-exits on error or `--help`; on normal
+// completion it just resolves and lets the event loop drain. After a
+// successful `login` the success message prints, `run()` returns, but
+// something inside atcute / the loopback HTTP path leaves a ref'd handle
+// alive indefinitely -- the CLI hangs forever instead of returning to the
+// shell. (The same is true for `logout`'s revocation flow.) Force-exit on
+// success so users get an immediate prompt back; non-success paths already
+// `process.exit` themselves.
 void runMain(main).then(() => process.exit(0));

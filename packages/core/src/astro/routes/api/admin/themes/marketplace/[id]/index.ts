@@ -1,3 +1,9 @@
+/**
+ * Theme marketplace detail proxy endpoint
+ *
+ * GET /_emdash/api/admin/themes/marketplace/:id - Get theme details
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

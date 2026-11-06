@@ -4,6 +4,13 @@ import { describe, expect, it } from "vitest";
 import { detectDialect } from "../../../../../../packages/core/src/database/dialect-helpers.js";
 import { FailFastPostgresDialect } from "../../../../../../packages/core/src/database/pg-migration-lock.js";
 
+/**
+ * The dialect must change only `acquireMigrationLock`. If it dropped the
+ * adapter's capability flags, the Kysely Migrator would stop running
+ * migrations inside a transaction (supportsTransactionalDdl) — silently
+ * breaking rollback-on-failure. The lock behavior itself is covered by the
+ * Postgres integration tests (migration-lock-pg.test.ts).
+ */
 describe("FailFastPostgresDialect", () => {
 	it("preserves the stock adapter's capability flags", () => {
 		const stock = new PostgresDialect({ pool: {} as never }).createAdapter();
@@ -32,6 +39,8 @@ describe("FailFastPostgresDialect", () => {
 	});
 
 	it("remains a PostgresDialect for the public dialect type", () => {
+		// `emdash/db/postgres` publicly returns PostgresDialect; the fail-fast
+		// dialect must not narrow or break that type contract.
 		expect(new FailFastPostgresDialect({ pool: {} as never })).toBeInstanceOf(PostgresDialect);
 	});
 });

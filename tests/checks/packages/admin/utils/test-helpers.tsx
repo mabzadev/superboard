@@ -1,10 +1,25 @@
+/**
+ * Shared test utilities for admin component tests.
+ *
+ * Provides wrapper components, mock factories, and helpers
+ * for vitest browser mode with React.
+ */
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
 import { ThemeProvider } from "../../../../../packages/admin/src/components/ThemeProvider";
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
 const HTTP_METHOD_PREFIX_REGEX = /^(GET|POST|PUT|DELETE|PATCH|ANY) /;
 
+/**
+ * Create a fresh QueryClient configured for testing.
+ * Disables retries and gcTime for deterministic tests.
+ */
 export function createTestQueryClient() {
 	return new QueryClient({
 		defaultOptions: {
@@ -19,6 +34,10 @@ export function createTestQueryClient() {
 	});
 }
 
+/**
+ * Wrapper that provides QueryClient + ThemeProvider.
+ * Use with `render(<Comp />, { wrapper: TestWrapper })`.
+ */
 export function TestWrapper({ children }: { children: React.ReactNode }) {
 	const queryClient = React.useMemo(() => createTestQueryClient(), []);
 	return (
@@ -28,11 +47,23 @@ export function TestWrapper({ children }: { children: React.ReactNode }) {
 	);
 }
 
+/**
+ * Wrapper that provides just QueryClient (no theme).
+ */
 export function QueryWrapper({ children }: { children: React.ReactNode }) {
 	const queryClient = React.useMemo(() => createTestQueryClient(), []);
 	return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 
+/**
+ * Mock fetch interceptor for testing API calls.
+ *
+ * Usage:
+ *   const mockFetch = createMockFetch();
+ *   mockFetch.on("GET", "/_emdash/api/manifest", { version: "1.0" });
+ *   // ... render component that fetches manifest ...
+ *   mockFetch.restore();
+ */
 export function createMockFetch() {
 	const originalFetch = globalThis.fetch;
 	const handlers = new Map<string, { status: number; body: unknown }>();
@@ -43,12 +74,15 @@ export function createMockFetch() {
 		const method = init?.method ?? "GET";
 		const key = `${method.toUpperCase()} ${url}`;
 
+		// Check for exact match first
 		let handler = handlers.get(key);
 
+		// Then check for URL-only match (any method)
 		if (!handler) {
 			handler = handlers.get(`ANY ${url}`);
 		}
 
+		// Check for prefix matches
 		if (!handler) {
 			for (const [pattern, h] of handlers) {
 				const patternUrl = pattern.replace(HTTP_METHOD_PREFIX_REGEX, "");
@@ -68,6 +102,7 @@ export function createMockFetch() {
 			);
 		}
 
+		// Fall through to real fetch for unmatched
 		return originalFetch(input, init);
 	}
 
@@ -87,14 +122,20 @@ export function createMockFetch() {
 	};
 }
 
+/**
+ * Wait for a condition to be true, with retry.
+ */
 export async function waitFor(fn: () => boolean | void, timeout = 2000): Promise<void> {
 	const start = Date.now();
 	while (Date.now() - start < timeout) {
 		try {
 			const result = fn();
 			if (result !== false) return;
-		} catch {}
+		} catch {
+			// retry
+		}
 		await new Promise((r) => setTimeout(r, 50));
 	}
+	// Final attempt that throws
 	fn();
 }

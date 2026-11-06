@@ -177,6 +177,7 @@ describe("extractPlainText", () => {
 	});
 
 	it("does not double-decode &amp;lt;", () => {
+		// &amp;lt; should become &lt; (literal text), not <
 		const text = extractPlainText({ body: "code: &amp;lt;div&amp;gt;" });
 		expect(text).toBe("code: &lt;div&gt;");
 	});

@@ -1,3 +1,9 @@
+/**
+ * Integration tests for API token handlers.
+ *
+ * Tests token CRUD and resolution against a real in-memory SQLite database.
+ */
+
 import type { Kysely } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -8,6 +14,7 @@ import {
 	resolveApiToken,
 	resolveOAuthToken,
 } from "../../../../../../packages/core/src/api/handlers/api-tokens.js";
+import { handleTokenRefresh } from "../../../../../../packages/core/src/api/handlers/device-flow.js";
 import {
 	generatePrefixedToken,
 	TOKEN_PREFIXES,
@@ -15,6 +22,7 @@ import {
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { setupTestDatabase } from "../../utils/test-db.js";
 
+// Regex patterns for token validation
 const PAT_PREFIX_REGEX = /^ec_pat_/;
 
 let db: Kysely<Database>;
@@ -22,13 +30,14 @@ let db: Kysely<Database>;
 beforeEach(async () => {
 	db = await setupTestDatabase();
 
+	// Create a test user
 	await db
 		.insertInto("users")
 		.values({
 			id: "user_1",
 			email: "admin@test.com",
 			name: "Admin",
-			role: 50,
+			role: 50, // ADMIN
 			email_verified: 1,
 		})
 		.execute();
@@ -133,6 +142,7 @@ describe("handleApiTokenList", () => {
 		const result = await handleApiTokenList(db, "user_1");
 		const item = result.data!.items[0];
 
+		// Ensure no hash or raw token is exposed
 		expect(item).not.toHaveProperty("token_hash");
 		expect(item).not.toHaveProperty("tokenHash");
 		expect(item).not.toHaveProperty("token");
@@ -150,6 +160,7 @@ describe("handleApiTokenRevoke", () => {
 		const result = await handleApiTokenRevoke(db, tokenId, "user_1");
 		expect(result.success).toBe(true);
 
+		// Should be gone from the list
 		const list = await handleApiTokenList(db, "user_1");
 		expect(list.data!.items).toHaveLength(0);
 	});
@@ -178,10 +189,12 @@ describe("handleApiTokenRevoke", () => {
 		});
 		const tokenId = createResult.data!.info.id;
 
+		// User 2 tries to revoke user 1's token
 		const result = await handleApiTokenRevoke(db, tokenId, "user_2");
 		expect(result.success).toBe(false);
 		expect(result.error!.code).toBe("NOT_FOUND");
 
+		// Token should still exist
 		const list = await handleApiTokenList(db, "user_1");
 		expect(list.data!.items).toHaveLength(1);
 	});
@@ -199,6 +212,7 @@ describe("resolveApiToken", () => {
 		expect(resolved).not.toBeNull();
 		expect(resolved!.userId).toBe("user_1");
 		expect(resolved!.scopes).toEqual(["content:read", "media:write"]);
+		expect(resolved!.tokenId).toBe(createResult.data!.info.id);
 	});
 
 	it("returns null for invalid token", async () => {
@@ -207,7 +221,7 @@ describe("resolveApiToken", () => {
 	});
 
 	it("returns null for expired token", async () => {
-		const pastDate = new Date(Date.now() - 86400000).toISOString();
+		const pastDate = new Date(Date.now() - 86400000).toISOString(); // Yesterday
 		const createResult = await handleApiTokenCreate(db, "user_1", {
 			name: "Expired",
 			scopes: ["content:read"],
@@ -220,7 +234,7 @@ describe("resolveApiToken", () => {
 	});
 
 	it("resolves non-expired token", async () => {
-		const futureDate = new Date(Date.now() + 86400000).toISOString();
+		const futureDate = new Date(Date.now() + 86400000).toISOString(); // Tomorrow
 		const createResult = await handleApiTokenCreate(db, "user_1", {
 			name: "Future",
 			scopes: ["admin"],
@@ -236,6 +250,7 @@ describe("resolveApiToken", () => {
 
 describe("resolveOAuthToken", () => {
 	it("resolves a valid OAuth access token", async () => {
+		// Insert directly since we don't have a Device Flow handler yet
 		const { raw, hash } = generatePrefixedToken(TOKEN_PREFIXES.OAUTH_ACCESS);
 		const futureDate = new Date(Date.now() + 3600000).toISOString();
 
@@ -275,6 +290,51 @@ describe("resolveOAuthToken", () => {
 
 		const resolved = await resolveOAuthToken(db, raw);
 		expect(resolved).toBeNull();
+	});
+
+	it("identifies the grant by an id that survives refresh and is not a token hash", async () => {
+		const expires = new Date(Date.now() + 3600000).toISOString();
+		async function grant(): Promise<{ access: string; refresh: string; hashes: string[] }> {
+			const refresh = generatePrefixedToken(TOKEN_PREFIXES.OAUTH_REFRESH);
+			const access = generatePrefixedToken(TOKEN_PREFIXES.OAUTH_ACCESS);
+			await db
+				.insertInto("_emdash_oauth_tokens")
+				.values([
+					{
+						token_hash: refresh.hash,
+						token_type: "refresh",
+						user_id: "user_1",
+						scopes: JSON.stringify(["content:read"]),
+						client_type: "mcp",
+						expires_at: expires,
+					},
+					{
+						token_hash: access.hash,
+						token_type: "access",
+						user_id: "user_1",
+						scopes: JSON.stringify(["content:read"]),
+						client_type: "mcp",
+						expires_at: expires,
+						refresh_token_hash: refresh.hash,
+					},
+				])
+				.execute();
+			return { access: access.raw, refresh: refresh.raw, hashes: [refresh.hash, access.hash] };
+		}
+
+		const first = await grant();
+		const before = await resolveOAuthToken(db, first.access);
+		const refreshed = await handleTokenRefresh(db, {
+			refresh_token: first.refresh,
+			grant_type: "refresh_token",
+		});
+		expect(refreshed.success).toBe(true);
+		const after = await resolveOAuthToken(db, refreshed.data!.access_token);
+		expect(after!.tokenId).toBe(before!.tokenId);
+		for (const hash of first.hashes) expect(before!.tokenId).not.toContain(hash);
+
+		const second = await grant();
+		expect((await resolveOAuthToken(db, second.access))!.tokenId).not.toBe(before!.tokenId);
 	});
 
 	it("does not resolve refresh tokens", async () => {

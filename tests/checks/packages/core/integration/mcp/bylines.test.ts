@@ -1,3 +1,11 @@
+/**
+ * MCP byline tools + content_create byline attachment.
+ *
+ * Covers the byline CRUD tools (byline_list/get/create/update/delete/
+ * translations) and the new `bylines` argument on content_create, which
+ * forwards to the same setContentBylines path content_update already used.
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

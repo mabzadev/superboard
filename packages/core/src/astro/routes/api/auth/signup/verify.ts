@@ -1,3 +1,10 @@
+/**
+ * GET /_emdash/api/auth/signup/verify
+ *
+ * Validate a signup verification token (called when user clicks email link).
+ * Returns the email and role for the UI to display.
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;

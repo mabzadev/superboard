@@ -5,6 +5,8 @@ import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/prom
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { ensureUpstreamCommit } from "./upstream-sync.mjs";
+
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 export const repositoryRoot = resolve(scriptDirectory, "../..");
 const integrationConfigPath = resolve(repositoryRoot, "scripts/config/emdash-integration.json");
@@ -65,7 +67,6 @@ const packageLockCachePathPattern = /apps\/reference\/package-lock\.json/g;
 const lintSourcePattern = /\.[cm]?[jt]sx?$/;
 const formatSourcePattern = /\.(?:[cm]?[jt]sx?|jsonc?|ya?ml|toml|css|scss|md)$/;
 const overlayLintSources = [
-	"tests/checks/github/check-no-major.test.mjs",
 	"apps/labeler/src/bytes.ts",
 	"tests/checks/apps/labeler/bytes.test.ts",
 	"scripts/emdash/overlay.mjs",
@@ -268,17 +269,32 @@ function flattenPnpmOverrides(overrides, parent = "") {
 }
 
 export function renderPnpmWorkspace(upstreamWorkspace, overlay, compatibility) {
-	const normalizedUpstreamWorkspace = upstreamWorkspace.replace(
-		/^verifyDepsBeforeRun:[^\n]*\n/mu,
-		"",
+	const upstreamArchitectures = { os: [], cpu: [] };
+	const normalizedUpstreamWorkspace = upstreamWorkspace
+		.replace(/^verifyDepsBeforeRun:[^\n]*\n/mu, "")
+		.replace(/^(?:#[^\n]*\n)?supportedArchitectures:\n((?: {2}[^\n]*\n)+)/mu, (_block, body) => {
+			let list = null;
+			for (const line of body.split("\n")) {
+				const key = /^ {2}(os|cpu):\s*$/u.exec(line);
+				if (key) list = upstreamArchitectures[key[1]];
+				const value = /^ {4}- "?([^"\s]+)"?\s*$/u.exec(line);
+				if (value && list) list.push(value[1]);
+			}
+			return "";
+		});
+	const supportedArchitectures = Object.fromEntries(
+		["os", "cpu"].map((key) => [
+			key,
+			[...new Set([...compatibility.supportedArchitectures[key], ...upstreamArchitectures[key]])],
+		]),
 	);
 	const hoistPatternLines = compatibility.hoistPattern
 		.map((value) => `  - ${JSON.stringify(value)}`)
 		.join("\n");
-	const supportedOperatingSystems = compatibility.supportedArchitectures.os
+	const supportedOperatingSystems = supportedArchitectures.os
 		.map((value) => `    - ${JSON.stringify(value)}`)
 		.join("\n");
-	const supportedCpus = compatibility.supportedArchitectures.cpu
+	const supportedCpus = supportedArchitectures.cpu
 		.map((value) => `    - ${JSON.stringify(value)}`)
 		.join("\n");
 	const packageExtensionLines = Object.entries(compatibility.packageExtensions)
@@ -333,6 +349,27 @@ export function renderPnpmWorkspace(upstreamWorkspace, overlay, compatibility) {
 		...overlay.package.overrides,
 		...compatibility.additionalOverrides,
 	});
+	const replacedOverrides = new Set(Object.keys(overrides));
+	let inOverrides = false;
+	let pendingComments = [];
+	const keptLines = [];
+	for (const line of rendered.split("\n")) {
+		if (!line.startsWith(" ")) {
+			inOverrides = line === "overrides:";
+			keptLines.push(...pendingComments, line);
+			pendingComments = [];
+			continue;
+		}
+		if (inOverrides && /^ {2}#/u.test(line)) {
+			pendingComments.push(line);
+			continue;
+		}
+		const entry = inOverrides ? /^ {2}("([^"]+)"|[^\s:"]+):/u.exec(line) : null;
+		const name = entry?.[2] ?? entry?.[1];
+		if (!(name && replacedOverrides.has(name))) keptLines.push(...pendingComments, line);
+		pendingComments = [];
+	}
+	rendered = keptLines.join("\n");
 	const overrideLines = Object.entries(overrides)
 		.map(([key, value]) => `  ${JSON.stringify(key)}: ${renderYamlValue(value, 4)}`)
 		.join("\n");
@@ -635,20 +672,8 @@ export async function expectedGeneratedFiles() {
 	]);
 }
 
-async function ensureUpstreamCommit(config) {
-	const present = runGit(["cat-file", "-e", `${config.upstream.commit}^{commit}`], repositoryRoot, {
-		allowFailure: true,
-	});
-	if (present.status !== 0)
-		runGit(["fetch", "--no-tags", "--depth=1", config.upstream.remote, config.upstream.commit]);
-	const object = runGit(["cat-file", "-t", config.upstream.commit]).stdout.trim();
-	if (object !== "commit") {
-		throw new Error(`Pinned upstream object is ${object}, expected commit`);
-	}
-}
-
 export async function applyOverlay() {
-	await ensureUpstreamCommit(await readIntegrationConfig());
+	ensureUpstreamCommit(repositoryRoot, (await readIntegrationConfig()).upstream);
 	const expected = await expectedGeneratedFiles();
 	const changed = [];
 	for (const [path, contents] of expected) {
@@ -664,7 +689,7 @@ export async function applyOverlay() {
 
 export async function checkOverlay() {
 	const config = await readIntegrationConfig();
-	await ensureUpstreamCommit(config);
+	ensureUpstreamCommit(repositoryRoot, config.upstream);
 	const expected = await expectedGeneratedFiles();
 	const mismatches = [];
 	for (const [path, contents] of expected) {

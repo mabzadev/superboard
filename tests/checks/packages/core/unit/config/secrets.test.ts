@@ -68,6 +68,10 @@ describe("config/secrets", () => {
 		});
 
 		it("kid is stable across repeated calls and matches fingerprintKey()", async () => {
+			// Kid is derived from decoded key bytes (canonicality is enforced
+			// upstream, so raw <-> bytes is 1:1). Repeated parses of the same
+			// canonical raw string must yield the same kid, and the standalone
+			// fingerprintKey() helper must agree with parseEncryptionKeys().
 			const raw = generateEncryptionKey();
 			const a = await parseEncryptionKeys(raw);
 			const b = await parseEncryptionKeys(raw);
@@ -101,6 +105,7 @@ describe("config/secrets", () => {
 		});
 
 		it("throws on a malformed body (non base64url chars)", async () => {
+			// 43 chars with a bad character
 			const bad = "emdash_enc_v1_" + "!".repeat(43);
 			await expect(parseEncryptionKeys(bad)).rejects.toBeInstanceOf(EmDashSecretsError);
 		});
@@ -113,14 +118,31 @@ describe("config/secrets", () => {
 		});
 
 		it("rejects non-canonical base64url so kid stays stable per key material", async () => {
+			// 32-byte keys encode to 43 base64url chars. The 43rd char encodes
+			// 4 bits of which only the high 2 are meaningful — the low 2 bits
+			// must be zero in canonical encoding. Letters whose 6-bit value
+			// has zero low-2-bits: A(0), E(4), I(8), M(12), Q(16), U(20),
+			// Y(24), c(28), g(32), k(36), o(40), s(44), w(48), 0(52), 4(56),
+			// 8(60). Anything else in the last position encodes bits that
+			// canonical encoding would set to zero — same decoded bytes,
+			// different raw string. We reject these to keep kid 1:1 with
+			// key material.
+			//
+			// "A".repeat(43) is canonical (all-zero key). Replace the last
+			// char with "B" (value 1) to get a non-canonical string with
+			// the same decoded bytes.
 			const canonical = `emdash_enc_v1_${"A".repeat(43)}`;
 			const nonCanonical = `emdash_enc_v1_${"A".repeat(42)}B`;
 
+			// Both have the right shape so we know we're testing the
+			// canonical check, not the regex.
 			expect(canonical).toMatch(/^emdash_enc_v1_[A-Za-z0-9_-]{43}$/);
 			expect(nonCanonical).toMatch(/^emdash_enc_v1_[A-Za-z0-9_-]{43}$/);
 
+			// Canonical form parses fine.
 			await expect(parseEncryptionKeys(canonical)).resolves.toBeTruthy();
 
+			// Non-canonical form is rejected.
 			await expect(parseEncryptionKeys(nonCanonical)).rejects.toThrow(EmDashSecretsError);
 		});
 	});
@@ -140,6 +162,11 @@ describe("config/secrets", () => {
 		});
 
 		it("does not consult EMDASH_ENCRYPTION_KEY (a malformed key cannot break preview/comments)", async () => {
+			// Regression: previously a malformed EMDASH_ENCRYPTION_KEY was
+			// parsed inside resolveSecrets and the throw propagated through
+			// request-context middleware as a 500 to anonymous visitors with
+			// stale `?_preview=` URLs. The key is validated separately at
+			// startup now; resolveSecrets must not gate on it.
 			const result = await resolveSecrets({
 				db,
 				env: { EMDASH_ENCRYPTION_KEY: "not_a_valid_key" },
@@ -161,6 +188,7 @@ describe("config/secrets", () => {
 			expect(result.ipSalt).toBe("env-ip-salt");
 			expect(result.ipSaltSource).toBe("env");
 
+			// And nothing was written to the options table on the env path.
 			const repo = new OptionsRepository(db);
 			expect(await repo.get<string>(IP_SALT_OPTION_KEY)).toBeNull();
 			expect(await repo.get<string>(PREVIEW_SECRET_OPTION_KEY)).toBeNull();
@@ -176,6 +204,10 @@ describe("config/secrets", () => {
 		});
 
 		it("legacy EMDASH_AUTH_SECRET fallback for IP salt is honored", async () => {
+			// Prior code derived the IP salt from EMDASH_AUTH_SECRET. Existing
+			// installs that have only EMDASH_AUTH_SECRET set must keep the
+			// same salt — otherwise their existing IP-bucket rate-limit data
+			// rotates uselessly on upgrade.
 			const result = await resolveSecrets({
 				db,
 				env: { EMDASH_AUTH_SECRET: "legacy-auth" },
@@ -203,6 +235,12 @@ describe("config/secrets", () => {
 		});
 
 		it("repeated first-resolves are idempotent (sequential test of convergence)", async () => {
+			// Five sequential first-resolves on a fresh DB should converge.
+			// Node SQLite is synchronous, so this doesn't exercise
+			// genuine cross-process concurrency. The cross-process atomicity
+			// is provided by `INSERT ... ON CONFLICT DO NOTHING` at the DB
+			// layer; see the lost-race test below for in-process coverage
+			// of the re-read path.
 			const promises: Promise<Awaited<ReturnType<typeof resolveSecrets>>>[] = [];
 			for (let i = 0; i < 5; i++) {
 				promises.push(resolveSecrets({ db, env: {} }));
@@ -215,6 +253,8 @@ describe("config/secrets", () => {
 		});
 
 		it("returns the existing row when first-read finds one already populated", async () => {
+			// Pre-populate the row, then resolve. Exercises the early-return
+			// branch in `ensureGeneratedOption` where the first read hits.
 			const winnerSalt = "row-already-populated";
 			const repo = new OptionsRepository(db);
 			await repo.set(IP_SALT_OPTION_KEY, winnerSalt);
@@ -225,11 +265,21 @@ describe("config/secrets", () => {
 		});
 
 		it("converges via lost-race re-read when setIfAbsent reports no insert", async () => {
+			// Simulate a genuine cross-process race: caller A reads (no row),
+			// caller B inserts the winner, caller A's setIfAbsent loses
+			// (returns false). A then re-reads and converges on B's value.
+			//
+			// We stub `setIfAbsent` to inject the "concurrent process won"
+			// behavior on the IP-salt key specifically (the resolver also
+			// does this for preview secret in parallel; we need to target
+			// one to assert).
 			const winnerSalt = "concurrent-process-won";
 			const realRepo = new OptionsRepository(db);
 			const stubRepo = Object.create(realRepo) as OptionsRepository;
 			stubRepo.setIfAbsent = async <T>(name: string, value: T) => {
 				if (name === IP_SALT_OPTION_KEY) {
+					// Simulate "winner" inserting first; tell our caller the
+					// insert didn't take so it falls through to the re-read.
 					await realRepo.set(name, winnerSalt);
 					return false;
 				}
@@ -242,9 +292,13 @@ describe("config/secrets", () => {
 		});
 
 		it("throws SECRET_PERSIST_FAILED when setIfAbsent loses but the row is empty after re-read", async () => {
+			// Pathological case: setIfAbsent says "didn't insert" but the
+			// row is still missing. This shouldn't happen in practice with
+			// a sane DB, but the resolver guards against it rather than
+			// looping forever or returning an empty string.
 			const realRepo = new OptionsRepository(db);
 			const stubRepo = Object.create(realRepo) as OptionsRepository;
-			stubRepo.setIfAbsent = async () => false;
+			stubRepo.setIfAbsent = async () => false; // Always claim no-op, no row appears.
 
 			await expect(resolveSecrets({ db, env: {}, _repo: stubRepo })).rejects.toThrow(
 				/SECRET_PERSIST_FAILED|Failed to persist/,
@@ -252,6 +306,10 @@ describe("config/secrets", () => {
 		});
 
 		it("reads the default env from process.env when no env map is passed", async () => {
+			// Regression test for #2139: secrets must come from the runtime
+			// process env, never from build-time `import.meta.env`
+			// substitution (which would embed the secret in the server
+			// bundle and shadow the platform-configured value).
 			const previous = process.env.EMDASH_PREVIEW_SECRET;
 			process.env.EMDASH_PREVIEW_SECRET = "proc-preview-secret";
 			try {
@@ -322,12 +380,16 @@ describe("config/secrets", () => {
 
 	describe("resolveSecretsCached", () => {
 		it("memoizes per-db so multiple callers share one resolved value", async () => {
+			// First caller starts the resolution; second caller piggybacks.
+			// We can verify they share a value (and the cache key is the db
+			// instance) by comparing against a freshly cleared cache.
 			const a = await resolveSecretsCached(db);
 			const b = await resolveSecretsCached(db);
 			expect(a).toBe(b);
 
 			_clearSecretsCacheForTesting();
 			const c = await resolveSecretsCached(db);
+			// Different cache entry, but same persisted DB values.
 			expect(c).not.toBe(a);
 			expect(c.ipSalt).toBe(a.ipSalt);
 			expect(c.previewSecret).toBe(a.previewSecret);
@@ -336,6 +398,10 @@ describe("config/secrets", () => {
 
 	describe("source hygiene", () => {
 		it("never references import.meta.env in code (would be inlined into the server bundle at build time)", async () => {
+			// Regression guard for #2139. Vite statically replaces the bare
+			// `import.meta.env` expression with an object literal built from
+			// the build-time env, embedding secrets from `.env` into
+			// `dist/server` and shadowing platform-configured runtime values.
 			const source = await readFile(
 				fileURLToPath(
 					new URL("../../../../../../packages/core/src/config/secrets.ts", import.meta.url),

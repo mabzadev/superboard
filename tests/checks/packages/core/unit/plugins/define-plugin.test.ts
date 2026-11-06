@@ -1,7 +1,21 @@
+/**
+ * definePlugin() Tests
+ *
+ * Tests the plugin definition helper for:
+ * - ID validation (simple and scoped formats)
+ * - Version validation (semver)
+ * - Capability validation and normalization
+ * - Hook resolution (function vs config object)
+ * - Default value handling
+ */
+
+import { PLUGIN_CAPABILITIES } from "@emdash-cms/plugin-types";
 import { describe, it, expect, vi } from "vitest";
+import { z } from "zod";
 
 import { definePlugin } from "../../../../../../packages/core/src/plugins/define-plugin.js";
 
+// Error message patterns for test assertions
 const INVALID_PLUGIN_ID_PATTERN = /Invalid plugin id/;
 const INVALID_PLUGIN_VERSION_PATTERN = /Invalid plugin version/;
 const INVALID_CAPABILITY_PATTERN = /Invalid capability/;
@@ -72,6 +86,9 @@ describe("definePlugin", () => {
 		});
 
 		it("rejects empty ID", () => {
+			// Empty id is treated as "no id" — same code path as the
+			// sandboxed-shape rejection, with a pointer at the new
+			// `satisfies SandboxedPlugin` authoring flow.
 			expect(() =>
 				definePlugin({
 					id: "",
@@ -146,6 +163,11 @@ describe("definePlugin", () => {
 		});
 	});
 
+	// Regression: #1370 — the id/version validation patterns must stay
+	// function-local (evaluated at call time). As module-scope consts, a
+	// circular module init on Cloudflare Workers could reach defineNativePlugin
+	// before they initialized, throwing "Cannot access 'SIMPLE_ID' before
+	// initialization" and 500-ing every route. Validation must keep working.
 	describe("#1370 — call-time validation regexes", () => {
 		it("validates id and version on every call", () => {
 			expect(definePlugin({ id: "first", version: "1.0.0" }).id).toBe("first");
@@ -160,15 +182,31 @@ describe("definePlugin", () => {
 	});
 
 	describe("capability validation", () => {
+		it.each(PLUGIN_CAPABILITIES)("accepts manifest capability %s", (capability) => {
+			expect(() =>
+				definePlugin({
+					id: "test",
+					version: "1.0.0",
+					capabilities: [capability],
+				}),
+			).not.toThrow();
+		});
+
 		it("accepts valid capabilities", () => {
 			const plugin = definePlugin({
 				id: "test",
 				version: "1.0.0",
-				capabilities: ["content:read", "content:write", "network:request"],
+				capabilities: [
+					"content:read",
+					"content:write",
+					"hooks.content-policy:register",
+					"network:request",
+				],
 			});
 
 			expect(plugin.capabilities).toContain("content:read");
 			expect(plugin.capabilities).toContain("content:write");
+			expect(plugin.capabilities).toContain("hooks.content-policy:register");
 			expect(plugin.capabilities).toContain("network:request");
 		});
 
@@ -204,6 +242,28 @@ describe("definePlugin", () => {
 			expect(plugin.capabilities).toContain("content:read");
 		});
 
+		it("normalizes content:revisions:read to include content:read", () => {
+			const plugin = definePlugin({
+				id: "test",
+				version: "1.0.0",
+				capabilities: ["content:revisions:read"],
+			});
+
+			expect(plugin.capabilities).toContain("content:revisions:read");
+			expect(plugin.capabilities).toContain("content:read");
+		});
+
+		it("normalizes taxonomies:write to include taxonomies:read", () => {
+			const plugin = definePlugin({
+				id: "test",
+				version: "1.0.0",
+				capabilities: ["taxonomies:write"],
+			});
+
+			expect(plugin.capabilities).toContain("taxonomies:write");
+			expect(plugin.capabilities).toContain("taxonomies:read");
+		});
+
 		it("normalizes media:write to include media:read", () => {
 			const plugin = definePlugin({
 				id: "test",
@@ -213,6 +273,26 @@ describe("definePlugin", () => {
 
 			expect(plugin.capabilities).toContain("media:write");
 			expect(plugin.capabilities).toContain("media:read");
+		});
+
+		it("normalizes comments:moderate to include comments:read", () => {
+			const plugin = definePlugin({
+				id: "test",
+				version: "1.0.0",
+				capabilities: ["comments:moderate"],
+			});
+			expect(plugin.capabilities).toEqual(["comments:moderate", "comments:read"]);
+		});
+
+		it("normalizes redirects:write to include redirects:read", () => {
+			const plugin = definePlugin({
+				id: "test",
+				version: "1.0.0",
+				capabilities: ["redirects:write"],
+			});
+
+			expect(plugin.capabilities).toContain("redirects:write");
+			expect(plugin.capabilities).toContain("redirects:read");
 		});
 
 		it("normalizes network:request:unrestricted to include network:request", () => {
@@ -246,6 +326,11 @@ describe("definePlugin", () => {
 			expect(plugin.capabilities).toEqual([]);
 		});
 
+		// ── Deprecation alias layer ────────────────────────────────
+		// During the deprecation window we accept the old names and
+		// silently rewrite them to the new names. The runtime should
+		// only ever see canonical (new) names.
+
 		it("accepts and normalizes deprecated capability names", () => {
 			const plugin = definePlugin({
 				id: "test",
@@ -264,6 +349,7 @@ describe("definePlugin", () => {
 				],
 			});
 
+			// Normalized to current names
 			expect(plugin.capabilities).toContain("content:read");
 			expect(plugin.capabilities).toContain("content:write");
 			expect(plugin.capabilities).toContain("media:read");
@@ -275,6 +361,7 @@ describe("definePlugin", () => {
 			expect(plugin.capabilities).toContain("hooks.email-events:register");
 			expect(plugin.capabilities).toContain("hooks.page-fragments:register");
 
+			// And the deprecated names do NOT appear in the resolved capabilities
 			expect(plugin.capabilities).not.toContain("read:content");
 			expect(plugin.capabilities).not.toContain("write:content");
 			expect(plugin.capabilities).not.toContain("network:fetch");
@@ -288,6 +375,7 @@ describe("definePlugin", () => {
 			const plugin = definePlugin({
 				id: "test",
 				version: "1.0.0",
+				// Same capability, both spellings
 				capabilities: ["read:content", "content:read"],
 			});
 
@@ -296,6 +384,8 @@ describe("definePlugin", () => {
 		});
 
 		it("normalizes deprecated names before applying implications", () => {
+			// `write:content` (deprecated) should still imply `content:read`
+			// after rewrite, not `read:content`.
 			const plugin = definePlugin({
 				id: "test",
 				version: "1.0.0",
@@ -306,6 +396,43 @@ describe("definePlugin", () => {
 			expect(plugin.capabilities).toContain("content:read");
 			expect(plugin.capabilities).not.toContain("write:content");
 			expect(plugin.capabilities).not.toContain("read:content");
+		});
+
+		it("warns once per plugin that declares deprecated capability names", () => {
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+			try {
+				const definition = {
+					id: "legacy-capability-warning",
+					version: "1.0.0",
+					capabilities: ["read:content", "network:fetch", "email:send"],
+				} as const;
+				definePlugin(definition);
+				definePlugin(definition);
+
+				expect(warn).toHaveBeenCalledOnce();
+				const message = String(warn.mock.calls[0]?.[0]);
+				expect(message).toContain('"legacy-capability-warning"');
+				expect(message).toContain("read:content → content:read");
+				expect(message).toContain("network:fetch → network:request");
+				expect(message).not.toContain("email:send");
+			} finally {
+				warn.mockRestore();
+			}
+		});
+
+		it("does not warn for plugins that use current capability names", () => {
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+			try {
+				definePlugin({
+					id: "current-capability-names",
+					version: "1.0.0",
+					capabilities: ["content:read", "network:request"],
+				});
+
+				expect(warn).not.toHaveBeenCalled();
+			} finally {
+				warn.mockRestore();
+			}
 		});
 	});
 
@@ -364,6 +491,7 @@ describe("definePlugin", () => {
 					"content:afterSave": {
 						handler,
 						priority: 200,
+						// timeout, dependencies, errorPolicy use defaults
 					},
 				},
 			});
@@ -486,9 +614,100 @@ describe("definePlugin", () => {
 			expect(plugin.routes.sync.handler).toBe(handler);
 			expect(plugin.routes.webhook).toBeDefined();
 		});
+
+		it("rejects MCP tools that reference a raw response route", () => {
+			expect(() =>
+				definePlugin({
+					id: "test",
+					version: "1.0.0",
+					routes: {
+						download: {
+							permission: "plugins:manage",
+							response: "raw",
+							handler: async () => null,
+						},
+					},
+					mcp: {
+						tools: {
+							download: {
+								description: "Download a report.",
+								route: "download",
+								input: z.object({}),
+							},
+						},
+					},
+				}),
+			).toThrow("cannot reference a raw response route");
+		});
+
+		it.each([
+			{ methods: ["GET"] as const },
+			{ request: { body: "none" as const } },
+			{ request: { body: "form-data" as const } },
+		])("rejects MCP tools with an incompatible route %#", (routeOptions) => {
+			expect(() =>
+				definePlugin({
+					id: "test",
+					version: "1.0.0",
+					routes: {
+						tool: {
+							permission: "plugins:manage",
+							...routeOptions,
+							handler: async () => null,
+						},
+					},
+					mcp: {
+						tools: {
+							tool: {
+								description: "Manage a resource.",
+								route: "tool",
+								input: z.object({}),
+							},
+						},
+					},
+				}),
+			).toThrow("POST-compatible JSON route");
+		});
 	});
 
 	describe("admin passthrough", () => {
+		it.each([
+			{ response: "raw" as const },
+			{ methods: ["GET"] as const },
+			{ request: { body: "form-data" as const } },
+		])("rejects an editor panel with an incompatible route %#", (routeOptions) => {
+			expect(() =>
+				definePlugin({
+					id: "test",
+					version: "1.0.0",
+					routes: {
+						health: { ...routeOptions, handler: async () => ({ blocks: [] }) },
+					},
+					admin: {
+						editorPanels: [{ id: "health", title: "Health", route: "health" }],
+					},
+				}),
+			).toThrow("accepts POST JSON requests and returns JSON");
+		});
+
+		it.each([
+			{ response: "raw" as const },
+			{ methods: ["GET"] as const },
+			{ request: { body: "none" as const } },
+			{ request: { body: "form-data" as const } },
+		])("rejects an incompatible explicit Block Kit admin route %#", (routeOptions) => {
+			expect(() =>
+				definePlugin({
+					id: "test",
+					version: "1.0.0",
+					routes: {
+						admin: { ...routeOptions, handler: async () => ({ blocks: [] }) },
+					},
+					admin: { pages: [{ id: "overview", title: "Overview" }] },
+				}),
+			).toThrow("Block Kit admin route must accept POST JSON requests and return JSON");
+		});
+
 		it("preserves admin config", () => {
 			const plugin = definePlugin({
 				id: "test",

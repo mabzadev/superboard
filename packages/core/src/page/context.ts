@@ -1,5 +1,13 @@
+/**
+ * Public page context builder
+ *
+ * Templates call this to describe the page being rendered.
+ * The resulting context is passed to EmDashHead / EmDashBodyStart / EmDashBodyEnd.
+ */
+
 import type { BreadcrumbItem, PublicPageContext } from "../plugins/types.js";
 
+/** Fields shared by both input forms */
 interface PageContextFields {
 	kind: "content" | "custom";
 	pageType?: string;
@@ -9,26 +17,37 @@ interface PageContextFields {
 	canonical?: string | null;
 	image?: string | null;
 	content?: { collection: string; id: string; slug?: string | null };
+	/** SEO overrides for OG/Twitter meta generation */
 	seo?: {
 		ogTitle?: string | null;
 		ogDescription?: string | null;
 		ogImage?: string | null;
 		robots?: string | null;
 	};
+	/** Article metadata for Open Graph article: tags */
 	articleMeta?: {
 		publishedTime?: string | null;
 		modifiedTime?: string | null;
 		author?: string | null;
 	};
+	/** Site name for structured data and og:site_name */
 	siteName?: string;
+	/**
+	 * Breadcrumb trail for this page, root first. Pass an empty array
+	 * to explicitly opt out of breadcrumbs (e.g. homepage), or omit the
+	 * field to let consumers fall back to their own derivation.
+	 */
 	breadcrumbs?: BreadcrumbItem[];
+	/** Public-facing site URL (origin) for structured data */
 	siteUrl?: string;
 }
 
+/** Input with Astro global -- used in .astro files */
 interface AstroInput extends PageContextFields {
 	Astro: { url: URL; currentLocale?: string };
 }
 
+/** Input with explicit URL -- used outside .astro files */
 interface UrlInput extends PageContextFields {
 	url: URL | string;
 	locale?: string;
@@ -40,6 +59,9 @@ function isAstroInput(input: CreatePublicPageContextInput): input is AstroInput 
 	return "Astro" in input;
 }
 
+/**
+ * Build a PublicPageContext from template input.
+ */
 export function createPublicPageContext(input: CreatePublicPageContextInput): PublicPageContext {
 	let url: string;
 	let path: string;

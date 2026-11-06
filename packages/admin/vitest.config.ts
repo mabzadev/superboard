@@ -7,10 +7,31 @@ import { centralTests } from "../../tests/checks/project-config.mjs";
 export default centralTests(
 	import.meta.url,
 	defineConfig({
+		resolve: { dedupe: ["react", "react-dom"] },
+		optimizeDeps: {
+			include: [
+				"@cloudflare/kumo/primitives/scroll-area",
+				"@codemirror/autocomplete",
+				"@codemirror/commands",
+				"@codemirror/lang-css",
+				"@codemirror/lang-html",
+				"@codemirror/lang-javascript",
+				"@codemirror/language",
+				"@codemirror/state",
+				"@codemirror/view",
+				"@lezer/highlight",
+				"react-image-crop",
+				"date-fns",
+				"react-day-picker/locale/*",
+			],
+		},
 		plugins: [
 			react({
 				babel: {
-					plugins: [["@lingui/babel-plugin-lingui-macro", { stripMessageField: false }]],
+					plugins: [
+						// Match the admin package build so production-fallback tests keep source messages.
+						["@lingui/babel-plugin-lingui-macro", { stripMessageField: false }],
+					],
 				},
 			}),
 		],
@@ -20,11 +41,15 @@ export default centralTests(
 			setupFiles: ["../../tests/checks/packages/admin/setup.ts"],
 			browser: {
 				enabled: true,
+				// Pin a non-UTC timezone so timestamp-parsing tests catch local-vs-UTC bugs.
 				provider: playwright({
 					contextOptions: { timezoneId: "America/New_York" },
 				}),
 				instances: [{ browser: "chromium" }],
 				headless: true,
+				// Desktop-width viewport: the content editor's settings panel is a
+				// slide-in sheet below lg (1024px), which would make its controls
+				// unreachable for the tests that exercise them directly.
 				viewport: { width: 1280, height: 800 },
 			},
 		},

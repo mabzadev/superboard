@@ -1,3 +1,22 @@
+/**
+ * Tests for admin router page components.
+ *
+ * Bug: content created in the wrong locale when using the locale switcher.
+ *
+ * Root cause (two parts):
+ *   1. ContentListPage renders ContentList with `activeLocale` but the "Add New"
+ *      <Link> in ContentList does NOT forward `search={{ locale: activeLocale }}` to
+ *      the new-content route.  The locale is silently dropped on navigation.
+ *   2. ContentNewPage (router.tsx:380) has no `validateSearch` and never reads the
+ *      locale from URL search params, so `createContent` is always called without a
+ *      locale, defaulting to English regardless of what is configured.
+ *
+ * Fix required in:
+ *   packages/admin/src/components/ContentList.tsx     – forward locale on Add-New links
+ *   packages/admin/src/router.tsx (ContentNewPage)    – read locale from search params
+ *                                                       and pass it to createContent
+ */
+
 import { Toasty } from "@cloudflare/kumo";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
@@ -6,13 +25,29 @@ import { RouterProvider } from "@tanstack/react-router";
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import type { AdminManifest } from "../../../../packages/admin/src/lib/api";
+import type { AdminManifest, ContentItem } from "../../../../packages/admin/src/lib/api";
 import {
 	ConfigurationLoadingScreen,
 	createAdminRouter,
 } from "../../../../packages/admin/src/router";
 import { render } from "./utils/render.tsx";
 import { createTestQueryClient, createMockFetch, waitFor } from "./utils/test-helpers";
+
+// ---------------------------------------------------------------------------
+// Component mocks – keep layout plumbing out of these tests
+// ---------------------------------------------------------------------------
+
+const { MOCK_BYLINE_VALUES } = vi.hoisted(() => ({
+	MOCK_BYLINE_VALUES: {
+		slug: "rebekah-aultman",
+		displayName: "Rebekah Aultman",
+		bio: "Staff writer.",
+		websiteUrl: "https://rebekah.example",
+		userId: null,
+		isGuest: false,
+		avatarMediaId: null,
+	},
+}));
 
 vi.mock("../../../../packages/admin/src/components/Shell", () => ({
 	Shell: ({ children }: { children: React.ReactNode }) => <div data-testid="shell">{children}</div>,
@@ -27,66 +62,117 @@ vi.mock("../../../../packages/admin/src/components/ContentEditor", () => ({
 		item,
 		onSave,
 		onAutosave,
+		onAuthorChange,
 		onSeoChange,
 		onPublishedAtChange,
+		onDirtyChange,
 		isSaving,
 		isAutosaving,
 		isSaveFeedbackActive,
 		isUpdatingPublishedAt,
 		autosaveCompletionToken,
+		autosaveRejectionToken,
+		onQuickCreateByline,
+		onQuickEditByline,
 	}: {
 		item?: { data?: { title?: string }; slug?: string | null };
 		onSave?: (payload: { data: Record<string, unknown> }) => void;
 		onAutosave?: (payload: { data: Record<string, unknown>; slug?: string }) => void;
+		onAuthorChange?: (authorId: string | null) => void;
 		onSeoChange?: (seo: { title: string }) => void;
-		onPublishedAtChange?: (publishedAt: string) => void;
+		onPublishedAtChange?: (publishedAt: string) => void | Promise<void>;
+		onDirtyChange?: (isDirty: boolean) => void;
 		isSaving?: boolean;
 		isAutosaving?: boolean;
 		isSaveFeedbackActive?: boolean;
 		isUpdatingPublishedAt?: boolean;
 		autosaveCompletionToken?: number;
-	}) => (
-		<div data-testid="content-editor">
-			<div data-testid="mock-title">{item?.data?.title ?? ""}</div>
-			<div data-testid="mock-slug">{item?.slug ?? ""}</div>
-			<div data-testid="is-saving">{isSaveFeedbackActive ? "saving" : "idle"}</div>
-			<div data-testid="manual-save-blocked">{isSaving ? "blocked" : "ready"}</div>
-			<div data-testid="autosave-blocked">{isSaving || isAutosaving ? "blocked" : "ready"}</div>
-			<div data-testid="autosave-completion-token">{autosaveCompletionToken ?? 0}</div>
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-					onSave?.({ data: { title: "Test Post" } });
-				}}
-			>
-				<button type="submit" disabled={isSaving}>
-					Save
+		autosaveRejectionToken?: number;
+		onQuickCreateByline?: (input: typeof MOCK_BYLINE_VALUES) => Promise<unknown>;
+		onQuickEditByline?: (bylineId: string, input: typeof MOCK_BYLINE_VALUES) => Promise<unknown>;
+	}) => {
+		const [isDirty, setIsDirty] = React.useState(false);
+		const onDirtyChangeRef = React.useRef(onDirtyChange);
+		onDirtyChangeRef.current = onDirtyChange;
+		React.useEffect(() => {
+			onDirtyChangeRef.current?.(isDirty);
+		}, [isDirty]);
+
+		return (
+			<div data-testid="content-editor">
+				<div data-testid="mock-title">{item?.data?.title ?? ""}</div>
+				<div data-testid="mock-slug">{item?.slug ?? ""}</div>
+				<div data-testid="is-saving">{isSaveFeedbackActive ? "saving" : "idle"}</div>
+				<div data-testid="manual-save-blocked">{isSaving ? "blocked" : "ready"}</div>
+				<div data-testid="autosave-blocked">{isSaving || isAutosaving ? "blocked" : "ready"}</div>
+				<div data-testid="autosave-completion-token">{autosaveCompletionToken ?? 0}</div>
+				<div data-testid="autosave-rejection-token">{autosaveRejectionToken ?? 0}</div>
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						onSave?.({ data: { title: "Test Post" } });
+					}}
+				>
+					<button type="submit" disabled={isSaving}>
+						Save
+					</button>
+				</form>
+				<button
+					type="button"
+					disabled={isSaving || isAutosaving}
+					onClick={() =>
+						onAutosave?.({
+							data: { title: "Autosaved Title" },
+							slug: "autosaved-title",
+						})
+					}
+				>
+					Trigger Draft Sync
 				</button>
-			</form>
-			<button
-				type="button"
-				disabled={isSaving || isAutosaving}
-				onClick={() =>
-					onAutosave?.({
-						data: { title: "Autosaved Title" },
-						slug: "autosaved-title",
-					})
-				}
-			>
-				Trigger Draft Sync
-			</button>
-			<button type="button" onClick={() => onSeoChange?.({ title: "Search title" })}>
-				Trigger SEO Sync
-			</button>
-			<button
-				type="button"
-				disabled={isUpdatingPublishedAt}
-				onClick={() => onPublishedAtChange?.("2020-06-01T08:45:00.000Z")}
-			>
-				Trigger Publish Date Sync
-			</button>
-		</div>
-	),
+				<button type="button" onClick={() => onSeoChange?.({ title: "Search title" })}>
+					Trigger SEO Sync
+				</button>
+				<button type="button" onClick={() => onAuthorChange?.("user_02")}>
+					Trigger Author Sync
+				</button>
+				<button
+					type="button"
+					disabled={isUpdatingPublishedAt}
+					onClick={(event) => {
+						const result = onPublishedAtChange?.("2020-06-01T08:45:00.000Z");
+						event.currentTarget.dataset.returnsPromise = String(result instanceof Promise);
+						if (result instanceof Promise) void result.catch(() => undefined);
+					}}
+				>
+					Trigger Publish Date Sync
+				</button>
+				<button
+					type="button"
+					onClick={() => {
+						const next = !isDirty;
+						onDirtyChangeRef.current?.(next);
+						setIsDirty(next);
+					}}
+				>
+					{isDirty ? "Clear Dirty" : "Set Dirty"}
+				</button>
+				<button
+					type="button"
+					onClick={() => void onQuickCreateByline?.(MOCK_BYLINE_VALUES).catch(() => undefined)}
+				>
+					Trigger Byline Create
+				</button>
+				<button
+					type="button"
+					onClick={() =>
+						void onQuickEditByline?.("byline_01", MOCK_BYLINE_VALUES).catch(() => undefined)
+					}
+				>
+					Trigger Byline Edit
+				</button>
+			</div>
+		);
+	},
 }));
 
 vi.mock("../../../../packages/admin/src/components/MediaLibrary", () => ({
@@ -231,6 +317,10 @@ vi.mock("../../../../packages/admin/src/components/MediaLibrary", () => ({
 	},
 }));
 
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
 const MANIFEST: AdminManifest = {
 	version: "1.0.0",
 	hash: "abc123",
@@ -254,12 +344,18 @@ const MANIFEST: AdminManifest = {
 	},
 };
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function buildRouter() {
 	const queryClient = createTestQueryClient();
 	const router = createAdminRouter(queryClient);
 	if (!i18n.locale) {
 		i18n.loadAndActivate({ locale: "en", messages: {} });
 	}
+	// Toasty and I18nProvider are provided by App.tsx in production.
+	// Mirror that here so useLingui() and useKumoToastManager() work inside page components.
 	function TestApp() {
 		return (
 			<I18nProvider i18n={i18n}>
@@ -899,6 +995,10 @@ describe("MediaPage – upload completion", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Tests: ContentListPage – locale forwarded to "Add New" link
+// ---------------------------------------------------------------------------
+
 describe("ContentListPage – locale forwarding to the new-content route", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
 
@@ -923,6 +1023,10 @@ describe("ContentListPage – locale forwarding to the new-content route", () =>
 	});
 
 	it("Add New link includes the active locale when a non-default locale (de) is selected", async () => {
+		// Navigate to the content list with locale=de selected in the switcher.
+		// The default locale is fr, so de is a non-default locale.
+		// The "Add New" <Link> must carry ?locale=de so that ContentNewPage
+		// receives it and creates content in German, not the default French.
 		const { router, TestApp } = buildRouter();
 
 		await router.navigate({
@@ -941,6 +1045,10 @@ describe("ContentListPage – locale forwarding to the new-content route", () =>
 	});
 
 	it("Add New link uses the default locale (fr) when no locale is set in the URL", async () => {
+		// Navigate to the content list without an explicit locale param.
+		// activeLocale falls back to the configured defaultLocale ("fr").
+		// The "Add New" <Link> must carry ?locale=fr so that ContentNewPage
+		// creates content in the correct default language.
 		const { router, TestApp } = buildRouter();
 
 		await router.navigate({
@@ -978,6 +1086,13 @@ describe("ContentListPage – locale forwarding to the new-content route", () =>
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Tests: ContentListPage – hook order stays stable across an erroring refetch
+// (regression for #1415: inline useCallback for onLoadMore sat below the early
+// returns, so a render that took the `error` guard ran one fewer hook → React
+// #300 "Rendered fewer hooks than expected").
+// ---------------------------------------------------------------------------
+
 describe("ContentListPage – hook order is stable when a refetch errors (#1415)", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
 
@@ -1011,9 +1126,15 @@ describe("ContentListPage – hook order is stable when a refetch errors (#1415)
 
 		const screen = await render(<TestApp />);
 
+		// First render succeeds and reaches the inline onLoadMore useCallback.
 		const addNewLink = screen.getByRole("link", { name: /add new/i });
 		await expect.element(addNewLink).toBeInTheDocument();
 
+		// Make the next content fetch fail, then force a refetch. The component
+		// re-renders with `error` truthy and takes the ErrorScreen early return,
+		// which sits ABOVE the onLoadMore useCallback. If that callback hook is
+		// below the guards, this render runs one fewer hook and React throws #300
+		// — so the ErrorScreen (and its Retry button) never appears.
 		mockFetch.on("GET", "/_emdash/api/content/posts", { error: { message: "Boom" } }, 500);
 		await queryClient.refetchQueries({ queryKey: ["content", "posts"] });
 
@@ -1021,6 +1142,185 @@ describe("ContentListPage – hook order is stable when a refetch errors (#1415)
 		await expect.element(retryButton).toBeInTheDocument();
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Tests: ContentListPage – numbered pages for the list and the trash
+// ---------------------------------------------------------------------------
+
+describe("ContentListPage – numbered pages", () => {
+	const MANIFEST_WITH_PAGES: AdminManifest = {
+		...MANIFEST,
+		collections: {
+			...MANIFEST.collections,
+			pages: { ...MANIFEST.collections.posts!, label: "Pages", labelSingular: "Page" },
+		},
+	};
+	let mockFetch: ReturnType<typeof createMockFetch>;
+	let requests: string[];
+	let totals: Record<string, number>;
+	let holdManifest: Promise<void> | undefined;
+	let holdCollection: { collection: string; release: Promise<void> } | undefined;
+
+	function listPage(collection: string, url: URL, total: number) {
+		const page = Number(url.searchParams.get("page"));
+		const limit = Number(url.searchParams.get("limit"));
+		const start = (page - 1) * limit;
+		const count = Math.max(0, Math.min(limit, total - start));
+		const items = Array.from({ length: count }, (_, index) => {
+			const n = start + index + 1;
+			return {
+				id: `${collection}-${n}`,
+				type: collection,
+				slug: `${collection}-${n}`,
+				status: "draft",
+				locale: "fr",
+				data: { title: `${collection} entry ${n}` },
+				authorId: "user_01",
+				createdAt: "2026-01-01T00:00:00Z",
+				updatedAt: "2026-01-01T00:00:00Z",
+				deletedAt: "2026-01-02T00:00:00Z",
+				publishedAt: null,
+				scheduledAt: null,
+				liveRevisionId: null,
+				draftRevisionId: null,
+			};
+		});
+		return { items, total };
+	}
+
+	beforeEach(() => {
+		requests = [];
+		totals = { posts: 45, "posts/trash": 25, pages: 3, "pages/trash": 0 };
+		holdManifest = undefined;
+		holdCollection = undefined;
+		mockFetch = createMockFetch();
+		mockFetch
+			.on("GET", "/_emdash/api/auth/me", { data: { id: "user_01", role: 60 } })
+			.on("GET", "/_emdash/api/content/posts/authors", { data: { items: [] } })
+			.on("GET", "/_emdash/api/content/pages/authors", { data: { items: [] } });
+		const mockedFetch = globalThis.fetch;
+		globalThis.fetch = async (input, init) => {
+			const href =
+				typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+			const url = new URL(href, location.origin);
+			if (url.pathname === "/_emdash/api/manifest") {
+				await holdManifest;
+				return Response.json({ data: MANIFEST_WITH_PAGES });
+			}
+			const list = /^\/_emdash\/api\/content\/(\w+)(\/trash)?$/.exec(url.pathname);
+			if (list && url.searchParams.has("page")) {
+				requests.push(`${url.pathname}${url.search}`);
+				const [, collection = "", trash = ""] = list;
+				if (holdCollection?.collection === collection) await holdCollection.release;
+				return Response.json({
+					data: listPage(collection, url, totals[`${collection}${trash}`] ?? 0),
+				});
+			}
+			return mockedFetch(input, init);
+		};
+	});
+
+	afterEach(() => {
+		mockFetch.restore();
+	});
+
+	async function renderPosts() {
+		const harness = buildRouter();
+		await harness.router.navigate({ to: "/content/$collection", params: { collection: "posts" } });
+		const screen = await render(<harness.TestApp />);
+		await expect.element(screen.getByText("Showing 1-20 of 45")).toBeInTheDocument();
+		return { ...harness, screen };
+	}
+
+	it("loads one page of the list and of the trash at a time", async () => {
+		const { screen } = await renderPosts();
+
+		expect(requests).toContain("/_emdash/api/content/posts/trash?page=1&limit=20&locale=fr");
+		expect(
+			requests.some((url) => url.startsWith("/_emdash/api/content/posts?page=1&limit=20&")),
+		).toBe(true);
+		await expect.element(screen.getByRole("tab", { name: /Trash/ })).toHaveTextContent("25");
+
+		await screen.getByRole("button", { name: "Next page" }).click();
+
+		await expect.element(screen.getByText("Showing 21-40 of 45")).toBeInTheDocument();
+		await expect.element(screen.getByText("posts entry 21")).toBeInTheDocument();
+		expect(
+			requests.some((url) => url.startsWith("/_emdash/api/content/posts?page=2&limit=20&")),
+		).toBe(true);
+	});
+
+	it("starts a changed search at page 1 without requesting the old page for it", async () => {
+		const { screen } = await renderPosts();
+		await screen.getByRole("button", { name: "Next page" }).click();
+		await expect.element(screen.getByText("Showing 21-40 of 45")).toBeInTheDocument();
+
+		await screen.getByRole("searchbox", { name: "Search posts" }).fill("entry");
+
+		await expect.element(screen.getByText("Showing 1-20 of 45")).toBeInTheDocument();
+		const searches = requests.filter((url) => url.includes("q=entry"));
+		expect(searches).toHaveLength(1);
+		expect(searches[0]).toContain("page=1&");
+	});
+
+	it("moves back to the last page when the current one empties", async () => {
+		const { screen, queryClient } = await renderPosts();
+		await screen.getByRole("button", { name: "Last page" }).click();
+		await expect.element(screen.getByText("Showing 41-45 of 45")).toBeInTheDocument();
+
+		totals.posts = 40;
+		await queryClient.invalidateQueries({ queryKey: ["content", "posts"] });
+
+		await expect.element(screen.getByText("Showing 21-40 of 40")).toBeInTheDocument();
+		await expect.element(screen.getByText("posts entry 40")).toBeInTheDocument();
+	});
+
+	it("never shows or requests the previous collection's page when switching collection", async () => {
+		const { screen, router } = await renderPosts();
+		await screen.getByRole("button", { name: "Next page" }).click();
+		await expect.element(screen.getByText("Showing 21-40 of 45")).toBeInTheDocument();
+		let releasePages = () => {};
+		holdCollection = {
+			collection: "pages",
+			release: new Promise<void>((resolve) => {
+				releasePages = resolve;
+			}),
+		};
+
+		await router.navigate({ to: "/content/$collection", params: { collection: "pages" } });
+
+		await expect.element(screen.getByRole("heading", { name: "Pages" })).toBeInTheDocument();
+		expect(screen.getByText("posts entry 21").query()).toBeNull();
+		releasePages();
+		await expect.element(screen.getByText("Showing 1-3 of 3")).toBeInTheDocument();
+		expect(requests.filter((url) => url.startsWith("/_emdash/api/content/pages?"))).toEqual([
+			expect.stringContaining("page=1&"),
+		]);
+	});
+
+	it("waits for the manifest before loading the trash", async () => {
+		let releaseManifest = () => {};
+		holdManifest = new Promise<void>((resolve) => {
+			releaseManifest = resolve;
+		});
+		const { router, TestApp } = buildRouter();
+		await router.navigate({ to: "/content/$collection", params: { collection: "posts" } });
+		const screen = await render(<TestApp />);
+		await new Promise((resolve) => setTimeout(resolve, 100));
+
+		expect(requests).toEqual([]);
+		releaseManifest();
+
+		await expect.element(screen.getByText("Showing 1-20 of 45")).toBeInTheDocument();
+		expect(requests.filter((url) => url.includes("/trash?"))).toEqual([
+			"/_emdash/api/content/posts/trash?page=1&limit=20&locale=fr",
+		]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Tests: ContentNewPage – locale passed to createContent
+// ---------------------------------------------------------------------------
 
 describe("ContentNewPage – locale passed to createContent", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
@@ -1062,6 +1362,8 @@ describe("ContentNewPage – locale passed to createContent", () => {
 	});
 
 	it("passes locale=de to the API when ?locale=de is in the URL", async () => {
+		// The default locale is fr; navigating with ?locale=de tests that the
+		// non-default locale is read from search params and forwarded to createContent.
 		const { router, TestApp } = buildRouter();
 
 		await router.navigate({
@@ -1072,16 +1374,21 @@ describe("ContentNewPage – locale passed to createContent", () => {
 
 		const screen = await render(<TestApp />);
 
+		// Wait for the editor to appear (manifest must have loaded)
 		await expect
 			.element(screen.getByRole("button", { name: "Save", exact: true }))
 			.toBeInTheDocument();
 
+		// Capture outgoing requests
 		const requests: { url: string; body: unknown }[] = [];
 		const origFetch = globalThis.fetch;
 		globalThis.fetch = async (input, init) => {
 			const url =
 				typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-			if (url.includes("/content/posts") && init?.method === "POST") {
+			// Match the create endpoint exactly. A successful create navigates to
+			// the editor, whose own POSTs live under /content/posts/{id}/.
+			const path = url.split("?")[0] ?? url;
+			if (path.endsWith("/content/posts") && init?.method === "POST") {
 				const body = init.body ? JSON.parse(init.body as string) : null;
 				requests.push({ url, body });
 			}
@@ -1092,10 +1399,15 @@ describe("ContentNewPage – locale passed to createContent", () => {
 
 		globalThis.fetch = origFetch;
 
+		// After the fix: the POST body must include locale: "de"
 		expect(requests).toHaveLength(1);
 		expect(requests[0]!.body).toMatchObject({ locale: "de" });
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Tests: ContentNewPage – a rejected create surfaces an error toast
+// ---------------------------------------------------------------------------
 
 describe("ContentNewPage – create failure surfaces the server's error", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
@@ -1109,6 +1421,10 @@ describe("ContentNewPage – create failure surfaces the server's error", () => 
 				data: { id: "user_01", role: 60 },
 			})
 			.on("GET", "/_emdash/api/bylines", { data: { items: [] } })
+			// A canned 409 SLUG_CONFLICT — the response shape the server
+			// returns when the entry's slug is already taken in the
+			// collection (slug derivation itself is server-side and not
+			// exercised here).
 			.on(
 				"POST",
 				"/_emdash/api/content/posts",
@@ -1144,18 +1460,194 @@ describe("ContentNewPage – create failure surfaces the server's error", () => 
 
 		await screen.getByRole("button", { name: "Save", exact: true }).click();
 
+		// The UI surfaces WHAT happened — the server's human-readable
+		// conflict message.
 		await expect.element(screen.getByText("Failed to save")).toBeInTheDocument();
 		await expect
 			.element(screen.getByText("Slug 'test-post' already exists in collection 'posts'"))
 			.toBeInTheDocument();
 
+		// And with the error affordance: Kumo styles severity off `variant`
+		// (Base UI's `type` is inert for styling), and the toast icon only
+		// renders for a non-default variant.
 		await expect
 			.poll(() => document.querySelectorAll("[data-toast-icon]").length)
 			.toBeGreaterThan(0);
 
+		// And the failed create must not navigate anywhere.
 		expect(router.state.location.pathname).toContain("/content/posts/new");
 	});
+
+	it("names a field the server rejected by its label", async () => {
+		mockFetch
+			.on("GET", "/_emdash/api/manifest", {
+				data: {
+					...MANIFEST,
+					collections: {
+						posts: {
+							...MANIFEST.collections.posts,
+							fields: { title: { kind: "string", label: "Headline" } },
+						},
+					},
+				},
+			})
+			.on(
+				"POST",
+				"/_emdash/api/content/posts",
+				{
+					success: false,
+					error: {
+						code: "VALIDATION_ERROR",
+						message: "title: Invalid input: expected string, received undefined",
+						details: {
+							issues: [
+								{
+									path: "title",
+									code: "required",
+									message: "Invalid input: expected string, received undefined",
+								},
+							],
+						},
+					},
+				},
+				400,
+			);
+		const { router, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/new",
+			params: { collection: "posts" },
+			search: { locale: undefined },
+		});
+		const screen = await render(<TestApp />);
+		await expect
+			.element(screen.getByRole("button", { name: "Save", exact: true }))
+			.toBeInTheDocument();
+
+		await screen.getByRole("button", { name: "Save", exact: true }).click();
+
+		await expect.element(screen.getByText("Headline is required.")).toBeInTheDocument();
+		expect(screen.getByText("expected string, received undefined", { exact: false }).query()).toBe(
+			null,
+		);
+	});
 });
+
+// ---------------------------------------------------------------------------
+// Tests: bylines created and edited from the editor keep the form's values
+// ---------------------------------------------------------------------------
+
+describe("Content editor routes – byline profiles saved from the editor", () => {
+	let mockFetch: ReturnType<typeof createMockFetch>;
+	let mockedFetch: typeof fetch;
+	let bylineWrites: { method: string; url: string; body: unknown }[];
+
+	beforeEach(() => {
+		mockFetch = createMockFetch();
+		mockFetch
+			.on("GET", "/_emdash/api/manifest", { data: MANIFEST })
+			.on("GET", "/_emdash/api/auth/me", { data: { id: "user_01", role: 60 } })
+			.on("GET", "/_emdash/api/content/posts/post_1", {
+				data: {
+					item: {
+						id: "post_1",
+						type: "posts",
+						slug: "post-1",
+						status: "draft",
+						locale: "en",
+						translationGroup: null,
+						data: { title: "Post 1" },
+						authorId: null,
+						primaryBylineId: null,
+						createdAt: "2025-01-01T00:00:00Z",
+						updatedAt: "2025-01-01T00:00:00Z",
+						publishedAt: null,
+						scheduledAt: null,
+						liveRevisionId: null,
+						draftRevisionId: null,
+					},
+				},
+			})
+			.on("GET", "/_emdash/api/admin/bylines", { data: { items: [] } })
+			.on("POST", "/_emdash/api/admin/bylines", { data: { id: "byline_02" } })
+			.on("PUT", "/_emdash/api/admin/bylines/byline_01", { data: { id: "byline_01" } });
+
+		bylineWrites = [];
+		mockedFetch = globalThis.fetch;
+		globalThis.fetch = async (input, init) => {
+			const url =
+				typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+			const method = init?.method ?? "GET";
+			if (url.startsWith("/_emdash/api/admin/bylines") && method !== "GET") {
+				bylineWrites.push({ method, url, body: JSON.parse(init?.body as string) });
+			}
+			return mockedFetch(input, init);
+		};
+	});
+
+	afterEach(() => {
+		globalThis.fetch = mockedFetch;
+		mockFetch.restore();
+	});
+
+	it("creates a byline from a new post with the form's values in the post's locale", async () => {
+		const { router, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/new",
+			params: { collection: "posts" },
+			search: { locale: "de" },
+		});
+		const screen = await render(<TestApp />);
+
+		await screen.getByRole("button", { name: "Trigger Byline Create" }).click();
+
+		await vi.waitFor(() => expect(bylineWrites).toHaveLength(1));
+		expect(bylineWrites[0]).toEqual({
+			method: "POST",
+			url: "/_emdash/api/admin/bylines",
+			body: { ...MOCK_BYLINE_VALUES, locale: "de" },
+		});
+	});
+
+	it("creates a byline from an existing post with the form's values in the post's locale", async () => {
+		const { router, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+		const screen = await render(<TestApp />);
+
+		await screen.getByRole("button", { name: "Trigger Byline Create" }).click();
+
+		await vi.waitFor(() => expect(bylineWrites).toHaveLength(1));
+		expect(bylineWrites[0]).toEqual({
+			method: "POST",
+			url: "/_emdash/api/admin/bylines",
+			body: { ...MOCK_BYLINE_VALUES, locale: "en" },
+		});
+	});
+
+	it("saves every form field when a byline is edited from a post", async () => {
+		const { router, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+		const screen = await render(<TestApp />);
+
+		await screen.getByRole("button", { name: "Trigger Byline Edit" }).click();
+
+		await vi.waitFor(() => expect(bylineWrites).toHaveLength(1));
+		expect(bylineWrites[0]).toEqual({
+			method: "PUT",
+			url: "/_emdash/api/admin/bylines/byline_01",
+			body: MOCK_BYLINE_VALUES,
+		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Tests: ContentEditPage – autosave cache stays in sync
+// ---------------------------------------------------------------------------
 
 describe("ContentEditPage – autosave cache patching", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
@@ -1182,6 +1674,7 @@ describe("ContentEditPage – autosave cache patching", () => {
 			.on("GET", "/_emdash/api/bylines", { data: { items: [] } })
 			.on("GET", "/_emdash/api/content/posts/post_1", {
 				data: {
+					_rev: "revision-token",
 					item: {
 						id: "post_1",
 						type: "posts",
@@ -1284,6 +1777,60 @@ describe("ContentEditPage – autosave cache patching", () => {
 		});
 	});
 
+	it("echoes the current revision token in editor and auxiliary writes", async () => {
+		const { router, TestApp } = buildRouter();
+
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+
+		const screen = await render(<TestApp />);
+		await waitFor(() => {
+			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
+		});
+
+		const fetchWithMocks = globalThis.fetch;
+		const putBodies: Record<string, unknown>[] = [];
+		globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+			const url =
+				typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+			if (init?.method === "PUT" && url.includes("/content/posts/post_1")) {
+				if (typeof init.body !== "string") throw new TypeError("Expected a JSON request body");
+				putBodies.push(JSON.parse(init.body) as Record<string, unknown>);
+			}
+			return fetchWithMocks(input, init);
+		}) as typeof fetch;
+
+		try {
+			await screen.getByRole("button", { name: "Save", exact: true }).click();
+			await waitFor(() => expect(putBodies).toHaveLength(1));
+
+			await screen.getByRole("button", { name: "Trigger Draft Sync" }).click();
+			await waitFor(() => expect(putBodies).toHaveLength(2));
+
+			await screen.getByRole("button", { name: "Trigger Author Sync" }).click();
+			await waitFor(() => expect(putBodies).toHaveLength(3));
+
+			await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
+			await waitFor(() => expect(putBodies).toHaveLength(4));
+
+			expect(putBodies).toEqual([
+				{ data: { title: "Test Post" }, _rev: "revision-token" },
+				{
+					data: { title: "Autosaved Title" },
+					slug: "autosaved-title",
+					_rev: "revision-token",
+					skipRevision: true,
+				},
+				{ authorId: "user_02", _rev: "revision-token" },
+				{ seo: { title: "Search title" }, _rev: "revision-token" },
+			]);
+		} finally {
+			globalThis.fetch = fetchWithMocks;
+		}
+	});
+
 	it("sends publish-date changes through the auxiliary update payload", async () => {
 		const fetchWithMocks = globalThis.fetch;
 		let updateBody: Record<string, unknown> | undefined;
@@ -1308,10 +1855,15 @@ describe("ContentEditPage – autosave cache patching", () => {
 				expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
 			});
 
-			await screen.getByRole("button", { name: "Trigger Publish Date Sync" }).click();
+			const trigger = screen.getByRole("button", { name: "Trigger Publish Date Sync" });
+			await trigger.click();
+			await expect.element(trigger).toHaveAttribute("data-returns-promise", "true");
 
 			await waitFor(() => {
-				expect(updateBody).toEqual({ publishedAt: "2020-06-01T08:45:00.000Z" });
+				expect(updateBody).toEqual({
+					publishedAt: "2020-06-01T08:45:00.000Z",
+					_rev: "revision-token",
+				});
 			});
 		} finally {
 			globalThis.fetch = fetchWithMocks;
@@ -1379,6 +1931,7 @@ describe("ContentEditPage – autosave cache patching", () => {
 			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
 		});
 
+		// Hold every PUT open so the mutation's pending window is observable.
 		const fetchWithMocks = globalThis.fetch;
 		let resolvePut: (() => void) | undefined;
 		globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
@@ -1412,6 +1965,7 @@ describe("ContentEditPage – autosave cache patching", () => {
 		}) as typeof fetch;
 
 		try {
+			// Auxiliary write (SEO): the Save control must stay idle while it flies.
 			await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
 			await new Promise((resolve) => setTimeout(resolve, 50));
 			expect(screen.getByTestId("is-saving").element().textContent).toBe("idle");
@@ -1425,6 +1979,7 @@ describe("ContentEditPage – autosave cache patching", () => {
 				expect(screen.getByTestId("manual-save-blocked").element().textContent).toBe("ready");
 			});
 
+			// Editor save: the same mutation with source "editor" must report saving.
 			await screen.getByRole("button", { name: "Save", exact: true }).click();
 			await waitFor(() => {
 				expect(screen.getByTestId("is-saving").element().textContent).toBe("saving");
@@ -1489,10 +2044,14 @@ describe("ContentEditPage – autosave cache patching", () => {
 				expect(screen.getByTestId("is-saving").element().textContent).toBe("saving");
 			});
 
+			// Auxiliary write lands while the editor save is still in flight.
 			await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
 			await new Promise((resolve) => setTimeout(resolve, 50));
 			expect(screen.getByTestId("is-saving").element().textContent).toBe("saving");
 
+			// Main's shared mutation observer follows the latest auxiliary write.
+			// When it settles, operation gating becomes idle even though the older
+			// editor request is still running; feedback remains visual-only.
 			expect(resolvers).toHaveLength(2);
 			resolvers[1]?.();
 			await waitFor(() => {
@@ -1575,5 +2134,372 @@ describe("ContentEditPage – autosave cache patching", () => {
 		} finally {
 			globalThis.fetch = fetchWithMocks;
 		}
+	});
+
+	it("signals a rejected autosave to the editor", async () => {
+		mockFetch.on(
+			"PUT",
+			"/_emdash/api/content/posts/post_1?locale=en",
+			{ error: { code: "VALIDATION_ERROR", message: "title: Too big" } },
+			400,
+		);
+		const { router, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+		const screen = await render(<TestApp />);
+		await waitFor(() => {
+			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
+		});
+
+		await screen.getByRole("button", { name: "Trigger Draft Sync" }).click();
+
+		await waitFor(() => {
+			expect(screen.getByTestId("autosave-rejection-token").element().textContent).toBe("1");
+		});
+		expect(screen.getByTestId("autosave-completion-token").element().textContent).toBe("0");
+		expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
+	});
+
+	it("names a field the server rejected by its label in the autosave toast", async () => {
+		mockFetch
+			.on("GET", "/_emdash/api/manifest", {
+				data: {
+					...MANIFEST,
+					i18n: undefined,
+					collections: {
+						posts: {
+							...MANIFEST.collections.posts,
+							supports: ["drafts", "revisions"],
+							fields: { title: { kind: "string", label: "Headline" } },
+						},
+					},
+				},
+			})
+			.on(
+				"PUT",
+				"/_emdash/api/content/posts/post_1?locale=en",
+				{
+					error: {
+						code: "VALIDATION_ERROR",
+						message: "title: Too big: expected string to have <=5 characters",
+						details: {
+							issues: [
+								{
+									path: "title",
+									code: "too_big",
+									origin: "string",
+									maximum: 5,
+									message: "Too big: expected string to have <=5 characters",
+								},
+							],
+						},
+					},
+				},
+				400,
+			);
+		const { router, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+		const screen = await render(<TestApp />);
+		await waitFor(() => {
+			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
+		});
+
+		await screen.getByRole("button", { name: "Trigger Draft Sync" }).click();
+
+		await expect.element(screen.getByText("Autosave failed")).toBeInTheDocument();
+		await expect
+			.element(screen.getByText("Headline can have at most 5 characters."))
+			.toBeInTheDocument();
+		expect(screen.getByText("Too big", { exact: false }).query()).toBe(null);
+	});
+
+	it("does not signal a rejection for a server error", async () => {
+		mockFetch.on(
+			"PUT",
+			"/_emdash/api/content/posts/post_1?locale=en",
+			{ error: { code: "INTERNAL_ERROR", message: "boom" } },
+			500,
+		);
+		const { router, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+		const screen = await render(<TestApp />);
+		await waitFor(() => {
+			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
+		});
+
+		await screen.getByRole("button", { name: "Trigger Draft Sync" }).click();
+
+		await expect.element(screen.getByText("Autosave failed")).toBeInTheDocument();
+		await waitFor(() => {
+			expect(screen.getByTestId("autosave-blocked").element().textContent).toBe("ready");
+		});
+		expect(screen.getByTestId("autosave-rejection-token").element().textContent).toBe("0");
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Tests: ContentEditPage – revision token stays synchronized with clean reads
+// ---------------------------------------------------------------------------
+
+describe("ContentEditPage – revision token synchronization", () => {
+	const rev1 = btoa("1:2025-01-01T00:00:00Z");
+	const rev2 = btoa("2:2025-01-02T00:00:00Z");
+	const rev3 = btoa("3:2025-01-03T00:00:00Z");
+
+	const manifestWithRevisions: AdminManifest = {
+		...MANIFEST,
+		i18n: undefined,
+		collections: {
+			posts: {
+				...MANIFEST.collections.posts,
+				supports: ["drafts", "revisions"],
+			},
+		},
+	};
+
+	function makeItem(overrides: Partial<ContentItem> = {}) {
+		return {
+			id: "post_1",
+			type: "posts",
+			slug: "published-slug",
+			status: "draft",
+			locale: "en",
+			translationGroup: null,
+			data: { title: "Published Title" },
+			authorId: null,
+			primaryBylineId: null,
+			createdAt: "2025-01-01T00:00:00Z",
+			updatedAt: "2025-01-01T00:00:00Z",
+			publishedAt: "2025-01-01T00:00:00Z",
+			scheduledAt: null,
+			liveRevisionId: "rev_live",
+			draftRevisionId: "rev_draft",
+			...overrides,
+		};
+	}
+
+	let originalFetch: typeof fetch;
+	let getCount = 0;
+	let putBodies: Record<string, unknown>[] = [];
+
+	function jsonResponse(body: unknown, status = 200) {
+		return new Response(JSON.stringify(body), {
+			status,
+			headers: { "Content-Type": "application/json" },
+		});
+	}
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+		getCount = 0;
+		putBodies = [];
+
+		globalThis.fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+			const url =
+				typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+			const method = init?.method ?? "GET";
+			const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+
+			if (method === "GET" && url === "/_emdash/api/manifest")
+				return jsonResponse({ data: manifestWithRevisions });
+			if (method === "GET" && url === "/_emdash/api/auth/me")
+				return jsonResponse({ data: { id: "user_01", role: 30 } });
+			if (method === "GET" && url === "/_emdash/api/bylines")
+				return jsonResponse({ data: { items: [] } });
+			if (method === "GET" && url.startsWith("/_emdash/api/revisions/rev_draft"))
+				return jsonResponse({
+					data: {
+						item: {
+							id: "rev_draft",
+							collection: "posts",
+							entryId: "post_1",
+							data: { title: "Draft Title", _slug: "draft-slug" },
+							authorId: null,
+							createdAt: "2025-01-01T00:00:00Z",
+						},
+					},
+				});
+			if (method === "POST" && url.includes("/_emdash/api/content/posts/post_1/lock"))
+				return jsonResponse({ data: { enabled: false, holder: null, heldByCaller: false } });
+			if (method === "DELETE" && url.includes("/_emdash/api/content/posts/post_1/lock"))
+				return jsonResponse({ data: { released: true } });
+			if (method === "GET" && url.startsWith("/_emdash/api/content/posts/post_1")) {
+				getCount++;
+				const revision = getCount === 1 ? rev1 : rev2;
+				return jsonResponse({
+					data: { _rev: revision, item: makeItem() },
+				});
+			}
+			if (method === "PUT" && url.startsWith("/_emdash/api/content/posts/post_1")) {
+				putBodies.push(body);
+				return jsonResponse({
+					data: { _rev: rev3, item: makeItem() },
+				});
+			}
+
+			throw new Error(`Unhandled request: ${method} ${url}`);
+		}) as typeof fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+	});
+
+	it("adopts a newer revision after a clean refetch and sends it on SEO save", async () => {
+		const { router, queryClient, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+		const screen = await render(<TestApp />);
+		await waitFor(() => {
+			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
+		});
+		expect(getCount).toBe(1);
+
+		await queryClient.refetchQueries({ queryKey: ["content", "posts", "post_1"] });
+		await waitFor(() => expect(getCount).toBe(2));
+
+		await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
+		await waitFor(() => expect(putBodies).toHaveLength(1));
+
+		expect(putBodies[0]).toEqual({ seo: { title: "Search title" }, _rev: rev2 });
+	});
+
+	it("keeps the base revision while the editor is dirty", async () => {
+		const { router, queryClient, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+		const screen = await render(<TestApp />);
+		await waitFor(() => {
+			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
+		});
+
+		await screen.getByRole("button", { name: "Set Dirty" }).click();
+		await queryClient.refetchQueries({ queryKey: ["content", "posts", "post_1"] });
+		await waitFor(() => expect(getCount).toBe(2));
+
+		await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
+		await waitFor(() => expect(putBodies).toHaveLength(1));
+
+		expect(putBodies[0]).toEqual({ seo: { title: "Search title" }, _rev: rev1 });
+	});
+
+	it("does not downgrade to a stale revision after a successful write", async () => {
+		const { router, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+		const screen = await render(<TestApp />);
+		await waitFor(() => {
+			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
+		});
+
+		await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
+		await waitFor(() => expect(putBodies).toHaveLength(1));
+		expect(putBodies[0]).toEqual({ seo: { title: "Search title" }, _rev: rev1 });
+
+		// The mutation invalidates the content query; wait for the background
+		// refetch to return the stale rev2 while the token advanced to rev3.
+		await waitFor(() => expect(getCount).toBe(2));
+
+		await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
+		await waitFor(() => expect(putBodies).toHaveLength(2));
+
+		expect(putBodies[1]).toEqual({ seo: { title: "Search title" }, _rev: rev3 });
+	});
+
+	it("keeps the stale token when a refetch resolves before the parent re-renders after a dirtying edit", async () => {
+		const { router, queryClient, TestApp } = buildRouter();
+		await router.navigate({
+			to: "/content/$collection/$id",
+			params: { collection: "posts", id: "post_1" },
+		});
+		const screen = await render(<TestApp />);
+		await waitFor(() => {
+			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
+		});
+
+		// Mark the editor dirty and immediately refetch, without waiting for the
+		// parent's React state to reflect the new dirty flag. TheContentEditor
+		// calls onDirtyChange synchronously from the editing event path so the
+		// adoption effect still sees dirty=true and keeps the original rev1 token.
+		await screen.getByRole("button", { name: "Set Dirty" }).click();
+		await queryClient.refetchQueries({ queryKey: ["content", "posts", "post_1"] });
+		await waitFor(() => expect(getCount).toBe(2));
+
+		await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
+		await waitFor(() => expect(putBodies).toHaveLength(1));
+
+		expect(putBodies[0]).toEqual({ seo: { title: "Search title" }, _rev: rev1 });
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Tests: ContentTypesListPage – registering an unregistered table
+// ---------------------------------------------------------------------------
+
+describe("ContentTypesListPage – register failure surfaces the server's error", () => {
+	let mockFetch: ReturnType<typeof createMockFetch>;
+
+	beforeEach(() => {
+		mockFetch = createMockFetch();
+
+		mockFetch
+			.on("GET", "/_emdash/api/manifest", { data: MANIFEST })
+			.on("GET", "/_emdash/api/auth/me", {
+				data: { id: "user_01", role: 50 },
+			})
+			.on("GET", "/_emdash/api/schema/collections", { data: { items: [] } })
+			.on("GET", "/_emdash/api/schema/block-types", { data: { items: [] } })
+			.on("GET", "/_emdash/api/schema/orphans", {
+				data: {
+					items: [{ slug: "ecommerce_orders", tableName: "ecommerce_orders", rowCount: 3 }],
+				},
+			})
+			.on(
+				"POST",
+				"/_emdash/api/schema/orphans/ecommerce_orders",
+				{
+					error: {
+						code: "TABLE_NOT_FOUND",
+						message: 'Table "ec_ecommerce_orders" does not exist',
+					},
+				},
+				404,
+			);
+	});
+
+	afterEach(() => {
+		mockFetch.restore();
+	});
+
+	it("shows a toast with the server's message when the register request fails", async () => {
+		const { router, TestApp } = buildRouter();
+		await router.navigate({ to: "/content-types" });
+		const screen = await render(<TestApp />);
+
+		const register = screen.getByRole("button", { name: "Register" });
+		await expect.element(register).toBeInTheDocument();
+		await register.click();
+
+		await expect.element(screen.getByText("Failed to register ecommerce_orders")).toBeVisible();
+		await expect
+			.element(screen.getByText('Table "ec_ecommerce_orders" does not exist'))
+			.toBeVisible();
+		await expect
+			.poll(() => document.querySelectorAll("[data-toast-icon]").length)
+			.toBeGreaterThan(0);
 	});
 });

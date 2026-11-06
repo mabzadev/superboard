@@ -2,8 +2,24 @@ import { ClientResponseError } from "@atcute/client";
 import type { ListingVisibilityState } from "@emdash-cms/registry-moderation";
 
 export interface RegistryLabelerPolicy {
+	/** Official clients always require the aggregator's approved listing projection. */
 	enforcement: "required";
+	/** Optional bare-DID declaration used for requests and cache identity; aggregator policy remains authoritative. */
 	acceptLabelers?: string;
+}
+
+export interface ReleaseHistoryEvidence {
+	historicalReleaseCount?: number;
+	releaseHistoryComplete?: boolean;
+}
+
+/** Return true only when the aggregator proves one complete observed release history. */
+export function isProvenFirstRelease(evidence: ReleaseHistoryEvidence): boolean {
+	return (
+		evidence.releaseHistoryComplete === true &&
+		Number.isSafeInteger(evidence.historicalReleaseCount) &&
+		evidence.historicalReleaseCount === 1
+	);
 }
 
 function normalizeAcceptLabelers(value: string | undefined): string | undefined {

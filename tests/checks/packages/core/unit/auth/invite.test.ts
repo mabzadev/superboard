@@ -17,6 +17,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
+// Regex patterns for token validation
 const TOKEN_PARAM_REGEX = /token=/;
 const TOKEN_EXTRACT_REGEX = /token=([a-zA-Z0-9_-]+)/;
 
@@ -29,6 +30,7 @@ describe("Invite", () => {
 		db = await setupTestDatabase();
 		adapter = createKyselyAdapter(db);
 
+		// Create an admin user (required for the invitedBy FK)
 		const admin = await adapter.createUser({
 			email: "admin@example.com",
 			name: "Admin",
@@ -56,6 +58,7 @@ describe("Invite", () => {
 			expect(result.url).toContain("https://example.com");
 			expect(result.url).toContain("/admin/invite/accept?token=");
 			expect(result.url).toMatch(TOKEN_PARAM_REGEX);
+			// Should NOT have a token field on the result
 			expect("token" in result).toBe(false);
 		});
 
@@ -141,6 +144,7 @@ describe("Invite", () => {
 				{
 					baseUrl: "https://example.com",
 					siteName: "Test Site",
+					// No email sender — copy-link fallback
 				},
 				adapter,
 				"noemail@example.com",
@@ -168,8 +172,10 @@ describe("Invite", () => {
 
 			expect(sentEmails).toHaveLength(1);
 			const html = sentEmails[0]!.html!;
+			// HTML body should be escaped
 			expect(html).not.toContain("<script>");
 			expect(html).toContain("&lt;script&gt;");
+			// Plain text subject should NOT be escaped (it's not HTML)
 			expect(sentEmails[0]!.subject).toContain("<script>");
 		});
 	});
@@ -213,6 +219,7 @@ describe("Invite", () => {
 		});
 
 		it("should throw invalid_token for a nonexistent token", async () => {
+			// Use a valid base64url token that doesn't exist in the DB
 			const fakeToken = generateToken();
 
 			await expect(validateInvite(adapter, fakeToken)).rejects.toThrow(InviteError);
@@ -228,8 +235,10 @@ describe("Invite", () => {
 		it("should throw invalid_token for an already-used token", async () => {
 			const token = await createTestInvite("used@example.com");
 
+			// Complete the invite (consumes the token)
 			await completeInvite(adapter, token, { name: "Used User" });
 
+			// Token should now be invalid
 			await expect(validateInvite(adapter, token)).rejects.toThrow(InviteError);
 		});
 	});
@@ -269,11 +278,26 @@ describe("Invite", () => {
 			expect(user.emailVerified).toBe(true);
 		});
 
+		it("redeems an invite token only once when completed twice at the same time", async () => {
+			const token = await createTestInvite("race@example.com");
+
+			const results = await Promise.allSettled([
+				completeInvite(adapter, token, { name: "First" }),
+				completeInvite(adapter, token, { name: "Second" }),
+			]);
+
+			expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+			expect(results.filter((r) => r.status === "rejected")).toMatchObject([
+				{ reason: { code: "invalid_token" } },
+			]);
+		});
+
 		it("should delete token after use (single-use)", async () => {
 			const token = await createTestInvite("oneuse@example.com");
 
 			await completeInvite(adapter, token, { name: "One Use" });
 
+			// Second use should fail
 			await expect(completeInvite(adapter, token, { name: "Second Use" })).rejects.toThrow(
 				InviteError,
 			);

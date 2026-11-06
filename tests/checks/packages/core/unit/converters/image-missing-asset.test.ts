@@ -5,6 +5,9 @@ import type { PortableTextBlock } from "../../../../../../packages/core/src/cont
 
 describe("Image blocks without asset wrapper", () => {
 	it("does not crash when an image block has url at the top level instead of inside asset", () => {
+		// This is the format that can originate from migrations or third-party imports
+		// (e.g. Ghost → Portable Text). Without the fix, accessing block.asset.url
+		// throws TypeError: Cannot read properties of undefined (reading 'url').
 		const blocks: PortableTextBlock[] = [
 			{
 				_type: "block",
@@ -85,5 +88,18 @@ describe("Image blocks without asset wrapper", () => {
 		expect(imageNode.attrs?.src).toBe("https://example.com/photo.jpg");
 		expect(imageNode.attrs?.alt).toBe("A proper image");
 		expect(imageNode.attrs?.mediaId).toBe("media-123");
+	});
+
+	it("reads the caption from title-only legacy image blocks", () => {
+		const result = portableTextToProsemirror([
+			{
+				_type: "image",
+				_key: "img1",
+				url: "https://example.com/photo.jpg",
+				title: "Legacy caption",
+			} as unknown as PortableTextBlock,
+		]);
+
+		expect(result.content[0].attrs?.caption).toBe("Legacy caption");
 	});
 });

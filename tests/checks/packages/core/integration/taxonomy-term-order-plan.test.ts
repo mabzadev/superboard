@@ -1,17 +1,34 @@
-import Database from "better-sqlite3";
+/**
+ * Query-plan shape of the term listing reads.
+ *
+ * `sort_order` leads the ORDER BY (`sort_order, label, id`), which no index
+ * satisfies: `idx_taxonomies_name_locale` is `(name, locale)` and
+ * `idx_taxonomies_parent` is `(parent_id)`. Both reads seek the sibling group
+ * through an index and sort it in a temp b-tree.
+ *
+ * The seek is what these assertions protect: without it the planner falls back
+ * to `idx_taxonomies_locale` and reads every term in the locale per facet. The
+ * temp b-tree sorts only the seeked group and reads no extra rows, which is what
+ * D1 bills.
+ *
+ * SQLite-only: `EXPLAIN QUERY PLAN` is a SQLite concern and, being stats-blind
+ * here, the plan is schema-driven — matching D1 exactly.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { runMigrations } from "../../../../../packages/core/src/database/migrations/runner.js";
 import { TaxonomyRepository } from "../../../../../packages/core/src/database/repositories/taxonomy.js";
 import type { Database as DatabaseSchema } from "../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../packages/core/src/db/node-sqlite-compat.js";
 
 interface CapturedQuery {
 	sql: string;
 	parameters: readonly unknown[];
 }
 
-let sqlite: Database.Database;
+let sqlite: Database;
 let db: Kysely<DatabaseSchema>;
 let repo: TaxonomyRepository;
 let captured: CapturedQuery[];
@@ -29,9 +46,12 @@ beforeEach(async () => {
 		},
 	});
 
+	// No ANALYZE: matches D1, which never maintains sqlite_stat1.
 	await runMigrations(db);
 	repo = new TaxonomyRepository(db);
 
+	// One taxonomy dominates the locale, so a plan that filters `name` in memory
+	// instead of seeking it reads far more rows than it returns.
 	for (let i = 0; i < 40; i++) {
 		await repo.create({ name: "tag", slug: `tag-${i}`, label: `Tag ${i}`, locale: "en" });
 	}
@@ -57,6 +77,7 @@ afterEach(async () => {
 	await db.destroy();
 });
 
+/** Normalize application values captured from Kysely for direct driver binding. */
 function bindable(p: unknown): unknown {
 	if (typeof p === "boolean") return p ? 1 : 0;
 	if (p instanceof Date) return p.toISOString();
@@ -64,6 +85,10 @@ function bindable(p: unknown): unknown {
 	return p;
 }
 
+/**
+ * Plan of the last captured query whose SQL matches — the repository's real
+ * emitted SQL, so the assertions can't drift from a hand-copied literal.
+ */
 function queryOf(match: (sql: string) => boolean): CapturedQuery {
 	const query = captured.findLast((q) => match(q.sql));
 	expect(query, "expected a matching query to have been emitted").toBeDefined();
@@ -84,6 +109,7 @@ it("seeks findByName through the composite index rather than scanning the locale
 
 	const plan = planOf((sql) => sql.includes('"name" = ?') && sql.includes("sort_order"));
 	expect(plan).toContain("idx_taxonomies_name_locale");
+	// The locale-only index reads every term in the locale to filter `name`.
 	expect(plan).not.toContain("idx_taxonomies_locale");
 	expect(plan).not.toContain("SCAN taxonomies");
 	expect(plan).toContain("TEMP B-TREE");

@@ -210,6 +210,8 @@ describe("storage-query", () => {
 		});
 
 		it("should handle number values", () => {
+			// Numeric operands use a type-guarded extract so the comparison is
+			// numeric (not lexical text) and total across schemaless documents.
 			const result = buildCondition(db, "count", 42);
 			expect(result.sql).toBe(
 				"CASE WHEN json_type(data, '$.count') IN ('integer', 'real') THEN json_extract(data, '$.count') END = ?",
@@ -241,6 +243,8 @@ describe("storage-query", () => {
 			expect(buildCondition(db, "name", { startsWith: "c:\\dir" }).params).toEqual(["c:\\\\dir%"]);
 		});
 
+		// Numeric range bounds are type-guarded so `'9' >= '10'` can't sneak in
+		// via lexical text comparison.
 		const ageNum =
 			"CASE WHEN json_type(data, '$.age') IN ('integer', 'real') THEN json_extract(data, '$.age') END";
 
@@ -272,6 +276,15 @@ describe("storage-query", () => {
 			const result = buildCondition(db, "age", { gte: 18, lt: 65 });
 			expect(result.sql).toBe(`${ageNum} >= ? AND ${ageNum} < ?`);
 			expect(result.params).toEqual([18, 65]);
+		});
+
+		it("should throw for a range filter whose every bound is undefined", () => {
+			// An empty predicate is silently dropped downstream, which turns a
+			// guard into an unconditional match.
+			expect(() => buildCondition(db, "age", { gte: undefined })).toThrow(StorageQueryError);
+			expect(() => buildCondition(db, "age", { gt: undefined, lte: undefined })).toThrow(
+				StorageQueryError,
+			);
 		});
 	});
 
@@ -309,6 +322,14 @@ describe("storage-query", () => {
 			expect(result.sql).toContain("LIKE ? ESCAPE");
 			expect(result.sql).toContain(">= ?");
 			expect(result.params).toEqual(["active", "pending", "test%", 5]);
+		});
+
+		it("should never emit a dangling AND", () => {
+			// A condition that contributes no SQL must not leave an empty slot in
+			// the join, which would produce `<cond> AND ` and fail to parse.
+			expect(() => buildWhereClause(db, { count: { gte: -99 }, name: { gte: undefined } })).toThrow(
+				StorageQueryError,
+			);
 		});
 	});
 

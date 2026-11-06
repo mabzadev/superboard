@@ -1,14 +1,35 @@
-import BetterSqlite3 from "better-sqlite3";
+/** Tests for cleanup subsystems and scheduled cleanup orchestration. */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { ulid } from "ulidx";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-import { runSystemCleanup } from "../../../../../packages/core/src/cleanup.js";
+import {
+	handleDeviceTokenExchange,
+	handleTokenRevoke,
+} from "../../../../../packages/core/src/api/handlers/device-flow.js";
+import {
+	ACCESS_TOKEN_TTL_SECONDS,
+	hashApiToken,
+} from "../../../../../packages/core/src/auth/api-tokens.js";
+import {
+	runSystemCleanup,
+	shouldRunSystemCleanup,
+} from "../../../../../packages/core/src/cleanup.js";
 import { runMigrations } from "../../../../../packages/core/src/database/migrations/runner.js";
 import { MediaRepository } from "../../../../../packages/core/src/database/repositories/media.js";
+import { MAX_404_LOG_ROWS } from "../../../../../packages/core/src/database/repositories/redirect.js";
 import { RevisionRepository } from "../../../../../packages/core/src/database/repositories/revision.js";
 import type { Database } from "../../../../../packages/core/src/database/types.js";
-import { setupTestDatabase, setupTestDatabaseWithCollections } from "../utils/test-db.js";
+import { NodeSqliteCompatDatabase as BetterSqlite3 } from "../../../../../packages/core/src/db/node-sqlite-compat.js";
+import {
+	describeEachDialect,
+	setupForDialect,
+	setupTestDatabase,
+	setupTestDatabaseWithCollections,
+	teardownForDialect,
+	type DialectTestContext,
+} from "../utils/test-db.js";
 
 describe("Revision Pruning", () => {
 	let db: Kysely<Database>;
@@ -26,12 +47,14 @@ describe("Revision Pruning", () => {
 	it("prunes old revisions keeping the most recent N", async () => {
 		const entryId = ulid();
 
+		// Create a content entry
 		const { sql } = await import("kysely");
 		await sql`
 			INSERT INTO ec_post (id, slug, status, created_at, updated_at, version)
 			VALUES (${entryId}, ${"test-post"}, ${"draft"}, ${new Date().toISOString()}, ${new Date().toISOString()}, ${1})
 		`.execute(db);
 
+		// Create 200 revisions
 		for (let i = 0; i < 200; i++) {
 			await revisionRepo.create({
 				collection: "post",
@@ -43,6 +66,7 @@ describe("Revision Pruning", () => {
 		const countBefore = await revisionRepo.countByEntry("post", entryId);
 		expect(countBefore).toBe(200);
 
+		// Prune to keep 50
 		const pruned = await revisionRepo.pruneOldRevisions("post", entryId, 50);
 
 		expect(pruned).toBe(150);
@@ -50,6 +74,7 @@ describe("Revision Pruning", () => {
 		const countAfter = await revisionRepo.countByEntry("post", entryId);
 		expect(countAfter).toBe(50);
 
+		// Verify the remaining 50 are the newest
 		const remaining = await revisionRepo.findByEntry("post", entryId);
 		expect(remaining[0]?.data.title).toBe("Version 200");
 		expect(remaining[49]?.data.title).toBe("Version 151");
@@ -64,6 +89,7 @@ describe("Revision Pruning", () => {
 			VALUES (${entryId}, ${"test-post-2"}, ${"draft"}, ${new Date().toISOString()}, ${new Date().toISOString()}, ${1})
 		`.execute(db);
 
+		// Create 10 revisions
 		for (let i = 0; i < 10; i++) {
 			await revisionRepo.create({
 				collection: "post",
@@ -119,6 +145,43 @@ describe("Revision Pruning", () => {
 });
 
 describe("Scheduled system cleanup", () => {
+	it("caps the 404 log outside the anonymous request path", async () => {
+		const db = await setupTestDatabase();
+		const rows = Array.from({ length: MAX_404_LOG_ROWS + 2 }, (_, index) => ({
+			id: ulid(),
+			path: `/missing-${index}`,
+			referrer: null,
+			user_agent: null,
+			ip: null,
+			hits: 1,
+			last_seen_at: new Date(index).toISOString(),
+			created_at: new Date(index).toISOString(),
+		}));
+
+		try {
+			for (let offset = 0; offset < rows.length; offset += 250) {
+				await db
+					.insertInto("_emdash_404_log")
+					.values(rows.slice(offset, offset + 250))
+					.execute();
+			}
+			const result = await runSystemCleanup(db);
+			expect(result.notFoundLog).toBe(2);
+			expect(
+				Number(
+					(
+						await db
+							.selectFrom("_emdash_404_log")
+							.select((eb) => eb.fn.countAll<number>().as("c"))
+							.executeTakeFirstOrThrow()
+					).c,
+				),
+			).toBe(MAX_404_LOG_ROWS);
+		} finally {
+			await db.destroy();
+		}
+	});
+
 	it("prunes revision entries queued by revision writes", async () => {
 		const db = await setupTestDatabaseWithCollections();
 		const revisionRepo = new RevisionRepository(db);
@@ -208,6 +271,31 @@ describe("Scheduled system cleanup", () => {
 	});
 });
 
+describe("Media upload-attempt cleanup", () => {
+	it("moves failed keys behind the rest of the cleanup batch", async () => {
+		vi.useFakeTimers({ now: new Date("2026-01-01T00:00:00.000Z") });
+		const db = await setupTestDatabase();
+		const repo = new MediaRepository(db);
+		try {
+			for (let i = 0; i < 3; i++) {
+				await repo.trackStorageKeyForCleanup(`media-${i}`, `failed-${i}.png`);
+			}
+			vi.advanceTimersByTime(1_000);
+			await repo.trackStorageKeyForCleanup("media-new", "newer.png");
+			vi.advanceTimersByTime(1_000);
+
+			for (let i = 0; i < 3; i++) {
+				await repo.deferUploadAttemptCleanup(`failed-${i}.png`);
+			}
+
+			expect(await repo.findUploadAttemptsForCleanup(0, 1)).toEqual(["newer.png"]);
+		} finally {
+			vi.useRealTimers();
+			await db.destroy();
+		}
+	});
+});
+
 describe("MediaRepository.cleanupPendingUploads", () => {
 	let db: Kysely<Database>;
 	let mediaRepo: MediaRepository;
@@ -224,6 +312,7 @@ describe("MediaRepository.cleanupPendingUploads", () => {
 	it("deletes pending uploads older than the default 1 hour", async () => {
 		vi.useFakeTimers();
 
+		// Create pending uploads
 		for (let i = 0; i < 10; i++) {
 			await mediaRepo.createPending({
 				filename: `pending-${i}.jpg`,
@@ -232,10 +321,12 @@ describe("MediaRepository.cleanupPendingUploads", () => {
 			});
 		}
 
+		// Advance past 1 hour
 		vi.advanceTimersByTime(61 * 60 * 1000);
 
 		const deletedKeys = await mediaRepo.cleanupPendingUploads();
 		expect(deletedKeys).toHaveLength(10);
+		// Verify actual storage keys are returned
 		for (let i = 0; i < 10; i++) {
 			expect(deletedKeys).toContain(`uploads/pending-${i}.jpg`);
 		}
@@ -243,7 +334,29 @@ describe("MediaRepository.cleanupPendingUploads", () => {
 		vi.useRealTimers();
 	});
 
+	it("withholds a stale pending key that another media record still references", async () => {
+		vi.useFakeTimers();
+
+		await mediaRepo.createPending({
+			filename: "stale.jpg",
+			mimeType: "image/jpeg",
+			storageKey: "uploads/shared.jpg",
+		});
+		vi.advanceTimersByTime(61 * 60 * 1000);
+		await mediaRepo.create({
+			filename: "keeper.jpg",
+			mimeType: "image/jpeg",
+			storageKey: "uploads/shared.jpg",
+		});
+
+		const deletedKeys = await mediaRepo.cleanupPendingUploads();
+		expect(deletedKeys).toHaveLength(0);
+
+		vi.useRealTimers();
+	});
+
 	it("does not delete recent pending uploads", async () => {
+		// Create pending uploads (current time -- not yet expired)
 		for (let i = 0; i < 5; i++) {
 			await mediaRepo.createPending({
 				filename: `recent-${i}.jpg`,
@@ -259,6 +372,7 @@ describe("MediaRepository.cleanupPendingUploads", () => {
 	it("does not delete ready or failed items", async () => {
 		vi.useFakeTimers();
 
+		// Create items with different statuses
 		await mediaRepo.create({
 			filename: "ready.jpg",
 			mimeType: "image/jpeg",
@@ -273,10 +387,11 @@ describe("MediaRepository.cleanupPendingUploads", () => {
 		});
 		await mediaRepo.markFailed(pending.id);
 
+		// Advance past 1 hour
 		vi.advanceTimersByTime(61 * 60 * 1000);
 
 		const deletedKeys = await mediaRepo.cleanupPendingUploads();
-		expect(deletedKeys).toHaveLength(0);
+		expect(deletedKeys).toHaveLength(0); // failed + ready should not be deleted
 
 		vi.useRealTimers();
 
@@ -293,8 +408,10 @@ describe("MediaRepository.cleanupPendingUploads", () => {
 			storageKey: "uploads/short-lived.jpg",
 		});
 
+		// Advance 10 minutes
 		vi.advanceTimersByTime(10 * 60 * 1000);
 
+		// Cleanup with 5 min max age
 		const deletedKeys = await mediaRepo.cleanupPendingUploads(5 * 60 * 1000);
 		expect(deletedKeys).toHaveLength(1);
 		expect(deletedKeys[0]).toBe("uploads/short-lived.jpg");
@@ -316,8 +433,9 @@ describe("Expired token cleanup", () => {
 
 	it("deletes expired tokens while keeping valid ones", async () => {
 		const now = new Date();
-		const expired = new Date(now.getTime() - 60 * 1000).toISOString();
+		const expired = new Date(now.getTime() - 60 * 1000).toISOString(); // 1 min ago
 
+		// Create a test user first (tokens reference users)
 		const userId = ulid();
 		await db
 			.insertInto("users")
@@ -335,6 +453,7 @@ describe("Expired token cleanup", () => {
 			})
 			.execute();
 
+		// Create 100 expired tokens
 		for (let i = 0; i < 100; i++) {
 			await db
 				.insertInto("auth_tokens")
@@ -351,6 +470,7 @@ describe("Expired token cleanup", () => {
 				.execute();
 		}
 
+		// Create 5 valid tokens
 		const validExpiry = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
 		for (let i = 0; i < 5; i++) {
 			await db
@@ -368,11 +488,182 @@ describe("Expired token cleanup", () => {
 				.execute();
 		}
 
+		// Use the DB directly to simulate what deleteExpiredTokens does
 		await db.deleteFrom("auth_tokens").where("expires_at", "<", new Date().toISOString()).execute();
 
+		// Verify only valid ones remain
 		const remaining = await db.selectFrom("auth_tokens").select("hash").execute();
 
 		expect(remaining).toHaveLength(5);
 		expect(remaining.every((r) => r.hash.startsWith("valid-"))).toBe(true);
+	});
+});
+
+describeEachDialect("Expired OAuth login cleanup", (dialect) => {
+	let ctx: DialectTestContext;
+	const userId = "oauth-user";
+	const minutesFromNow = (minutes: number) =>
+		new Date(Date.now() + minutes * 60 * 1000).toISOString();
+	const oauthToken = (token_hash: string, token_type: string, expires_at: string) => ({
+		token_hash,
+		token_type,
+		user_id: userId,
+		scopes: "[]",
+		client_type: "cli",
+		expires_at,
+	});
+	const deviceCode = (device_code: string, expires_at: string) => ({
+		device_code,
+		user_code: device_code,
+		scopes: "[]",
+		status: "pending",
+		expires_at,
+		interval: 5,
+	});
+
+	beforeEach(async () => {
+		ctx = await setupForDialect(dialect);
+		const now = new Date().toISOString();
+		await ctx.db
+			.insertInto("users")
+			.values({
+				id: userId,
+				email: "oauth@example.com",
+				name: "OAuth",
+				avatar_url: null,
+				role: 50,
+				email_verified: 1,
+				disabled: 0,
+				data: null,
+				created_at: now,
+				updated_at: now,
+			})
+			.execute();
+	});
+
+	afterEach(async () => {
+		await teardownForDialect(ctx);
+	});
+
+	it("deletes OAuth tokens that expired more than an hour ago", async () => {
+		await ctx.db
+			.insertInto("_emdash_oauth_tokens")
+			.values([
+				oauthToken("expired-access", "access", minutesFromNow(-120)),
+				oauthToken("expired-refresh", "refresh", minutesFromNow(-120)),
+				oauthToken("live-access", "access", minutesFromNow(60)),
+				oauthToken("live-refresh", "refresh", minutesFromNow(60)),
+			])
+			.execute();
+
+		await runSystemCleanup(ctx.db);
+
+		const remaining = await ctx.db
+			.selectFrom("_emdash_oauth_tokens")
+			.select("token_hash")
+			.orderBy("token_hash")
+			.execute();
+		expect(remaining.map((row) => row.token_hash)).toEqual(["live-access", "live-refresh"]);
+	});
+
+	it("keeps an expired refresh token while an access token issued from it is still valid", async () => {
+		const refreshToken = "ec_ort_expired";
+		const refreshHash = hashApiToken(refreshToken);
+		await ctx.db
+			.insertInto("_emdash_oauth_tokens")
+			.values([
+				oauthToken(refreshHash, "refresh", minutesFromNow(5 - ACCESS_TOKEN_TTL_SECONDS / 60)),
+				{
+					...oauthToken("live-access", "access", minutesFromNow(5)),
+					refresh_token_hash: refreshHash,
+				},
+			])
+			.execute();
+
+		await runSystemCleanup(ctx.db);
+		await handleTokenRevoke(ctx.db, { token: refreshToken });
+
+		expect(await ctx.db.selectFrom("_emdash_oauth_tokens").select("token_hash").execute()).toEqual(
+			[],
+		);
+	});
+
+	it("deletes expired authorization codes and keeps unexpired ones", async () => {
+		const code = (code_hash: string, expires_at: string) => ({
+			code_hash,
+			client_id: "https://client.example/metadata.json",
+			redirect_uri: "https://client.example/callback",
+			user_id: userId,
+			scopes: "[]",
+			code_challenge: "challenge",
+			code_challenge_method: "S256",
+			expires_at,
+		});
+		await ctx.db
+			.insertInto("_emdash_authorization_codes")
+			.values([code("expired-code", minutesFromNow(-1)), code("live-code", minutesFromNow(10))])
+			.execute();
+
+		await runSystemCleanup(ctx.db);
+
+		const remaining = await ctx.db
+			.selectFrom("_emdash_authorization_codes")
+			.select("code_hash")
+			.execute();
+		expect(remaining.map((row) => row.code_hash)).toEqual(["live-code"]);
+	});
+
+	it("deletes device codes that expired more than an hour ago", async () => {
+		await ctx.db
+			.insertInto("_emdash_device_codes")
+			.values([
+				deviceCode("abandoned", minutesFromNow(-120)),
+				deviceCode("waiting", minutesFromNow(10)),
+			])
+			.execute();
+
+		await runSystemCleanup(ctx.db);
+
+		const remaining = await ctx.db
+			.selectFrom("_emdash_device_codes")
+			.select("device_code")
+			.execute();
+		expect(remaining.map((row) => row.device_code)).toEqual(["waiting"]);
+	});
+
+	it("keeps a just-expired device code so a polling client still gets expired_token", async () => {
+		await ctx.db
+			.insertInto("_emdash_device_codes")
+			.values(deviceCode("just-expired", minutesFromNow(-1)))
+			.execute();
+
+		await runSystemCleanup(ctx.db);
+
+		const poll = await handleDeviceTokenExchange(ctx.db, {
+			device_code: "just-expired",
+			grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+		});
+		expect(poll.deviceFlowError).toBe("expired_token");
+	});
+});
+
+describe("System cleanup scheduling", () => {
+	it("runs cleanup on the top of the hour", () => {
+		expect(shouldRunSystemCleanup(new Date("2026-10-04T12:00:00.000Z"))).toBe(true);
+	});
+
+	it("skips cleanup during the hour", () => {
+		expect(shouldRunSystemCleanup(new Date("2026-10-04T12:05:00.000Z"))).toBe(false);
+		expect(shouldRunSystemCleanup(new Date("2026-10-04T12:59:00.000Z"))).toBe(false);
+	});
+
+	it("does not run a second cleanup if the previous one was recent", () => {
+		const lastRun = new Date("2026-10-04T12:00:00.000Z");
+		expect(shouldRunSystemCleanup(new Date("2026-10-04T12:00:30.000Z"), lastRun)).toBe(false);
+	});
+
+	it("runs cleanup in the next hour", () => {
+		const lastRun = new Date("2026-10-04T12:00:00.000Z");
+		expect(shouldRunSystemCleanup(new Date("2026-10-04T13:00:00.000Z"), lastRun)).toBe(true);
 	});
 });

@@ -1,3 +1,9 @@
+/**
+ * Schema field reorder endpoint
+ *
+ * POST /_emdash/api/schema/collections/{slug}/fields/reorder - Reorder fields
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

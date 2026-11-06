@@ -8,6 +8,7 @@ import type {
 } from "../../../../../packages/admin/src/lib/api/marketplace";
 import { render } from "../utils/render.tsx";
 
+// Mock router
 const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual("@tanstack/react-router");
@@ -35,6 +36,7 @@ vi.mock("../../../../../packages/admin/src/lib/api/marketplace", async () => {
 	};
 });
 
+// Import after mocks
 const { MarketplaceBrowse } =
 	await import("../../../../../packages/admin/src/components/MarketplaceBrowse");
 
@@ -136,7 +138,9 @@ describe("MarketplaceBrowse", () => {
 				<MarketplaceBrowse />
 			</Wrapper>,
 		);
+		// 5200 → 5.2k
 		await expect.element(screen.getByText("5.2k")).toBeInTheDocument();
+		// 890 → 890
 		await expect.element(screen.getByText("890")).toBeInTheDocument();
 	});
 
@@ -146,7 +150,9 @@ describe("MarketplaceBrowse", () => {
 				<MarketplaceBrowse />
 			</Wrapper>,
 		);
+		// SEO Helper has 2 capabilities
 		await expect.element(screen.getByText("2 permissions")).toBeInTheDocument();
+		// Analytics has 1 capability
 		await expect.element(screen.getByText("1 permission")).toBeInTheDocument();
 	});
 
@@ -156,6 +162,7 @@ describe("MarketplaceBrowse", () => {
 				<MarketplaceBrowse />
 			</Wrapper>,
 		);
+		// SEO Helper has "pass", Analytics has "warn"
 		await expect.element(screen.getByText("Pass")).toBeInTheDocument();
 		await expect.element(screen.getByText("Warn")).toBeInTheDocument();
 	});
@@ -217,7 +224,9 @@ describe("MarketplaceBrowse", () => {
 				<MarketplaceBrowse />
 			</Wrapper>,
 		);
+		// Wait for cards to render
 		await expect.element(screen.getByText("SEO Helper")).toBeInTheDocument();
+		// The Link wraps the card, creating an <a> with the plugin detail path
 		const links = screen.getByRole("link").all();
 		const seoLink = links.find((l) => l.element().getAttribute("href")?.includes("seo-helper"));
 		expect(seoLink).toBeDefined();
@@ -232,6 +241,7 @@ describe("MarketplaceBrowse", () => {
 				<MarketplaceBrowse />
 			</Wrapper>,
 		);
+		// The avatar shows the first letter — use exact match to avoid matching "Zeta Plugin"
 		await expect.element(screen.getByText("Z", { exact: true })).toBeInTheDocument();
 	});
 
@@ -253,6 +263,7 @@ describe("MarketplaceBrowse", () => {
 		);
 		const capabilitySelect = screen.getByRole("combobox", { name: "Filter by capability" });
 		await expect.element(capabilitySelect).toBeInTheDocument();
+		// Default option
 		await expect.element(screen.getByText("All capabilities")).toBeInTheDocument();
 	});
 

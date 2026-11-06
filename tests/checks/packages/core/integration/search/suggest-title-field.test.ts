@@ -8,6 +8,11 @@ import { FTSManager } from "../../../../../../packages/core/src/search/fts-manag
 import { getSuggestions } from "../../../../../../packages/core/src/search/query.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
+/**
+ * Autocomplete should stay consistent with search results. A collection
+ * with a configured `titleField` and no literal `title` field must still
+ * produce suggestions, drawing the suggestion title from that field's column.
+ */
 describe("getSuggestions: titleField drives the suggestion title", () => {
 	let db: Kysely<Database>;
 
@@ -16,6 +21,8 @@ describe("getSuggestions: titleField drives the suggestion title", () => {
 		const registry = new SchemaRegistry(db);
 		const fts = new FTSManager(db);
 
+		// No `title` field at all -- only a custom titleField. Before the fix this
+		// collection was skipped entirely (getSuggestions required a literal title).
 		await registry.createCollection({
 			slug: "employees",
 			label: "Employees",

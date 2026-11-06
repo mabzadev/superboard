@@ -1,3 +1,17 @@
+/**
+ * Portable Text <-> Markdown conversion layer.
+ *
+ * Three tiers of block handling:
+ *   Tier 1: Standard PT blocks <-> standard Markdown (headings, paragraphs, lists, etc.)
+ *   Tier 2: EmDash custom blocks <-> Markdown directives (future)
+ *   Tier 3: Unknown blocks <-> opaque HTML comment fences (preserved, not editable)
+ */
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/** Minimal Portable Text block shape */
 export interface PortableTextBlock {
 	_type: string;
 	_key?: string;
@@ -29,6 +43,14 @@ interface ParsedInline {
 	markDefs: MarkDef[];
 }
 
+// ---------------------------------------------------------------------------
+// PT -> Markdown
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert Portable Text blocks to Markdown.
+ * Unknown block types are serialized as opaque fences.
+ */
 export function portableTextToMarkdown(blocks: PortableTextBlock[]): string {
 	const lines: string[] = [];
 	let prevWasList = false;
@@ -39,6 +61,7 @@ export function portableTextToMarkdown(blocks: PortableTextBlock[]): string {
 		if (block._type === "block") {
 			const isList = !!block.listItem;
 
+			// Blank line between non-contiguous block types
 			if (i > 0 && (!isList || !prevWasList)) {
 				lines.push("");
 			}
@@ -60,6 +83,7 @@ export function portableTextToMarkdown(blocks: PortableTextBlock[]): string {
 			lines.push(`![${alt}](${url})`);
 			prevWasList = false;
 		} else {
+			// Tier 3: Unknown block -> opaque fence
 			if (i > 0) lines.push("");
 			lines.push(`<!--ec:block ${JSON.stringify(block)} -->`);
 			prevWasList = false;
@@ -72,12 +96,14 @@ export function portableTextToMarkdown(blocks: PortableTextBlock[]): string {
 function renderStandardBlock(block: PortableTextBlock): string {
 	const text = renderSpans(block.children ?? [], block.markDefs ?? []);
 
+	// List items
 	if (block.listItem) {
 		const indent = "  ".repeat(Math.max(0, (block.level ?? 1) - 1));
 		const marker = block.listItem === "number" ? "1." : "-";
 		return `${indent}${marker} ${text}`;
 	}
 
+	// Headings
 	if (block.style && block.style.startsWith("h")) {
 		const level = parseInt(block.style.substring(1), 10);
 		if (level >= 1 && level <= 6) {
@@ -85,6 +111,7 @@ function renderStandardBlock(block: PortableTextBlock): string {
 		}
 	}
 
+	// Blockquote
 	if (block.style === "blockquote") {
 		return `> ${text}`;
 	}
@@ -132,6 +159,11 @@ function renderSpans(spans: PortableTextSpan[], markDefs: MarkDef[]): string {
 	return result;
 }
 
+// ---------------------------------------------------------------------------
+// Markdown -> PT
+// ---------------------------------------------------------------------------
+
+// Regex patterns for markdown parsing
 const OPAQUE_FENCE_PATTERN = /^<!--ec:block (.+) -->$/;
 const HEADING_PATTERN = /^(#{1,6})\s+(.+)$/;
 const UNORDERED_LIST_PATTERN = /^(\s*)[-*+]\s+(.+)$/;
@@ -140,6 +172,10 @@ const IMAGE_PATTERN = /^!\[([^\]]*)\]\(([^)]+)\)$/;
 const INLINE_MARKDOWN_PATTERN =
 	/(\*\*(.+?)\*\*)|(_(.+?)_)|(`(.+?)`)|(\[(.+?)\]\((.+?)\))|(~~(.+?)~~)/g;
 
+/**
+ * Convert Markdown to Portable Text blocks.
+ * Opaque fences (<!--ec:block ... -->) are deserialized and spliced back in.
+ */
 export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 	const blocks: PortableTextBlock[] = [];
 	const lines = markdown.split("\n");
@@ -148,6 +184,7 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 	while (i < lines.length) {
 		const line = lines[i];
 
+		// Opaque fence
 		const opaqueMatch = line.match(OPAQUE_FENCE_PATTERN);
 		if (opaqueMatch) {
 			try {
@@ -159,6 +196,7 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
+		// Code fence
 		if (line.startsWith("```")) {
 			const lang = line.slice(3).trim();
 			const codeLines: string[] = [];
@@ -173,15 +211,17 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 				language: lang || undefined,
 				code: codeLines.join("\n"),
 			});
-			i++;
+			i++; // skip closing ```
 			continue;
 		}
 
+		// Blank line
 		if (line.trim() === "") {
 			i++;
 			continue;
 		}
 
+		// Heading
 		const headingMatch = line.match(HEADING_PATTERN);
 		if (headingMatch) {
 			blocks.push(makeBlock(headingMatch[2], `h${headingMatch[1].length}`));
@@ -189,12 +229,14 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
+		// Blockquote
 		if (line.startsWith("> ")) {
 			blocks.push(makeBlock(line.slice(2), "blockquote"));
 			i++;
 			continue;
 		}
 
+		// Unordered list
 		const ulMatch = line.match(UNORDERED_LIST_PATTERN);
 		if (ulMatch) {
 			const level = Math.floor(ulMatch[1].length / 2) + 1;
@@ -203,6 +245,7 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
+		// Ordered list
 		const olMatch = line.match(ORDERED_LIST_PATTERN);
 		if (olMatch) {
 			const level = Math.floor(olMatch[1].length / 2) + 1;
@@ -211,6 +254,7 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
+		// Image
 		const imgMatch = line.match(IMAGE_PATTERN);
 		if (imgMatch) {
 			blocks.push({
@@ -223,12 +267,17 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
+		// Paragraph
 		blocks.push(makeBlock(line));
 		i++;
 	}
 
 	return blocks;
 }
+
+// ---------------------------------------------------------------------------
+// Block builders
+// ---------------------------------------------------------------------------
 
 function makeBlock(text: string, style: string = "normal"): PortableTextBlock {
 	const { spans, markDefs } = parseInline(text);
@@ -248,6 +297,9 @@ function makeListBlock(text: string, listItem: string, level: number): PortableT
 	};
 }
 
+/**
+ * Parse inline markdown (bold, italic, code, links, strikethrough) into PT spans + markDefs.
+ */
 function parseInline(text: string): ParsedInline {
 	const spans: PortableTextSpan[] = [];
 	const markDefs: MarkDef[] = [];
@@ -299,21 +351,84 @@ function parseInline(text: string): ParsedInline {
 	return { spans, markDefs };
 }
 
+// ---------------------------------------------------------------------------
+// Key generation
+// ---------------------------------------------------------------------------
+
 let keyCounter = 0;
 
 function generateKey(): string {
 	return `k${(keyCounter++).toString(36)}`;
 }
 
+/** Reset key counter (useful for testing) */
 export function resetKeyCounter(): void {
 	keyCounter = 0;
 }
 
+// ---------------------------------------------------------------------------
+// Schema-aware conversion helpers
+// ---------------------------------------------------------------------------
+
 export interface FieldSchema {
 	slug: string;
 	type: string;
+	validation?: unknown;
+	blockTypes?: Array<{
+		slug: string;
+		currentVersion: number;
+		versions: Array<{
+			version: number;
+			fields: Array<{ slug: string; type: string }>;
+		}>;
+	}>;
 }
 
+function convertNestedBlockPortableText(
+	value: unknown,
+	field: FieldSchema,
+	direction: "read" | "write",
+): unknown {
+	if (!Array.isArray(value)) return value;
+	const validation = field.validation;
+	const allowedTypes =
+		validation && typeof validation === "object" && "allowedTypes" in validation
+			? validation.allowedTypes
+			: undefined;
+	return value.map((block) => {
+		if (!block || typeof block !== "object" || Array.isArray(block)) return block;
+		const record = { ...block };
+		const type =
+			record._type === undefined &&
+			direction === "write" &&
+			Array.isArray(allowedTypes) &&
+			allowedTypes.length === 1
+				? allowedTypes[0]
+				: record._type;
+		const version = typeof record._version === "number" ? record._version : undefined;
+		const blockType = field.blockTypes?.find((candidate) => candidate.slug === type);
+		const definition = blockType?.versions.find(
+			(candidate) => candidate.version === (version ?? blockType.currentVersion),
+		);
+		if (!definition) return block;
+		for (const nestedField of definition.fields) {
+			if (nestedField.type !== "portableText") continue;
+			const nestedValue = record[nestedField.slug];
+			if (direction === "read" && Array.isArray(nestedValue)) {
+				record[nestedField.slug] = portableTextToMarkdown(nestedValue as PortableTextBlock[]);
+			} else if (direction === "write" && typeof nestedValue === "string") {
+				record[nestedField.slug] = markdownToPortableText(nestedValue);
+			}
+		}
+		return record;
+	});
+}
+
+/**
+ * Convert content data for reading: Portable Text arrays -> Markdown strings.
+ * Converts top-level `portableText` arrays and nested `portableText` arrays
+ * inside `blocks` arrays.
+ */
 export function convertDataForRead(
 	data: Record<string, unknown>,
 	fields: FieldSchema[],
@@ -325,11 +440,18 @@ export function convertDataForRead(
 	for (const field of fields) {
 		if (field.type === "portableText" && Array.isArray(result[field.slug])) {
 			result[field.slug] = portableTextToMarkdown(result[field.slug] as PortableTextBlock[]);
+		} else if (field.type === "blocks" && Array.isArray(result[field.slug])) {
+			result[field.slug] = convertNestedBlockPortableText(result[field.slug], field, "read");
 		}
 	}
 	return result;
 }
 
+/**
+ * Convert content data for writing: Markdown strings -> Portable Text arrays.
+ * Converts top-level `portableText` strings and nested Markdown strings
+ * in `portableText` fields inside `blocks` arrays.
+ */
 export function convertDataForWrite(
 	data: Record<string, unknown>,
 	fields: FieldSchema[],
@@ -338,6 +460,8 @@ export function convertDataForWrite(
 	for (const field of fields) {
 		if (field.type === "portableText" && typeof result[field.slug] === "string") {
 			result[field.slug] = markdownToPortableText(result[field.slug] as string);
+		} else if (field.type === "blocks" && Array.isArray(result[field.slug])) {
+			result[field.slug] = convertNestedBlockPortableText(result[field.slug], field, "write");
 		}
 	}
 	return result;

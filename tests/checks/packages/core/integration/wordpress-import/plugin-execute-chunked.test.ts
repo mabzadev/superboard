@@ -1,3 +1,16 @@
+/**
+ * Chunked WP plugin import (issue #475): a large site is imported as a
+ * loop of bounded requests instead of one giant Worker invocation. These
+ * tests cover the state that must survive chunk boundaries:
+ *
+ * - translation groups: a translation in chunk N links to its sibling
+ *   imported in chunk N-1 via the seeded translationGroup map
+ * - taxonomy lookup maps: later chunks reload the plan from the DB
+ *   instead of re-running term creation
+ * - comment threading: a reply in comment page N threads onto its parent
+ *   from page N-1 via the seeded rootIds map
+ */
+
 import type { Kysely } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -42,6 +55,7 @@ function makeConfig(): WpPluginImportConfig {
 }
 
 function makeEmdash(db: Kysely<Database>): EmDashHandlers {
+	// ponytail: minimal stub — importContent only touches db + handleContentCreate
 	return {
 		db,
 		handleContentCreate: (collection: string, body: { data: Record<string, unknown> }) =>
@@ -66,6 +80,7 @@ describe("chunked WP plugin import — cross-chunk state", () => {
 		const emdash = makeEmdash(db);
 		const translationGroups = new Map<string, string>();
 
+		// Chunk 1: the default-locale item establishes the group mapping.
 		const first = await importContent(
 			[makeItem({ sourceId: 1, slug: "hello", locale: "en", translationGroup: "g1" })],
 			makeConfig(),
@@ -77,6 +92,8 @@ describe("chunked WP plugin import — cross-chunk state", () => {
 		expect(first.result.imported).toBe(1);
 		expect(translationGroups.get("g1")).toBeDefined();
 
+		// Chunk 2 (separate importContent call = separate invocation): the
+		// translation must link into the same group.
 		const second = await importContent(
 			[makeItem({ sourceId: 2, slug: "hallo", locale: "de", translationGroup: "g1" })],
 			makeConfig(),
@@ -107,11 +124,27 @@ describe("chunked WP plugin import — cross-chunk state", () => {
 		const originalId = first.contentIdMap.get(7);
 		expect(originalId).toBeDefined();
 
+		// Re-run (e.g. after the tab was closed): skipExisting skips the
+		// insert but must still yield the mapping comments/menus need.
 		const second = await importContent([item], makeConfig(), emdash, manifest, undefined);
 		expect(second.result.imported).toBe(0);
 		expect(second.result.skipped).toBe(1);
 		expect(second.contentIdMap.get(7)).toBe(originalId);
 		expect(second.collectionByWpId.get(7)).toBe("post");
+	});
+
+	it("counts only existing content as skipped, not post types left out of the import", async () => {
+		const emdash = makeEmdash(db);
+		const items = [
+			makeItem({ sourceId: 1, slug: "kept" }),
+			makeItem({ sourceId: 2, slug: "about", postType: "page" }),
+		];
+
+		const first = await importContent(items, makeConfig(), emdash, manifest, undefined);
+		expect(first.result).toMatchObject({ imported: 1, skipped: 0 });
+
+		const second = await importContent(items, makeConfig(), emdash, manifest, undefined);
+		expect(second.result).toMatchObject({ imported: 0, skipped: 1 });
 	});
 
 	it("loadTaxonomyPlanFromDb rebuilds lookup maps without creating anything", async () => {
@@ -128,6 +161,7 @@ describe("chunked WP plugin import — cross-chunk state", () => {
 
 		expect(plan.termIdByNameAndSlug.get("company")?.get("acme")).toBe(term.id);
 		expect([...(plan.collectionsByTaxonomy.get("company") ?? [])]).toEqual(["post"]);
+		// Nothing was created by the loader
 		expect(plan.termsCreated).toEqual({});
 		expect(plan.missingTaxonomies).toEqual([]);
 	});
@@ -163,6 +197,7 @@ describe("chunked WP plugin import — cross-chunk state", () => {
 			status: "approved",
 		};
 
+		// Page 1 and page 2 as separate invocations sharing the rootIds map.
 		const rootIds = new Map<number, string>();
 		const page1 = await importCommentsFromPlugin(
 			[parent],

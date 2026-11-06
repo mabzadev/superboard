@@ -1,3 +1,16 @@
+/**
+ * GET  /_emdash/api/auth/magic-link/verify
+ * POST /_emdash/api/auth/magic-link/verify
+ *
+ * GET is the link in the email. It only forwards to the admin confirmation
+ * page, because mail scanners fetch every link in a message and would
+ * otherwise use up the single-use token before the recipient clicks.
+ *
+ * POST verifies the token and creates the session.
+ * Tokens are single-use and expire after 15 minutes, or 5 minutes for
+ * sign-in handover links.
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -5,54 +18,67 @@ export const prerender = false;
 import { verifyMagicLink, MagicLinkError } from "@emdash-cms/auth";
 import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
 
-import { apiError } from "#api/error.js";
-import { isSafeRedirect } from "#api/redirect.js";
+import { apiError, apiSuccess, handleError } from "#api/error.js";
+import { isParseError, parseBody } from "#api/parse.js";
+import { magicLinkVerifyBody } from "#api/schemas.js";
 
-export const GET: APIRoute = async ({ url, locals, session, redirect }) => {
+import { after } from "../../../../../after.js";
+import { sessionUnavailableError } from "../../../../session-user.js";
+
+export const GET: APIRoute = async ({ url, redirect }) => {
+	const token = url.searchParams.get("token");
+	if (!token) {
+		return redirect("/_emdash/admin/login?error=missing_token");
+	}
+
+	const confirmUrl = new URLSearchParams({ token });
+	const rawRedirect = url.searchParams.get("redirect");
+	if (rawRedirect) confirmUrl.set("redirect", rawRedirect);
+	return redirect(`/_emdash/admin/login/magic-link?${confirmUrl.toString()}`);
+};
+
+export const POST: APIRoute = async ({ request, locals, session }) => {
 	const { emdash } = locals;
 
 	if (!emdash?.db) {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
-
-	const token = url.searchParams.get("token");
-
-	if (!token) {
-		return redirect("/_emdash/admin/login?error=missing_token");
-	}
+	if (!session) return sessionUnavailableError();
 
 	try {
+		const body = await parseBody(request, magicLinkVerifyBody);
+		if (isParseError(body)) return body;
+
 		const adapter = createKyselyAdapter(emdash.db);
-		const user = await verifyMagicLink(adapter, token);
+		const user = await verifyMagicLink(adapter, body.token);
 
-		void adapter.deleteExpiredTokens().catch(() => {});
-
-		if (session) {
-			session.set("user", { id: user.id });
-			session.set("strongReauthentication", {
-				userId: user.id,
-				verifiedAt: new Date().toISOString(),
-			});
-		}
-
-		const rawRedirect = url.searchParams.get("redirect");
-		const redirectUrl = isSafeRedirect(rawRedirect) ? rawRedirect : "/_emdash/admin";
-
-		return redirect(redirectUrl);
-	} catch (error) {
-		console.error("Magic link verify error:", error);
-
-		if (error instanceof MagicLinkError) {
-			switch (error.code) {
-				case "invalid_token":
-					return redirect("/_emdash/admin/login?error=invalid_link");
-				case "token_expired":
-					return redirect("/_emdash/admin/login?error=link_expired");
-				case "user_not_found":
-					return redirect("/_emdash/admin/login?error=user_not_found");
+		// Cleanup of expired tokens -- prevents accumulation
+		after(async () => {
+			try {
+				await adapter.deleteExpiredTokens();
+			} catch (error) {
+				console.error("[magic-link] failed to delete expired tokens:", error);
 			}
+		});
+
+		session.set("user", { id: user.id });
+		session.set("strongReauthentication", {
+			userId: user.id,
+			verifiedAt: new Date().toISOString(),
+		});
+
+		return apiSuccess({ success: true });
+	} catch (error) {
+		if (error instanceof MagicLinkError) {
+			const statusMap: Record<MagicLinkError["code"], number> = {
+				invalid_token: 400,
+				token_expired: 410,
+				user_not_found: 404,
+				email_not_configured: 500,
+			};
+			return apiError(error.code.toUpperCase(), error.message, statusMap[error.code]);
 		}
 
-		return redirect("/_emdash/admin/login?error=verification_failed");
+		return handleError(error, "Failed to verify magic link", "MAGIC_LINK_VERIFY_ERROR");
 	}
 };

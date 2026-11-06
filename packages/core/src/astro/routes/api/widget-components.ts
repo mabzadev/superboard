@@ -1,3 +1,9 @@
+/**
+ * Widget components registry endpoint
+ *
+ * GET /_emdash/api/widget-components - List available widget components
+ */
+
 import type { APIRoute } from "astro";
 
 import { apiSuccess, handleError } from "#api/error.js";

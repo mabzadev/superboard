@@ -10,6 +10,8 @@ import {
 
 export const imageRoutes = new Hono<{ Bindings: Env }>();
 
+// ── GET /plugins/:id/icon — Latest version icon ─────────────────
+
 imageRoutes.get("/plugins/:id/icon", async (c) => {
 	const pluginId = c.req.param("id");
 	const width = parseWidth(c.req.query("w"));
@@ -34,6 +36,8 @@ imageRoutes.get("/plugins/:id/icon", async (c) => {
 		return c.json({ error: "Internal server error" }, 500);
 	}
 });
+
+// ── GET /plugins/:id/versions/:version/icon — Versioned icon ────
 
 imageRoutes.get("/plugins/:id/versions/:version/icon", async (c) => {
 	const pluginId = c.req.param("id");
@@ -63,11 +67,14 @@ imageRoutes.get("/plugins/:id/versions/:version/icon", async (c) => {
 	}
 });
 
+// ── GET /plugins/:id/versions/:version/screenshots/:filename ────
+
 imageRoutes.get("/plugins/:id/versions/:version/screenshots/:filename", async (c) => {
 	const pluginId = c.req.param("id");
 	const version = c.req.param("version");
 	const filename = c.req.param("filename");
 
+	// Sanitize filename to prevent path traversal
 	if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
 		return c.json({ error: "Invalid filename" }, 400);
 	}
@@ -80,6 +87,8 @@ imageRoutes.get("/plugins/:id/versions/:version/screenshots/:filename", async (c
 		return c.json({ error: "Internal server error" }, 500);
 	}
 });
+
+// ── GET /themes/:id/thumbnail — Theme thumbnail ─────────────────
 
 imageRoutes.get("/themes/:id/thumbnail", async (c) => {
 	const themeId = c.req.param("id");
@@ -105,6 +114,8 @@ imageRoutes.get("/themes/:id/thumbnail", async (c) => {
 	}
 });
 
+// ── GET /themes/:id/screenshots/:filename — Theme screenshot ────
+
 imageRoutes.get("/themes/:id/screenshots/:filename", async (c) => {
 	const themeId = c.req.param("id");
 	const filename = c.req.param("filename");
@@ -122,12 +133,15 @@ imageRoutes.get("/themes/:id/screenshots/:filename", async (c) => {
 	}
 });
 
+// ── Image serving helpers ───────────────────────────────────────
+
 const MAX_WIDTHS = [64, 128, 256] as const;
 
 function parseWidth(value: string | undefined): number | undefined {
 	if (!value) return undefined;
 	const num = parseInt(value, 10);
 	if (Number.isNaN(num) || num < 1) return undefined;
+	// Clamp to nearest allowed size
 	for (const max of MAX_WIDTHS) {
 		if (num <= max) return max;
 	}
@@ -149,6 +163,7 @@ async function serveImage(
 		? "public, max-age=31536000, immutable"
 		: "public, max-age=3600";
 
+	// Try Images binding for WebP conversion
 	try {
 		const images = c.env.IMAGES;
 		if (images.input) {
@@ -162,8 +177,11 @@ async function serveImage(
 				headers: { "Content-Type": "image/webp", "Cache-Control": cacheControl },
 			});
 		}
-	} catch {}
+	} catch {
+		// Images binding not available or failed — fall through to raw
+	}
 
+	// Fallback: serve raw from R2
 	return new Response(object.body, {
 		headers: {
 			"Content-Type": object.httpMetadata?.contentType ?? "image/png",

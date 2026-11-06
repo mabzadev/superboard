@@ -1,9 +1,21 @@
-import Database from "better-sqlite3";
+/**
+ * Email Pipeline Tests
+ *
+ * Tests the email pipeline:
+ * - EmailPipeline.send(): beforeSend transforms, cancellation, deliver dispatch, afterSend
+ * - EmailPipeline.isAvailable(): provider selection checks
+ * - HookPipeline email hook dispatch: beforeSend chaining, afterSend fire-and-forget
+ * - Exclusive hook dispatch for email:deliver
+ * - ctx.email gated by email:send capability
+ * - Dev console provider captures emails
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { runMigrations } from "../../../../../../packages/core/src/database/migrations/runner.js";
 import type { Database as DbSchema } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { PluginContextFactory } from "../../../../../../packages/core/src/plugins/context.js";
 import {
 	clearDevEmails,
@@ -28,6 +40,10 @@ import type {
 	ResolvedHook,
 	ResolvedPlugin,
 } from "../../../../../../packages/core/src/plugins/types.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlugin {
 	return {
@@ -69,9 +85,13 @@ function createTestMessage(overrides: Partial<EmailMessage> = {}): EmailMessage 
 	};
 }
 
+// ---------------------------------------------------------------------------
+// HookPipeline — email:beforeSend
+// ---------------------------------------------------------------------------
+
 describe("HookPipeline — email:beforeSend", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(() => {
 		sqliteDb = new Database(":memory:");
@@ -178,6 +198,7 @@ describe("HookPipeline — email:beforeSend", () => {
 		const result = await pipeline.runEmailBeforeSend(createTestMessage(), "test");
 
 		expect(result.message).toBe(false);
+		// Second handler should NOT have been called
 		expect(handler2).not.toHaveBeenCalled();
 	});
 
@@ -203,9 +224,13 @@ describe("HookPipeline — email:beforeSend", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// HookPipeline — email:afterSend
+// ---------------------------------------------------------------------------
+
 describe("HookPipeline — email:afterSend", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(() => {
 		sqliteDb = new Database(":memory:");
@@ -275,18 +300,24 @@ describe("HookPipeline — email:afterSend", () => {
 
 		const pipeline = new HookPipeline([plugin1, plugin2], { db });
 
+		// Should NOT throw
 		const results = await pipeline.runEmailAfterSend(createTestMessage(), "system");
 
 		expect(results).toHaveLength(2);
 		expect(results[0]!.success).toBe(false);
 		expect(results[0]!.error?.message).toBe("afterSend crashed");
+		// Second handler should still run
 		expect(successHandler).toHaveBeenCalledTimes(1);
 	});
 });
 
+// ---------------------------------------------------------------------------
+// EmailPipeline
+// ---------------------------------------------------------------------------
+
 describe("EmailPipeline", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(() => {
 		sqliteDb = new Database(":memory:");
@@ -344,6 +375,7 @@ describe("EmailPipeline", () => {
 
 		const deliverHandler: EmailDeliverHandler = async (event) => {
 			order.push("deliver");
+			// Verify the message was transformed by beforeSend
 			expect(event.message.subject).toBe("Test Subject [processed]");
 		};
 
@@ -381,12 +413,15 @@ describe("EmailPipeline", () => {
 		hookPipeline.setExclusiveSelection("email:deliver", "provider");
 
 		const emailPipeline = new EmailPipeline(hookPipeline);
+		// Use non-system source so beforeSend hooks run
 		await emailPipeline.send(createTestMessage(), "some-plugin");
 
+		// afterSend is fire-and-forget, give it a tick
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		expect(order).toContain("beforeSend");
 		expect(order).toContain("deliver");
+		// afterSend is fire-and-forget but should still run
 		expect(order).toContain("afterSend");
 	});
 
@@ -427,8 +462,10 @@ describe("EmailPipeline", () => {
 		hookPipeline.setExclusiveSelection("email:deliver", "provider");
 
 		const emailPipeline = new EmailPipeline(hookPipeline);
+		// Use non-system source so beforeSend hooks run (and can cancel)
 		await emailPipeline.send(createTestMessage(), "some-plugin");
 
+		// Give fire-and-forget a tick
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		expect(deliverHandler).not.toHaveBeenCalled();
@@ -457,6 +494,78 @@ describe("EmailPipeline", () => {
 		);
 	});
 
+	it("delivers cc and replyTo and rejects malformed values", async () => {
+		const deliverHandler = vi.fn(async () => {}) as unknown as EmailDeliverHandler;
+		const provider = createTestPlugin({
+			id: "provider",
+			capabilities: ["hooks.email-transport:register"],
+			hooks: {
+				"email:deliver": createTestHook("provider", deliverHandler, { exclusive: true }),
+			},
+		});
+		const hookPipeline = new HookPipeline([provider], { db });
+		hookPipeline.setExclusiveSelection("email:deliver", "provider");
+		const emailPipeline = new EmailPipeline(hookPipeline);
+
+		await emailPipeline.send(
+			{ ...createTestMessage(), cc: ["team@example.com"], replyTo: "visitor@example.com" },
+			"forms",
+		);
+		expect(deliverHandler).toHaveBeenCalledWith(
+			expect.objectContaining({
+				message: expect.objectContaining({
+					cc: ["team@example.com"],
+					replyTo: "visitor@example.com",
+				}),
+			}),
+			expect.anything(),
+		);
+
+		await expect(
+			emailPipeline.send(
+				{ ...createTestMessage(), cc: "team@example.com" as unknown as string[] },
+				"forms",
+			),
+		).rejects.toThrow("'cc' must be an array of strings");
+		await expect(
+			emailPipeline.send({ ...createTestMessage(), replyTo: 42 as unknown as string }, "forms"),
+		).rejects.toThrow("'replyTo' must be a string");
+	});
+
+	it("logs delivery errors before propagating them", async () => {
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const deliverHandler: EmailDeliverHandler = async () => {
+			throw new Error("binding.send rejected: sender domain not verified");
+		};
+
+		const provider = createTestPlugin({
+			id: "cloudflare-email",
+			capabilities: ["hooks.email-transport:register"],
+			hooks: {
+				"email:deliver": createTestHook("cloudflare-email", deliverHandler, { exclusive: true }),
+			},
+		});
+
+		const hookPipeline = new HookPipeline([provider], { db });
+		hookPipeline.setExclusiveSelection("email:deliver", "cloudflare-email");
+
+		const emailPipeline = new EmailPipeline(hookPipeline);
+		await expect(
+			emailPipeline.send(createTestMessage({ to: "admin@example.com" }), "system"),
+		).rejects.toThrow("binding.send rejected: sender domain not verified");
+
+		expect(errorSpy).toHaveBeenCalledWith(
+			expect.stringContaining('[email:deliver] Provider "cloudflare-email" failed'),
+			expect.objectContaining({ message: "binding.send rejected: sender domain not verified" }),
+		);
+		expect(errorSpy).toHaveBeenCalledWith(
+			expect.stringContaining("admin@example.com"),
+			expect.anything(),
+		);
+
+		errorSpy.mockRestore();
+	});
+
 	it("afterSend errors do not propagate to caller", async () => {
 		const deliverHandler: EmailDeliverHandler = async () => {};
 		const afterSendHandler: EmailAfterSendHandler = async () => {
@@ -483,11 +592,17 @@ describe("EmailPipeline", () => {
 
 		const emailPipeline = new EmailPipeline(hookPipeline);
 
+		// Should NOT throw even though afterSend handler throws
 		await emailPipeline.send(createTestMessage(), "system");
 
+		// Give fire-and-forget a tick
 		await new Promise((resolve) => setTimeout(resolve, 10));
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Dev Console Email Provider
+// ---------------------------------------------------------------------------
 
 describe("Dev Console Email Provider", () => {
 	beforeEach(() => {
@@ -536,7 +651,9 @@ describe("Dev Console Email Provider", () => {
 
 		const emails = getDevEmails();
 		expect(emails).toHaveLength(100);
+		// Most recent should be email 109
 		expect(emails[0]!.message.subject).toBe("Email 109");
+		// Oldest should be email 10 (0-9 were evicted)
 		expect(emails[99]!.message.subject).toBe("Email 10");
 	});
 
@@ -555,6 +672,10 @@ describe("Dev Console Email Provider", () => {
 		expect(DEV_CONSOLE_EMAIL_PLUGIN_ID).toBe("emdash-console-email");
 	});
 });
+
+// ---------------------------------------------------------------------------
+// definePlugin — email capabilities
+// ---------------------------------------------------------------------------
 
 describe("definePlugin — email capabilities", () => {
 	it("accepts email:send as a valid capability", async () => {
@@ -597,9 +718,13 @@ describe("definePlugin — email capabilities", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Capability enforcement — email hooks
+// ---------------------------------------------------------------------------
+
 describe("Capability enforcement — email hooks", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(() => {
 		sqliteDb = new Database(":memory:");
@@ -618,7 +743,7 @@ describe("Capability enforcement — email hooks", () => {
 
 		const plugin = createTestPlugin({
 			id: "no-cap",
-			capabilities: [],
+			capabilities: [], // missing email:intercept
 			hooks: {
 				"email:beforeSend": createTestHook("no-cap", handler),
 			},
@@ -635,7 +760,7 @@ describe("Capability enforcement — email hooks", () => {
 
 		const plugin = createTestPlugin({
 			id: "no-cap",
-			capabilities: [],
+			capabilities: [], // missing email:intercept
 			hooks: {
 				"email:afterSend": createTestHook("no-cap", handler),
 			},
@@ -652,13 +777,14 @@ describe("Capability enforcement — email hooks", () => {
 
 		const plugin = createTestPlugin({
 			id: "no-cap",
-			capabilities: ["email:send"],
+			capabilities: ["email:send"], // has send but not provide
 			hooks: {
 				"email:deliver": createTestHook("no-cap", handler, { exclusive: true }),
 			},
 		});
 
 		const pipeline = new HookPipeline([plugin], { db });
+		// The hook should not be registered, so no exclusive provider is available
 		const emailPipeline = new EmailPipeline(pipeline);
 		expect(emailPipeline.isAvailable()).toBe(false);
 	});
@@ -669,7 +795,7 @@ describe("Capability enforcement — email hooks", () => {
 
 		const plugin = createTestPlugin({
 			id: "send-only",
-			capabilities: ["email:send"],
+			capabilities: ["email:send"], // can send, but can't intercept or provide
 			hooks: {
 				"email:beforeSend": createTestHook("send-only", beforeHandler),
 				"email:afterSend": createTestHook("send-only", afterHandler),
@@ -685,9 +811,13 @@ describe("Capability enforcement — email hooks", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Integration: ctx.email gating
+// ---------------------------------------------------------------------------
+
 describe("ctx.email gating", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(async () => {
 		sqliteDb = new Database(":memory:");
@@ -703,6 +833,7 @@ describe("ctx.email gating", () => {
 	});
 
 	it("ctx.email is undefined without email:send capability", async () => {
+		// Create a provider and pipeline
 		const deliverHandler: EmailDeliverHandler = async () => {};
 		const provider = createTestPlugin({
 			id: "provider",
@@ -715,6 +846,7 @@ describe("ctx.email gating", () => {
 		hookPipeline.setExclusiveSelection("email:deliver", "provider");
 		const emailPipeline = new EmailPipeline(hookPipeline);
 
+		// Plugin WITHOUT email:send capability
 		const plugin = createTestPlugin({
 			id: "no-email",
 			capabilities: [],
@@ -727,6 +859,7 @@ describe("ctx.email gating", () => {
 	});
 
 	it("ctx.email is defined with email:send capability and available provider", async () => {
+		// Create a provider and pipeline
 		const deliverHandler: EmailDeliverHandler = async () => {};
 		const provider = createTestPlugin({
 			id: "provider",
@@ -739,6 +872,7 @@ describe("ctx.email gating", () => {
 		hookPipeline.setExclusiveSelection("email:deliver", "provider");
 		const emailPipeline = new EmailPipeline(hookPipeline);
 
+		// Plugin WITH email:send capability
 		const plugin = createTestPlugin({
 			id: "email-consumer",
 			capabilities: ["email:send"],
@@ -752,9 +886,11 @@ describe("ctx.email gating", () => {
 	});
 
 	it("ctx.email is undefined when no provider is configured", async () => {
+		// Pipeline with no providers
 		const hookPipeline = new HookPipeline([], { db });
 		const emailPipeline = new EmailPipeline(hookPipeline);
 
+		// Plugin WITH email:send capability but no provider configured
 		const plugin = createTestPlugin({
 			id: "email-consumer",
 			capabilities: ["email:send"],
@@ -798,9 +934,13 @@ describe("ctx.email gating", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Integration: Full pipeline with PluginManager
+// ---------------------------------------------------------------------------
+
 describe("Email Pipeline — full integration with PluginManager", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(async () => {
 		sqliteDb = new Database(":memory:");
@@ -839,9 +979,13 @@ describe("Email Pipeline — full integration with PluginManager", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Integration: Dev console as pipeline provider
+// ---------------------------------------------------------------------------
+
 describe("Dev Console — as pipeline provider", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(async () => {
 		sqliteDb = new Database(":memory:");
@@ -917,6 +1061,7 @@ describe("Dev Console — as pipeline provider", () => {
 		hookPipeline.setExclusiveSelection("email:deliver", DEV_CONSOLE_EMAIL_PLUGIN_ID);
 
 		const emailPipeline = new EmailPipeline(hookPipeline);
+		// Use non-system source so beforeSend hooks run
 		await emailPipeline.send(createTestMessage({ text: "Hello world" }), "some-plugin");
 
 		const emails = getDevEmails();
@@ -925,9 +1070,13 @@ describe("Dev Console — as pipeline provider", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Email Pipeline Security
+// ---------------------------------------------------------------------------
+
 describe("EmailPipeline — recursion guard", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(() => {
 		sqliteDb = new Database(":memory:");
@@ -942,8 +1091,10 @@ describe("EmailPipeline — recursion guard", () => {
 	});
 
 	it("throws EmailRecursionError on re-entrant send", async () => {
+		// A plugin that tries to send an email from within email:beforeSend
 		let emailPipeline: EmailPipeline;
 		const recursiveHandler: EmailBeforeSendHandler = async (event) => {
+			// This should throw — we're already inside send()
 			await emailPipeline.send(createTestMessage({ to: "other@example.com" }), "sneaky-plugin");
 			return event.message;
 		};
@@ -973,6 +1124,7 @@ describe("EmailPipeline — recursion guard", () => {
 
 		emailPipeline = new EmailPipeline(hookPipeline);
 
+		// Use non-system source so beforeSend hooks run and trigger recursion
 		await expect(emailPipeline.send(createTestMessage(), "some-plugin")).rejects.toThrow(
 			EmailRecursionError,
 		);
@@ -985,6 +1137,7 @@ describe("EmailPipeline — recursion guard", () => {
 		const recursiveHandler: EmailBeforeSendHandler = async (event) => {
 			callCount++;
 			if (callCount === 1) {
+				// First call: try to recurse (will fail)
 				await emailPipeline.send(createTestMessage(), "sneaky");
 			}
 			return event.message;
@@ -1014,18 +1167,20 @@ describe("EmailPipeline — recursion guard", () => {
 		hookPipeline.setExclusiveSelection("email:deliver", "provider");
 		emailPipeline = new EmailPipeline(hookPipeline);
 
+		// First send triggers recursion error (non-system so beforeSend runs)
 		await expect(emailPipeline.send(createTestMessage(), "some-plugin")).rejects.toThrow(
 			EmailRecursionError,
 		);
 
-		callCount = 10;
+		// Subsequent sends should work (ALS context ended after the first call)
+		callCount = 10; // Skip the recursion branch
 		await emailPipeline.send(createTestMessage(), "some-plugin");
 	});
 });
 
 describe("EmailPipeline — system email protection", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(() => {
 		sqliteDb = new Database(":memory:");
@@ -1041,6 +1196,7 @@ describe("EmailPipeline — system email protection", () => {
 
 	it("system emails skip email:beforeSend hooks entirely", async () => {
 		const interceptorHandler = vi.fn(async (event: EmailBeforeSendEvent) => {
+			// A malicious interceptor that rewrites the body to steal auth tokens
 			return { ...event.message, html: "<a href='https://evil.com'>Click here</a>" };
 		});
 
@@ -1067,6 +1223,7 @@ describe("EmailPipeline — system email protection", () => {
 
 		const emailPipeline = new EmailPipeline(hookPipeline);
 
+		// System email should bypass beforeSend entirely
 		await emailPipeline.send(
 			createTestMessage({
 				to: "admin@example.com",
@@ -1075,7 +1232,9 @@ describe("EmailPipeline — system email protection", () => {
 			"system",
 		);
 
+		// The interceptor should NOT have been called
 		expect(interceptorHandler).not.toHaveBeenCalled();
+		// The deliver handler SHOULD have been called with the original message
 		expect(deliverHandler).toHaveBeenCalledTimes(1);
 		expect(deliverHandler).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -1114,6 +1273,7 @@ describe("EmailPipeline — system email protection", () => {
 		const emailPipeline = new EmailPipeline(hookPipeline);
 		await emailPipeline.send(createTestMessage({ to: "admin@example.com" }), "system");
 
+		// System email must be delivered regardless
 		expect(deliverHandler).toHaveBeenCalledTimes(1);
 	});
 
@@ -1146,6 +1306,7 @@ describe("EmailPipeline — system email protection", () => {
 		const emailPipeline = new EmailPipeline(hookPipeline);
 		await emailPipeline.send(createTestMessage(), "some-plugin");
 
+		// Non-system emails still pass through beforeSend
 		expect(handler).toHaveBeenCalledTimes(1);
 		expect(deliverHandler).toHaveBeenCalledTimes(1);
 	});
@@ -1178,6 +1339,7 @@ describe("EmailPipeline — system email protection", () => {
 
 		const emailPipeline = new EmailPipeline(hookPipeline);
 
+		// Non-system source — recipient change is allowed
 		await emailPipeline.send(createTestMessage(), "some-plugin");
 		expect(deliverHandler).toHaveBeenCalledTimes(1);
 	});
@@ -1185,7 +1347,7 @@ describe("EmailPipeline — system email protection", () => {
 
 describe("EmailPipeline — cancellation audit", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: Database.Database;
+	let sqliteDb: Database;
 
 	beforeEach(() => {
 		sqliteDb = new Database(":memory:");

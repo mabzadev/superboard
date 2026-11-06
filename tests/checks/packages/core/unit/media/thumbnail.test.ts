@@ -26,6 +26,7 @@ describe("computeThumbnailSize", () => {
 	});
 
 	it("clamps extreme tall aspect ratios to the bounding box", () => {
+		// Without clamping, naive code would produce a 64×537600 canvas.
 		const result = computeThumbnailSize(100, 840_000);
 		expect(result.width).toBeLessThanOrEqual(THUMBNAIL_MAX_DIMENSION);
 		expect(result.height).toBeLessThanOrEqual(THUMBNAIL_MAX_DIMENSION);

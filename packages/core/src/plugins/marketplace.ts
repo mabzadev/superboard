@@ -1,10 +1,22 @@
+/**
+ * MarketplaceClient — HTTP client for the EmDash Plugin Marketplace
+ *
+ * Used by the install/update/proxy endpoints in EmDash core to communicate
+ * with the marketplace Worker. The marketplace is a distribution channel,
+ * not a runtime dependency — bundles are copied to site-local R2 at install time.
+ */
+
 import { createGzipDecoder, unpackTar } from "modern-tar";
 
 import { pluginManifestSchema, reconcileManifestAccess } from "./manifest-schema.js";
 import type { PluginManifest } from "./types.js";
 
+// ── Module-level regex patterns ───────────────────────────────────
+
 const TRAILING_SLASHES = /\/+$/;
 const LEADING_DOT_SLASH = /^\.\//;
+
+// ── Types ──────────────────────────────────────────────────────────
 
 export interface MarketplacePluginSummary {
 	id: string;
@@ -87,6 +99,8 @@ export interface MarketplaceSearchResult {
 	nextCursor?: string;
 }
 
+// ── Theme types ───────────────────────────────────────────────────
+
 export interface MarketplaceThemeSummary {
 	id: string;
 	name: string;
@@ -138,24 +152,35 @@ export interface PluginBundle {
 	checksum: string;
 }
 
+// ── Interface ──────────────────────────────────────────────────────
+
 export interface MarketplaceClient {
+	/** Search the marketplace catalog */
 	search(query?: string, opts?: MarketplaceSearchOpts): Promise<MarketplaceSearchResult>;
 
+	/** Get full plugin detail */
 	getPlugin(id: string): Promise<MarketplacePluginDetail>;
 
+	/** Get version history for a plugin */
 	getVersions(id: string): Promise<MarketplaceVersionSummary[]>;
 
+	/** Download and extract a plugin bundle */
 	downloadBundle(id: string, version: string): Promise<PluginBundle>;
 
+	/** Fire-and-forget install stat (never throws) */
 	reportInstall(id: string, version: string): Promise<void>;
 
+	/** Search theme listings */
 	searchThemes(
 		query?: string,
 		opts?: MarketplaceThemeSearchOpts,
 	): Promise<MarketplaceThemeSearchResult>;
 
+	/** Get full theme detail */
 	getTheme(id: string): Promise<MarketplaceThemeDetail>;
 }
+
+// ── Errors ─────────────────────────────────────────────────────────
 
 export class MarketplaceError extends Error {
 	constructor(
@@ -175,11 +200,58 @@ export class MarketplaceUnavailableError extends MarketplaceError {
 	}
 }
 
+const MAX_REDIRECTS = 5;
+
+/**
+ * Fetches a marketplace URL, following redirects only while they stay on
+ * that URL's origin. Throws a `MarketplaceError` coded
+ * `${codePrefix}_REDIRECT_UNTRUSTED` or `${codePrefix}_TOO_MANY_REDIRECTS`.
+ */
+export async function fetchWithinOrigin(
+	url: string,
+	label: string,
+	codePrefix: string,
+): Promise<Response> {
+	const origin = new URL(url).origin;
+	let currentUrl = url;
+	let response = await fetch(currentUrl, { redirect: "manual" });
+
+	for (let i = 0; i < MAX_REDIRECTS; i++) {
+		if (response.status < 300 || response.status >= 400) break;
+
+		const location = response.headers.get("location");
+		if (!location) break;
+
+		const target = new URL(location, currentUrl);
+		if (target.origin !== origin) {
+			throw new MarketplaceError(
+				`${label} redirected to untrusted host: ${target.origin}`,
+				response.status,
+				`${codePrefix}_REDIRECT_UNTRUSTED`,
+			);
+		}
+		currentUrl = target.href;
+		response = await fetch(currentUrl, { redirect: "manual" });
+	}
+
+	if (response.status >= 300 && response.status < 400) {
+		throw new MarketplaceError(
+			`${label} exceeded maximum redirects (${MAX_REDIRECTS})`,
+			response.status,
+			`${codePrefix}_TOO_MANY_REDIRECTS`,
+		);
+	}
+	return response;
+}
+
+// ── Implementation ─────────────────────────────────────────────────
+
 class MarketplaceClientImpl implements MarketplaceClient {
 	private readonly baseUrl: string;
 	private readonly siteOrigin: string | undefined;
 
 	constructor(baseUrl: string, siteOrigin?: string) {
+		// Strip trailing slash
 		this.baseUrl = baseUrl.replace(TRAILING_SLASHES, "");
 		this.siteOrigin = siteOrigin;
 	}
@@ -213,38 +285,9 @@ class MarketplaceClientImpl implements MarketplaceClient {
 	async downloadBundle(id: string, version: string): Promise<PluginBundle> {
 		const bundleUrl = `${this.baseUrl}/api/v1/plugins/${encodeURIComponent(id)}/versions/${encodeURIComponent(version)}/bundle`;
 
-		const marketplaceOrigin = new URL(this.baseUrl).origin;
-		const MAX_REDIRECTS = 5;
 		let response: Response;
 		try {
-			let currentUrl = bundleUrl;
-			response = await fetch(currentUrl, { redirect: "manual" });
-
-			for (let i = 0; i < MAX_REDIRECTS; i++) {
-				if (response.status < 300 || response.status >= 400) break;
-
-				const location = response.headers.get("location");
-				if (!location) break;
-
-				const target = new URL(location, currentUrl);
-				if (target.origin !== marketplaceOrigin) {
-					throw new MarketplaceError(
-						`Bundle download redirected to untrusted host: ${target.origin}`,
-						response.status,
-						"BUNDLE_REDIRECT_UNTRUSTED",
-					);
-				}
-				currentUrl = target.href;
-				response = await fetch(currentUrl, { redirect: "manual" });
-			}
-
-			if (response.status >= 300 && response.status < 400) {
-				throw new MarketplaceError(
-					`Bundle download exceeded maximum redirects (${MAX_REDIRECTS})`,
-					response.status,
-					"BUNDLE_TOO_MANY_REDIRECTS",
-				);
-			}
+			response = await fetchWithinOrigin(bundleUrl, "Bundle download", "BUNDLE");
 		} catch (err) {
 			if (err instanceof MarketplaceError) throw err;
 			throw new MarketplaceUnavailableError(err);
@@ -272,6 +315,7 @@ class MarketplaceClientImpl implements MarketplaceClient {
 	}
 
 	async reportInstall(id: string, version: string): Promise<void> {
+		// Generate a stable site hash from the site origin (best-effort, non-identifying)
 		const siteHash = await generateSiteHash(this.siteOrigin);
 		const url = `${this.baseUrl}/api/v1/plugins/${encodeURIComponent(id)}/installs`;
 
@@ -281,7 +325,9 @@ class MarketplaceClientImpl implements MarketplaceClient {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ siteHash, version }),
 			});
-		} catch {}
+		} catch {
+			// Fire-and-forget — never throw
+		}
 	}
 
 	async searchThemes(
@@ -320,7 +366,9 @@ class MarketplaceClientImpl implements MarketplaceClient {
 			try {
 				const body: { error?: string } = await response.json();
 				if (body.error) errorMessage = body.error;
-			} catch {}
+			} catch {
+				// use default message
+			}
 			throw new MarketplaceError(errorMessage, response.status);
 		}
 
@@ -329,10 +377,42 @@ class MarketplaceClientImpl implements MarketplaceClient {
 	}
 }
 
+// ── Bundle extraction ──────────────────────────────────────────────
+
+/**
+ * Extract manifest + code files from a tarball.
+ *
+ * The tarball is a gzipped tar archive containing:
+ * - manifest.json
+ * - backend.js
+ * - admin.js (optional)
+ *
+ * We use a minimal tar parser since we only need to read a few small files.
+ */
+/**
+ * Exported so the experimental registry install handler can reuse the
+ * same parse / validate / hash primitive. Despite the file name, this
+ * function predates the marketplace-vs-registry split and is generic
+ * over plugin bundle tarballs regardless of distribution channel.
+ */
+// Aligns with RFC 0001 §"Bundle size limits" (256 KiB decompressed,
+// 20 files). Matches `MAX_BUNDLE_SIZE` in @emdash-cms/plugin-cli. We
+// don't import that constant to keep this runtime module independent
+// of the authoring CLI; the two values must stay in sync.
+//
+// Tar adds per-file headers (~512 bytes each) plus directory entries,
+// so the entry count cap is set comfortably above RFC's 20-file limit.
+// Going over either is a strong signal the bundle isn't a legitimate
+// sandboxed plugin.
 const MAX_DECOMPRESSED_BUNDLE_BYTES = 256 * 1024;
 const MAX_BUNDLE_TAR_ENTRIES = 32;
 
 export async function extractBundle(tarballBytes: Uint8Array): Promise<PluginBundle> {
+	// Decompress fully into memory first, then parse the tar.
+	// Passing a pipeThrough() stream directly to unpackTar causes a backpressure
+	// deadlock in workerd: the tar decoder's body-stream pull() needs more
+	// decompressed data, but the upstream pipe is stalled waiting for the
+	// decoder's writable side to drain — a circular dependency.
 	const decompressedStream = new ReadableStream<Uint8Array>({
 		start(controller) {
 			controller.enqueue(tarballBytes);
@@ -340,6 +420,11 @@ export async function extractBundle(tarballBytes: Uint8Array): Promise<PluginBun
 		},
 	}).pipeThrough(createGzipDecoder());
 
+	// Collect decompressed bytes with a hard cap. A gzip-bomb -- a small
+	// tarball that decompresses to gigabytes -- otherwise exhausts
+	// worker / Node memory before we know to reject it. The cap matches
+	// RFC 0001's publish-time bundle size limit (MAX_DECOMPRESSED_BUNDLE_BYTES);
+	// anything past that isn't a legitimate sandboxed plugin.
 	const reader = decompressedStream.getReader();
 	const chunks: Uint8Array[] = [];
 	let total = 0;
@@ -351,7 +436,9 @@ export async function extractBundle(tarballBytes: Uint8Array): Promise<PluginBun
 		if (total > MAX_DECOMPRESSED_BUNDLE_BYTES) {
 			try {
 				await reader.cancel();
-			} catch {}
+			} catch {
+				// nothing to do
+			}
 			throw new MarketplaceError(
 				`Bundle decompressed size exceeds limit (${MAX_DECOMPRESSED_BUNDLE_BYTES} bytes)`,
 				undefined,
@@ -389,6 +476,7 @@ export async function extractBundle(tarballBytes: Uint8Array): Promise<PluginBun
 	const files = new Map<string, string>();
 	for (const entry of entries) {
 		if (entry.data && entry.header.type === "file") {
+			// Strip leading ./ prefix that tar tools commonly add
 			const name = entry.header.name.replace(LEADING_DOT_SLASH, "");
 			files.set(name, decoder.decode(entry.data));
 		}
@@ -429,6 +517,7 @@ export async function extractBundle(tarballBytes: Uint8Array): Promise<PluginBun
 		);
 	}
 
+	// Compute SHA-256 checksum of the tarball for verification
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Uint8Array is a valid BufferSource at runtime; TS lib mismatch
 	const hashBuffer = await crypto.subtle.digest("SHA-256", tarballBytes as unknown as BufferSource);
 	const hashArray = new Uint8Array(hashBuffer);
@@ -442,6 +531,13 @@ export async function extractBundle(tarballBytes: Uint8Array): Promise<PluginBun
 	};
 }
 
+// ── Helpers ────────────────────────────────────────────────────────
+
+/**
+ * Generate a stable non-identifying site hash from the site origin.
+ * The same origin always produces the same hash, so the marketplace
+ * installs table deduplicates correctly per (plugin_id, site_hash).
+ */
 async function generateSiteHash(siteOrigin?: string): Promise<string> {
 	const seed = siteOrigin ? `emdash-site:${siteOrigin}` : `emdash-anonymous`;
 	try {
@@ -449,6 +545,8 @@ async function generateSiteHash(siteOrigin?: string): Promise<string> {
 		const arr = new Uint8Array(hash);
 		return Array.from(arr.slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
 	} catch {
+		// Fallback for environments without crypto.subtle: FNV-1a hash encoded as hex.
+		// Deterministic, uniform distribution, no origin leakage.
 		let h = 0x811c9dc5;
 		for (let i = 0; i < seed.length; i++) {
 			h ^= seed.charCodeAt(i);
@@ -459,6 +557,15 @@ async function generateSiteHash(siteOrigin?: string): Promise<string> {
 	}
 }
 
+// ── Factory ────────────────────────────────────────────────────────
+
+/**
+ * Create a MarketplaceClient for the given marketplace URL.
+ *
+ * @param baseUrl - The marketplace API base URL (e.g. "https://marketplace.emdashcms.com")
+ * @param siteOrigin - The origin of the EmDash site (e.g. "https://myblog.example.com").
+ *   Used to generate a stable, non-identifying site hash for install deduplication.
+ */
 export function createMarketplaceClient(baseUrl: string, siteOrigin?: string): MarketplaceClient {
 	return new MarketplaceClientImpl(baseUrl, siteOrigin);
 }

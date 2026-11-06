@@ -1,3 +1,10 @@
+/**
+ * POST /_emdash/api/auth/atproto/login
+ *
+ * Initiates the AT Protocol OAuth flow by generating an authorization URL.
+ * The client should redirect the browser to the returned URL.
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;

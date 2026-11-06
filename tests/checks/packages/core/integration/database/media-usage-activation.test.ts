@@ -36,6 +36,7 @@ describeEachDialect("media usage production activation", (dialect) => {
 
 		await expect(
 			activateMediaUsageCapture(ctx.db, {
+				// Exercise the JavaScript boundary rather than the compile-time literal.
 				writersDrained: false as true,
 			}),
 		).rejects.toThrow(/writers.*drained/i);

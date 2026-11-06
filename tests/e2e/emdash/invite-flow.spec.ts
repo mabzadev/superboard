@@ -1,3 +1,21 @@
+/**
+ * Invite Flow E2E Tests
+ *
+ * Tests the full user invitation lifecycle:
+ * - Invite accept page error states (missing token, invalid token)
+ * - Admin creating an invite via API
+ * - Full invite → passkey registration → user creation flow
+ *   using a CDP virtual WebAuthn authenticator
+ *
+ * The invite accept page (/_emdash/admin/invite/accept) is a public
+ * route — auth middleware allows unauthenticated access.
+ *
+ * In dev mode the built-in console email provider auto-activates,
+ * so invite creation sends an email (captured in memory) rather than
+ * returning the invite URL directly. We retrieve the URL from the
+ * dev emails endpoint using server-side fetch with the PAT.
+ */
+
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -5,9 +23,11 @@ import { join } from "node:path";
 import { expect, test } from "../../fixtures/emdash-browser";
 import { addVirtualWebAuthnAuthenticator } from "../../fixtures/emdash-browser/virtual-authenticator";
 
+// Regex patterns
 const ADMIN_URL_PATTERN = /\/_emdash\/admin\/?$/;
 const INVITE_URL_REGEX = /https?:\/\/[^\s]+\/admin\/invite\/accept\?token=[^\s]+/;
 const URL_IN_TEXT_REGEX = /https?:\/\/[^\s]+/;
+const PASSKEY_ACTION_REGEX = /^(Create passkey|Use another device|Use a security key)$/;
 
 const SERVER_INFO_PATH = join(tmpdir(), "emdash-pw-server.json");
 
@@ -15,9 +35,18 @@ function getServerInfo(): { baseUrl: string; token: string; sessionCookie: strin
 	return JSON.parse(readFileSync(SERVER_INFO_PATH, "utf-8"));
 }
 
+/**
+ * Create an invite via the API using the PAT from serverInfo.
+ * Uses Node.js fetch (not browser) to avoid module isolation issues
+ * with the dev email store.
+ *
+ * When the dev console email provider is active, the invite email is
+ * captured in memory. We retrieve it via GET /_emdash/api/dev/emails.
+ */
 async function createInviteViaApi(email: string, role = 30): Promise<string> {
 	const { baseUrl, token, sessionCookie } = getServerInfo();
 
+	// Clear previously captured emails
 	await fetch(`${baseUrl}/_emdash/api/dev/emails`, {
 		method: "DELETE",
 		headers: {
@@ -26,6 +55,7 @@ async function createInviteViaApi(email: string, role = 30): Promise<string> {
 		},
 	});
 
+	// Create the invite
 	const createRes = await fetch(`${baseUrl}/_emdash/api/auth/invite`, {
 		method: "POST",
 		headers: {
@@ -45,10 +75,12 @@ async function createInviteViaApi(email: string, role = 30): Promise<string> {
 		data?: { inviteUrl?: string };
 	};
 
+	// If no email provider, the response includes the URL directly
 	if (createBody.data?.inviteUrl) {
 		return createBody.data.inviteUrl;
 	}
 
+	// Otherwise, retrieve the invite URL from captured dev emails
 	const emailsRes = await fetch(`${baseUrl}/_emdash/api/dev/emails`, {
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -94,6 +126,8 @@ test.describe("Invite Accept Page", () => {
 
 			await expect(admin.page.locator("h1")).toContainText("Invite Error", { timeout: 15000 });
 
+			// The error step renders an h2 with an error title and a
+			// "Back to login" link regardless of the specific error code.
 			await expect(admin.page.locator("h2")).toBeVisible({ timeout: 15000 });
 			await expect(admin.page.locator("text=Back to login")).toBeVisible();
 		});
@@ -111,8 +145,14 @@ test.describe("Invite Accept Page", () => {
 			await expect(admin.page.locator("text=You've been invited!")).toBeVisible();
 			await expect(admin.page.getByLabel("Email")).toHaveValue("invite-ui@example.com");
 			await expect(admin.page.locator("text=AUTHOR")).toBeVisible();
-			await expect(admin.page.locator("text=Create your passkey")).toBeVisible();
-			await expect(admin.page.getByRole("button", { name: "Create Account" })).toBeVisible();
+			await expect(
+				admin.page.getByRole("heading", {
+					name: "With a passkey, you don’t need to remember complex passwords",
+				}),
+			).toBeVisible();
+			await expect(
+				admin.page.getByRole("button", { name: PASSKEY_ACTION_REGEX }).first(),
+			).toBeVisible();
 		});
 	});
 });
@@ -154,21 +194,26 @@ test.describe("Full invite flow with passkey registration", () => {
 	test("completes invite registration with virtual authenticator", async ({ admin, page }) => {
 		test.setTimeout(120_000);
 
+		// Step 1: Create invite via server-side API
 		const inviteEmail = `invited-user-${crypto.randomUUID()}@example.com`;
 		const inviteUrl = await createInviteViaApi(inviteEmail, 30);
 		const inviteToken = new URL(inviteUrl).searchParams.get("token")!;
 
+		// Step 2: Set up virtual authenticator
 		const removeAuth = await addVirtualWebAuthnAuthenticator(page);
 
 		try {
+			// Step 3: Navigate to invite accept page
 			await page.goto(`/_emdash/admin/invite/accept?token=${inviteToken}`);
 			await admin.waitForHydration();
 
+			// Step 4: Verify the registration form renders
 			await expect(page.locator("h1")).toContainText("Accept Invite", { timeout: 15000 });
 			await expect(page.locator("text=You've been invited!")).toBeVisible();
 			await expect(page.getByLabel("Email")).toHaveValue(inviteEmail);
 			await expect(page.locator("text=AUTHOR")).toBeVisible();
 
+			// Step 5: Fill in name and create a passkey
 			const nameInput = page.getByLabel("Your name (optional)");
 			await nameInput.fill("Invited User");
 
@@ -177,9 +222,14 @@ test.describe("Full invite flow with passkey registration", () => {
 					return new URL(response.url()).pathname === "/_emdash/api/auth/invite/complete";
 				})
 				.then((response) => response.status());
-			await page.getByRole("button", { name: "Create Account" }).click();
+			await page.getByRole("button", { name: "Create passkey" }).click();
 			expect(await completionResponsePromise).toBe(200);
 
+			// Step 6: Confirm the completed passkey flow and continue
+			await expect(page.getByRole("heading", { name: "Passkey created" })).toBeVisible();
+			await page.getByRole("button", { name: "Open the dashboard" }).click();
+
+			// Step 7: Wait for the dashboard redirect
 			await expect(page).toHaveURL(ADMIN_URL_PATTERN, { timeout: 60_000 });
 			const welcomeDialog = page.getByRole("dialog", { name: /Welcome to EmDash/ });
 			await expect(welcomeDialog).toBeVisible({ timeout: 15_000 });
@@ -188,6 +238,7 @@ test.describe("Full invite flow with passkey registration", () => {
 			await admin.waitForShell();
 			await expect(page.getByRole("button", { name: /Invited User/ })).toBeVisible();
 
+			// Verify no passkey errors appeared
 			await expect(page.locator("text=Registration was cancelled or timed out")).toHaveCount(0);
 			await expect(page.locator("text=Invalid origin")).toHaveCount(0);
 		} finally {

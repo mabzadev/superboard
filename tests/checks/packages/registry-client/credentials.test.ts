@@ -73,7 +73,7 @@ describe("MemoryCredentialStore", () => {
 		const store = new MemoryCredentialStore();
 		const s = session();
 		await store.put(s);
-		s.handle = "mutated.test";
+		s.handle = "mutated.test"; // mutate after put
 		const stored = await store.current();
 		expect(stored?.handle).toBe("alice.example.com");
 	});
@@ -110,6 +110,7 @@ describe("FileCredentialStore", () => {
 		const store = new FileCredentialStore({ path });
 		await store.put(session());
 		const stat = await import("node:fs/promises").then((m) => m.stat(path));
+		// File mode includes type bits; mask to permission bits only.
 		expect(stat.mode & 0o777).toBe(0o600);
 	});
 
@@ -191,6 +192,7 @@ describe("EnvCredentialStore", () => {
 		const store = new EnvCredentialStore({
 			env: {
 				EMDASH_PUBLISHER_DID: "did:plc:abc",
+				// missing handle and pds
 			},
 		});
 		expect(await store.current()).toBeNull();

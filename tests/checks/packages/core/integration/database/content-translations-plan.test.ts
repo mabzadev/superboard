@@ -1,4 +1,10 @@
-import Database from "better-sqlite3";
+/**
+ * Query-plan coverage for translation-group reads on content tables.
+ *
+ * SQLite runs without ANALYZE/sqlite_stat1 here, matching D1's stats-blind
+ * planner. Result parity for these reads is covered by the i18n suite.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -6,6 +12,7 @@ import * as migration055 from "../../../../../../packages/core/src/database/migr
 import { runMigrations } from "../../../../../../packages/core/src/database/migrations/runner.js";
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
 import type { Database as DatabaseSchema } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { getMenuWithDb } from "../../../../../../packages/core/src/menus/index.js";
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 import { SQL_BATCH_SIZE } from "../../../../../../packages/core/src/utils/chunks.js";
@@ -15,7 +22,7 @@ interface CapturedQuery {
 	parameters: readonly unknown[];
 }
 
-let sqlite: Database.Database;
+let sqlite: Database;
 let db: Kysely<DatabaseSchema>;
 let repo: ContentRepository;
 let captured: CapturedQuery[];
@@ -92,6 +99,11 @@ it.each([
 	},
 );
 
+/**
+ * Menu references resolve a translation group without a `deleted_at` filter, so
+ * they need an index that leads with `translation_group`. `fr` has no `ec_post`
+ * row, which exercises the any-locale fallback as well as the direct lookup.
+ */
 it.each([
 	{ locale: "en", url: "/post/slug-10" },
 	{ locale: "fr", url: "/post/slug-9" },
@@ -173,7 +185,9 @@ async function seedMenuReference(referenceGroup: string): Promise<void> {
 }
 
 function translationQueries(): CapturedQuery[] {
-	return captured.filter((query) => query.sql.includes("translation_group"));
+	return captured.filter(
+		(query) => query.sql.includes("translation_group") && query.sql.includes('"ec_post"'),
+	);
 }
 
 function translationQuery(): CapturedQuery {
@@ -182,6 +196,7 @@ function translationQuery(): CapturedQuery {
 	return queries[0]!;
 }
 
+/** Normalize application values captured from Kysely for direct driver binding. */
 function bindable(parameter: unknown): unknown {
 	if (typeof parameter === "boolean") return parameter ? 1 : 0;
 	if (parameter instanceof Date) return parameter.toISOString();

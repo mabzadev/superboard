@@ -53,10 +53,13 @@ describe("object cache: schema (getCollectionInfo)", () => {
 		expect(first?.slug).toBe("post");
 		await flush();
 
+		// D1 down — a cached read must not need it.
 		vi.mocked(getDb).mockRejectedValue(new Error("D1 unavailable"));
 		const second = await getCollectionInfo("post");
 		expect(second?.slug).toBe("post");
 
+		// A schema change bumps the schema epoch → next read reloads (and now
+		// D1 is down, so it surfaces).
 		invalidateUrlPatternCache();
 		await flush();
 		await expect(getCollectionInfo("post")).rejects.toThrow(/D1 unavailable/);
@@ -101,8 +104,9 @@ describe("object cache: comments (getComments)", () => {
 
 		vi.mocked(getDb).mockRejectedValue(new Error("D1 unavailable"));
 		const second = await getComments({ collection: "post", contentId: postId });
-		expect(second.total).toBe(1);
+		expect(second.total).toBe(1); // served from KV, no D1
 
+		// Posting another comment bumps the comments epoch → reload (D1 down).
 		vi.mocked(getDb).mockResolvedValue(db);
 		await new CommentRepository(db).create({
 			collection: "post",
@@ -127,10 +131,12 @@ describe("object cache: comments (getComments)", () => {
 		});
 		await flush();
 
+		// Reaction-less call: no counts attached.
 		const plain = await getComments({ collection: "post", contentId: postId });
 		expect(plain.items[0]!.reactions).toBeUndefined();
 		await flush();
 
+		// reactions:true must get its own entry, not the reaction-less snapshot.
 		const withReactions = await getComments({
 			collection: "post",
 			contentId: postId,

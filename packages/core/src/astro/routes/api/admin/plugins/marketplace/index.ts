@@ -1,3 +1,9 @@
+/**
+ * Marketplace search proxy endpoint
+ *
+ * GET /_emdash/api/admin/plugins/marketplace - Search marketplace plugins
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

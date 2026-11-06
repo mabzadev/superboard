@@ -1,3 +1,10 @@
+/**
+ * GET /_emdash/.well-known/auth
+ *
+ * Auth discovery endpoint. Returns available auth mechanisms.
+ * Public, unauthenticated. Used by CLI to determine how to authenticate.
+ */
+
 import type { APIRoute } from "astro";
 
 import { getAuthMode } from "#auth/mode.js";
@@ -8,17 +15,21 @@ export const prerender = false;
 export const GET: APIRoute = async ({ locals }) => {
 	const { emdash } = locals;
 
+	// Build discovery response
 	const config = emdash?.config;
 	const authMode = config ? getAuthMode(config) : null;
 
 	const isExternal = authMode?.type === "external";
 
+	// Try to read site name from DB options
 	let siteName = "EmDash";
 	if (emdash?.db) {
 		try {
 			const options = new OptionsRepository(emdash.db);
 			siteName = (await options.get<string>("emdash:site_title")) || "EmDash";
-		} catch {}
+		} catch {
+			// DB may not be initialized yet
+		}
 	}
 
 	const response: Record<string, unknown> = {
