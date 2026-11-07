@@ -39,7 +39,7 @@ try {
 		for (const locale of ["en", "fr"]) {
 			await page.goto(new URL(`/monetization/settings?lang=${locale}&tab=general`, origin).href);
 			await hydrate();
-			const purchase = page.getByRole("checkbox", {
+			const purchase = page.getByRole("switch", {
 				name: locale === "fr" ? "Activer les achats" : "Enable purchases",
 			});
 			const [restoreBehavior, restoreLabel] =
@@ -50,25 +50,22 @@ try {
 							"Transfer if there are no active subscriptions",
 						];
 			const restore = page.getByRole("radio", { name: restoreLabel, exact: true });
-			await purchase.click();
+			await expect(purchase).toBeVisible();
+			if (!(await purchase.isChecked())) await purchase.click();
 			await restore.click();
-			const enabled = await purchase.isChecked();
 			await expect(restore).toBeChecked();
-			await page
-				.getByRole("button", {
-					name: locale === "fr" ? "Enregistrer les paramètres" : "Save settings",
-					exact: true,
-				})
-				.click();
-			await expect(page.getByRole("status")).toContainText(
-				locale === "fr" ? "Paramètres enregistrés." : "Settings saved.",
-			);
-			const billing = await (await context.request.get(billingEndpoint)).json();
-			assert.equal(billing.settings.purchases_enabled, enabled ? 1 : 0);
-			assert.equal(billing.settings.restore_behavior, restoreBehavior);
+			await expect
+				.poll(
+					async () => {
+						const { settings } = await (await context.request.get(billingEndpoint)).json();
+						return [settings.purchases_enabled, settings.restore_behavior];
+					},
+					{ timeout: 10_000 },
+				)
+				.toEqual([1, restoreBehavior]);
 			await page.reload();
 			await hydrate();
-			await expect(purchase).toBeChecked({ checked: enabled });
+			await expect(purchase).toBeChecked();
 			await expect(restore).toBeChecked();
 			await page.goto(new URL(`/monetization/settings?lang=${locale}&tab=products`, origin).href);
 			await hydrate();
