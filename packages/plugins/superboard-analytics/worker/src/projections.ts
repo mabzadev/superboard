@@ -7,6 +7,7 @@ import {
 } from "@superboard/contracts/analytics";
 
 import { sha256Hex } from "./crypto";
+import { eventArchiveBucket } from "./event-archive";
 import { httpError } from "./http";
 import { deliverMarketingSignal, marketingSignalStatement } from "./marketing-signals";
 import { localDate, reportTimezone } from "./timezone";
@@ -26,7 +27,7 @@ export async function projectStoredEvent(
 	const event = stored.event;
 	const archiveKey = archiveObjectKey(outbox.project_id, event);
 	const { hotRetentionDays, timezone } = await projectReportingSettings(env.DB, outbox.project_id);
-	await env.EVENT_ARCHIVE.put(archiveKey, stableAnalyticsJson(event), {
+	await eventArchiveBucket(env).put(archiveKey, stableAnalyticsJson(event), {
 		httpMetadata: { contentType: "application/json; charset=UTF-8" },
 		customMetadata: {
 			project_id: outbox.project_id,

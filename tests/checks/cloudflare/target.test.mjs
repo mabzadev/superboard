@@ -68,11 +68,6 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
 		"app-reference-production",
 	);
 	assert.equal(referenceApplication.environments.production.publicRouting, "staged");
-	assert.notEqual(
-		referenceApplication.environments.production.siteMedia.name,
-		referenceApplication.environments.production.r2.name,
-		"EmDash media must not share the application files bucket",
-	);
 	assert.equal(referenceApplication.customWorker.serviceBindings.length, 3);
 	assert.deepEqual(referenceApplication.customWorker.crons, ["0 3 * * *"]);
 	assert.deepEqual(

@@ -6,6 +6,7 @@ import type {
 import { withPluginWorkflowLifecycle } from "@superboard/contracts/plugin-workflow";
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 
+import { archiveBucket } from "../runtime/archive";
 import { flowRuntimeName } from "../runtime/names";
 import type { Env, FlowMaintenancePayload } from "../types";
 
@@ -268,7 +269,7 @@ export class FlowMaintenanceExecution extends WorkflowEntrypoint<Env, FlowMainte
 				})();
 				await Promise.all([
 					producer,
-					this.env.ARCHIVE.put(key, stream.readable, {
+					archiveBucket(this.env).put(key, stream.readable, {
 						httpMetadata: { contentType: "application/x-ndjson" },
 						customMetadata: {
 							projectId: String(payload.projectId),

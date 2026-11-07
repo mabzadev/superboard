@@ -2,6 +2,7 @@ import {
   FLOW_EVENT_NAMES,
   type FlowQueueEvent,
 } from "@superboard/contracts/flows";
+import { archiveBucket } from "../runtime/archive";
 import type { Env } from "../types";
 
 export async function consumeFlowEvents(
@@ -156,7 +157,7 @@ async function quarantineDeadLetters(
     try {
       const event = parseQueueEvent(message.body);
       const key = `v1/dead-letters/project=${event.projectId}/${event.eventId}.json`;
-      await env.ARCHIVE.put(
+      await archiveBucket(env).put(
         key,
         JSON.stringify({
           queue_message_id: message.id,

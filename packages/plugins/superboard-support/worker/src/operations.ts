@@ -3,6 +3,7 @@ import { Hono, type Handler } from "hono";
 
 import { recordSlaResolution } from "./service-levels";
 import type { Env } from "./types";
+import { attachmentsBucket } from "./attachments-bucket";
 import { readJsonObject } from "./validation";
 import { executeMacro } from "./workflows";
 
@@ -202,7 +203,7 @@ operations.get("/:projectId/contacts/exports/:jobId/download", async (c) => {
 	if (job.status !== "completed" || !job.storage_key) {
 		throw failure("contact_export_not_ready", "Contact export is not ready", 409);
 	}
-	const object = await c.env.ATTACHMENTS.get(job.storage_key);
+	const object = await attachmentsBucket(c.env).get(job.storage_key);
 	if (!object)
 		throw failure("contact_export_unavailable", "Contact export is temporarily unavailable", 503);
 	return new Response(object.body, {

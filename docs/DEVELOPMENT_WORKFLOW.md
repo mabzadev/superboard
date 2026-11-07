@@ -230,8 +230,8 @@ change the reviewed intent to `enforced`, apply the exact confirmed plan with no
 pending jobs, then disable administrator bypass in the GitHub Environment UI.
 Instance deployment credentials belong to Cloudflare Builds. Configure one
 connection per instance, with `dev` for Mabza and `main` for production.
-Production also requires a private R2 backup bucket and a retained backup
-encryption key. Additional accounts register through the installer; no central
+Production writes encrypted D1 backups under `backups/` in the installation's
+files bucket and requires a retained backup encryption key. Additional accounts register through the installer; no central
 GitHub Environment or application-specific source constant is required. Follow
 [the Cloudflare installation guide](./CLOUDFLARE_BUILDS.md).
 
@@ -280,8 +280,10 @@ npm run target:register -- \
   --auth-gateway-jwks-url https://auth.sample.dev/.well-known/jwks.json
 ```
 
-Le template crée des noms différents pour le bucket applicatif et le cache
-Dashboard. La limite par fichier et l'allowlist MIME sont obligatoirement
+Le template crée un seul bucket R2 par environnement,
+`superboard-<target>-<env>-files`. Chaque module y écrit dans son dossier :
+`site/`, `files/`, `support/`, `analytics/`, `marketing/`, `flows/` et
+`backups/`. La limite par fichier et l'allowlist MIME sont obligatoirement
 déclarées par application; le Worker Files les applique aussi aux flux sans
 `Content-Length`. Google/Apple, la liste Support et les features se déclarent
 avec `--google-audiences`, `--apple-audiences`, `--support-project-ids` et

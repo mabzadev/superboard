@@ -1,4 +1,5 @@
 import { Env } from "../types";
+import { applicationFilesBucket } from "./application-files-bucket";
 import { migrateLegacyOtpSecrets } from "./auth-credentials";
 import { cleanupDashboardAuthRateLimits } from "./auth-rate-limit";
 import { pruneObservabilityObservations } from "./observability-retention";
@@ -167,7 +168,7 @@ export async function cleanupExpiredDownloads(env: Env): Promise<number> {
 	let deleted = 0;
 	let cursor: string | undefined;
 	do {
-		const listed = await env.R2.list({
+		const listed = await applicationFilesBucket(env.R2).list({
 			cursor,
 			limit: 100,
 			delimiter: "/",
@@ -182,7 +183,7 @@ export async function cleanupExpiredDownloads(env: Env): Promise<number> {
 			})
 			.map((item) => item.key);
 		if (!expired.length) continue;
-		await env.R2.delete(expired);
+		await applicationFilesBucket(env.R2).delete(expired);
 		const placeholders = expired.map(() => "?").join(", ");
 		await env.DB.prepare(`DELETE FROM downloadable_files WHERE file_key IN (${placeholders})`)
 			.bind(...expired)

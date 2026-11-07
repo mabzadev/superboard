@@ -488,7 +488,7 @@ test("generated Analytics config declares its complete durable pipeline", () => 
 	assert.deepEqual(config.r2_buckets, [
 		{
 			binding: "EVENT_ARCHIVE",
-			bucket_name: "superboard-dev-analytics-events",
+			bucket_name: "superboard-files",
 		},
 	]);
 	assert.deepEqual(config.queues.producers, [
@@ -555,7 +555,7 @@ test("generated Flows config declares its native Cloudflare runtime", () => {
 	assert.deepEqual(config.r2_buckets, [
 		{
 			binding: "ARCHIVE",
-			bucket_name: "superboard-dev-flows-archive",
+			bucket_name: "superboard-files",
 		},
 	]);
 	assert.deepEqual(config.queues.producers, [
@@ -1332,7 +1332,7 @@ test("generated identity and files configs are private and parameterized", () =>
 	assert.equal(files.vars.FILES_PUBLIC_ORIGIN, "https://sdk.mabza.dev/v1/data");
 	assert.equal(files.vars.DOWNLOAD_TICKET_TTL_SECONDS, "600");
 	assert.equal(files.d1_databases[0].database_name, "superboard-dev-files-db");
-	assert.equal(files.r2_buckets[0].bucket_name, "superboard-dev-files");
+	assert.equal(files.r2_buckets[0].bucket_name, "superboard-files");
 });
 
 test("generated custom config preserves target service bindings", () => {

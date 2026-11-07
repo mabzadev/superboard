@@ -179,6 +179,62 @@ describe("SuperBoard Files Worker", () => {
 		expect((await read("?include_deleted=true", "member")).status).toBe(403);
 	});
 
+	it("serves downloads from the files folder of the shared bucket", async () => {
+		const fileId = "44444444-4444-4444-8444-444444444444";
+		const ownerHash = Array.from(
+			new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("user-1"))),
+			(byte) => byte.toString(16).padStart(2, "0"),
+		).join("");
+		const ticket = await createDownloadTicket(
+			{
+				fileId,
+				ownerHash,
+				expiresAt: Math.floor(Date.now() / 1000) + 300,
+				nonce: "55555555-5555-4555-8555-555555555555",
+			},
+			"files-download-signing-key",
+		);
+		const db = {
+			prepare: () => ({
+				bind: () => ({
+					first: async () => ({
+						id: fileId,
+						user_id: "user-1",
+						object_key: "application-files/test/voice",
+						filename: "voice.m4a",
+						content_type: "audio/mp4",
+						byte_size: 5,
+						etag: "etag",
+						created_at: "2026-11-07T00:00:00.000Z",
+						updated_at: "2026-11-07T00:00:00.000Z",
+					}),
+				}),
+			}),
+		} as unknown as D1Database;
+		const requestedKeys: string[] = [];
+		const files = {
+			async get(key: string) {
+				requestedKeys.push(key);
+				return {
+					body: new Blob(["voice"]).stream(),
+					size: 5,
+					httpEtag: '"etag"',
+					writeHttpMetadata: (headers: Headers) => headers.set("content-type", "audio/mp4"),
+				};
+			},
+		} as unknown as R2Bucket;
+
+		const response = await app.request(
+			`/v1/downloads/${ticket}`,
+			{},
+			environment({ DB: db, FILES: files }),
+		);
+
+		expect(response.status).toBe(200);
+		await expect(response.text()).resolves.toBe("voice");
+		expect(requestedKeys).toEqual(["files/application-files/test/voice"]);
+	});
+
 	it("signs tickets with the active key and verifies an overlap key without exposing owners", async () => {
 		const now = 1_786_320_000;
 		const ticket = await createDownloadTicket(

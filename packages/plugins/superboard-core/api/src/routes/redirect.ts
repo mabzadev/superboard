@@ -2,6 +2,7 @@ import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono, type Context } from "hono";
 
+import { applicationFilesBucket } from "../lib/application-files-bucket";
 import { generateShortCode } from "../lib/crypto";
 import { readApiJson } from "../lib/request-body";
 import { Env } from "../types";
@@ -115,7 +116,7 @@ async function imageUrlFromBody(c: any, body: Record<string, any>) {
 
 	const name = String(file.name || "quick-link-image").replace(/[^a-zA-Z0-9._-]/g, "-");
 	const key = `quick-links/${crypto.randomUUID()}-${name}`;
-	await c.env.R2.put(key, await file.arrayBuffer(), {
+	await applicationFilesBucket(c.env.R2).put(key, await file.arrayBuffer(), {
 		httpMetadata: { contentType: file.type || "application/octet-stream" },
 		customMetadata: { kind: "quick_link_image" },
 	});
@@ -154,7 +155,7 @@ redirect.get("/public", async (c) => {
 redirect.get("/quick-link-assets/*", async (c) => {
 	if (!c.env.R2) return c.text("Not found", 404);
 	const key = decodeURIComponent(new URL(c.req.url).pathname.replace(/^\/quick-link-assets\//, ""));
-	const object = await c.env.R2.get(key);
+	const object = await applicationFilesBucket(c.env.R2).get(key);
 	if (!object) return c.text("Not found", 404);
 	return new Response(object.body, {
 		headers: {

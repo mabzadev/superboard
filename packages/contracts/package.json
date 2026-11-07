@@ -39,6 +39,7 @@
 		"./route-services": "./src/route-services.ts",
 		"./route-inventory": "./src/route-inventory.ts",
 		"./internal-request-signature": "./src/internal-request-signature.ts",
-		"./route-reference": "./src/route-reference.ts"
+		"./route-reference": "./src/route-reference.ts",
+		"./r2": "./src/r2.ts"
 	}
 }

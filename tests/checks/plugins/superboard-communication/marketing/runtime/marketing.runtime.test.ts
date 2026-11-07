@@ -3,6 +3,7 @@ import {
 	signProjectContext,
 	type InternalProjectContext,
 } from "@superboard/contracts/project-context";
+import { R2_FOLDERS } from "@superboard/contracts/r2";
 import {
 	createExecutionContext,
 	createMessageBatch,
@@ -74,6 +75,34 @@ async function signedRequest(
 }
 
 describe("Marketing in the Workers runtime", () => {
+	it("stores uploaded media under the marketing folder of the shared bucket", async () => {
+		const signed = await signedRequest(
+			"/internal/v1/media",
+			12,
+			"POST",
+			undefined,
+			"media-runtime",
+		);
+		const headers = new Headers(signed.headers);
+		headers.set("content-type", "image/png");
+		headers.set("x-filename", "hero.png");
+		const bytes = new Uint8Array([137, 80, 78, 71]);
+		const upload = await SELF.fetch(
+			new Request(signed.url, { method: "POST", headers, body: bytes }),
+		);
+		expect(upload.status).toBe(201);
+		const { data } = await upload.json<{ data: { id: string } }>();
+
+		const row = await env.DB.prepare("SELECT object_key FROM marketing_media WHERE id = ?")
+			.bind(data.id)
+			.first<{ object_key: string }>();
+		expect(row?.object_key).toBe(`12/${data.id}/hero.png`);
+		expect(await env.MEDIA.head(`${R2_FOLDERS.marketing}${row?.object_key}`)).not.toBeNull();
+
+		const download = await SELF.fetch(await signedRequest(`/internal/v1/media/${data.id}`, 12));
+		expect(new Uint8Array(await download.arrayBuffer())).toEqual(bytes);
+	});
+
 	it("keeps the published email available while its next revision is a draft", async () => {
 		const document = createEmailDesign("en", "notification");
 		document.locales.en!.subject = "Ready";

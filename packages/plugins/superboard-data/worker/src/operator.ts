@@ -6,6 +6,7 @@ import { readJsonObjectLimited, RequestBodyError } from "@superboard/contracts/r
 import { createFetchRouter, type FetchRouteHandler } from "@superboard/contracts/route-registry";
 
 import { FilesInputError } from "./errors.js";
+import { filesBucket } from "./files-bucket.js";
 import type { FilesEnv } from "./index.js";
 
 interface Upload {
@@ -208,7 +209,7 @@ operatorFileRoutes.defineRoute({ id: "files:operator:upload-content" }).put(
 			const piping = bounded.pipeTo(fixed.writable, {
 				signal: AbortSignal.any([abort.signal, AbortSignal.timeout(60000)]),
 			});
-			const storing = env.FILES.put(ticket.object_key, fixed.readable, {
+			const storing = filesBucket(env).put(ticket.object_key, fixed.readable, {
 				httpMetadata: { contentType: ticket.content_type },
 			});
 			let object: R2Object;
@@ -220,7 +221,7 @@ operatorFileRoutes.defineRoute({ id: "files:operator:upload-content" }).put(
 				throw error;
 			}
 			if (bytes !== ticket.byte_size) {
-				await env.FILES.delete(ticket.object_key);
+				await filesBucket(env).delete(ticket.object_key);
 				throw new FileOperationError(422, "FILE_SIZE_MISMATCH");
 			}
 			await env.DB.prepare(
@@ -230,7 +231,7 @@ operatorFileRoutes.defineRoute({ id: "files:operator:upload-content" }).put(
 				.run();
 			return json({ id: ticket.id, uploaded: true, byte_size: bytes });
 		} catch (error) {
-			await env.FILES.delete(ticket.object_key);
+			await filesBucket(env).delete(ticket.object_key);
 			await env.DB.prepare(
 				"UPDATE operator_file_uploads SET state='created' WHERE id=? AND project_id=? AND state='uploading'",
 			)
@@ -243,7 +244,7 @@ operatorFileRoutes.defineRoute({ id: "files:operator:upload-content" }).put(
 operatorFileRoutes.defineRoute({ id: "files:operator:upload-complete" }).post(
 	operatorPrefix + "/upload-tickets/:ticketId/complete",
 	uploadAction(async ({ env, projectId, actor }, ticket) => {
-		const object = await env.FILES.head(ticket.object_key);
+		const object = await filesBucket(env).head(ticket.object_key);
 		if (!object || object.size !== ticket.byte_size)
 			throw new FileOperationError(409, "UPLOAD_NOT_READY");
 		await env.DB.batch([
@@ -344,7 +345,7 @@ operatorFileRoutes.defineRoute({ id: "files:operator:object-download-ticket" }).
 operatorFileRoutes.defineRoute({ id: "files:operator:object-content" }).get(
 	operatorPrefix + "/objects/:id/content",
 	objectAction(async ({ env }, row) => {
-		const object = await env.FILES.get(row.object_key);
+		const object = await filesBucket(env).get(row.object_key);
 		if (!object) throw new FileOperationError(503, "FILE_STORAGE_UNAVAILABLE");
 		return new Response(object.body, {
 			headers: {
@@ -366,7 +367,7 @@ operatorFileRoutes.defineRoute({ id: "files:operator:collect-garbage" }).post(
 			.bind(projectId, new Date().toISOString())
 			.all<Upload>();
 		for (const row of rows.results) {
-			await env.FILES.delete(row.object_key);
+			await filesBucket(env).delete(row.object_key);
 			await env.DB.prepare(
 				"DELETE FROM operator_file_uploads WHERE project_id=? AND id=? AND state<>'completed'",
 			)

@@ -6,6 +6,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 	const prefix = `${platformName}-${target}`;
 	const suffix = selectedEnvironment === "production" ? "prod" : "dev";
 	const resourcePrefix = () => `${prefix}-${suffix}`;
+	const filesBucket = () => ({ name: `${resourcePrefix()}-files` });
 	const disabledFeatures = new Set(
 		String(args["disable-features"] || "")
 			.split(",")
@@ -51,14 +52,14 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 	const environmentResources = {
 		d1: { name: `${resourcePrefix()}-db`, id: null },
 		siteD1: { name: `${resourcePrefix()}-site-db`, id: null },
-		siteMedia: { name: `${resourcePrefix()}-site-media` },
+		siteMedia: filesBucket(),
 		siteSessionKv: { name: `${resourcePrefix()}-site-session`, id: null },
 		siteReleaseKv: {
 			name: `${resourcePrefix()}-site-last-verified-release`,
 			id: null,
 		},
 		kv: { name: resourcePrefix(), id: null },
-		r2: { name: resourcePrefix() },
+		r2: filesBucket(),
 		emailD1: { name: `${resourcePrefix()}-email-db`, id: null },
 		identityD1: { name: `${resourcePrefix()}-identity-db`, id: null },
 		filesD1: { name: `${resourcePrefix()}-files-db`, id: null },
@@ -83,10 +84,10 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 			}),
 		),
 		moduleR2: {
-			support: { name: `${resourcePrefix()}-support-v2-attachments` },
-			analytics: { name: `${resourcePrefix()}-analytics-events` },
-			marketing: { name: `${resourcePrefix()}-marketing-media` },
-			flows: { name: `${resourcePrefix()}-flows-archive` },
+			support: filesBucket(),
+			analytics: filesBucket(),
+			marketing: filesBucket(),
+			flows: filesBucket(),
 		},
 		moduleVectorize: {
 			supportKnowledge: {

@@ -2,6 +2,7 @@ import {
 	signProjectContext,
 	type InternalProjectContext,
 } from "@superboard/contracts/project-context";
+import { R2_FOLDERS } from "@superboard/contracts/r2";
 import {
 	createExecutionContext,
 	createMessageBatch,
@@ -369,7 +370,8 @@ describe("Analytics in the Workers runtime", () => {
 			.bind(event.event_id)
 			.first<{ archive_key: string; status: string }>();
 		expect(receipt?.status).toBe("projected");
-		const archived = await env.EVENT_ARCHIVE.get(receipt!.archive_key);
+		expect(await env.EVENT_ARCHIVE.head(receipt!.archive_key)).toBeNull();
+		const archived = await env.EVENT_ARCHIVE.get(`${R2_FOLDERS.analytics}${receipt!.archive_key}`);
 		const archivedText = await archived!.text();
 		expect(archivedText).not.toContain("private-runtime-installation-id");
 		expect(archivedText).not.toContain("private-runtime-session-id");

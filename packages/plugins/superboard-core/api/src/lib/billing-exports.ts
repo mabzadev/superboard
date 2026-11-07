@@ -1,4 +1,5 @@
 import type { BillingEnv } from "../types";
+import { applicationFilesBucket } from "./application-files-bucket";
 
 const DATASETS: Record<string, { sql: string; columns: string[] }> = {
 	transactions: {
@@ -147,7 +148,7 @@ export async function processBillingExport(env: BillingEnv, exportId: string) {
 			...(result.results || []).map((row) => columns.map((column) => csv(row[column])).join(",")),
 		];
 		const key = `purchases/${job.project_id}/${job.dataset}/${new Date().toISOString().slice(0, 10)}/${job.id}.csv`;
-		await env.R2.put(key, lines.join("\n"), {
+		await applicationFilesBucket(env.R2).put(key, lines.join("\n"), {
 			httpMetadata: {
 				contentType: "text/csv; charset=utf-8",
 				contentDisposition: `attachment; filename="superboard-${job.dataset}-${job.id}.csv"`,

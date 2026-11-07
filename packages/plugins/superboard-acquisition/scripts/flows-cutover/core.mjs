@@ -587,7 +587,7 @@ export function createBackupPlan({
 		databases: databases.map((database) => {
 			const identifier = database.id || database.name || "UNPROVISIONED";
 			const localPath = `${outputDirectory}/${database.name || "unknown"}.sql`;
-			const objectKey = `flows-cutover/${projectRef}/${stamp}/${database.name || "unknown"}.sql`;
+			const objectKey = `flows/flows-cutover/${projectRef}/${stamp}/${database.name || "unknown"}.sql`;
 			return {
 				logical_name: database.logical_name,
 				database_name: database.name || null,

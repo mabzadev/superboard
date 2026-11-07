@@ -125,7 +125,7 @@ export async function retainProductionBackups({
 	for (const descriptor of descriptors) {
 		const result = await backup({ descriptor, outputDirectory: directory, env });
 		const encrypted = await encryptBackupFile(result.paths.sql, key);
-		const object = `${bucket}/superboard/${context.target}/${context.revision}/${descriptor.service}/${Date.now()}.sql.enc`;
+		const object = `${bucket}/backups/${context.target}/${context.revision}/${descriptor.service}/${Date.now()}.sql.enc`;
 		await execute(
 			"pnpm",
 			["exec", "wrangler", "r2", "object", "put", object, "--file", encrypted, "--remote"],
