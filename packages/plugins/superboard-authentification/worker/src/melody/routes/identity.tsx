@@ -2,7 +2,12 @@ import { Hono } from "hono";
 
 import { routeConfig, typeConfig } from "../configs";
 import { identityHandler } from "../handlers";
-import { authMiddleware, configMiddleware, setupMiddleware } from "../middlewares";
+import {
+	authMiddleware,
+	captchaMiddleware,
+	configMiddleware,
+	setupMiddleware,
+} from "../middlewares";
 
 const identityRoutes = new Hono<typeConfig.Context>();
 export default identityRoutes;
@@ -14,6 +19,7 @@ identityRoutes.post(
 	routeConfig.IdentityRoute.AuthorizePassword,
 	setupMiddleware.validOrigin,
 	configMiddleware.enablePasswordSignIn,
+	captchaMiddleware.requireCaptcha,
 	identityHandler.postAuthorizePassword,
 );
 
@@ -34,6 +40,7 @@ identityRoutes.post(
 	routeConfig.IdentityRoute.AuthorizeAccount,
 	setupMiddleware.validOrigin,
 	configMiddleware.enableSignUp,
+	captchaMiddleware.requireCaptcha,
 	identityHandler.postAuthorizeAccount,
 );
 

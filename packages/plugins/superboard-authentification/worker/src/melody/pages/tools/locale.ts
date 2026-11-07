@@ -762,6 +762,18 @@ export const requestError = Object.freeze({
     fr: "Échec de l'authentification.",
     zh: '身份认证失败。',
   },
+  captchaRequired: {
+    en: 'Complete the security check before continuing.',
+    fr: 'Effectuez la vérification de sécurité avant de continuer.',
+  },
+  captchaFailed: {
+    en: 'The security check could not be verified. Please try again.',
+    fr: 'La vérification de sécurité n’a pas abouti. Veuillez réessayer.',
+  },
+  captchaUnavailable: {
+    en: 'The security check is temporarily unavailable. Please try again in a moment.',
+    fr: 'La vérification de sécurité est momentanément indisponible. Réessayez dans un instant.',
+  },
   noUser: {
     en: 'No user found.',
     fr: 'Aucun utilisateur trouvé.',

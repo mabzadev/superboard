@@ -16,9 +16,9 @@ describe("Identity Worker with D1", () => {
 			status: "ok",
 			schema: {
 				status: "current",
-				expectedMigration: "0151_authentication_configuration.sql",
-				latestMigration: "0151_authentication_configuration.sql",
-				appliedMigrationCount: 53,
+				expectedMigration: "0152_authentication_captcha.sql",
+				latestMigration: "0152_authentication_captcha.sql",
+				appliedMigrationCount: 54,
 			},
 			project_scope: { ready: true, unscoped_rows: 0 },
 		});

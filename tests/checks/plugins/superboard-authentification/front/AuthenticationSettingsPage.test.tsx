@@ -3,10 +3,12 @@ import {
 	authenticationSettingsFromEnvironment,
 	type AuthenticationSettingsSnapshot,
 } from "@superboard/contracts/authentication-settings";
+import { FrontContextProvider, useFrontContext } from "@superboard/front-ui/context";
 import { QueryClient, QueryClientProvider } from "@superboard/front-ui/query";
+import type { ReactNode } from "react";
 import { beforeAll, beforeEach, expect, test, vi } from "vitest";
 
-import { fireEvent, render, screen } from "../../../packages/supbrd-front-ui/render.js";
+import { fireEvent, render, screen, within } from "../../../packages/supbrd-front-ui/render.js";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), put: vi.fn() }));
 vi.mock(
@@ -18,8 +20,8 @@ vi.mock(
 	() => ({ useProjectSelection: () => ({ selectedProject: { id: "1-test" } }) }),
 );
 
-import AuthenticationSettingsPage from "../../../../../packages/plugins/superboard-authentification/src/front/AuthenticationSettingsPage.js";
 import { settingTab } from "../../../../../packages/plugins/superboard-authentification/src/front/authentication-settings-layout.js";
+import AuthenticationSettingsPage from "../../../../../packages/plugins/superboard-authentification/src/front/AuthenticationSettingsPage.js";
 
 let stored: AuthenticationSettingsSnapshot;
 beforeAll(() => {
@@ -49,22 +51,40 @@ beforeEach(() => {
 				stored = {
 					...stored,
 					revision: body.revision + 1,
-					values: { ...stored.values, ...(body.values as AuthenticationSettingsSnapshot["values"]) },
+					values: {
+						...stored.values,
+						...(body.values as AuthenticationSettingsSnapshot["values"]),
+					},
 				};
 				return { data: structuredClone(stored) };
 			},
 		);
 });
 
-function renderTab(tab: "sign-in" | "appearance" | "advanced") {
+function French({ children }: { children: ReactNode }) {
+	return (
+		<FrontContextProvider value={{ ...useFrontContext(), locale: "fr" }}>
+			{children}
+		</FrontContextProvider>
+	);
+}
+
+function renderTab(tab: "sign-in" | "appearance" | "advanced", locale: "en" | "fr" = "en") {
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	const page = <AuthenticationSettingsPage tab={tab} />;
 	render(
 		<QueryClientProvider client={client}>
-			<AuthenticationSettingsPage tab={tab} />
+			{locale === "fr" ? <French>{page}</French> : page}
 		</QueryClientProvider>,
 	);
 }
 
+async function captchaRow(name = "CAPTCHA (Turnstile)") {
+	const captcha = await screen.findByRole("switch", { name });
+	const row = captcha.closest("[data-setting='captcha']");
+	if (!(row instanceof HTMLElement)) throw new Error("The CAPTCHA setting row is missing");
+	return { captcha, row: within(row) };
+}
 
 test("a sign-in provider shows its fields only once it is switched on", async () => {
 	renderTab("sign-in");
@@ -73,7 +93,9 @@ test("a sign-in provider shows its fields only once it is switched on", async ()
 	expect(screen.queryByLabelText("Google client ID")).toBeNull();
 	fireEvent.click(google);
 	fireEvent.change(screen.getByLabelText("Google client ID"), { target: { value: "google-id" } });
-	await vi.waitFor(() => expect(stored.values.GOOGLE_AUTH_CLIENT_ID).toBe("google-id"), { timeout: 3000 });
+	await vi.waitFor(() => expect(stored.values.GOOGLE_AUTH_CLIENT_ID).toBe("google-id"), {
+		timeout: 3000,
+	});
 });
 
 test("switching a provider off removes its client ID", async () => {
@@ -97,7 +119,9 @@ test("an enabled provider whose secret is missing from the deployment is flagged
 test("an option that depends on a disabled setting stays hidden until it is enabled", async () => {
 	renderTab("sign-in");
 	const passwordless = await screen.findByRole("switch", { name: "Allow passwordless sign-in" });
-	expect(screen.queryByRole("switch", { name: "Send a sign-in link instead of a code" })).toBeNull();
+	expect(
+		screen.queryByRole("switch", { name: "Send a sign-in link instead of a code" }),
+	).toBeNull();
 	fireEvent.click(passwordless);
 	expect(
 		screen.getByRole("switch", { name: "Send a sign-in link instead of a code" }),
@@ -116,7 +140,9 @@ test("a duration is edited in its unit and saved in seconds", async () => {
 	const session = await screen.findByLabelText("Session lifetime");
 	expect(session).toHaveValue("30");
 	fireEvent.change(session, { target: { value: "45" } });
-	await vi.waitFor(() => expect(stored.values.SERVER_SESSION_EXPIRES_IN).toBe(2700), { timeout: 3000 });
+	await vi.waitFor(() => expect(stored.values.SERVER_SESSION_EXPIRES_IN).toBe(2700), {
+		timeout: 3000,
+	});
 });
 
 test("languages are switches and the last remaining one cannot be turned off", async () => {
@@ -124,7 +150,9 @@ test("languages are switches and the last remaining one cannot be turned off", a
 	const french = await screen.findByRole("switch", { name: "French" });
 	fireEvent.click(french);
 	expect(screen.getByRole("switch", { name: "English" })).toBeDisabled();
-	await vi.waitFor(() => expect(stored.values.SUPPORTED_LOCALES).toEqual(["en"]), { timeout: 3000 });
+	await vi.waitFor(() => expect(stored.values.SUPPORTED_LOCALES).toEqual(["en"]), {
+		timeout: 3000,
+	});
 });
 
 test("self-service actions are allowed by default and turning one off blocks it", async () => {
@@ -132,7 +160,9 @@ test("self-service actions are allowed by default and turning one off blocks it"
 	const changeEmail = await screen.findByRole("switch", { name: "Change their email address" });
 	expect(changeEmail).toBeChecked();
 	fireEvent.click(changeEmail);
-	await vi.waitFor(() => expect(stored.values.BLOCKED_POLICIES).toEqual(["change_email"]), { timeout: 3000 });
+	await vi.waitFor(() => expect(stored.values.BLOCKED_POLICIES).toEqual(["change_email"]), {
+		timeout: 3000,
+	});
 });
 
 test("an edit made while an automatic save is in flight is saved too", async () => {
@@ -175,4 +205,63 @@ test("every authentication setting is reachable from one settings tab", () => {
 		(key) => settingTab(key) === undefined,
 	);
 	expect(unreachable).toEqual([]);
+});
+
+test("the CAPTCHA site key stays hidden until CAPTCHA is switched on, then saves with it", async () => {
+	stored.deployment = { providerSecrets: { github: true, apple: false }, captchaSecret: true };
+	renderTab("advanced");
+	const { captcha, row } = await captchaRow();
+	expect(captcha).not.toBeChecked();
+	expect(row.getByText("Off")).toBeInTheDocument();
+	expect(row.queryByLabelText("Site key")).toBeNull();
+	fireEvent.click(captcha);
+	expect(row.getByText("To complete")).toBeInTheDocument();
+	fireEvent.change(row.getByLabelText("Site key"), {
+		target: { value: "1x00000000000000000000AA" },
+	});
+	expect(row.getByText("Enabled")).toBeInTheDocument();
+	await vi.waitFor(
+		() =>
+			expect(api.put).toHaveBeenLastCalledWith(expect.any(String), {
+				revision: 0,
+				values: { ENABLE_CAPTCHA: true, TURNSTILE_SITE_KEY: "1x00000000000000000000AA" },
+			}),
+		{ timeout: 3000 },
+	);
+	expect(screen.getByRole("status")).toHaveTextContent("All changes saved.");
+});
+
+test("CAPTCHA is flagged when the deployment lacks the Turnstile secret key", async () => {
+	stored.values.ENABLE_CAPTCHA = true;
+	stored.values.TURNSTILE_SITE_KEY = "1x00000000000000000000AA";
+	renderTab("advanced");
+	const { row } = await captchaRow();
+	expect(row.getByText("Secret missing")).toBeInTheDocument();
+	expect(row.getByText(/TURNSTILE_SECRET_KEY/u)).toBeInTheDocument();
+	expect(row.getByLabelText("Site key")).toHaveValue("1x00000000000000000000AA");
+	expect(row.queryByDisplayValue(/secret/iu)).toBeNull();
+});
+
+test("switching CAPTCHA off hides its fields and keeps the site key for later", async () => {
+	stored.deployment = { providerSecrets: { github: true, apple: false }, captchaSecret: true };
+	stored.values.ENABLE_CAPTCHA = true;
+	stored.values.TURNSTILE_SITE_KEY = "1x00000000000000000000AA";
+	renderTab("advanced");
+	const { captcha, row } = await captchaRow();
+	expect(row.getByText("Enabled")).toBeInTheDocument();
+	fireEvent.click(captcha);
+	expect(row.queryByLabelText("Site key")).toBeNull();
+	await vi.waitFor(() => expect(stored.values.ENABLE_CAPTCHA).toBe(false), { timeout: 3000 });
+	expect(stored.values.TURNSTILE_SITE_KEY).toBe("1x00000000000000000000AA");
+});
+
+test("the CAPTCHA settings are shown in French", async () => {
+	renderTab("advanced", "fr");
+	const { captcha, row } = await captchaRow("CAPTCHA (Turnstile)");
+	expect(row.getByText("Désactivé")).toBeInTheDocument();
+	fireEvent.click(captcha);
+	fireEvent.change(row.getByLabelText("Clé de site"), {
+		target: { value: "1x00000000000000000000AA" },
+	});
+	expect(row.getByText("Secret manquant")).toBeInTheDocument();
 });

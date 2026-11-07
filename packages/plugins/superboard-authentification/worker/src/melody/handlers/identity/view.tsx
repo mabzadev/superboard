@@ -21,11 +21,15 @@ import {
   requestUtil,
   validateUtil,
 } from '../../utils'
+import {
+  captchaConfiguration, turnstileScriptId, turnstileScriptUrl,
+} from '../../../captcha.js'
 
 const viewRender = async (
   c: Context<typeConfig.Context>,
   propsScript: HtmlEscapedString | Promise<HtmlEscapedString>,
   locale: typeConfig.Locale,
+  { captcha = false }: { captcha?: boolean } = {},
 ) => {
   const branding = brandingService.getBranding(c)
 
@@ -69,6 +73,14 @@ const viewRender = async (
         href={branding.fontUrl}
         rel='stylesheet'
       />
+      {captcha && (
+        <script
+          id={turnstileScriptId}
+          src={turnstileScriptUrl}
+          async
+          defer
+        />
+      )}
       <Style>
         {css`
           :root {
@@ -144,6 +156,9 @@ export const getAuthorizeView = async (c: Context<typeConfig.Context>) => {
   const githubClientId = isBasePolicy && githubClientSecret && githubAppName ? (githubAuthId ?? '') : ''
   const appleClientId = isBasePolicy && appleClientSecret ? (appleAuthId ?? '') : ''
   const oidcProviders = isBasePolicy && oidcAuthProviders ? oidcAuthProviders : []
+  const captchaSiteKey = (enablePasswordSignIn || enableSignUp)
+    ? (captchaConfiguration(env(c))?.siteKey ?? '')
+    : ''
   const branding = brandingService.getBranding(c)
 
   const propsScript = html`
@@ -169,6 +184,7 @@ export const getAuthorizeView = async (c: Context<typeConfig.Context>) => {
         allowPasskey: ${allowPasskey.toString()},
         allowRecoveryCode: ${allowRecoveryCode.toString()},
         enableUserAttribute: ${enableUserAttribute.toString()},
+        captchaSiteKey: "${captchaSiteKey}",
       }
     </script>
   `
@@ -177,6 +193,7 @@ export const getAuthorizeView = async (c: Context<typeConfig.Context>) => {
     c,
     propsScript,
     queryDto.locale,
+    { captcha: captchaSiteKey !== '' },
   )
 }
 

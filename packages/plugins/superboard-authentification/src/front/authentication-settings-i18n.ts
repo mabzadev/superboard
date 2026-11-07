@@ -108,6 +108,8 @@ const labels: Record<string, [string, string]> = {
 	OIDC_AUTH_PROVIDERS: ["OIDC provider names", "Noms des fournisseurs OIDC"],
 	ENABLE_EMAIL_LOG: ["Keep email logs", "Journaliser les e-mails"],
 	ENABLE_SIGN_IN_LOG: ["Keep sign-in logs", "Journaliser les connexions"],
+	ENABLE_CAPTCHA: ["CAPTCHA (Turnstile)", "CAPTCHA (Turnstile)"],
+	TURNSTILE_SITE_KEY: ["Site key", "Clé de site"],
 };
 const messages: Record<string, [string, string]> = {
 	"tab:sign-in": ["Sign-in", "Connexion"],
@@ -165,6 +167,20 @@ const messages: Record<string, [string, string]> = {
 	"section:limits:description": [
 		"Maximum number of sends or attempts before a temporary block.",
 		"Nombre maximal d’envois ou d’essais avant un blocage temporaire.",
+	],
+	"section:captcha": ["CAPTCHA", "CAPTCHA"],
+	"section:captcha:description": [
+		"Ask for a Cloudflare Turnstile check on registration and password sign-in, in the hosted pages and through the SDK.",
+		"Demandez une vérification Cloudflare Turnstile à l’inscription et à la connexion par mot de passe, sur les pages hébergées et via le SDK.",
+	],
+	"captcha:secret": ["Secret key", "Clé secrète"],
+	"captcha:secretStored": [
+		"The secret key is the TURNSTILE_SECRET_KEY deployment secret. It is never displayed.",
+		"La clé secrète est le secret de déploiement TURNSTILE_SECRET_KEY. Elle n’est jamais affichée.",
+	],
+	"captcha:secretMissing": [
+		"The Turnstile secret key is not configured on the server, so CAPTCHA is not enforced until TURNSTILE_SECRET_KEY is added to the deployment.",
+		"La clé secrète Turnstile n’est pas configurée sur le serveur : le CAPTCHA ne s’applique pas tant que TURNSTILE_SECRET_KEY n’est pas ajouté au déploiement.",
 	],
 	"section:selfService": ["Self-service actions", "Actions en libre-service"],
 	"section:selfService:description": [

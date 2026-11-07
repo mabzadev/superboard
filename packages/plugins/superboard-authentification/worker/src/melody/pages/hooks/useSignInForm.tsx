@@ -3,6 +3,7 @@ import { object } from "yup";
 
 import { View } from ".";
 import { routeConfig, typeConfig } from "../../configs";
+import { captchaFields, captchaRequired } from "../tools/captcha";
 import { validate, emailField, passwordField } from "../tools/form";
 import { AuthorizeParams } from "../tools/param";
 import { handleAuthorizeStep, parseAuthorizeBaseValues, parseResponse } from "../tools/request";
@@ -13,6 +14,9 @@ export interface UseSignInFormProps {
 	onSubmitError: (error: string | null) => void;
 	onSwitchView: (view: View) => void;
 	usePasswordlessAsMagicLink?: boolean;
+	captchaSiteKey?: string;
+	captchaToken?: string | null;
+	onCaptchaReset?: () => void;
 }
 
 const useSignInForm = ({
@@ -21,6 +25,9 @@ const useSignInForm = ({
 	onSubmitError,
 	onSwitchView,
 	usePasswordlessAsMagicLink = false,
+	captchaSiteKey = "",
+	captchaToken = null,
+	onCaptchaReset,
 }: UseSignInFormProps) => {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -73,6 +80,11 @@ const useSignInForm = ({
 				return;
 			}
 
+			if (captchaSiteKey && !captchaToken) {
+				onSubmitError(captchaRequired);
+				return;
+			}
+
 			setIsSubmitting(true);
 
 			fetch(routeConfig.IdentityRoute.AuthorizePassword, {
@@ -84,6 +96,7 @@ const useSignInForm = ({
 				body: JSON.stringify({
 					email,
 					password,
+					...captchaFields(captchaToken),
 					...parseAuthorizeBaseValues(params, locale),
 				}),
 			})
@@ -93,12 +106,24 @@ const useSignInForm = ({
 				})
 				.catch((error) => {
 					onSubmitError(error);
+					onCaptchaReset?.();
 				})
 				.finally(() => {
 					setIsSubmitting(false);
 				});
 		},
-		[params, locale, onSubmitError, onSwitchView, email, password, errors],
+		[
+			params,
+			locale,
+			onSubmitError,
+			onSwitchView,
+			email,
+			password,
+			errors,
+			captchaSiteKey,
+			captchaToken,
+			onCaptchaReset,
+		],
 	);
 
 	const handlePasswordlessSignIn = useCallback(

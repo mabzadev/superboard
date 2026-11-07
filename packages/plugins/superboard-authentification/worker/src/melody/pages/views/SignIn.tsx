@@ -1,7 +1,7 @@
 import { typeConfig } from '../../configs'
 import {
   View, useSubmitError, useSignInForm,
-  useInitialProps, usePasskeyVerifyForm,
+  useInitialProps, usePasskeyVerifyForm, useCaptcha,
 } from '../hooks'
 import { getAuthorizeParams } from '../tools/param'
 import { SignIn as SignInBlock } from '../blocks'
@@ -25,6 +25,8 @@ const SignIn = ({
     locale,
   })
 
+  const captcha = useCaptcha()
+
   const {
     values, errors, handleChange, handleSubmit, handlePasswordlessSignIn,
     isSubmitting, isPasswordlessSigningIn, magicLinkSent,
@@ -34,6 +36,9 @@ const SignIn = ({
     onSubmitError: handleSubmitError,
     onSwitchView,
     usePasswordlessAsMagicLink: initialProps.usePasswordlessAsMagicLink,
+    captchaSiteKey: initialProps.captchaSiteKey,
+    captchaToken: captcha.token,
+    onCaptchaReset: captcha.reset,
   })
 
   const {
@@ -65,6 +70,8 @@ const SignIn = ({
       isVerifyingPasskey={isVerifyingPasskey}
       isPasswordlessSigningIn={isPasswordlessSigningIn}
       magicLinkSent={magicLinkSent}
+      captchaResetCount={captcha.resetCount}
+      onCaptchaToken={captcha.setToken}
     />
   )
 }

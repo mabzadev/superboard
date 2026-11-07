@@ -58,6 +58,17 @@ et ses clés sont sous `/v1/auth/.well-known/`. Les jetons applicatifs ES256
 utilisent le jeu de clés `/v1/auth/.well-known/application-jwks.json`, distinct
 des clés OIDC hébergées.
 
+Quand le CAPTCHA Turnstile est activé avec une clé de site et le secret de
+déploiement `TURNSTILE_SECRET_KEY`, `POST /v1/auth/register`,
+`POST /v1/auth/signin/password` ainsi que l’inscription et la connexion par mot
+de passe des pages hébergées et de `/v1/auth/embedded-auth/v1/*` exigent un
+jeton Turnstile. Le client l’envoie dans le champ `captcha_token` du corps, dans
+le champ `cf-turnstile-response` ou dans l’en-tête `X-SuperBoard-Captcha-Token`.
+Un jeton absent renvoie `403` `captcha_required`, un jeton refusé `403`
+`captcha_failed`, et une vérification impossible `503` `captcha_unavailable`.
+Les connexions anonymes, par fournisseur ou par clé d’accès et le renouvellement
+de session n’en demandent pas.
+
 Les méthodes, corps, en-têtes SDK, signatures de fournisseurs et règles
 d’autorisation des opérations restent ceux de leurs handlers. Le registre
 `packages/contracts/src/route-registry.ts` enregistre les déclarations auprès des handlers et relie les

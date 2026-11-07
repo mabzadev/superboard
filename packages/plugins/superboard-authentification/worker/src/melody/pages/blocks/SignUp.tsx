@@ -1,5 +1,5 @@
 import {
-  Field, SecondaryButton, PasswordField, PrimaryButton, SubmitError, ViewTitle,
+  Field, SecondaryButton, PasswordField, PrimaryButton, SubmitError, ViewTitle, Turnstile,
 } from '../components'
 
 import {
@@ -20,6 +20,8 @@ export interface SignUpProps {
   initialProps: InitialProps;
   isSubmitting: boolean;
   userAttributes: userAttributeModel.Record[];
+  captchaResetCount: number;
+  onCaptchaToken: (token: string | null) => void;
 }
 
 const SignUp = ({
@@ -33,6 +35,8 @@ const SignUp = ({
   initialProps,
   isSubmitting,
   userAttributes,
+  captchaResetCount,
+  onCaptchaToken,
 }: SignUpProps) => {
   return (
     <>
@@ -127,6 +131,14 @@ const SignUp = ({
               )}
             />
           ))}
+          {initialProps.captchaSiteKey && (
+            <Turnstile
+              siteKey={initialProps.captchaSiteKey}
+              locale={locale}
+              resetCount={captchaResetCount}
+              onToken={onCaptchaToken}
+            />
+          )}
           <SubmitError error={submitError} />
           <PrimaryButton
             className='mt-4'

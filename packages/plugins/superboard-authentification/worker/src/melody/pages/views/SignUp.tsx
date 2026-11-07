@@ -2,7 +2,7 @@ import { useEffect } from 'hono/jsx'
 import { typeConfig } from '../../configs'
 import {
   useSubmitError, View, useSignUpForm,
-  useInitialProps,
+  useInitialProps, useCaptcha,
 } from '../hooks'
 import { getAuthorizeParams } from '../tools/param'
 import { SignUp as SignUpBlock } from '../blocks'
@@ -25,6 +25,7 @@ const SignUp = ({
     onSwitchView,
     locale,
   })
+  const captcha = useCaptcha()
   const {
     values, errors, handleChange, handleSubmit, isSubmitting, userAttributes, getSignUpInfo,
   } = useSignUpForm({
@@ -33,6 +34,8 @@ const SignUp = ({
     params,
     onSubmitError: handleSubmitError,
     onSwitchView,
+    captchaToken: captcha.token,
+    onCaptchaReset: captcha.reset,
   })
 
   useEffect(
@@ -54,6 +57,8 @@ const SignUp = ({
       initialProps={initialProps}
       isSubmitting={isSubmitting}
       userAttributes={userAttributes}
+      captchaResetCount={captcha.resetCount}
+      onCaptchaToken={captcha.setToken}
     />
   )
 }
