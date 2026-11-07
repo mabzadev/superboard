@@ -541,8 +541,10 @@ export async function getPublicSupportConfiguration(db: D1Database, projectId: n
 		.bind(projectId)
 		.all<Record<string, unknown>>();
 	return {
+		business_name: settings.business_name,
 		locale: settings.locale,
 		timezone: settings.timezone,
+		date_format: settings.date_format,
 		attachment_max_bytes: settings.attachment_max_bytes,
 		allowed_content_types: settings.allowed_content_types,
 		features: settings.features,

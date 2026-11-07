@@ -598,6 +598,76 @@ describe("Support provider outbound adapters", () => {
 		).rejects.toMatchObject({ code: "configuration_required", status: 422 });
 	});
 
+	it("names Google and Microsoft replies after the company name unless the connection sets its own", async () => {
+		const emailFetch = vi
+			.fn()
+			.mockResolvedValue(Response.json({ id: "email-1", status: "queued" }, { status: 202 }));
+		const env = {
+			EMAIL_SERVICE: { fetch: emailFetch },
+			EMAIL_INTERNAL_TOKEN: "internal-email-token",
+		} as unknown as Env;
+		const reply = (senderName: string | null, credentials: Record<string, unknown>) =>
+			outboundProviderRequest(env, {
+				...baseInput,
+				provider: "email_microsoft",
+				recipient: "customer@example.test",
+				senderName,
+				credentials: { access_token: "current-oauth-access", ...credentials },
+			});
+		await reply("Acme Care", {});
+		await reply("Acme Care", { from_name: "Help desk" });
+		await reply("Acme\r\nCare", {});
+		await reply(null, {});
+		const bodies = emailFetch.mock.calls.map(
+			(call) =>
+				JSON.parse(requestBody((call as [string, RequestInit])[1].body)) as Record<string, unknown>,
+		);
+		expect(bodies.map((body) => body.fromName)).toEqual([
+			"Acme Care",
+			"Help desk",
+			"Acme Care",
+			undefined,
+		]);
+		expect("fromName" in (bodies[3] ?? {})).toBe(false);
+	});
+
+	it("signs SMTP replies with the company name unless the connection sets its own", async () => {
+		const emailFetch = vi
+			.fn()
+			.mockResolvedValue(Response.json({ id: "email-1", status: "queued" }, { status: 202 }));
+		const env = {
+			EMAIL_SERVICE: { fetch: emailFetch },
+			EMAIL_INTERNAL_TOKEN: "internal-email-token",
+		} as unknown as Env;
+		const smtp = {
+			...baseInput,
+			provider: "smtp",
+			recipient: "customer@example.test",
+			senderName: "Acme Care",
+		};
+		await outboundProviderRequest(env, {
+			...smtp,
+			credentials: { host: "smtp.example.test", from_email: "help@example.test" },
+		});
+		await outboundProviderRequest(env, {
+			...smtp,
+			credentials: {
+				host: "smtp.example.test",
+				from_email: "help@example.test",
+				from_name: "Help desk",
+			},
+		});
+		const fromNames = emailFetch.mock.calls.map(
+			(call) =>
+				(
+					JSON.parse(requestBody((call as [string, RequestInit])[1].body)) as {
+						publicConfig: { from_name: string | null };
+					}
+				).publicConfig.from_name,
+		);
+		expect(fromNames).toEqual(["Acme Care", "Help desk"]);
+	});
+
 	it("uses provider-specific Messenger and Instagram account authorities", async () => {
 		const fetchMock = vi.fn().mockResolvedValue(Response.json({ message_id: "mid-1" }));
 		vi.stubGlobal("fetch", fetchMock);
@@ -695,3 +765,7 @@ describe("Support provider outbound adapters", () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });
+
+function requestBody(body: RequestInit["body"]): string {
+	return typeof body === "string" ? body : "";
+}

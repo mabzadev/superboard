@@ -1,7 +1,13 @@
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen, waitFor, within } from "../../../../../packages/supbrd-front-ui/render.js";
+import {
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within,
+} from "../../../../../packages/supbrd-front-ui/render.js";
 
 const services = vi.hoisted(() => ({
 	listIntegrations: vi.fn(),
@@ -67,6 +73,11 @@ async function selectWebhook(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("Support native integrations", () => {
+	beforeAll(() => {
+		if (!("PointerEvent" in window))
+			Object.defineProperty(window, "PointerEvent", { value: MouseEvent, configurable: true });
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 		services.listIntegrations.mockResolvedValue(page());
@@ -149,6 +160,32 @@ describe("Support native integrations", () => {
 		expect(signingSecret).toHaveValue("");
 		expect(screen.queryByDisplayValue("s".repeat(32))).not.toBeInTheDocument();
 		expect(notifications.success).toHaveBeenCalledWith("Support integration configured");
+	});
+
+	it("subscribes a webhook to every event with one switch that includes the others", async () => {
+		const user = userEvent.setup();
+		render(<SupportIntegrationsPage />);
+		await screen.findByText("No Support integrations");
+
+		await selectWebhook(user);
+		const created = screen.getByRole("switch", { name: "Conversation created" });
+		expect(created).toBeChecked();
+		expect(created).toBeEnabled();
+		fireEvent.click(screen.getByRole("switch", { name: "All current and future events" }));
+		expect(created).toBeChecked();
+		expect(created).toBeDisabled();
+		await user.type(screen.getByLabelText("Display name"), "Every event");
+		await user.type(screen.getByLabelText("Endpoint URL"), "https://hooks.example.com/all");
+		await user.type(screen.getByLabelText("Signing secret"), "a".repeat(32));
+		await user.click(screen.getByRole("button", { name: "Add and configure" }));
+		await waitFor(() =>
+			expect(services.createIntegration).toHaveBeenCalledWith(
+				"project-1",
+				expect.objectContaining({
+					settings: { endpoint_url: "https://hooks.example.com/all", events: ["*"] },
+				}),
+			),
+		);
 	});
 
 	it("rejects unsafe webhook endpoints before creating an integration", async () => {

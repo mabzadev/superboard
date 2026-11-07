@@ -8,11 +8,14 @@ import {
 } from "@superboard/front-ui/lib/Notifications.js";
 import { isSafePublicHttpsUrl } from "@superboard/front-ui/lib/validation.js";
 import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
+import {
+	SettingsActions,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+	SwitchField,
+} from "@superboard/front-ui/settings-form";
 import { Button } from "@superboard/front-ui/ui/button.js";
-import { Card, CardContent, CardHeader, CardTitle } from "@superboard/front-ui/ui/card.js";
-import { Checkbox } from "@superboard/front-ui/ui/checkbox.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
-import { Label } from "@superboard/front-ui/ui/label.js";
 import { Blocks, KeyRound, Link2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -27,6 +30,7 @@ import {
 } from "../../api/support/integrationsService.js";
 import { useSupportI18n } from "../../i18n.js";
 import { SupportModulePage as ModulePage } from "../support/SupportModulePage.js";
+import { SettingsSelectField, SettingsValidatedField } from "../support/SupportSettingsFields.js";
 import {
 	AccessNotice,
 	SupportEmpty,
@@ -349,29 +353,25 @@ function WebhookEvents({
 	const { t } = useSupportI18n();
 
 	return (
-		<fieldset className="space-y-2">
+		<fieldset className="space-y-3">
 			<legend className="text-sm font-medium">{t("Events")}</legend>
-			<div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-				{webhookEventOptions.map((event) => {
-					const id = `${idPrefix}-${event.value.replaceAll(".", "-").replace("*", "all")}`;
-					return (
-						<div className="flex items-center gap-2" key={event.value}>
-							<Checkbox
-								checked={selected.includes(event.value)}
-								disabled={disabled}
-								id={id}
-								onCheckedChange={(checked) =>
-									onChange(toggleWebhookEvent(selected, event.value, checked === true))
-								}
-							/>
-							<Label className="font-normal" htmlFor={id}>
-								{t(event.label)}
-							</Label>
-						</div>
-					);
-				})}
-			</div>
-			<p className="text-xs text-muted-foreground">
+			{webhookEventOptions.map((event) => {
+				const id = `${idPrefix}-${event.value.replaceAll(".", "-").replace("*", "all")}`;
+				const everything = event.value !== "*" && selected.includes("*");
+				return (
+					<SwitchField
+						key={event.value}
+						id={id}
+						label={t(event.label)}
+						checked={everything || selected.includes(event.value)}
+						disabled={disabled || everything}
+						onCheckedChange={(checked) => {
+							onChange(toggleWebhookEvent(selected, event.value, checked));
+						}}
+					/>
+				);
+			})}
+			<p className="text-xs text-kumo-subtle">
 				{t(
 					"“All current and future events” also subscribes this endpoint to event types added later.",
 				)}
@@ -679,7 +679,7 @@ export default function SupportIntegrationsPage() {
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<div className="space-y-4">
+				<div className="space-y-6">
 					<SupportSearchToolbar
 						query={resources.query}
 						setQuery={resources.setQuery}
@@ -688,133 +688,126 @@ export default function SupportIntegrationsPage() {
 						loading={resources.loading}
 					/>
 					<SupportError message={resources.error} />
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2 text-base">
-								<Blocks /> {t("Add an integration")}
-							</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-4">
+					<SettingsSection
+						title={
+							<span className="flex items-center gap-2">
+								<Blocks className="size-4" /> {t("Add an integration")}
+							</span>
+						}
+						description={t("Connect a team tool, commerce context, meeting service or webhook.")}
+					>
+						<SettingsRow>
 							<SupportError message={formError} />
-							<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-								<div className="space-y-2">
-									<Label htmlFor="support-integration-provider">{t("Integration")}</Label>
-									<select
-										className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-										id="support-integration-provider"
-										value={provider}
-										onChange={(event) => {
-											setProvider(event.target.value as IntegrationProvider);
-											setTarget("");
-											setWebhookEvents([...defaultWebhookEvents]);
-											setAdditionalSettings({});
-											setCredentials({});
-											setFormError(null);
-										}}
-									>
-										{Object.entries(integrations).map(([value, item]) => (
-											<option key={value} value={value}>
-												{t(item.label)}
-											</option>
-										))}
-									</select>
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="support-integration-name">{t("Display name")}</Label>
-									<Input
-										id="support-integration-name"
-										placeholder={t("{name} for Support", { name: t(definition.label) })}
-										value={name}
-										onChange={(event) => setName(event.target.value)}
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="support-integration-target">{t(definition.field)}</Label>
-									<Input
-										aria-invalid={provider === "webhook" && Boolean(target) && !targetIsValid}
-										id="support-integration-target"
-										placeholder={definition.placeholder && t(definition.placeholder)}
-										type={provider === "webhook" || provider === "api" ? "url" : "text"}
-										value={target}
-										onChange={(event) => setTarget(event.target.value)}
-									/>
-									{provider === "webhook" && target && !targetIsValid ? (
-										<p className="text-xs text-destructive" role="alert">
-											{t(
-												"Use a public HTTPS URL without credentials, fragments, or private-network addresses.",
-											)}
-										</p>
-									) : null}
-								</div>
-								{(definition.additionalSettings || []).map((field) => (
-									<div className="space-y-2" key={field.key}>
-										<Label htmlFor={`support-integration-${field.key}`}>{t(field.label)}</Label>
-										<Input
-											id={`support-integration-${field.key}`}
-											placeholder={
-												field.placeholder && t(field.placeholder, field.placeholderValues)
-											}
-											value={additionalSettings[field.key] || ""}
-											onChange={(event) =>
-												setAdditionalSettings((current) => ({
-													...current,
-													[field.key]: event.target.value,
-												}))
-											}
-										/>
-									</div>
+							<SettingsSelectField
+								id="support-integration-provider"
+								label={t("Integration")}
+								value={provider}
+								onChange={(event) => {
+									setProvider(event.target.value as IntegrationProvider);
+									setTarget("");
+									setWebhookEvents([...defaultWebhookEvents]);
+									setAdditionalSettings({});
+									setCredentials({});
+									setFormError(null);
+								}}
+							>
+								{Object.entries(integrations).map(([value, item]) => (
+									<option key={value} value={value}>
+										{t(item.label)}
+									</option>
 								))}
-							</div>
-							{provider === "webhook" ? (
+							</SettingsSelectField>
+							<SettingsTextField
+								id="support-integration-name"
+								label={t("Display name")}
+								placeholder={t("{name} for Support", { name: t(definition.label) })}
+								value={name}
+								onChange={(event) => setName(event.target.value)}
+							/>
+							<SettingsValidatedField
+								id="support-integration-target"
+								label={t(definition.field)}
+								aria-invalid={provider === "webhook" && Boolean(target) && !targetIsValid}
+								error={
+									provider === "webhook" && target && !targetIsValid
+										? t(
+												"Use a public HTTPS URL without credentials, fragments, or private-network addresses.",
+											)
+										: undefined
+								}
+								placeholder={definition.placeholder && t(definition.placeholder)}
+								type={provider === "webhook" || provider === "api" ? "url" : "text"}
+								value={target}
+								onChange={(event) => setTarget(event.target.value)}
+							/>
+							{(definition.additionalSettings || []).map((field) => (
+								<SettingsTextField
+									key={field.key}
+									id={`support-integration-${field.key}`}
+									label={t(field.label)}
+									placeholder={field.placeholder && t(field.placeholder, field.placeholderValues)}
+									value={additionalSettings[field.key] || ""}
+									onChange={(event) =>
+										setAdditionalSettings((current) => ({
+											...current,
+											[field.key]: event.target.value,
+										}))
+									}
+								/>
+							))}
+						</SettingsRow>
+						{provider === "webhook" ? (
+							<SettingsRow>
 								<WebhookEvents
 									idPrefix="new-support-webhook-event"
 									onChange={setWebhookEvents}
 									selected={webhookEvents}
 								/>
-							) : null}
-							{needsCredentialAccess && canManageCredentials ? (
-								<div className="space-y-3 rounded-lg border p-4">
-									<div>
-										<p className="flex items-center gap-2 text-sm font-medium">
-											<KeyRound className="size-4" /> {t("Secure credentials")}
-										</p>
-										<p className="mt-1 text-xs text-muted-foreground">
-											{t(
-												"Values are sent only to the write-only credential endpoint, encrypted per project, and cleared from this form after every submission attempt.",
-											)}
-										</p>
-									</div>
-									<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-										{definition.credentialFields.map((field) => (
-											<div className="space-y-2" key={field.key}>
-												<Label htmlFor={`new-integration-${field.key}`}>{t(field.label)}</Label>
-												<Input
-													autoComplete="new-password"
-													id={`new-integration-${field.key}`}
-													maxLength={field.maxLength}
-													minLength={field.minLength}
-													spellCheck={false}
-													type="password"
-													value={credentials[field.key] || ""}
-													onChange={(event) =>
-														setCredentials((current) => ({
-															...current,
-															[field.key]: event.target.value,
-														}))
-													}
-												/>
-											</div>
-										))}
-									</div>
+							</SettingsRow>
+						) : null}
+						{needsCredentialAccess && canManageCredentials ? (
+							<SettingsRow>
+								<div>
+									<p className="flex items-center gap-2 text-sm font-medium">
+										<KeyRound className="size-4" /> {t("Secure credentials")}
+									</p>
+									<p className="mt-1 text-xs text-kumo-subtle">
+										{t(
+											"Values are sent only to the write-only credential endpoint, encrypted per project, and cleared from this form after every submission attempt.",
+										)}
+									</p>
 								</div>
-							) : needsCredentialAccess ? (
+								{definition.credentialFields.map((field) => (
+									<SettingsTextField
+										key={field.key}
+										id={`new-integration-${field.key}`}
+										label={t(field.label)}
+										autoComplete="new-password"
+										maxLength={field.maxLength}
+										minLength={field.minLength}
+										spellCheck={false}
+										type="password"
+										value={credentials[field.key] || ""}
+										onChange={(event) =>
+											setCredentials((current) => ({
+												...current,
+												[field.key]: event.target.value,
+											}))
+										}
+									/>
+								))}
+							</SettingsRow>
+						) : needsCredentialAccess ? (
+							<SettingsRow>
 								<AccessNotice>
 									{t(
 										"Only project owners and administrators can create or replace integration credentials. Existing secrets are never loaded into this page.",
 									)}
 								</AccessNotice>
-							) : null}
-							<div className="flex justify-end">
+							</SettingsRow>
+						) : null}
+						<SettingsRow>
+							<SettingsActions>
 								<Button
 									aria-busy={saving}
 									disabled={saving || !canCreate}
@@ -822,9 +815,9 @@ export default function SupportIntegrationsPage() {
 								>
 									<Plus /> {saving ? t("Creating…") : t("Add and configure")}
 								</Button>
-							</div>
-						</CardContent>
-					</Card>
+							</SettingsActions>
+						</SettingsRow>
+					</SettingsSection>
 					{resources.loading ? (
 						<SupportLoading />
 					) : resources.items.length === 0 ? (
@@ -835,68 +828,71 @@ export default function SupportIntegrationsPage() {
 							)}
 						/>
 					) : (
-						<div className="grid gap-3">
+						<SettingsSection
+							title={t("Connected integrations")}
+							description={t(
+								"Each integration shows whether it is ready to process Support events.",
+							)}
+						>
 							{resources.items.map((item) => {
 								const itemProvider = isIntegrationProvider(item.provider) ? item.provider : null;
 								const itemDefinition = itemProvider ? integrations[itemProvider] : null;
 								const canConfigure = canManageCredentials && Boolean(itemDefinition);
 								return (
-									<Card key={item.id}>
-										<CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-											<div>
+									<SettingsRow key={item.id}>
+										<div className="flex flex-wrap items-start justify-between gap-3">
+											<div className="min-w-0">
 												<p className="font-medium">{item.display_name}</p>
-												<p className="text-sm text-muted-foreground">
+												<p className="text-sm text-kumo-subtle">
 													{t(itemDefinition?.label || item.provider)}
 												</p>
 												{item.status === "configuration_required" ? (
-													<p className="mt-1 text-xs text-muted-foreground">
+													<p className="mt-1 text-xs text-kumo-subtle">
 														{t(
 															"Save all required credentials before this integration can process Support events.",
 														)}
 													</p>
 												) : null}
 											</div>
-											<div className="flex items-center gap-2">
-												<SupportStatus value={item.status} />
-												{canManageCredentials &&
-												itemProvider &&
-												oauthProviders.has(itemProvider) ? (
-													<Button
-														disabled={saving || configuring}
-														variant="outline"
-														onClick={() => void authorizeExisting(item)}
-													>
-														<Link2 /> {t("Authorize")}
-													</Button>
-												) : null}
-												{canConfigure ? (
-													<Button
-														disabled={saving || configuring}
-														variant="outline"
-														onClick={() => openConfiguration(item)}
-													>
-														<KeyRound />
-														{!itemDefinition?.credentialFields.length ||
-														item.status === "configuration_required"
-															? t("Configure")
-															: t("Replace credentials")}
-													</Button>
-												) : null}
+											<SupportStatus value={item.status} />
+										</div>
+										<SettingsActions className="gap-2">
+											{canManageCredentials && itemProvider && oauthProviders.has(itemProvider) ? (
 												<Button
-													aria-label={t("Delete {name}", { name: item.display_name })}
 													disabled={saving || configuring}
-													size="icon"
-													variant="ghost"
-													onClick={() => void remove(item)}
+													variant="outline"
+													onClick={() => void authorizeExisting(item)}
 												>
-													<Trash2 />
+													<Link2 /> {t("Authorize")}
 												</Button>
-											</div>
-										</CardContent>
-									</Card>
+											) : null}
+											{canConfigure ? (
+												<Button
+													disabled={saving || configuring}
+													variant="outline"
+													onClick={() => openConfiguration(item)}
+												>
+													<KeyRound />
+													{!itemDefinition?.credentialFields.length ||
+													item.status === "configuration_required"
+														? t("Configure")
+														: t("Replace credentials")}
+												</Button>
+											) : null}
+											<Button
+												aria-label={t("Delete {name}", { name: item.display_name })}
+												disabled={saving || configuring}
+												size="icon"
+												variant="ghost"
+												onClick={() => void remove(item)}
+											>
+												<Trash2 />
+											</Button>
+										</SettingsActions>
+									</SettingsRow>
 								);
 							})}
-						</div>
+						</SettingsSection>
 					)}
 					<SupportLoadMore
 						visible={resources.hasMore}
@@ -904,16 +900,16 @@ export default function SupportIntegrationsPage() {
 						onClick={resources.loadMore}
 					/>
 					{selectedIntegration && selectedDefinition && selectedProvider ? (
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-base">
-									{t("Secure configuration for {name}", { name: selectedIntegration.display_name })}
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="space-y-4">
+						<SettingsSection
+							title={t("Secure configuration for {name}", {
+								name: selectedIntegration.display_name,
+							})}
+							description={t("Saving replaces the target and the complete credential set.")}
+						>
+							<SettingsRow>
 								<SupportError message={configurationError} />
 								{selectedDefinition.credentialFields.length > 0 && (
-									<p className="text-sm text-muted-foreground">
+									<p className="text-sm text-kumo-subtle">
 										{t(
 											"Stored credentials are write-only. They are never returned by the API or loaded into this page; saving replaces the complete credential set.",
 										)}
@@ -928,89 +924,83 @@ export default function SupportIntegrationsPage() {
 										</span>
 									</div>
 								) : null}
-								<div className="space-y-2">
-									<Label htmlFor="configured-integration-target">
-										{t(selectedDefinition.field)}
-									</Label>
-									<Input
-										aria-invalid={
-											selectedProvider === "webhook" &&
-											Boolean(configurationTarget) &&
-											!configurationTargetIsValid
-										}
-										id="configured-integration-target"
-										placeholder={
-											selectedDefinition.placeholder && t(selectedDefinition.placeholder)
-										}
-										type={
-											selectedProvider === "webhook" || selectedProvider === "api" ? "url" : "text"
-										}
-										value={configurationTarget}
-										onChange={(event) => setConfigurationTarget(event.target.value)}
-									/>
-									{selectedProvider === "webhook" &&
-									configurationTarget &&
-									!configurationTargetIsValid ? (
-										<p className="text-xs text-destructive" role="alert">
-											{t(
-												"Use a public HTTPS URL without credentials, fragments, or private-network addresses.",
-											)}
-										</p>
-									) : null}
-								</div>
+								<SettingsValidatedField
+									id="configured-integration-target"
+									label={t(selectedDefinition.field)}
+									aria-invalid={
+										selectedProvider === "webhook" &&
+										Boolean(configurationTarget) &&
+										!configurationTargetIsValid
+									}
+									error={
+										selectedProvider === "webhook" &&
+										configurationTarget &&
+										!configurationTargetIsValid
+											? t(
+													"Use a public HTTPS URL without credentials, fragments, or private-network addresses.",
+												)
+											: undefined
+									}
+									placeholder={selectedDefinition.placeholder && t(selectedDefinition.placeholder)}
+									type={
+										selectedProvider === "webhook" || selectedProvider === "api" ? "url" : "text"
+									}
+									value={configurationTarget}
+									onChange={(event) => setConfigurationTarget(event.target.value)}
+								/>
 								{(selectedDefinition.additionalSettings || []).map((field) => (
-									<div className="space-y-2" key={field.key}>
-										<Label htmlFor={`configured-integration-${field.key}`}>{t(field.label)}</Label>
-										<Input
-											disabled={configuring}
-											id={`configured-integration-${field.key}`}
-											placeholder={
-												field.placeholder && t(field.placeholder, field.placeholderValues)
-											}
-											value={configurationAdditionalSettings[field.key] || ""}
-											onChange={(event) =>
-												setConfigurationAdditionalSettings((current) => ({
-													...current,
-													[field.key]: event.target.value,
-												}))
-											}
-										/>
-									</div>
+									<SettingsTextField
+										key={field.key}
+										disabled={configuring}
+										id={`configured-integration-${field.key}`}
+										label={t(field.label)}
+										placeholder={field.placeholder && t(field.placeholder, field.placeholderValues)}
+										value={configurationAdditionalSettings[field.key] || ""}
+										onChange={(event) =>
+											setConfigurationAdditionalSettings((current) => ({
+												...current,
+												[field.key]: event.target.value,
+											}))
+										}
+									/>
 								))}
-								{selectedProvider === "webhook" ? (
+							</SettingsRow>
+							{selectedProvider === "webhook" ? (
+								<SettingsRow>
 									<WebhookEvents
 										disabled={configuring}
 										idPrefix="configured-support-webhook-event"
 										onChange={setConfigurationEvents}
 										selected={configurationEvents}
 									/>
-								) : null}
-								<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+								</SettingsRow>
+							) : null}
+							{selectedDefinition.credentialFields.length > 0 ? (
+								<SettingsRow>
 									{selectedDefinition.credentialFields.map((field) => (
-										<div className="space-y-2" key={field.key}>
-											<Label htmlFor={`configured-integration-${field.key}`}>
-												{t("New {field}", { field: t(field.label).toLowerCase() })}
-											</Label>
-											<Input
-												autoComplete="new-password"
-												disabled={configuring}
-												id={`configured-integration-${field.key}`}
-												maxLength={field.maxLength}
-												minLength={field.minLength}
-												spellCheck={false}
-												type="password"
-												value={configurationCredentials[field.key] || ""}
-												onChange={(event) =>
-													setConfigurationCredentials((current) => ({
-														...current,
-														[field.key]: event.target.value,
-													}))
-												}
-											/>
-										</div>
+										<SettingsTextField
+											key={field.key}
+											autoComplete="new-password"
+											disabled={configuring}
+											id={`configured-integration-${field.key}`}
+											label={t("New {field}", { field: t(field.label).toLowerCase() })}
+											maxLength={field.maxLength}
+											minLength={field.minLength}
+											spellCheck={false}
+											type="password"
+											value={configurationCredentials[field.key] || ""}
+											onChange={(event) =>
+												setConfigurationCredentials((current) => ({
+													...current,
+													[field.key]: event.target.value,
+												}))
+											}
+										/>
 									))}
-								</div>
-								<div className="flex justify-end gap-2">
+								</SettingsRow>
+							) : null}
+							<SettingsRow>
+								<SettingsActions>
 									<Button disabled={configuring} variant="outline" onClick={closeConfiguration}>
 										{t("Cancel")}
 									</Button>
@@ -1026,9 +1016,9 @@ export default function SupportIntegrationsPage() {
 									>
 										{configuring ? t("Saving…") : t("Save securely")}
 									</Button>
-								</div>
-							</CardContent>
-						</Card>
+								</SettingsActions>
+							</SettingsRow>
+						</SettingsSection>
 					) : null}
 				</div>
 			)}
