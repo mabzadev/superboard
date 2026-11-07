@@ -152,16 +152,32 @@ export function gatewayAdmin(
 	routes.defineRoute({ id: "api:gateway:routes-list" }).get(
 		"/routes",
 		operatorAction(async (c, { instance }) => {
-			const rows = await c.env.DB.prepare(
-				"SELECT route_id,route_json,revision,updated_at FROM gateway_operator_routes WHERE instance_id=? ORDER BY route_id",
-			)
-				.bind(instance)
-				.all<{ route_id: string; route_json: string; revision: number; updated_at: string }>();
-			return json(
-				rows.results.map(({ route_json, ...row }) => ({
-					...routeInput.parse(JSON.parse(route_json)),
-					...row,
-				})),
+			const [rows, policy] = await Promise.all([
+				c.env.DB.prepare(
+					"SELECT route_id,route_json,revision,updated_at FROM gateway_operator_routes WHERE instance_id=? ORDER BY route_id",
+				)
+					.bind(instance)
+					.all<{ route_id: string; route_json: string; revision: number; updated_at: string }>(),
+				c.env.DB.prepare(
+					"SELECT version,policy_json FROM gateway_operator_policies WHERE instance_id=?",
+				)
+					.bind(instance)
+					.first<{ version: number; policy_json: string }>(),
+			]);
+			return Response.json(
+				{
+					data: rows.results.map(({ route_json, ...row }) => ({
+						...routeInput.parse(JSON.parse(route_json)),
+						...row,
+					})),
+					access_policy: {
+						allowed_operator_ids: policy
+							? policyInput.parse(JSON.parse(policy.policy_json)).allowed_operator_ids
+							: [],
+						version: policy?.version ?? null,
+					},
+				},
+				{ headers: { "Cache-Control": "private, no-store" } },
 			);
 		}),
 	);

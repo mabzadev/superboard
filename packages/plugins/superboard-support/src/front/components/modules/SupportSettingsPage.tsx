@@ -11,23 +11,18 @@ import {
 	moduleErrorMessage,
 } from "@superboard/front-ui/modules/ModulePage.js";
 import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
-import { Button } from "@superboard/front-ui/ui/button.js";
-import { Card, CardContent, CardHeader, CardTitle } from "@superboard/front-ui/ui/card.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
-import { Label } from "@superboard/front-ui/ui/label.js";
-import { Switch } from "@superboard/front-ui/ui/switch.js";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import {
-	Activity,
-	Bell,
-	CheckCheck,
-	Clock3,
-	DatabaseZap,
-	RefreshCw,
-	RotateCcw,
-	Save,
-	Trash2,
-} from "lucide-react";
+	AutosaveIndicator,
+	SettingsActions,
+	SettingsDependents,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+	SwitchField,
+	useSettingsAutosave,
+} from "@superboard/front-ui/settings-form";
+import { Button } from "@superboard/front-ui/ui/button.js";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -39,14 +34,8 @@ import {
 	type SupportOperationsHealth,
 } from "../../api/support/operationsHealthService.js";
 import {
-	deleteSupportNotification,
-	getSupportNotifications,
 	getSupportNotificationPreferences,
-	markAllSupportNotificationsRead,
-	markSupportNotificationRead,
-	snoozeSupportNotification,
 	updateSupportNotificationPreferences,
-	type SupportNotification,
 	type SupportNotificationPreferences,
 } from "../../api/support/operationsService.js";
 import {
@@ -56,62 +45,153 @@ import {
 } from "../../api/support/settingsService.js";
 import { useSupportI18n } from "../../i18n.js";
 import { SupportDetail } from "../support/SupportModulePage.js";
+import { SettingsDurationField, SettingsValidatedField } from "../support/SupportSettingsFields.js";
 import {
 	AccessNotice,
-	SupportEmpty,
+	SupportLoading,
 	SupportMetric,
 	SupportStatus,
 	supportChannelLabel,
 	supportStatusLabel,
 } from "../support/SupportUi.js";
 import SupportCaptainPage from "./SupportCaptainPage.js";
-import SupportContactsPage from "./SupportContactsPage.js";
 import SupportIntegrationsPage from "./SupportIntegrationsPage.js";
-import { SupportQualityPage } from "./SupportQualityPage.js";
 import SupportWorkforcePage from "./SupportWorkforcePage.js";
 
 const sharedSettings = {
 	workforce: { label: "Agents and teams", Component: SupportWorkforcePage },
-	contacts: { label: "Contacts", Component: () => <SupportContactsPage embedded /> },
 	integrations: { label: "Integrations", Component: SupportIntegrationsPage },
 	assistant: { label: "AI assistant", Component: SupportCaptainPage },
 };
 
-const defaults: SupportProjectSettings = {
-	business_name: "",
-	locale: "en",
-	timezone: "UTC",
-	date_format: "YYYY-MM-DD",
-	auto_resolve_minutes: null,
-	attachment_max_bytes: 10 * 1024 * 1024,
-	allowed_content_types: [],
-	features: {},
+const bytesPerMegabyte = 1024 * 1024;
+const maximumAttachmentMegabytes = 10;
+const defaultAutoResolveMinutes = 1440;
+const minimumAutoResolveMinutes = 1;
+const maximumAutoResolveMinutes = 525_600;
+const eventNamePattern = /^[a-z][a-z0-9_.-]*$/u;
+
+const deliveryChannels = [
+	["email_enabled", "Email"],
+	["push_enabled", "Mobile push"],
+	["browser_enabled", "Browser"],
+	["in_app_enabled", "In-app"],
+	["audio_enabled", "Notification sounds"],
+] as const;
+type DeliveryKey = (typeof deliveryChannels)[number][0];
+const builtInEvents = [
+	["conversation_assigned", "Conversation assignments"],
+	["workflow", "Automation notifications"],
+] as const;
+const builtInEventNames = new Set<string>(builtInEvents.map(([name]) => name));
+
+type SettingsDraft = {
+	project: string;
+	value: SupportProjectSettings;
+	contentTypes: string;
+	attachmentSize: string;
+	autoResolveInput: number | "";
 };
-const notificationDefaults: SupportNotificationPreferences = {
-	email_enabled: true,
-	push_enabled: true,
-	browser_enabled: true,
-	in_app_enabled: true,
-	audio_enabled: true,
-	muted_event_types: [],
+type PreferencesDraft = {
+	project: string;
+	delivery: Record<DeliveryKey, boolean>;
+	muted: string[];
+	otherMuted: string;
 };
+
+function commaList(value: string) {
+	return value
+		.split(",")
+		.map((item) => item.trim())
+		.filter(Boolean);
+}
+
+function megabytes(bytes: number) {
+	return String(Math.round((bytes / bytesPerMegabyte) * 100) / 100);
+}
+
+function attachmentBytes(size: string) {
+	const value = Number(size);
+	if (size.trim() === "" || !Number.isFinite(value)) return null;
+	const bytes = Math.round(value * bytesPerMegabyte);
+	return bytes >= 1 && bytes <= maximumAttachmentMegabytes * bytesPerMegabyte ? bytes : null;
+}
+
+function settingsDraft(project: string, settings: SupportProjectSettings): SettingsDraft {
+	return {
+		project,
+		value: settings,
+		contentTypes: settings.allowed_content_types.join(", "),
+		attachmentSize: megabytes(settings.attachment_max_bytes),
+		autoResolveInput: settings.auto_resolve_minutes ?? defaultAutoResolveMinutes,
+	};
+}
+
+function autoResolveValid(minutes: number | ""): minutes is number {
+	return (
+		minutes !== "" && minutes >= minimumAutoResolveMinutes && minutes <= maximumAutoResolveMinutes
+	);
+}
+
+function settingsPayload(draft: SettingsDraft): SupportProjectSettings {
+	const { value } = draft;
+	return {
+		business_name: value.business_name,
+		locale: value.locale,
+		timezone: value.timezone,
+		date_format: value.date_format,
+		auto_resolve_minutes: value.auto_resolve_minutes,
+		attachment_max_bytes: value.attachment_max_bytes,
+		allowed_content_types: commaList(draft.contentTypes),
+		features: value.features,
+	};
+}
+
+function preferencesDraft(
+	project: string,
+	preferences: SupportNotificationPreferences,
+): PreferencesDraft {
+	return {
+		project,
+		delivery: {
+			email_enabled: preferences.email_enabled,
+			push_enabled: preferences.push_enabled,
+			browser_enabled: preferences.browser_enabled,
+			in_app_enabled: preferences.in_app_enabled,
+			audio_enabled: preferences.audio_enabled,
+		},
+		muted: preferences.muted_event_types.filter((name) => builtInEventNames.has(name)),
+		otherMuted: preferences.muted_event_types
+			.filter((name) => !builtInEventNames.has(name))
+			.join(", "),
+	};
+}
+
+function preferencesPayload(draft: PreferencesDraft): SupportNotificationPreferences {
+	return {
+		...draft.delivery,
+		muted_event_types: [
+			...new Set([
+				...builtInEvents.map(([name]) => name).filter((name) => draft.muted.includes(name)),
+				...commaList(draft.otherMuted),
+			]),
+		],
+	};
+}
 
 export default function SupportSettingsPage() {
 	const { t, locale } = useSupportI18n();
 	const { selectedProject, selectedInstance } = useProjectSelection();
 	const projectRef = selectedProject?.id;
 	const administrator = new Set(["owner", "admin"]).has(selectedInstance?.role || "member");
-	const [settings, setSettings] = useState(defaults);
-	const [featuresJson, setFeaturesJson] = useState("{}");
+	const [settingsState, setSettingsState] = useState<SettingsDraft | null>(null);
+	const [preferencesState, setPreferencesState] = useState<PreferencesDraft | null>(null);
 	const [operations, setOperations] = useState<SupportOperationsHealth | null>(null);
 	const [deadLetters, setDeadLetters] = useState<SupportDeadLetter[]>([]);
-	const [notifications, setNotifications] = useState<SupportNotification[]>([]);
-	const [notificationPreferences, setNotificationPreferences] = useState(notificationDefaults);
-	const [mutedEvents, setMutedEvents] = useState("");
-	const [notificationsLoading, setNotificationsLoading] = useState(true);
 	const [notificationError, setNotificationError] = useState<string | null>(null);
-	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const settings = settingsState?.project === projectRef ? settingsState : null;
+	const preferences = preferencesState?.project === projectRef ? preferencesState : null;
 
 	const [activeTab, setActiveTab] = useState(() => {
 		const requested =
@@ -123,17 +203,59 @@ export default function SupportSettingsPage() {
 			: "general";
 	});
 
+	const settingsValid =
+		settings !== null &&
+		(settings.value.auto_resolve_minutes === null || autoResolveValid(settings.autoResolveInput)) &&
+		attachmentBytes(settings.attachmentSize) !== null;
+	const settingsAutosave = useSettingsAutosave({
+		resourceKey: `settings:${settings?.project ?? ""}`,
+		value: settings ? { project: settings.project, settings: settingsPayload(settings) } : null,
+		enabled: settingsValid,
+		save: async (request) => {
+			if (!request) return;
+			try {
+				await updateSupportSettings(request.project, request.settings);
+			} catch (cause) {
+				showErrorNotification(moduleErrorMessage(cause, locale));
+				throw cause;
+			}
+		},
+	});
+	const otherMutedInvalid =
+		preferences !== null &&
+		!commaList(preferences.otherMuted).every((name) => eventNamePattern.test(name));
+	const preferencesAutosave = useSettingsAutosave({
+		resourceKey: `preferences:${preferences?.project ?? ""}`,
+		value: preferences
+			? { project: preferences.project, preferences: preferencesPayload(preferences) }
+			: null,
+		enabled: preferences !== null && !otherMutedInvalid,
+		save: async (request) => {
+			if (!request) return;
+			try {
+				await updateSupportNotificationPreferences(request.project, request.preferences);
+			} catch (cause) {
+				showErrorNotification(moduleErrorMessage(cause, locale));
+				throw cause;
+			}
+		},
+	});
+
+	const updateSettings = (change: (draft: SettingsDraft) => SettingsDraft) => {
+		setSettingsState((current) => (current ? change(current) : current));
+	};
+	const updatePreferences = (change: (draft: PreferencesDraft) => PreferencesDraft) => {
+		setPreferencesState((current) => (current ? change(current) : current));
+	};
+
 	const loadSettings = useCallback(async () => {
 		if (!projectRef) return;
 		try {
 			const loaded = (await getSupportSettings(projectRef)).data.settings;
-			setSettings(loaded);
-			setFeaturesJson(JSON.stringify(loaded.features, null, 2));
+			setSettingsState(settingsDraft(projectRef, loaded));
 			setError(null);
 		} catch (cause) {
 			setError(moduleErrorMessage(cause, locale));
-		} finally {
-			setLoading(false);
 		}
 	}, [projectRef, locale]);
 	const loadOperations = useCallback(async () => {
@@ -149,25 +271,19 @@ export default function SupportSettingsPage() {
 			setError(moduleErrorMessage(cause, locale));
 		}
 	}, [administrator, projectRef, locale]);
-	const loadNotifications = useCallback(async () => {
+	const loadPreferences = useCallback(async () => {
 		if (!projectRef) return;
 		try {
-			const [items, preferences] = await Promise.all([
-				getSupportNotifications(projectRef),
-				getSupportNotificationPreferences(projectRef),
-			]);
-			setNotifications(items.data);
-			setNotificationPreferences(preferences.data);
-			setMutedEvents(preferences.data.muted_event_types.join(", "));
+			const loaded = (await getSupportNotificationPreferences(projectRef)).data;
+			setPreferencesState(preferencesDraft(projectRef, loaded));
 			setNotificationError(null);
 		} catch (cause) {
 			setNotificationError(moduleErrorMessage(cause, locale));
-		} finally {
-			setNotificationsLoading(false);
 		}
 	}, [projectRef, locale]);
+	const settingsLoaded = settings !== null;
 	useEffect(() => {
-		if (activeTab !== "general") return;
+		if ((activeTab !== "general" && activeTab !== "operations") || settingsLoaded) return;
 		let active = true;
 		Promise.resolve()
 			.then(async () => {
@@ -179,7 +295,7 @@ export default function SupportSettingsPage() {
 		return () => {
 			active = false;
 		};
-	}, [activeTab, loadSettings, locale]);
+	}, [activeTab, loadSettings, settingsLoaded, locale]);
 	useEffect(() => {
 		if (activeTab !== "operations") return;
 		let active = true;
@@ -194,12 +310,13 @@ export default function SupportSettingsPage() {
 			active = false;
 		};
 	}, [activeTab, loadOperations, locale]);
+	const preferencesLoaded = preferences !== null;
 	useEffect(() => {
-		if (activeTab !== "notifications") return;
+		if (activeTab !== "notifications" || preferencesLoaded) return;
 		let active = true;
 		Promise.resolve()
 			.then(async () => {
-				if (active) await loadNotifications();
+				if (active) await loadPreferences();
 			})
 			.catch((cause: unknown) => {
 				setNotificationError(moduleErrorMessage(cause, locale));
@@ -207,37 +324,19 @@ export default function SupportSettingsPage() {
 		return () => {
 			active = false;
 		};
-	}, [activeTab, loadNotifications, locale]);
-
-	const save = async () => {
-		if (!projectRef) return;
-		setLoading(true);
-		try {
-			const features: unknown = JSON.parse(featuresJson);
-			if (!features || typeof features !== "object" || Array.isArray(features))
-				throw new Error(t("Every feature flag must be true or false"));
-			const flags: Record<string, boolean> = {};
-			for (const [key, value] of Object.entries(features)) {
-				if (typeof value !== "boolean")
-					throw new Error(t("Every feature flag must be true or false"));
-				flags[key] = value;
-			}
-			await updateSupportSettings(projectRef, {
-				...settings,
-				allowed_content_types: settings.allowed_content_types.filter(Boolean),
-				features: flags,
-			});
-			showSuccessNotification(t("Support settings saved"));
-			await loadSettings();
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause, locale));
-		} finally {
-			setLoading(false);
-		}
-	};
+	}, [activeTab, loadPreferences, preferencesLoaded, locale]);
 
 	const resolveDeadLetter = async (item: SupportDeadLetter, action: "replay" | "discard") => {
 		if (!projectRef) return;
+		if (
+			action === "discard" &&
+			!window.confirm(
+				t("Discard {name}? It will not run again.", {
+					name: item.job_type || t("Unclassified Support job"),
+				}),
+			)
+		)
+			return;
 		try {
 			if (action === "replay") await replaySupportDeadLetter(projectRef, item.id);
 			else await discardSupportDeadLetter(projectRef, item.id);
@@ -250,78 +349,13 @@ export default function SupportSettingsPage() {
 		}
 	};
 
-	const saveNotificationPreferences = async () => {
-		if (!projectRef) return;
-		setNotificationsLoading(true);
-		try {
-			const muted = [
-				...new Set(
-					mutedEvents
-						.split(",")
-						.map((item) => item.trim())
-						.filter(Boolean),
-				),
-			];
-			await updateSupportNotificationPreferences(projectRef, {
-				...notificationPreferences,
-				muted_event_types: muted,
-			});
-			showSuccessNotification(t("Notification preferences saved"));
-			await loadNotifications();
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause, locale));
-		} finally {
-			setNotificationsLoading(false);
-		}
-	};
-
-	const updateNotification = async (
-		item: SupportNotification,
-		action: "read" | "snooze" | "delete",
-	) => {
-		if (!projectRef) return;
-		try {
-			if (action === "read") {
-				await markSupportNotificationRead(projectRef, item.id);
-			} else if (action === "snooze") {
-				await snoozeSupportNotification(
-					projectRef,
-					item.id,
-					new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-				);
-			} else {
-				await deleteSupportNotification(projectRef, item.id);
-			}
-			await loadNotifications();
-			showSuccessNotification(
-				action === "read"
-					? t("Notification marked as read")
-					: action === "snooze"
-						? t("Notification snoozed for one hour")
-						: t("Notification removed"),
-			);
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause, locale));
-		}
-	};
-
-	const markAllNotificationsRead = async () => {
-		if (!projectRef) return;
-		try {
-			await markAllSupportNotificationsRead(projectRef);
-			await loadNotifications();
-			showSuccessNotification(t("All notifications marked as read"));
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause, locale));
-		}
-	};
-
 	useEffect(() => {
-		if (new URLSearchParams(window.location.search).get("tab") === "automations") {
+		const movedTab = new URLSearchParams(window.location.search).get("tab");
+		if (movedTab === "automations" || movedTab === "contacts") {
 			const url = new URL(window.location.href);
 			url.pathname = "/support/inbox";
 			url.searchParams.delete("tab");
-			url.searchParams.set("section", "automations");
+			url.searchParams.set("section", movedTab);
 			window.location.replace(url);
 			return;
 		}
@@ -332,6 +366,8 @@ export default function SupportSettingsPage() {
 			window.location.replace(url);
 		}
 	}, []);
+
+	const quarantined = deadLetters.filter((item) => item.status === "quarantined");
 
 	return (
 		<ModulePage
@@ -352,12 +388,12 @@ export default function SupportSettingsPage() {
 				<TabsList aria-label={t("Settings sections")} className="h-auto flex-wrap">
 					<TabsTrigger value="general">{t("General")}</TabsTrigger>
 					<TabsTrigger value="notifications">{t("Notifications")}</TabsTrigger>
-					<TabsTrigger value="operations">{t("Operations")}</TabsTrigger>
 					{Object.entries(sharedSettings).map(([value, { label }]) => (
 						<TabsTrigger key={value} value={value}>
 							{t(label)}
 						</TabsTrigger>
 					))}
+					<TabsTrigger value="operations">{t("Advanced")}</TabsTrigger>
 				</TabsList>
 
 				{!selectedProject ? (
@@ -373,125 +409,131 @@ export default function SupportSettingsPage() {
 								</SupportDetail>
 							</TabsContent>
 						))}
-						<TabsContent className="space-y-6" value="general">
-							<fieldset className="space-y-6" disabled={loading}>
-								<Card>
-									<CardHeader>
-										<CardTitle className="text-base">{t("Support profile")}</CardTitle>
-									</CardHeader>
-									<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-										<Field label={t("Business name")}>
-											<Input
-												value={settings.business_name}
-												onChange={(e) =>
-													setSettings((v) => ({
-														...v,
-														business_name: e.target.value,
-													}))
-												}
-											/>
-										</Field>
-										<Field label={t("Locale")}>
-											<Input
-												value={settings.locale}
-												onChange={(e) => setSettings((v) => ({ ...v, locale: e.target.value }))}
-											/>
-										</Field>
-										<Field label={t("Timezone")}>
-											<Input
-												value={settings.timezone}
-												onChange={(e) => setSettings((v) => ({ ...v, timezone: e.target.value }))}
-											/>
-										</Field>
-										<Field label={t("Date format")}>
-											<Input
-												value={settings.date_format}
+						<TabsContent className="space-y-8 pt-4" value="general">
+							{settings ? (
+								<>
+									<SettingsSection
+										title={t("Support profile")}
+										description={t("How your Support team introduces itself to customers.")}
+									>
+										<SettingsRow>
+											<SettingsTextField
+												label={t("Business name")}
+												description={t(
+													"Shown to customers in the widget, in transcripts and as the sender of SMTP replies.",
+												)}
+												value={settings.value.business_name}
 												onChange={(event) => {
-													setSettings((current) => ({
-														...current,
-														date_format: event.target.value,
+													const business_name = event.target.value;
+													updateSettings((draft) => ({
+														...draft,
+														value: { ...draft.value, business_name },
 													}));
 												}}
 											/>
-										</Field>
-										<Field label={t("Auto-resolve after (minutes)")}>
-											<Input
-												min={0}
-												type="number"
-												value={settings.auto_resolve_minutes ?? ""}
-												onChange={(e) =>
-													setSettings((v) => ({
-														...v,
-														auto_resolve_minutes:
-															e.target.value === "" ? null : Number(e.target.value),
-													}))
-												}
-											/>
-										</Field>
-										<Field label={t("Attachment limit in bytes")}>
-											<Input
-												min={1}
-												max={104857600}
-												type="number"
-												value={settings.attachment_max_bytes}
-												onChange={(e) =>
-													setSettings((v) => ({
-														...v,
-														attachment_max_bytes: Number(e.target.value),
-													}))
-												}
-											/>
-										</Field>
-									</CardContent>
-								</Card>
-								<div className="space-y-4">
-									<Card>
-										<CardHeader>
-											<CardTitle className="text-base">{t("Allowed attachments")}</CardTitle>
-										</CardHeader>
-										<CardContent className="space-y-3">
-											<Field label={t("Allowed content types")}>
-												<Input
-													value={settings.allowed_content_types.join(", ")}
-													onChange={(event) =>
-														setSettings((current) => ({
-															...current,
-															allowed_content_types: event.target.value
-																.split(",")
-																.map((value) => value.trim()),
-														}))
-													}
-												/>
-											</Field>
-										</CardContent>
-									</Card>
-									<details className="rounded-md border p-4">
-										<summary className="cursor-pointer text-sm">{t("Advanced settings")}</summary>
-										<p className="mt-3 text-xs text-muted-foreground">
-											{t(
-												"Feature flags are a JSON object of lowercase keys set to true or false. Change them only when instructed.",
-											)}
-										</p>
-										<Field label={t("Feature flags")}>
-											<textarea
-												aria-label={t("Feature flags")}
-												className="min-h-32 w-full rounded-md border p-3 font-mono text-sm"
-												value={featuresJson}
+										</SettingsRow>
+										<SettingsRow>
+											<SettingsTextField
+												label={t("Locale")}
+												description={t(
+													"Language code used for customer messages, for example en or fr.",
+												)}
+												value={settings.value.locale}
 												onChange={(event) => {
-													setFeaturesJson(event.target.value);
+													const value = event.target.value;
+													updateSettings((draft) => ({
+														...draft,
+														value: { ...draft.value, locale: value },
+													}));
 												}}
 											/>
-										</Field>
-									</details>
-								</div>
-								<div className="flex justify-end">
-									<Button disabled={loading || Boolean(error)} onClick={() => void save()}>
-										<Save /> {t("Save settings")}
-									</Button>
-								</div>
-							</fieldset>
+										</SettingsRow>
+										<SettingsRow>
+											<SettingsTextField
+												label={t("Timezone")}
+												description={t(
+													"Used for times shown to customers, for example Europe/Paris or UTC.",
+												)}
+												value={settings.value.timezone}
+												onChange={(event) => {
+													const timezone = event.target.value;
+													updateSettings((draft) => ({
+														...draft,
+														value: { ...draft.value, timezone },
+													}));
+												}}
+											/>
+										</SettingsRow>
+										<SettingsRow>
+											<SettingsTextField
+												label={t("Date format")}
+												description={t(
+													"Used for dates in conversation transcripts, for example YYYY-MM-DD or DD/MM/YYYY.",
+												)}
+												value={settings.value.date_format}
+												onChange={(event) => {
+													const date_format = event.target.value;
+													updateSettings((draft) => ({
+														...draft,
+														value: { ...draft.value, date_format },
+													}));
+												}}
+											/>
+										</SettingsRow>
+									</SettingsSection>
+									<SettingsSection
+										title={t("Conversations")}
+										description={t("What happens to conversations that receive no new message.")}
+									>
+										<SettingsRow>
+											<SwitchField
+												label={t("Resolve inactive conversations automatically")}
+												checked={settings.value.auto_resolve_minutes !== null}
+												onCheckedChange={(enabled) => {
+													updateSettings((draft) => ({
+														...draft,
+														autoResolveInput: defaultAutoResolveMinutes,
+														value: {
+															...draft.value,
+															auto_resolve_minutes: enabled ? defaultAutoResolveMinutes : null,
+														},
+													}));
+												}}
+											/>
+											{settings.value.auto_resolve_minutes !== null && (
+												<SettingsDependents>
+													<SettingsDurationField
+														label={t("Resolve after")}
+														minutes={settings.autoResolveInput}
+														error={
+															autoResolveValid(settings.autoResolveInput)
+																? undefined
+																: t("Enter a duration between one minute and one year.")
+														}
+														onChange={(minutes) => {
+															updateSettings((draft) => ({
+																...draft,
+																autoResolveInput: minutes,
+																value: autoResolveValid(minutes)
+																	? { ...draft.value, auto_resolve_minutes: minutes }
+																	: draft.value,
+															}));
+														}}
+													/>
+												</SettingsDependents>
+											)}
+										</SettingsRow>
+									</SettingsSection>
+									<AutosaveIndicator
+										status={settingsAutosave.status}
+										onRetry={settingsAutosave.retry}
+									/>
+								</>
+							) : error ? null : (
+								<SupportLoading />
+							)}
 						</TabsContent>
-						<TabsContent className="space-y-6" value="notifications">
+						<TabsContent className="space-y-8 pt-4" value="notifications">
 							{notificationError ? (
 								<AccessNotice>
 									{notificationError}
@@ -500,129 +542,139 @@ export default function SupportSettingsPage() {
 									)}
 								</AccessNotice>
 							) : (
-								<div className="space-y-6">
-									<Card>
-										<CardHeader>
-											<CardTitle className="flex items-center gap-2 text-base">
-												<Bell /> {t("Delivery preferences")}
-											</CardTitle>
-										</CardHeader>
-										<CardContent className="space-y-4">
-											{(
-												[
-													["email_enabled", "Email"],
-													["push_enabled", "Mobile push"],
-													["browser_enabled", "Browser"],
-													["in_app_enabled", "In-app"],
-													["audio_enabled", "Notification sounds"],
-												] as const
-											).map(([key, label]) => (
-												<div className="flex items-center justify-between gap-4" key={key}>
-													<Label>{t(label)}</Label>
-													<Switch
-														aria-label={t(label)}
-														disabled={notificationsLoading}
-														checked={notificationPreferences[key]}
-														onCheckedChange={(enabled) =>
-															setNotificationPreferences((current) => ({
-																...current,
-																[key]: enabled,
-															}))
-														}
-													/>
-												</div>
-											))}
-											<Field label={t("Muted event types")}>
-												<Input
-													placeholder={t("assignment.updated, sla.warning")}
-													value={mutedEvents}
-													onChange={(event) => setMutedEvents(event.target.value)}
-												/>
-											</Field>
-											<p className="text-xs text-muted-foreground">
-												{t(
-													"Use comma-separated native Support event names. Muted events remain visible in audit history.",
-												)}
-											</p>
-											<div className="flex justify-end">
-												<Button
-													disabled={notificationsLoading}
-													onClick={() => void saveNotificationPreferences()}
-												>
-													<Save /> {t("Save preferences")}
-												</Button>
-											</div>
-										</CardContent>
-									</Card>
-									<Card>
-										<CardHeader>
-											<CardTitle className="flex flex-wrap items-center justify-between gap-3 text-base">
-												<span>{t("Recent notifications")}</span>
-												<Button
-													size="sm"
-													variant="outline"
-													onClick={() => void markAllNotificationsRead()}
-												>
-													<CheckCheck /> {t("Read all")}
-												</Button>
-											</CardTitle>
-										</CardHeader>
-										<CardContent className="space-y-3">
-											{notifications.length === 0 ? (
-												<SupportEmpty
-													title={t("No notifications")}
+								<>
+									{preferences ? (
+										<>
+											<SettingsSection
+												title={t("Delivery preferences")}
+												description={t("Where your personal Support notifications reach you.")}
+											>
+												{deliveryChannels.map(([key, label]) => (
+													<SettingsRow key={key}>
+														<SwitchField
+															label={t(label)}
+															checked={preferences.delivery[key]}
+															onCheckedChange={(enabled) => {
+																updatePreferences((draft) => ({
+																	...draft,
+																	delivery: { ...draft.delivery, [key]: enabled },
+																}));
+															}}
+														/>
+													</SettingsRow>
+												))}
+											</SettingsSection>
+											<SettingsSection
+												title={t("Notify me about")}
+												description={t("Turn off the events you do not want to be notified about.")}
+											>
+												{builtInEvents.map(([name, label]) => (
+													<SettingsRow key={name}>
+														<SwitchField
+															label={t(label)}
+															checked={!preferences.muted.includes(name)}
+															onCheckedChange={(enabled) => {
+																updatePreferences((draft) => ({
+																	...draft,
+																	muted: enabled
+																		? draft.muted.filter((item) => item !== name)
+																		: [...draft.muted, name],
+																}));
+															}}
+														/>
+													</SettingsRow>
+												))}
+											</SettingsSection>
+										</>
+									) : (
+										<SupportLoading />
+									)}
+									{preferences && (
+										<SettingsSection
+											title={t("Advanced")}
+											description={t("Mute other event types by their technical name.")}
+										>
+											<SettingsRow>
+												<SettingsValidatedField
+													label={t("Muted event types")}
+													placeholder={t("conversation_assigned, workflow")}
 													description={t(
-														"Assignment, SLA and conversation notifications will appear here.",
+														"Use comma-separated native Support event names. Muted events remain visible in audit history.",
 													)}
+													error={
+														otherMutedInvalid
+															? t("Use lowercase event names separated by commas.")
+															: undefined
+													}
+													value={preferences.otherMuted}
+													onChange={(event) => {
+														const otherMuted = event.target.value;
+														updatePreferences((draft) => ({ ...draft, otherMuted }));
+													}}
 												/>
-											) : (
-												notifications.map((item) => (
-													<div className="rounded-md border p-3" key={item.id}>
-														<div className="flex flex-wrap items-start justify-between gap-3">
-															<div>
-																<p className="font-medium">{item.title}</p>
-																<p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
-																<p className="mt-2 text-xs text-muted-foreground">
-																	{new Date(item.created_at).toLocaleString(locale)} ·{" "}
-																	{item.notification_type}
-																</p>
-															</div>
-															<SupportStatus value={item.read_at ? "read" : "unread"} />
-														</div>
-														<div className="mt-3 flex flex-wrap justify-end gap-2">
-															{!item.read_at ? (
-																<Button
-																	size="sm"
-																	variant="outline"
-																	onClick={() => void updateNotification(item, "read")}
-																>
-																	<CheckCheck /> {t("Mark read")}
-																</Button>
-															) : null}
-															<Button
-																size="sm"
-																variant="outline"
-																onClick={() => void updateNotification(item, "snooze")}
-															>
-																<Clock3 /> {t("Snooze 1 hour")}
-															</Button>
-															<Button
-																size="sm"
-																variant="ghost"
-																onClick={() => void updateNotification(item, "delete")}
-															>
-																<Trash2 /> {t("Remove")}
-															</Button>
-														</div>
-													</div>
-												))
-											)}
-										</CardContent>
-									</Card>
-								</div>
+											</SettingsRow>
+										</SettingsSection>
+									)}
+									{preferences && (
+										<AutosaveIndicator
+											status={preferencesAutosave.status}
+											onRetry={preferencesAutosave.retry}
+										/>
+									)}
+								</>
 							)}
 						</TabsContent>
-						<TabsContent className="space-y-6" value="operations">
+						<TabsContent className="space-y-8 pt-4" value="operations">
+							{settings ? (
+								<>
+									<SettingsSection
+										title={t("Attachments")}
+										description={t("Limits for the files customers and agents can send.")}
+									>
+										<SettingsRow>
+											<SettingsValidatedField
+												label={t("Maximum attachment size (MB)")}
+												inputMode="decimal"
+												error={
+													attachmentBytes(settings.attachmentSize) === null
+														? t("Enter a size greater than 0 and at most {max} MB.", {
+																max: maximumAttachmentMegabytes,
+															})
+														: undefined
+												}
+												value={settings.attachmentSize}
+												onChange={(event) => {
+													const attachmentSize = event.target.value;
+													const bytes = attachmentBytes(attachmentSize);
+													updateSettings((draft) => ({
+														...draft,
+														attachmentSize,
+														value:
+															bytes === null
+																? draft.value
+																: { ...draft.value, attachment_max_bytes: bytes },
+													}));
+												}}
+											/>
+										</SettingsRow>
+										<SettingsRow>
+											<SettingsTextField
+												label={t("Allowed content types")}
+												description={t(
+													"Comma-separated file types, for example image/png, application/pdf. Leave empty to accept every type.",
+												)}
+												value={settings.contentTypes}
+												onChange={(event) => {
+													const contentTypes = event.target.value;
+													updateSettings((draft) => ({ ...draft, contentTypes }));
+												}}
+											/>
+										</SettingsRow>
+									</SettingsSection>
+								</>
+							) : error ? null : (
+								<SupportLoading />
+							)}
 							{!administrator ? (
 								<AccessNotice>
 									{t(
@@ -631,106 +683,110 @@ export default function SupportSettingsPage() {
 								</AccessNotice>
 							) : (
 								<>
-									<div className="flex justify-end">
-										<Button variant="outline" onClick={() => void loadOperations()}>
-											<RefreshCw /> {t("Refresh diagnostics")}
-										</Button>
-									</div>
-									<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-										<SupportMetric label={t("Queued jobs")} value={total(operations?.queues)} />
-										<SupportMetric
-											label={t("Dead letters")}
-											value={total(operations?.dead_letters)}
-										/>
-										<SupportMetric
-											label={t("Provider events")}
-											value={total(operations?.providers)}
-										/>
-										<SupportMetric
-											label={t("Knowledge documents")}
-											value={total(operations?.knowledge)}
-										/>
-									</div>
-									<div className="space-y-6">
-										<OperationGroup
-											icon={<Activity />}
-											title={t("Queues and schedules")}
-											rows={operations?.queues ?? []}
-											label={(row) => row.queue_name || t("Support queue")}
-										/>
-										<OperationGroup
-											icon={<DatabaseZap />}
-											title={t("Indexing and bulk jobs")}
-											rows={[
-												...(operations?.knowledge ?? []),
-												...(operations?.imports ?? []),
-												...(operations?.exports ?? []),
-											]}
-											label={(row) => t(supportStatusLabel(row.status || "queued"))}
-										/>
-									</div>
+									<section className="space-y-3">
+										<div className="space-y-1">
+											<h2 className="text-base font-semibold">{t("Diagnostics")}</h2>
+											<p className="text-sm text-kumo-subtle">
+												{t("Live state of Support background work.")}
+											</p>
+										</div>
+										<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+											<SupportMetric label={t("Queued jobs")} value={total(operations?.queues)} />
+											<SupportMetric
+												label={t("Dead letters")}
+												value={total(operations?.dead_letters)}
+											/>
+											<SupportMetric
+												label={t("Provider events")}
+												value={total(operations?.providers)}
+											/>
+											<SupportMetric
+												label={t("Knowledge documents")}
+												value={total(operations?.knowledge)}
+											/>
+										</div>
+										<SettingsActions>
+											<Button variant="outline" onClick={() => void loadOperations()}>
+												{t("Refresh diagnostics")}
+											</Button>
+										</SettingsActions>
+									</section>
 									<OperationGroup
-										icon={<Activity />}
+										title={t("Queues and schedules")}
+										description={t("Background work waiting to run.")}
+										rows={operations?.queues ?? []}
+										label={(row) => row.queue_name || t("Support queue")}
+									/>
+									<OperationGroup
+										title={t("Indexing and bulk jobs")}
+										description={t("Knowledge indexing, imports and exports.")}
+										rows={[
+											...(operations?.knowledge ?? []),
+											...(operations?.imports ?? []),
+											...(operations?.exports ?? []),
+										]}
+										label={(row) => t(supportStatusLabel(row.status || "queued"))}
+									/>
+									<OperationGroup
 										title={t("Provider diagnostics")}
+										description={t("Events received from connected channels.")}
 										rows={operations?.providers ?? []}
 										label={(row) =>
 											row.provider ? t(supportChannelLabel(row.provider)) : t("Support provider")
 										}
 									/>
-									<Card>
-										<CardHeader>
-											<CardTitle className="text-base">{t("Dead-letter quarantine")}</CardTitle>
-										</CardHeader>
-										<CardContent className="space-y-2">
-											{deadLetters.filter((item) => item.status === "quarantined").length === 0 ? (
-												<SupportEmpty
-													title={t("Quarantine is empty")}
-													description={t("No Support jobs currently require an operator decision.")}
-												/>
-											) : (
-												deadLetters
-													.filter((item) => item.status === "quarantined")
-													.map((item) => (
-														<div
-															key={item.id}
-															className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3"
+									<SettingsSection
+										title={t("Dead-letter quarantine")}
+										description={t("Jobs that failed repeatedly and wait for a decision.")}
+									>
+										{quarantined.length === 0 ? (
+											<SettingsRow>
+												<p className="text-sm font-medium">{t("Quarantine is empty")}</p>
+												<p className="text-sm text-kumo-subtle">
+													{t("No Support jobs currently require an operator decision.")}
+												</p>
+											</SettingsRow>
+										) : (
+											quarantined.map((item) => (
+												<SettingsRow key={item.id}>
+													<div>
+														<p className="font-medium">
+															{item.job_type || t("Unclassified Support job")}
+														</p>
+														<p className="text-xs text-kumo-subtle">
+															{item.source_queue} · {item.attempts} {t("attempts")}
+														</p>
+													</div>
+													<SettingsActions className="gap-2">
+														{item.replayable ? (
+															<Button
+																size="sm"
+																variant="outline"
+																onClick={() => void resolveDeadLetter(item, "replay")}
+															>
+																{t("Replay")}
+															</Button>
+														) : null}
+														<Button
+															size="sm"
+															variant="ghost"
+															onClick={() => void resolveDeadLetter(item, "discard")}
 														>
-															<div>
-																<p className="font-medium">
-																	{item.job_type || t("Unclassified Support job")}
-																</p>
-																<p className="text-xs text-muted-foreground">
-																	{item.source_queue} · {item.attempts} {t("attempts")}
-																</p>
-															</div>
-															<div className="flex gap-2">
-																{item.replayable ? (
-																	<Button
-																		size="sm"
-																		variant="outline"
-																		onClick={() => void resolveDeadLetter(item, "replay")}
-																	>
-																		<RotateCcw /> {t("Replay")}
-																	</Button>
-																) : null}
-																<Button
-																	size="sm"
-																	variant="ghost"
-																	onClick={() => void resolveDeadLetter(item, "discard")}
-																>
-																	<Trash2 /> {t("Discard")}
-																</Button>
-															</div>
-														</div>
-													))
-											)}
-										</CardContent>
-									</Card>
+															{t("Discard")}
+														</Button>
+													</SettingsActions>
+												</SettingsRow>
+											))
+										)}
+									</SettingsSection>
 								</>
 							)}
-							<SupportDetail>
-								<SupportQualityPage auditOnly />
-							</SupportDetail>
+							{settings && (
+								<AutosaveIndicator
+									status={settingsAutosave.status}
+									onRetry={settingsAutosave.retry}
+								/>
+							)}
 						</TabsContent>
 					</>
 				)}
@@ -747,56 +803,42 @@ type CountRow = {
 	provider?: string;
 };
 function OperationGroup({
-	icon,
 	title,
+	description,
 	rows,
 	label,
 }: {
-	icon: React.ReactNode;
 	title: string;
+	description: string;
 	rows: CountRow[];
 	label: (row: CountRow) => string;
 }) {
 	const { t } = useSupportI18n();
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2 text-base">
-					{icon}
-					{title}
-				</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-2">
-				{rows.length === 0 ? (
-					<SupportEmpty
-						title={t("Healthy and idle")}
-						description={t("No queued or failed work is currently recorded.")}
-					/>
-				) : (
-					rows.map((row, index) => (
-						<div
-							className="flex items-center justify-between rounded-md border p-3"
-							key={`${label(row)}-${row.status}-${index}`}
-						>
-							<div>
-								<p className="font-medium">{label(row)}</p>
-								<SupportStatus value={row.status} />
-							</div>
-							<strong>{Number(row.count).toLocaleString()}</strong>
+		<SettingsSection title={title} description={description}>
+			{rows.length === 0 ? (
+				<SettingsRow>
+					<p className="text-sm font-medium">{t("Healthy and idle")}</p>
+					<p className="text-sm text-kumo-subtle">
+						{t("No queued or failed work is currently recorded.")}
+					</p>
+				</SettingsRow>
+			) : (
+				rows.map((row, index) => (
+					<SettingsRow
+						className="flex items-center justify-between gap-4 space-y-0"
+						key={`${label(row)}-${row.status}-${index}`}
+					>
+						<div className="space-y-1">
+							<p className="font-medium">{label(row)}</p>
+							<SupportStatus value={row.status} />
 						</div>
-					))
-				)}
-			</CardContent>
-		</Card>
-	);
-}
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-	return (
-		<Label className="block space-y-2">
-			<span>{label}</span>
-			{children}
-		</Label>
+						<strong>{Number(row.count).toLocaleString()}</strong>
+					</SettingsRow>
+				))
+			)}
+		</SettingsSection>
 	);
 }
 function total(rows?: Array<{ count: number }>) {

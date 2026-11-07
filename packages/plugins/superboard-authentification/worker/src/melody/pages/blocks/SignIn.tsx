@@ -1,7 +1,6 @@
 import {
   ViewTitle, PasswordField, PrimaryButton, SubmitError, SecondaryButton,
-  GoogleSignIn, FacebookSignIn, GithubSignIn, DiscordSignIn, OidcSignIn, AppleSignIn,
-  Banner,
+  GoogleSignIn, GithubSignIn, OidcSignIn, AppleSignIn,
 } from '../components'
 import { typeConfig } from '../../configs'
 import {
@@ -10,7 +9,6 @@ import {
 import { signIn } from '../tools/locale'
 import { AuthorizeParams } from '../tools/param'
 import EmailField from '../components/vanilla/EmailField'
-import { bannerModel } from '../../models'
 
 export interface SignInProps {
   locale: typeConfig.Locale;
@@ -35,7 +33,6 @@ export interface SignInProps {
   isVerifyingPasskey: boolean;
   isPasswordlessSigningIn: boolean;
   magicLinkSent: boolean;
-  appBanners: bannerModel.Record[];
 }
 
 const SignIn = ({
@@ -55,7 +52,6 @@ const SignIn = ({
   isVerifyingPasskey,
   isPasswordlessSigningIn,
   magicLinkSent,
-  appBanners,
 }: SignInProps) => {
   if (magicLinkSent) {
     return (
@@ -69,13 +65,6 @@ const SignIn = ({
   return (
     <>
       <ViewTitle title={signIn.title[locale]} />
-      {appBanners.map((banner) => (
-        <Banner
-          key={banner.id}
-          type={banner.type}
-          text={banner.locales.find((bannerLocale) => bannerLocale.locale === locale)?.value || banner.text}
-        />
-      ))}
       <form
         autoComplete='on'
         onSubmit={onSubmit}
@@ -133,9 +122,7 @@ const SignIn = ({
         </section>
         {(
           initialProps.googleClientId ||
-          initialProps.facebookClientId ||
           initialProps.githubClientId ||
-          initialProps.discordClientId ||
           initialProps.appleClientId ||
           initialProps.oidcProviders?.length > 0
         ) && (
@@ -147,22 +134,8 @@ const SignIn = ({
               onSubmitError={onSubmitError}
               onSwitchView={onSwitchView}
             />
-            <FacebookSignIn
-              facebookClientId={initialProps.facebookClientId}
-              locale={locale}
-              params={params}
-              onSubmitError={onSubmitError}
-              onSwitchView={onSwitchView}
-            />
             <GithubSignIn
               githubClientId={initialProps.githubClientId}
-              locale={locale}
-              params={params}
-              onSubmitError={onSubmitError}
-              onSwitchView={onSwitchView}
-            />
-            <DiscordSignIn
-              discordClientId={initialProps.discordClientId}
               locale={locale}
               params={params}
               onSubmitError={onSubmitError}

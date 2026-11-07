@@ -129,12 +129,8 @@ const french: Record<string, string> = {
 	Contacts: "Contacts",
 	"Agents and teams": "Agents et équipes",
 	"Inbox automations": "Automatisations de la boîte",
-	"Inboxes, channels, automations, proactive messages and reports for every inbox.":
-		"Boîtes de réception, canaux, automatisations, messages proactifs et rapports de toutes les boîtes.",
 	"Automations for every inbox. Open an inbox to manage only the rules that apply to it.":
 		"Automatisations de toutes les boîtes de réception. Ouvrez une boîte pour gérer uniquement ses propres règles.",
-	"Feature flags are a JSON object of lowercase keys set to true or false. Change them only when instructed.":
-		"Les fonctionnalités sont un objet JSON de clés en minuscules valant true ou false. Ne les modifiez que sur instruction.",
 	"AI assistant": "Assistant IA",
 	Conversations: "Conversations",
 	Articles: "Articles",
@@ -146,7 +142,6 @@ const french: Record<string, string> = {
 	"Custom domain": "Domaine personnalisé",
 	Status: "Statut",
 
-	"Advanced settings": "Paramètres avancés",
 	"Secure configuration for {name}": "Paramètres sécurisés pour {name}",
 	"Create an active {provider} inbox in Workforce first.":
 		"Créez d’abord une boîte {provider} active dans Agents et équipes.",
@@ -199,8 +194,6 @@ const french: Record<string, string> = {
 		"Créez une équipe pour regrouper les agents et attribuer les conversations.",
 	"Create an active": "Créez une boîte active",
 	"Create an inbox": "Créer une boîte de réception",
-	"Create an inbox before connecting a customer channel.":
-		"Créez une boîte de réception avant de connecter un canal client.",
 	"Create an inbox from Workforce, then attach a connection here.":
 		"Créez une boîte dans Agents et équipes, puis associez une connexion ici.",
 	"Create inbox": "Créer la boîte",
@@ -314,8 +307,6 @@ const french: Record<string, string> = {
 	"Connected integrations": "Intégrations connectées",
 	"Attachment limit in bytes": "Taille maximale en octets",
 	"Allowed content types": "Types de contenu autorisés",
-	"Feature flags": "Fonctionnalités (JSON)",
-	"Every feature flag must be true or false": "Chaque fonctionnalité doit valoir true ou false",
 	Channels: "Canaux",
 	Agents: "Agents",
 	Teams: "Équipes",
@@ -990,6 +981,127 @@ const french: Record<string, string> = {
 	"Support channel authorized": "Canal du support autorisé",
 	"Support channel authorization was not completed":
 		"L’autorisation du canal du support n’a pas abouti",
+	"Discard {name}? It will not run again.":
+		"Abandonner {name} ? Cette tâche ne sera plus exécutée.",
+	Advanced: "Avancé",
+	"How your Support team introduces itself to customers.":
+		"Comment votre équipe de support se présente aux clients.",
+	"Language code used for customer messages, for example en or fr.":
+		"Code de langue des messages envoyés aux clients, par exemple en ou fr.",
+	"What happens to conversations that receive no new message.":
+		"Ce qui arrive aux conversations qui ne reçoivent plus de message.",
+	"Resolve inactive conversations automatically":
+		"Résoudre automatiquement les conversations inactives",
+	"Resolve after": "Résoudre après",
+	"Where your personal Support notifications reach you.":
+		"Où vous recevez vos notifications personnelles du support.",
+	"Notify me about": "Me notifier pour",
+	"Turn off the events you do not want to be notified about.":
+		"Désactivez les événements pour lesquels vous ne voulez pas être notifié.",
+	"Assignment, SLA and conversation notifications sent to you.":
+		"Notifications d’attribution, de délai de service et de conversation qui vous sont envoyées.",
+	"Mute other event types by their technical name.":
+		"Mettez en sourdine d’autres types d’événements à partir de leur nom technique.",
+	"Use lowercase event names separated by commas.":
+		"Utilisez des noms d’événements en minuscules, séparés par des virgules.",
+	Attachments: "Pièces jointes",
+	"Limits for the files customers and agents can send.":
+		"Limites des fichiers que les clients et les agents peuvent envoyer.",
+	"Maximum attachment size (MB)": "Taille maximale d’une pièce jointe (Mo)",
+	"Enter a size greater than 0 and at most {max} MB.":
+		"Saisissez une taille supérieure à 0 et d’au plus {max} Mo.",
+	"Comma-separated file types, for example image/png, application/pdf. Leave empty to accept every type.":
+		"Types de fichiers séparés par des virgules, par exemple image/png, application/pdf. Laissez vide pour accepter tous les types.",
+	Diagnostics: "Diagnostic",
+	"Live state of Support background work.":
+		"État en direct des traitements du support en arrière-plan.",
+	"Background work waiting to run.": "Traitements en attente d’exécution.",
+	"Knowledge indexing, imports and exports.":
+		"Indexation de la base de connaissances, imports et exports.",
+	"Events received from connected channels.": "Événements reçus des canaux connectés.",
+	"Jobs that failed repeatedly and wait for a decision.":
+		"Tâches en échec répété qui attendent une décision.",
+	"Conversation assignments": "Attributions de conversations",
+	"Automation notifications": "Notifications des automatisations",
+	"Give an existing user access to Support conversations.":
+		"Donnez à un utilisateur existant l’accès aux conversations du support.",
+	"Maximum number of conversations at the same time.":
+		"Nombre maximal de conversations en même temps.",
+	"Switch a member off to stop assigning conversations to them.":
+		"Désactivez un membre pour ne plus lui attribuer de conversations.",
+	"Group agents to route conversations to them together.":
+		"Regroupez des agents pour leur acheminer les conversations ensemble.",
+	"Switch a team off to stop routing conversations to it.":
+		"Désactivez une équipe pour ne plus lui acheminer de conversations.",
+	"An inbox collects the conversations of one customer channel.":
+		"Une boîte de réception rassemble les conversations d’un canal client.",
+	"Switch an inbox off to stop receiving its conversations.":
+		"Désactivez une boîte de réception pour ne plus recevoir ses conversations.",
+	"Choose the teams and inboxes a member works in.":
+		"Choisissez les équipes et les boîtes de réception d’un membre.",
+	"Members of the selected team.": "Membres de l’équipe sélectionnée.",
+	"Members of the selected inbox.": "Membres de la boîte de réception sélectionnée.",
+	"Upcoming and current leave periods.": "Absences en cours et à venir.",
+	"Limit how many conversations an agent handles at the same time.":
+		"Limitez le nombre de conversations qu’un agent traite en même temps.",
+	"Switch a policy off to stop applying its limit.":
+		"Désactivez une règle pour ne plus appliquer sa limite.",
+	"Open conversations currently assigned to each agent.":
+		"Conversations ouvertes actuellement attribuées à chaque agent.",
+	"An assistant suggests, drafts or sends replies following your instructions.":
+		"Un assistant suggère, rédige ou envoie des réponses selon vos instructions.",
+	"Extra instructions an assistant follows in a specific situation.":
+		"Instructions supplémentaires qu’un assistant suit dans une situation précise.",
+	"An HTTP endpoint an assistant may call once execution is allowed.":
+		"Une adresse HTTP qu’un assistant peut appeler une fois l’exécution autorisée.",
+	"Run an assistant once and read its result below.":
+		"Lancez un assistant une fois et lisez son résultat ci-dessous.",
+	"Latest assistant tasks and their results.":
+		"Dernières tâches des assistants et leurs résultats.",
+	"Status of each record created for this project.": "État de chaque élément créé pour ce projet.",
+	"Connect a team tool, commerce context, meeting service or webhook.":
+		"Connectez un outil d’équipe, un contexte commerce, un service de réunion ou un webhook.",
+	"Each integration shows whether it is ready to process Support events.":
+		"Chaque intégration indique si elle est prête à traiter les événements du support.",
+	"Saving replaces the target and the complete credential set.":
+		"L’enregistrement remplace la cible et l’ensemble complet des identifiants.",
+	Profile: "Profil",
+	"How this customer is identified and reached.": "Comment ce client est identifié et contacté.",
+	"Extra details about this customer, as name and value pairs.":
+		"Informations supplémentaires sur ce client, sous forme de paires nom et valeur.",
+	Unit: "Unité",
+	Days: "Jours",
+	"Inboxes, channels, contacts, notifications, automations, assistant tasks, proactive messages and reports for every inbox.":
+		"Boîtes de réception, canaux, contacts, notifications, automatisations, tâches de l’assistant, messages proactifs et rapports de toutes les boîtes.",
+	"Assistant tasks": "Tâches de l’assistant",
+	"Create inboxes from the Inbox page.":
+		"Créez les boîtes de réception depuis la page Boîte de réception.",
+	"Inboxes are created from the Inbox page. Switch one off to stop receiving its conversations.":
+		"Les boîtes de réception se créent depuis la page Boîte de réception. Désactivez-en une pour ne plus recevoir ses conversations.",
+	"Shown to customers in the widget, in transcripts and as the sender of SMTP replies.":
+		"Affiché aux clients dans le widget, dans les transcriptions et comme expéditeur des réponses envoyées par SMTP.",
+	"Used for dates in conversation transcripts, for example YYYY-MM-DD or DD/MM/YYYY.":
+		"Utilisé pour les dates des transcriptions de conversation, par exemple YYYY-MM-DD ou DD/MM/YYYY.",
+	"Used for times shown to customers, for example Europe/Paris or UTC.":
+		"Utilisé pour les heures affichées aux clients, par exemple Europe/Paris ou UTC.",
+	"Enter a duration between one minute and one year.":
+		"Saisissez une durée comprise entre une minute et un an.",
+	"Inboxes that receive customer conversations, with the state of their connection.":
+		"Boîtes de réception qui reçoivent les conversations des clients, avec l’état de leur connexion.",
+	"Credentials and authorizations that link a customer channel to an inbox.":
+		"Identifiants et autorisations qui relient un canal client à une boîte de réception.",
+	"Attach a customer channel to an active inbox of the same type.":
+		"Rattachez un canal client à une boîte de réception active du même type.",
+	"How this inbox is named and which channel it receives.":
+		"Le nom de cette boîte de réception et le canal qu’elle reçoit.",
+	"Enter a name for this inbox.": "Saisissez un nom pour cette boîte de réception.",
+	"How conversations received in this inbox are handled.":
+		"Comment les conversations reçues dans cette boîte de réception sont traitées.",
+	"This field is required.": "Ce champ est obligatoire.",
+	"Name, language and publication status of this help center.":
+		"Nom, langue et état de publication de ce centre d’aide.",
+	"The web address customers use to open this help center.":
+		"L’adresse web que les clients utilisent pour ouvrir ce centre d’aide.",
 };
 
 export function useSupportI18n() {

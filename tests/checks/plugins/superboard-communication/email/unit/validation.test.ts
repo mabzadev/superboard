@@ -27,6 +27,18 @@ describe("email validation", () => {
 		).toThrow(/subject invalid/);
 	});
 
+	it("accepts an optional sender name and rejects line breaks or control characters in it", () => {
+		const message = { to: "user@example.com", subject: "Hello", text: "Hello" };
+		expect(parseEmailMessage({ ...message, fromName: "  Acme Care  " }).fromName).toBe("Acme Care");
+		expect("fromName" in parseEmailMessage(message)).toBe(false);
+		expect("fromName" in parseEmailMessage({ ...message, fromName: null })).toBe(false);
+		for (const fromName of ["Acme\r\nBcc: attacker@example.com", "Acme\nCare", "Acme\u0000", 42])
+			expect(() => parseEmailMessage({ ...message, fromName })).toThrow(/from name invalid/);
+		expect(() => parseEmailMessage({ ...message, fromName: "a".repeat(321) })).toThrow(
+			/from name invalid/,
+		);
+	});
+
 	it("rejects transport-owned headers even when their values are sanitized", () => {
 		expect(() =>
 			parseEmailMessage({

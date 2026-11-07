@@ -6,14 +6,17 @@ import {
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
 import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
-import { Button } from "@superboard/front-ui/ui/button.js";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@superboard/front-ui/ui/card.js";
+	AutosaveIndicator,
+	SettingsActions,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+	SwitchField,
+	useSettingsAutosave,
+} from "@superboard/front-ui/settings-form";
+import { Badge } from "@superboard/front-ui/ui/badge.js";
+import { Button } from "@superboard/front-ui/ui/button.js";
 import {
 	Dialog,
 	DialogContent,
@@ -23,8 +26,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@superboard/front-ui/ui/dialog.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
-import { Label } from "@superboard/front-ui/ui/label.js";
 import {
 	Select,
 	SelectContent,
@@ -32,11 +33,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@superboard/front-ui/ui/select.js";
-import { Switch } from "@superboard/front-ui/ui/switch.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
-import { Check, Code2, Copy, FolderKanban, KeyRound, Plus, RefreshCw } from "lucide-react";
+import { Check, Copy, FolderKanban, Plus, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ConfirmDialog, SettingsField } from "../../../SettingsLayout.js";
 import {
 	flowsApi,
 	type FlowEnvironment,
@@ -46,11 +47,19 @@ import { useFlows } from "./FlowsContext.js";
 import { FlowsEmptyState } from "./FlowsPage.js";
 import { useFlowI18n } from "./i18n.js";
 
+const settingsTabs = ["environments", "localization", "sdk"] as const;
+type SettingsTab = (typeof settingsTabs)[number];
+
+function environmentKind(kind: FlowEnvironment["kind"]) {
+	return kind === "development" ? "Development" : kind === "production" ? "Production" : "Test";
+}
+
 export function EnvironmentsContent({ projectRef }: { projectRef: string }) {
 	const { t, tr } = useFlowI18n();
 	const [items, setItems] = useState<FlowEnvironment[]>([]);
 	const [open, setOpen] = useState(false);
-	const [revealedKey, setRevealedKey] = useState<string | null>(null);
+	const [revealed, setRevealed] = useState<{ environment: string; key: string } | null>(null);
+	const [rotating, setRotating] = useState<FlowEnvironment | null>(null);
 	const load = useCallback(() => {
 		if (!projectRef) return Promise.resolve();
 		return flowsApi.listEnvironments(projectRef).then((environments) => {
@@ -62,86 +71,113 @@ export function EnvironmentsContent({ projectRef }: { projectRef: string }) {
 			showErrorNotification(message(cause, t("apiFailure")));
 		});
 	}, [load, t]);
-	const rotate = async (id: string) => {
+	const rotate = async (environment: FlowEnvironment) => {
 		if (!projectRef) return;
 		try {
-			const result = await flowsApi.rotateEnvironmentKey(projectRef, id);
-			setRevealedKey(result.sdk_key);
+			const result = await flowsApi.rotateEnvironmentKey(projectRef, environment.id);
+			setRevealed({ environment: environment.name, key: result.sdk_key });
 			showSuccessNotification(tr("SDK key rotated"));
 		} catch (cause) {
 			showErrorNotification(message(cause, t("apiFailure")));
 		}
 	};
 	return (
-		<div className="space-y-4">
-			<div className="flex justify-end">
+		<div className="flex w-full flex-col gap-8">
+			{revealed && (
+				<SettingsSection title={tr("New SDK key")} description={t("revealOnce")}>
+					<SettingsRow>
+						<p className="text-sm font-medium">{revealed.environment}</p>
+						<CopyField value={revealed.key} />
+					</SettingsRow>
+				</SettingsSection>
+			)}
+			<SettingsSection
+				title={tr("Release environments")}
+				description={tr(
+					"Each environment has its own SDK key, shown only once when it is created or rotated.",
+				)}
+			>
+				{items.length ? (
+					items.map((environment) => (
+						<SettingsRow
+							key={environment.id}
+							className="flex flex-wrap items-center justify-between gap-3 space-y-0"
+						>
+							<div className="min-w-0 space-y-2">
+								<h3 className="text-sm font-medium">{environment.name}</h3>
+								<div className="flex flex-wrap gap-2">
+									<Badge variant="outline">{tr(environmentKind(environment.kind))}</Badge>
+									<Badge variant={environment.allow_draft ? "warning" : "default"}>
+										{tr(
+											environment.allow_draft
+												? "Draft releases allowed"
+												: "Published versions only",
+										)}
+									</Badge>
+									<Badge variant={environment.active ? "success" : "default"}>
+										{tr(environment.active ? "Active" : "Inactive")}
+									</Badge>
+								</div>
+							</div>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									setRotating(environment);
+								}}
+							>
+								<RefreshCw /> {t("rotateKey")}
+							</Button>
+						</SettingsRow>
+					))
+				) : (
+					<SettingsRow>
+						<p className="text-sm text-kumo-subtle">{tr("No environments yet.")}</p>
+					</SettingsRow>
+				)}
+			</SettingsSection>
+			<SettingsActions>
 				<Dialog open={open} onOpenChange={setOpen}>
 					<DialogTrigger asChild>
-						<Button size="sm">
+						<Button>
 							<Plus /> {tr("New environment")}
 						</Button>
 					</DialogTrigger>
 					<CreateEnvironmentDialog
-						onCreated={() => {
+						onCreated={(environment, key) => {
 							setOpen(false);
+							if (key) setRevealed({ environment, key });
 							void load().catch((cause: unknown) => {
 								showErrorNotification(message(cause, t("apiFailure")));
 							});
 						}}
 					/>
 				</Dialog>
-			</div>
-			{revealedKey && (
-				<Card className="border-amber-500/30 bg-amber-500/5">
-					<CardHeader>
-						<CardTitle className="text-sm">{tr("New SDK key")}</CardTitle>
-						<CardDescription>{t("revealOnce")}</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<CopyField value={revealedKey} />
-					</CardContent>
-				</Card>
-			)}
-			<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-				{items.map((environment) => (
-					<Card key={environment.id}>
-						<CardHeader>
-							<div className="flex items-center justify-between gap-3">
-								<CardTitle>{environment.name}</CardTitle>
-								<span className="rounded-full border bg-muted px-2 py-0.5 text-xs capitalize">
-									{tr(
-										environment.kind === "development"
-											? "Development"
-											: environment.kind === "production"
-												? "Production"
-												: "Test",
-									)}
-								</span>
-							</div>
-							<CardDescription className="font-mono">{environment.key}</CardDescription>
-						</CardHeader>
-						<CardContent className="grid gap-3">
-							<p className="text-sm text-muted-foreground">
-								{environment.allow_draft
-									? tr("Draft releases allowed")
-									: tr("Published versions only")}
-							</p>
-							<div className="flex items-center gap-2 rounded bg-muted px-3 py-2 font-mono text-xs">
-								<KeyRound className="size-4" />
-								<span className="flex-1">••••••••••••</span>
-							</div>
-							<Button variant="outline" size="sm" onClick={() => void rotate(environment.id)}>
-								<RefreshCw /> {t("rotateKey")}
-							</Button>
-						</CardContent>
-					</Card>
-				))}
-			</div>
+			</SettingsActions>
+			<ConfirmDialog
+				open={rotating !== null}
+				title={tr("Rotate this SDK key?")}
+				description={tr(
+					"The current key stops working immediately. Applications that use it need the new key.",
+				)}
+				confirm={t("rotateKey")}
+				cancel={t("cancel")}
+				onConfirm={() => {
+					if (rotating) rotate(rotating).catch(() => undefined);
+				}}
+				onClose={() => {
+					setRotating(null);
+				}}
+			/>
 		</div>
 	);
 }
 
-function CreateEnvironmentDialog({ onCreated }: { onCreated: () => void }) {
+function CreateEnvironmentDialog({
+	onCreated,
+}: {
+	onCreated: (environment: string, key: string | undefined) => void;
+}) {
 	const { t, tr } = useFlowI18n();
 	const { projectRef } = useFlows();
 	const [name, setName] = useState("");
@@ -159,10 +195,8 @@ function CreateEnvironmentDialog({ onCreated }: { onCreated: () => void }) {
 				kind,
 				allow_draft: kind === "development" && allowDraft,
 			});
-			showSuccessNotification(
-				`${tr("New environment created")}. ${tr("New SDK key")}: ${result.sdk_key ?? "generated"}`,
-			);
-			onCreated();
+			showSuccessNotification(tr("New environment created"));
+			onCreated(name, result.sdk_key);
 		} catch (cause) {
 			showErrorNotification(message(cause, t("apiFailure")));
 		} finally {
@@ -177,49 +211,46 @@ function CreateEnvironmentDialog({ onCreated }: { onCreated: () => void }) {
 					{tr("SDK keys are isolated and rotatable. Only development environments can use drafts.")}
 				</DialogDescription>
 			</DialogHeader>
-			<div className="grid gap-4">
-				<label className="grid gap-2">
-					<Label>{t("name")}</Label>
-					<Input
-						value={name}
-						onChange={(event) => {
-							setName(event.target.value);
-							if (!key) setKey(identifier(event.target.value));
-						}}
-					/>
-				</label>
-				<label className="grid gap-2">
-					<Label>{t("identifier")}</Label>
-					<Input
-						className="font-mono"
-						value={key}
-						onChange={(event) => {
-							setKey(identifier(event.target.value));
-						}}
-					/>
-				</label>
-				<label className="grid gap-2">
-					<Label>{tr("Kind")}</Label>
-					<Select value={kind} onValueChange={setKind}>
-						<SelectTrigger className="w-full">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="development">{tr("Development")}</SelectItem>
-							<SelectItem value="test">{tr("Test")}</SelectItem>
-							<SelectItem value="production">{tr("Production")}</SelectItem>
-						</SelectContent>
-					</Select>
-				</label>
-				<div className="flex items-center justify-between rounded border p-3">
-					<Label>{tr("Allow draft releases")}</Label>
-					<Switch
-						aria-label={tr("Allow draft releases")}
-						disabled={kind !== "development"}
-						checked={kind === "development" && allowDraft}
+			<div className="space-y-4">
+				<SettingsTextField
+					label={t("name")}
+					value={name}
+					onChange={(event) => {
+						setName(event.target.value);
+						if (!key) setKey(identifier(event.target.value));
+					}}
+				/>
+				<SettingsTextField
+					label={t("identifier")}
+					description={tr("Used by the SDK to select this environment.")}
+					className="font-mono"
+					value={key}
+					onChange={(event) => {
+						setKey(identifier(event.target.value));
+					}}
+				/>
+				<SettingsField label={tr("Kind")}>
+					{(id) => (
+						<Select value={kind} onValueChange={setKind}>
+							<SelectTrigger id={id} className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="development">{tr("Development")}</SelectItem>
+								<SelectItem value="test">{tr("Test")}</SelectItem>
+								<SelectItem value="production">{tr("Production")}</SelectItem>
+							</SelectContent>
+						</Select>
+					)}
+				</SettingsField>
+				{kind === "development" && (
+					<SwitchField
+						label={tr("Allow draft releases")}
+						description={tr("Test unpublished workflow versions in this environment.")}
+						checked={allowDraft}
 						onCheckedChange={setAllowDraft}
 					/>
-				</div>
+				)}
 			</div>
 			<DialogFooter>
 				<Button disabled={!name || !key || busy} onClick={() => void create()}>
@@ -230,161 +261,207 @@ function CreateEnvironmentDialog({ onCreated }: { onCreated: () => void }) {
 	);
 }
 
+type LocalizationForm = {
+	name: string;
+	defaultLocale: string;
+	locales: string;
+	fallbacks: string;
+};
+
+function localizationForm(group: FlowLanguageGroup): LocalizationForm {
+	return {
+		name: group.name,
+		defaultLocale: group.default_locale,
+		locales: group.locales.join(", "),
+		fallbacks: Object.entries(group.fallbacks)
+			.map(([from, to]) => `${from}:${to}`)
+			.join(", "),
+	};
+}
+
+function newLocalizationForm(name: string): LocalizationForm {
+	return { name, defaultLocale: "en", locales: "en, fr", fallbacks: "fr:en" };
+}
+
 export function LocalizationContent({ projectRef }: { projectRef: string }) {
 	const { t, tr } = useFlowI18n();
 	const [groups, setGroups] = useState<FlowLanguageGroup[]>([]);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [name, setName] = useState("");
-	const [defaultLocale, setDefaultLocale] = useState("en");
-	const [locales, setLocales] = useState("en, fr");
-	const [fallbacks, setFallbacks] = useState("fr:en");
-	const load = useCallback(
-		(preferredId?: string) =>
-			flowsApi
-				.listLocalization(projectRef)
-				.then((result) => {
-					setGroups(result);
-					const selected = result.find((item) => item.id === preferredId) ?? result[0];
-					if (selected) {
-						setSelectedId(selected.id);
-						setName(selected.name);
-						setDefaultLocale(selected.default_locale);
-						setLocales(selected.locales.join(", "));
-						setFallbacks(
-							Object.entries(selected.fallbacks)
-								.map(([from, to]) => `${from}:${to}`)
-								.join(", "),
-						);
-					}
-				})
-				.catch((cause: unknown) => {
-					showErrorNotification(message(cause, t("apiFailure")));
-				}),
-		[projectRef, t],
-	);
+	const [previousId, setPreviousId] = useState<string | null>(null);
+	const [form, setForm] = useState<LocalizationForm>(() => newLocalizationForm(""));
+	const [busy, setBusy] = useState(false);
 	useEffect(() => {
-		void load().catch((cause: unknown) => {
-			showErrorNotification(message(cause, t("apiFailure")));
+		flowsApi.listLocalization(projectRef).then(
+			(result) => {
+				setGroups(result);
+				const selected = result[0];
+				if (selected) {
+					setSelectedId(selected.id);
+					setForm(localizationForm(selected));
+				}
+			},
+			(cause: unknown) => {
+				showErrorNotification(message(cause, t("apiFailure")));
+			},
+		);
+	}, [projectRef, t]);
+	const creating = selectedId === null;
+	const valid =
+		form.name.trim() !== "" && form.defaultLocale.trim() !== "" && csv(form.locales).length > 0;
+	const saveGroup = (value: LocalizationForm, id?: string) =>
+		flowsApi.saveLocalization(projectRef, {
+			id,
+			name: value.name,
+			default_locale: value.defaultLocale,
+			locales: csv(value.locales),
+			fallbacks: parseFallbacks(value.fallbacks),
 		});
-	}, [load, t]);
-	const save = async () => {
+	const autosave = useSettingsAutosave({
+		resourceKey: selectedId ?? "new",
+		value: form,
+		enabled: !creating && valid,
+		save: async (value) => {
+			const saved = await saveGroup(value, selectedId ?? undefined);
+			setGroups((current) => current.map((group) => (group.id === saved.id ? saved : group)));
+		},
+	});
+	const select = (group: FlowLanguageGroup) => {
+		setSelectedId(group.id);
+		setForm(localizationForm(group));
+	};
+	const create = async () => {
+		setBusy(true);
 		try {
-			const saved = await flowsApi.saveLocalization(projectRef, {
-				id: selectedId ?? undefined,
-				name,
-				default_locale: defaultLocale,
-				locales: csv(locales),
-				fallbacks: parseFallbacks(fallbacks),
-			});
+			const saved = await saveGroup(form);
+			setGroups((current) => [...current, saved]);
+			select(saved);
 			showSuccessNotification(tr("Localization saved"));
-			await load(saved.id);
 		} catch (cause) {
 			showErrorNotification(message(cause, t("apiFailure")));
+		} finally {
+			setBusy(false);
 		}
 	};
+	const change = (field: keyof LocalizationForm, value: string) => {
+		setForm((current) => ({ ...current, [field]: value }));
+	};
 	return (
-		<div className="space-y-4">
-			<div className="flex flex-wrap items-center gap-2">
-				<Select
-					value={selectedId ?? ""}
-					onValueChange={(id) => {
-						const group = groups.find((item) => item.id === id);
-						if (!group) return;
-						setSelectedId(group.id);
-						setName(group.name);
-						setDefaultLocale(group.default_locale);
-						setLocales(group.locales.join(", "));
-						setFallbacks(
-							Object.entries(group.fallbacks)
-								.map(([from, to]) => `${from}:${to}`)
-								.join(", "),
-						);
-					}}
-				>
-					<SelectTrigger className="w-64" aria-label={tr("Language groups")}>
-						<SelectValue placeholder={tr("New group")} />
-					</SelectTrigger>
-					<SelectContent>
-						{groups.map((group) => (
-							<SelectItem key={group.id} value={group.id}>
-								{group.name}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<Button
-					variant="outline"
-					onClick={() => {
-						setSelectedId(null);
-						setName(tr("New group"));
-						setDefaultLocale("en");
-						setLocales("en, fr");
-						setFallbacks("fr:en");
-					}}
-				>
-					<Plus /> {tr("New group")}
-				</Button>
-			</div>
-			<Card>
-				<CardHeader>
-					<CardTitle>{name || tr("Language group")}</CardTitle>
-					<CardDescription>
-						{tr(
-							"Translated block fields show missing values and use these fallback rules at runtime.",
-						)}
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="grid max-w-xl gap-4">
-					<label className="grid gap-2">
-						<Label>{t("name")}</Label>
-						<Input
-							value={name}
-							onChange={(event) => {
-								setName(event.target.value);
-							}}
-						/>
-					</label>
-					<label className="grid gap-2">
-						<Label>{t("defaultLocale")}</Label>
-						<Input
-							value={defaultLocale}
-							onChange={(event) => {
-								setDefaultLocale(event.target.value);
-							}}
-						/>
-					</label>
-					<label className="grid gap-2">
-						<Label>{t("locales")}</Label>
-						<Input
-							value={locales}
-							onChange={(event) => {
-								setLocales(event.target.value);
-							}}
-							placeholder={tr("en, fr, de")}
-						/>
-						<span className="text-xs text-muted-foreground">
-							{tr("Comma-separated BCP 47 language codes.")}
-						</span>
-					</label>
-					<label className="grid gap-2">
-						<Label>{t("fallbacks")}</Label>
-						<Input
-							value={fallbacks}
-							onChange={(event) => {
-								setFallbacks(event.target.value);
-							}}
-							placeholder={tr("fr-CH:fr, fr:en")}
-						/>
-					</label>
-					<Button
-						className="w-fit"
-						disabled={!name || !defaultLocale || csv(locales).length === 0}
-						onClick={() => void save()}
+		<div className="flex w-full flex-col gap-8">
+			<SettingsSection
+				title={tr("Language groups")}
+				description={tr("Choose the language group to edit, or create a new one.")}
+			>
+				<SettingsRow>
+					<Select
+						value={selectedId ?? ""}
+						onValueChange={(id) => {
+							const group = groups.find((item) => item.id === id);
+							if (group) select(group);
+						}}
 					>
-						{t("save")}
+						<SelectTrigger className="w-full" aria-label={tr("Language groups")}>
+							<SelectValue placeholder={tr("New group")} />
+						</SelectTrigger>
+						<SelectContent>
+							{groups.map((group) => (
+								<SelectItem key={group.id} value={group.id}>
+									{group.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					{!creating && (
+						<SettingsActions>
+							<Button
+								variant="outline"
+								onClick={() => {
+									setPreviousId(selectedId);
+									setSelectedId(null);
+									setForm(newLocalizationForm(tr("New group")));
+								}}
+							>
+								<Plus /> {tr("New group")}
+							</Button>
+						</SettingsActions>
+					)}
+				</SettingsRow>
+			</SettingsSection>
+			<SettingsSection
+				title={creating ? tr("New group") : form.name || tr("Language group")}
+				description={tr(
+					"Translated block fields show missing values and use these fallback rules at runtime.",
+				)}
+			>
+				<SettingsRow>
+					<SettingsTextField
+						label={t("name")}
+						value={form.name}
+						onChange={(event) => {
+							change("name", event.target.value);
+						}}
+					/>
+				</SettingsRow>
+				<SettingsRow>
+					<SettingsTextField
+						label={t("defaultLocale")}
+						value={form.defaultLocale}
+						onChange={(event) => {
+							change("defaultLocale", event.target.value);
+						}}
+					/>
+				</SettingsRow>
+				<SettingsRow>
+					<SettingsTextField
+						label={t("locales")}
+						description={tr("Comma-separated BCP 47 language codes.")}
+						placeholder={tr("en, fr, de")}
+						value={form.locales}
+						onChange={(event) => {
+							change("locales", event.target.value);
+						}}
+					/>
+				</SettingsRow>
+				<SettingsRow>
+					<SettingsTextField
+						label={t("fallbacks")}
+						description={tr(
+							"Language:fallback pairs separated by commas. fr-CH:fr uses French when Swiss French is missing.",
+						)}
+						placeholder={tr("fr-CH:fr, fr:en")}
+						value={form.fallbacks}
+						onChange={(event) => {
+							change("fallbacks", event.target.value);
+						}}
+					/>
+				</SettingsRow>
+			</SettingsSection>
+			{creating ? (
+				<SettingsActions>
+					{groups.length > 0 && (
+						<Button
+							variant="outline"
+							onClick={() => {
+								const group = groups.find((item) => item.id === previousId) ?? groups[0];
+								if (group) select(group);
+							}}
+						>
+							{t("cancel")}
+						</Button>
+					)}
+					<Button disabled={!valid || busy} onClick={() => void create()}>
+						{busy ? t("saving") : t("create")}
 					</Button>
-				</CardContent>
-			</Card>
+				</SettingsActions>
+			) : (
+				<>
+					{!valid && (
+						<p className="text-sm text-kumo-danger">
+							{tr("Enter a name, a default language and at least one language to save.")}
+						</p>
+					)}
+					<AutosaveIndicator status={autosave.status} onRetry={autosave.retry} />
+				</>
+			)}
 		</div>
 	);
 }
@@ -462,61 +539,70 @@ export function SdkContent({ projectRef }: { projectRef: string }) {
 	);
 	const selectedPlatform = platforms.find((item) => item.id === platform) ?? platforms[0];
 	return (
-		<div className="space-y-4">
-			<Card>
-				<CardHeader>
-					<CardTitle>{tr("Runtime selection")}</CardTitle>
-					<CardDescription>
-						{tr(
-							"Use the current project identifier and a rotatable environment key. The API stays on SuperBoard.",
+		<div className="flex w-full flex-col gap-8">
+			<SettingsSection
+				title={tr("Runtime selection")}
+				description={tr(
+					"Use the current project identifier and a rotatable environment key. The API stays on SuperBoard.",
+				)}
+			>
+				<SettingsRow>
+					<SettingsField label={tr("Environment")}>
+						{(id) => (
+							<Select value={environmentKey} onValueChange={setEnvironmentKey}>
+								<SelectTrigger id={id} className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{environments.map((environment) => (
+										<SelectItem key={environment.id} value={environment.key}>
+											{environment.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						)}
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="grid gap-4 md:grid-cols-3">
-					<label className="grid gap-2">
-						<Label>{tr("Project identifier")}</Label>
-						<CopyField value={projectRef} />
-					</label>
-					<label className="grid gap-2">
-						<Label>{tr("Environment")}</Label>
-						<Select value={environmentKey} onValueChange={setEnvironmentKey}>
-							<SelectTrigger className="w-full">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{environments.map((environment) => (
-									<SelectItem key={environment.id} value={environment.key}>
-										{environment.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</label>
-					<label className="grid gap-2">
-						<Label>{t("platform")}</Label>
-						<Select
-							value={platform}
-							onValueChange={(value) => {
-								const next = platforms.find((item) => item.id === value);
-								if (next) setPlatform(next.id);
-							}}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{platforms.map((item) => (
-									<SelectItem key={item.id} value={item.id}>
-										{item.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</label>
-				</CardContent>
-			</Card>
+					</SettingsField>
+				</SettingsRow>
+				<SettingsRow>
+					<SettingsField label={t("platform")}>
+						{(id) => (
+							<Select
+								value={platform}
+								onValueChange={(value) => {
+									const next = platforms.find((item) => item.id === value);
+									if (next) setPlatform(next.id);
+								}}
+							>
+								<SelectTrigger id={id} className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{platforms.map((item) => (
+										<SelectItem key={item.id} value={item.id}>
+											{item.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						)}
+					</SettingsField>
+				</SettingsRow>
+				<SettingsRow>
+					<p className="text-sm font-medium">{tr("Project identifier")}</p>
+					<CopyField value={projectRef} />
+				</SettingsRow>
+				{environmentKey && (
+					<SettingsRow>
+						<p className="text-sm font-medium">{tr("Environment identifier")}</p>
+						<CopyField value={environmentKey} />
+					</SettingsRow>
+				)}
+			</SettingsSection>
 			{!environmentKey ? (
-				<p role="alert">{tr("Select an available environment to view SDK examples.")}</p>
+				<p role="alert" className="text-sm text-kumo-subtle">
+					{tr("Select an available environment to view SDK examples.")}
+				</p>
 			) : publicConfig.apiUrl ? (
 				<SdkCodePanel
 					title={selectedPlatform.label}
@@ -524,55 +610,56 @@ export function SdkContent({ projectRef }: { projectRef: string }) {
 					code={flowSdkSnippet(platform, projectRef, environmentKey, publicConfig.apiUrl)}
 				/>
 			) : (
-				<p role="alert">{publicConfig.endpointError("API")}</p>
+				<p role="alert" className="text-sm text-kumo-danger">
+					{publicConfig.endpointError("API")}
+				</p>
 			)}
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<Code2 className="size-4" /> {tr("Debug and compatibility")}
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="grid gap-2 text-sm text-muted-foreground">
-					<p>• {tr("Configure SPA navigation and language in the SDK initialization.")}</p>
-					<p>
-						• {tr("The debug overlay reconnects WebSockets and displays ordered block updates.")}
-					</p>
-					<p>
-						•{" "}
-						{tr(
-							"Legacy @flows packages remain compatible through the canonical SDK key header supplied by customFetch.",
-						)}
-					</p>
-					<p>
-						•{" "}
-						{tr(
-							"Existing Paywall and Onboarding widgets remain deprecated adapters to Flows workflows.",
-						)}
-					</p>
-					<p>
-						•{" "}
-						{tr("Purchases and restores always delegate to Products; Flows never invents revenue.")}
-					</p>
-				</CardContent>
-			</Card>
+			<SettingsSection
+				title={tr("Debug and compatibility")}
+				description={tr("Notes for the developers who integrate the SDK.")}
+			>
+				<SettingsRow>
+					<ul className="list-disc space-y-2 ps-5 text-sm text-kumo-subtle">
+						<li>{tr("Configure SPA navigation and language in the SDK initialization.")}</li>
+						<li>
+							{tr("The debug overlay reconnects WebSockets and displays ordered block updates.")}
+						</li>
+						<li>
+							{tr(
+								"Legacy @flows packages remain compatible through the canonical SDK key header supplied by customFetch.",
+							)}
+						</li>
+						<li>
+							{tr(
+								"Existing Paywall and Onboarding widgets remain deprecated adapters to Flows workflows.",
+							)}
+						</li>
+						<li>
+							{tr(
+								"Purchases and restores always delegate to Products; Flows never invents revenue.",
+							)}
+						</li>
+					</ul>
+				</SettingsRow>
+			</SettingsSection>
 		</div>
 	);
+}
+
+function requestedTab(defaultTab: SettingsTab): SettingsTab {
+	if (typeof window === "undefined") return defaultTab;
+	const requested = new URLSearchParams(window.location.search).get("tab");
+	return settingsTabs.find((tab) => tab === requested) ?? defaultTab;
 }
 
 export function AcquisitionSettingsPage({
 	defaultTab = "environments",
 }: {
-	defaultTab?: "environments" | "sdk" | "localization";
+	defaultTab?: SettingsTab;
 } = {}) {
 	const { t, tr, locale } = useFlowI18n();
 	const { projectRef } = useFlows();
-	const [tab, setTab] = useState(() => {
-		const requested =
-			typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab");
-		return requested && ["environments", "sdk", "localization"].includes(requested)
-			? requested
-			: defaultTab;
-	});
+	const [tab, setTab] = useState(() => requestedTab(defaultTab));
 	useEffect(() => {
 		const url = new URL(window.location.href);
 		if (url.searchParams.get("tab") === "links") {
@@ -607,34 +694,36 @@ export function AcquisitionSettingsPage({
 			<Tabs
 				value={tab}
 				onValueChange={(value) => {
-					setTab(value);
+					const next = settingsTabs.find((item) => item === value);
+					if (!next) return;
+					setTab(next);
 					const url = new URL(window.location.href);
-					url.searchParams.set("tab", value);
+					url.searchParams.set("tab", next);
 					window.history.replaceState(null, "", url);
 				}}
 			>
 				<TabsList aria-label={tr("Settings sections")} className="h-auto flex-wrap">
 					<TabsTrigger value="environments">{tr("Environments")}</TabsTrigger>
-					<TabsTrigger value="sdk">{tr("SDK")}</TabsTrigger>
 					<TabsTrigger value="localization">{tr("Localization")}</TabsTrigger>
+					<TabsTrigger value="sdk">{tr("SDK")}</TabsTrigger>
 				</TabsList>
-				<TabsContent value="environments">
+				<TabsContent value="environments" className="pt-4">
 					{projectRef ? (
 						<EnvironmentsContent key={projectRef} projectRef={projectRef} />
 					) : (
 						<FlowsEmptyState icon={FolderKanban} title={t("selectProject")} />
 					)}
 				</TabsContent>
-				<TabsContent value="sdk">
+				<TabsContent value="localization" className="pt-4">
 					{projectRef ? (
-						<SdkContent key={projectRef} projectRef={projectRef} />
+						<LocalizationContent key={projectRef} projectRef={projectRef} />
 					) : (
 						<FlowsEmptyState icon={FolderKanban} title={t("selectProject")} />
 					)}
 				</TabsContent>
-				<TabsContent value="localization">
+				<TabsContent value="sdk" className="pt-4">
 					{projectRef ? (
-						<LocalizationContent key={projectRef} projectRef={projectRef} />
+						<SdkContent key={projectRef} projectRef={projectRef} />
 					) : (
 						<FlowsEmptyState icon={FolderKanban} title={t("selectProject")} />
 					)}
@@ -660,38 +749,29 @@ export function SdkSettingsPage() {
 function SdkCodePanel({ title, install, code }: { title: string; install: string; code: string }) {
 	const { t, tr } = useFlowI18n();
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{title}</CardTitle>
-				<CardDescription>
-					{tr("Install and initialize with your authenticated application user.")}
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="grid gap-4">
-				<div>
-					<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-						{t("install")}
-					</p>
-					<CopyField value={install} />
+		<SettingsSection
+			title={title}
+			description={tr("Install and initialize with your authenticated application user.")}
+		>
+			<SettingsRow>
+				<p className="text-sm font-medium">{t("install")}</p>
+				<CopyField value={install} />
+			</SettingsRow>
+			<SettingsRow>
+				<p className="text-sm font-medium">{tr("Initialize")}</p>
+				<div className="relative">
+					<pre className="overflow-x-auto rounded-md border border-kumo-line bg-kumo-tint p-4 pe-12 font-mono text-xs leading-5">
+						<code>{code}</code>
+					</pre>
+					<CopyButton value={code} className="absolute top-2 end-2" />
 				</div>
-				<div>
-					<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-						{tr("Initialize")}
-					</p>
-					<div className="relative">
-						<pre className="overflow-x-auto rounded-[var(--radius)] border border-border bg-muted p-4 pe-12 text-xs leading-5 text-foreground font-mono">
-							<code>{code}</code>
-						</pre>
-						<CopyButton value={code} className="absolute top-2 end-2" />
-					</div>
-				</div>
-			</CardContent>
-		</Card>
+			</SettingsRow>
+		</SettingsSection>
 	);
 }
 function CopyField({ value }: { value: string }) {
 	return (
-		<div className="flex items-center gap-2 rounded-[var(--radius-sm)] border bg-background p-2 ps-3">
+		<div className="flex items-center gap-2 rounded-md border border-kumo-line bg-kumo-base p-2 ps-3">
 			<code className="min-w-0 flex-1 break-all text-xs">{value || "—"}</code>
 			{value && <CopyButton value={value} />}
 		</div>

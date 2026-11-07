@@ -666,7 +666,7 @@ describe("Analytics in the Workers runtime", () => {
 		});
 	});
 
-	it("applies collection and hot-retention settings without dropping canonical facts", async () => {
+	it("applies hot retention and ignores the retired project-wide collection flag", async () => {
 		const settings = await SELF.fetch(
 			await signedRequest(
 				"/internal/v1/settings",
@@ -681,8 +681,11 @@ describe("Analytics in the Workers runtime", () => {
 			),
 		);
 		expect(settings.status).toBe(200);
+		await expect(settings.json()).resolves.toMatchObject({
+			data: { hot_retention_days: 7, timezone: "Europe/Zurich", data_collection_enabled: true },
+		});
 
-		const rejected = await SELF.fetch(
+		const sdkEvent = await SELF.fetch(
 			await signedRequest("/internal/v1/events", 55, "POST", {
 				schema_version: 1,
 				event_id: "runtime-disabled-sdk-event",
@@ -694,13 +697,9 @@ describe("Analytics in the Workers runtime", () => {
 				properties: { view_name: "Disabled" },
 			}),
 		);
-		expect(rejected.status).toBe(207);
-		await expect(rejected.json()).resolves.toMatchObject({
-			data: {
-				accepted: 0,
-				rejected: 1,
-				results: [{ code: "analytics_collection_disabled" }],
-			},
+		expect(sdkEvent.status).toBe(202);
+		await expect(sdkEvent.json()).resolves.toMatchObject({
+			data: { accepted: 1, rejected: 0 },
 		});
 
 		const canonical = {
@@ -734,6 +733,178 @@ describe("Analytics in the Workers runtime", () => {
 				.bind(canonical.event_id)
 				.first(),
 		).resolves.toMatchObject({ retention_days: 7 });
+	});
+
+	it("keeps processing a project whose stored collection flag is off", async () => {
+		await env.DB.prepare(
+			`INSERT INTO analytics_project_settings
+        (project_id, hot_retention_days, timezone, data_collection_enabled, updated_at)
+       VALUES ('58', 35, 'UTC', 0, ?)`,
+		)
+			.bind(new Date().toISOString())
+			.run();
+
+		const accepted = await SELF.fetch(
+			await signedRequest("/internal/v1/events", 58, "POST", {
+				schema_version: 1,
+				event_id: "runtime-legacy-paused-event",
+				event_name: "screen.viewed",
+				occurred_at: new Date().toISOString(),
+				source: "sdk",
+				application_id: "runtime-legacy-paused-app",
+				app_instance_id: "private-legacy-paused-instance",
+				properties: { view_name: "Home" },
+			}),
+		);
+		expect(accepted.status).toBe(202);
+		await projectEvent(58, "runtime-legacy-paused-event", "legacy-paused-projection");
+		await expect(
+			env.DB.prepare(
+				"SELECT COUNT(*) AS total FROM analytics_events_hot WHERE project_id = '58'",
+			).first(),
+		).resolves.toMatchObject({ total: 1 });
+
+		const settings = await SELF.fetch(await signedRequest("/internal/v1/settings", 58));
+		await expect(settings.json()).resolves.toMatchObject({
+			data: { data_collection_enabled: true },
+		});
+	});
+
+	it("groups daily reports by the project's report time zone", async () => {
+		const projectId = 57;
+		const utcDay = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
+		const occurredAt = `${utcDay}T23:30:00.000Z`;
+		const parisDay = new Date(Date.parse(`${utcDay}T00:00:00.000Z`) + 86_400_000)
+			.toISOString()
+			.slice(0, 10);
+		const saved = await SELF.fetch(
+			await signedRequest(
+				"/internal/v1/settings",
+				projectId,
+				"PUT",
+				{ timezone: "Europe/Paris" },
+				"runtime-report-timezone",
+			),
+		);
+		expect(saved.status).toBe(200);
+
+		const subject = {
+			application_id: "runtime-timezone-app",
+			app_instance_id: "private-timezone-instance",
+			occurred_at: occurredAt,
+			schema_version: 1,
+		};
+		const installation = {
+			...subject,
+			event_id: "runtime-timezone-installation",
+			event_name: "superboard.analytics.installation.created.v1",
+			source: "system",
+			properties: {},
+		};
+		const view = {
+			...subject,
+			event_id: "runtime-timezone-view",
+			event_name: "screen.viewed",
+			source: "sdk",
+			properties: { view_name: "Home" },
+		};
+		expect(
+			(
+				await SELF.fetch(
+					await signedRequest(
+						"/internal/v1/events",
+						projectId,
+						"POST",
+						installation,
+						undefined,
+						"system",
+					),
+				)
+			).status,
+		).toBe(202);
+		expect(
+			(await SELF.fetch(await signedRequest("/internal/v1/events", projectId, "POST", view)))
+				.status,
+		).toBe(202);
+		await projectEvent(projectId, installation.event_id, "timezone-installation-projection");
+		await projectEvent(projectId, view.event_id, "timezone-view-projection");
+
+		const range = new URLSearchParams({
+			from: `${utcDay}T00:00:00.000Z`,
+			to: new Date().toISOString(),
+		});
+		const overview = await SELF.fetch(
+			await signedRequest(`/internal/v1/overview?${range}`, projectId),
+		);
+		const overviewBody = await overview.json<{ data: { series: Array<{ date: string }> } }>();
+		expect(overviewBody.data.series.map((point) => point.date)).toEqual([parisDay]);
+
+		const analysis = await SELF.fetch(
+			await signedRequest(
+				`/internal/v1/events/analyze?${range}&event_name=screen.viewed`,
+				projectId,
+			),
+		);
+		await expect(analysis.json()).resolves.toMatchObject({
+			data: { series: [{ date: parisDay, events: 1 }] },
+		});
+
+		const retention = await SELF.fetch(
+			await signedRequest(`/internal/v1/retention?${range}`, projectId),
+		);
+		await expect(retention.json()).resolves.toMatchObject({
+			data: {
+				cohorts: [{ cohort_date: parisDay, size: 1, days: [{ day: 0, subjects: 1 }] }],
+			},
+		});
+	});
+
+	it("groups a range crossing a daylight saving change by local calendar day", async () => {
+		const projectId = 59;
+		expect(
+			(
+				await SELF.fetch(
+					await signedRequest(
+						"/internal/v1/settings",
+						projectId,
+						"PUT",
+						{ timezone: "Europe/Paris" },
+						"runtime-report-timezone-dst",
+					),
+				)
+			).status,
+		).toBe(200);
+		for (const [eventId, occurredAt] of [
+			["runtime-dst-summer", "2025-10-25T22:30:00.000Z"],
+			["runtime-dst-winter", "2025-10-26T22:30:00.000Z"],
+		] as const) {
+			const accepted = await SELF.fetch(
+				await signedRequest("/internal/v1/events", projectId, "POST", {
+					schema_version: 1,
+					event_id: eventId,
+					event_name: "dst.check",
+					occurred_at: occurredAt,
+					source: "sdk",
+					application_id: "runtime-dst-app",
+					app_instance_id: "private-dst-instance",
+					properties: {},
+				}),
+			);
+			expect(accepted.status).toBe(202);
+			await projectEvent(projectId, eventId, `${eventId}-projection`);
+		}
+		const range = new URLSearchParams({
+			from: "2025-10-20T00:00:00.000Z",
+			to: "2025-10-31T00:00:00.000Z",
+			event_name: "dst.check",
+		});
+		await expect(
+			(
+				await SELF.fetch(await signedRequest(`/internal/v1/events/analyze?${range}`, projectId))
+			).json(),
+		).resolves.toMatchObject({
+			data: { series: [{ date: "2025-10-26", events: 2 }] },
+		});
 	});
 
 	it("stops SDK collection for a disabled application", async () => {

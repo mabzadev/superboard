@@ -44,7 +44,7 @@ const Page = () => {
 				onClose={() => setShowInviteModal(false)}
 				onInvited={() => setShowInviteModal(false)}
 			/>
-			<UserTable orgId={null} />
+			<UserTable />
 		</section>
 	);
 };

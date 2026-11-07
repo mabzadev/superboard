@@ -41,8 +41,6 @@ const useSubmitError = ({
         msg = requestError.accountLocked[locale]
       } else if (errorString.indexOf(messageConfig.RequestError.OtpMfaLocked) !== -1) {
         msg = requestError.optMfaLocked[locale]
-      } else if (errorString.indexOf(messageConfig.RequestError.SmsMfaLocked) !== -1) {
-        msg = requestError.smsMfaLocked[locale]
       } else if (errorString.indexOf(messageConfig.RequestError.EmailMfaLocked) !== -1) {
         msg = requestError.emailMfaLocked[locale]
       } else if (errorString.indexOf(messageConfig.RequestError.EmailVerificationLocked) !== -1) {

@@ -1,5 +1,11 @@
 import { Button, Input, Loader, Select } from "@superboard/front-ui/kumo";
-import { useEffect, useState } from "react";
+import {
+	SettingsActions,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+} from "@superboard/front-ui/settings-form";
+import { useEffect, useId, useState, type ReactNode } from "react";
 
 import { BRAND_FONTS, SOCIAL_NETWORKS, socialLabel } from "./brand.js";
 import { useGrowthI18n } from "./growth-i18n.js";
@@ -11,6 +17,7 @@ import {
 	type BrandKit,
 	type GrowthSettings,
 } from "./growth-service.js";
+import { useAutosave } from "./settings-autosave.js";
 
 const colorLabels = {
 	accent: "Brand color",
@@ -22,120 +29,158 @@ const colorKeys = ["accent", "text", "background", "surface"] as const satisfies
 	keyof typeof colorLabels
 >;
 
-export function BrandKitSettings({ project }: { project: string }) {
+function useLoaded<T>(project: string, load: (project: string) => Promise<T>) {
 	const { t } = useGrowthI18n();
-	const [brand, setBrand] = useState<BrandKit>();
-	const [status, setStatus] = useState("");
-	const [busy, setBusy] = useState(false);
+	const [value, setValue] = useState<T>();
+	const [failed, setFailed] = useState(false);
 	useEffect(() => {
 		let active = true;
-		void getBrandKit(project).then(
-			(value) => {
-				if (active) setBrand(value);
+		void load(project).then(
+			(result) => {
+				if (active) setValue(result);
 			},
 			() => {
-				if (active) setStatus(t("Loading failed"));
+				if (active) setFailed(true);
 			},
 		);
 		return () => {
 			active = false;
 		};
-	}, [project, t]);
-	if (!brand) return status ? <p role="alert">{status}</p> : <Loader />;
+	}, [project, load]);
+	const fallback: ReactNode = failed ? (
+		<p role="alert" className="text-sm text-kumo-danger">
+			{t("Loading failed")}
+		</p>
+	) : (
+		<Loader />
+	);
+	return { value, fallback };
+}
+
+export function BrandKitSettings({ project }: { project: string }) {
+	const { value, fallback } = useLoaded(project, getBrandKit);
+	return value ? <BrandKitForm project={project} initial={value} /> : fallback;
+}
+
+function BrandKitForm({ project, initial }: { project: string; initial: BrandKit }) {
+	const { t } = useGrowthI18n();
+	const [brand, setBrand] = useState(initial);
+	const { indicator } = useAutosave({
+		resourceKey: project,
+		value: brand,
+		save: async (next) => {
+			await saveBrandKit(project, {
+				...next,
+				social_links: next.social_links.filter((link) => link.url.trim()),
+			});
+		},
+	});
 	const patch = (value: Partial<BrandKit>) => {
-		setBrand({ ...brand, ...value });
+		setBrand((current) => ({ ...current, ...value }));
 	};
 	const unusedNetworks = SOCIAL_NETWORKS.filter(
 		(network) => !brand.social_links.some((link) => link.network === network),
 	);
 	return (
-		<section className="space-y-4 rounded-lg border border-kumo-line p-5">
-			<div>
-				<h2 className="text-lg font-semibold">{t("Brand kit")}</h2>
-				<p className="text-sm text-kumo-subtle">
-					{t(
-						"New emails start with your logo, colors, font and footer. Each email can still change them.",
-					)}
-				</p>
-			</div>
-			<div className="grid gap-4 md:grid-cols-2">
-				<Input
-					label={t("Company name")}
-					value={brand.company_name ?? ""}
-					onChange={(event) => {
-						patch({ company_name: event.target.value || null });
-					}}
-				/>
-				<Input
-					label={t("Logo URL")}
-					type="url"
-					value={brand.logo_url ?? ""}
-					onChange={(event) => {
-						patch({ logo_url: event.target.value || null });
-					}}
-				/>
-			</div>
-			{brand.logo_url?.startsWith("https://") && (
-				<img src={brand.logo_url} alt={t("Logo preview")} className="h-12 w-auto object-contain" />
-			)}
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-				{colorKeys.map((key) => (
-					<Input
-						key={key}
-						type="color"
-						label={t(colorLabels[key])}
-						value={brand.colors[key]}
+		<>
+			<SettingsSection
+				title={t("Brand kit")}
+				description={t(
+					"New emails start with your logo, colors, font and footer. Each email can still change them.",
+				)}
+			>
+				<SettingsRow>
+					<SettingsTextField
+						label={t("Company name")}
+						value={brand.company_name ?? ""}
 						onChange={(event) => {
-							patch({ colors: { ...brand.colors, [key]: event.target.value } });
+							patch({ company_name: event.target.value || null });
 						}}
 					/>
+				</SettingsRow>
+				<SettingsRow>
+					<SettingsTextField
+						label={t("Logo URL")}
+						type="url"
+						value={brand.logo_url ?? ""}
+						onChange={(event) => {
+							patch({ logo_url: event.target.value || null });
+						}}
+					/>
+					{brand.logo_url?.startsWith("https://") && (
+						<img
+							src={brand.logo_url}
+							alt={t("Logo preview")}
+							className="h-12 w-auto object-contain"
+						/>
+					)}
+				</SettingsRow>
+				{colorKeys.map((key) => (
+					<SettingsRow key={key}>
+						<ColorField
+							label={t(colorLabels[key])}
+							value={brand.colors[key]}
+							onChange={(value) => {
+								patch({ colors: { ...brand.colors, [key]: value } });
+							}}
+						/>
+					</SettingsRow>
 				))}
-				<Select
-					label={t("Font")}
-					value={brand.font}
-					onValueChange={(value) => {
-						if (value) patch({ font: value });
-					}}
-					items={{
-						...BRAND_FONTS,
-						...(BRAND_FONTS[brand.font] ? {} : { [brand.font]: brand.font }),
-					}}
-				/>
-			</div>
-			<details className="rounded-lg border border-kumo-line p-4">
-				<summary className="cursor-pointer font-medium">{t("Footer and social links")}</summary>
-				<div className="mt-4 space-y-4">
-					<Input
+				<SettingsRow>
+					<Select
+						className="w-full"
+						label={t("Font")}
+						value={brand.font}
+						onValueChange={(value) => {
+							if (value) patch({ font: value });
+						}}
+						items={{
+							...BRAND_FONTS,
+							...(BRAND_FONTS[brand.font] ? {} : { [brand.font]: brand.font }),
+						}}
+					/>
+				</SettingsRow>
+			</SettingsSection>
+			<SettingsSection
+				title={t("Footer and social links")}
+				description={t("Added at the bottom of new emails, above the unsubscribe link.")}
+			>
+				<SettingsRow>
+					<SettingsTextField
 						label={t("Footer text")}
 						value={brand.footer_text ?? ""}
 						onChange={(event) => {
 							patch({ footer_text: event.target.value || null });
 						}}
 					/>
-					<Input
+				</SettingsRow>
+				<SettingsRow>
+					<SettingsTextField
 						label={t("Company address")}
 						value={brand.company_address ?? ""}
 						onChange={(event) => {
 							patch({ company_address: event.target.value || null });
 						}}
 					/>
-					{brand.social_links.map((link, index) => (
-						<div key={link.network} className="flex flex-wrap items-end gap-3">
-							<span className="w-28 pb-2 text-sm font-medium">{t(socialLabel(link.network))}</span>
-							<Input
-								aria-label={t(socialLabel(link.network))}
-								type="url"
-								value={link.url}
-								onChange={(event) => {
-									patch({
-										social_links: brand.social_links.map((item, position) =>
-											position === index ? { ...item, url: event.target.value } : item,
-										),
-									});
-								}}
-							/>
+				</SettingsRow>
+				{brand.social_links.map((link, index) => (
+					<SettingsRow key={link.network}>
+						<SettingsTextField
+							label={t(socialLabel(link.network))}
+							type="url"
+							value={link.url}
+							onChange={(event) => {
+								patch({
+									social_links: brand.social_links.map((item, position) =>
+										position === index ? { ...item, url: event.target.value } : item,
+									),
+								});
+							}}
+						/>
+						<SettingsActions>
 							<Button
 								variant="ghost"
+								aria-label={t("Remove {network}", { network: t(socialLabel(link.network)) })}
 								onClick={() => {
 									patch({
 										social_links: brand.social_links.filter((_, position) => position !== index),
@@ -144,10 +189,13 @@ export function BrandKitSettings({ project }: { project: string }) {
 							>
 								{t("Remove")}
 							</Button>
-						</div>
-					))}
-					{unusedNetworks.length > 0 && (
+						</SettingsActions>
+					</SettingsRow>
+				))}
+				{unusedNetworks.length > 0 && (
+					<SettingsRow>
 						<Select
+							className="w-full"
 							label={t("Add a social link")}
 							value=""
 							onValueChange={(value) => {
@@ -161,39 +209,42 @@ export function BrandKitSettings({ project }: { project: string }) {
 								),
 							}}
 						/>
-					)}
-				</div>
-			</details>
-			<div className="flex items-center gap-3">
-				<Button
-					variant="primary"
-					loading={busy}
-					onClick={() => {
-						setBusy(true);
-						setStatus("");
-						saveBrandKit(project, {
-							...brand,
-							social_links: brand.social_links.filter((link) => link.url.trim()),
-						})
-							.then((saved) => {
-								setBrand(saved);
-								setStatus(t("Brand kit saved"));
-							})
-							.catch(() => {
-								setStatus(t("Save failed"));
-							})
-							.finally(() => {
-								setBusy(false);
-							});
+					</SettingsRow>
+				)}
+			</SettingsSection>
+			{indicator}
+		</>
+	);
+}
+
+function ColorField({
+	label,
+	value,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	onChange(value: string): void;
+}) {
+	const id = useId();
+	return (
+		<div className="flex items-center justify-between gap-4">
+			<label htmlFor={id} className="text-sm font-medium">
+				{label}
+			</label>
+			<div className="flex shrink-0 items-center gap-3">
+				<code className="text-xs text-kumo-subtle">{value}</code>
+				<Input
+					id={id}
+					type="color"
+					className="w-14 p-1"
+					value={value}
+					onChange={(event) => {
+						onChange(event.target.value);
 					}}
-				>
-					{t("Save brand kit")}
-				</Button>
-				<p role="status" className="text-sm">
-					{status}
-				</p>
+				/>
 			</div>
-		</section>
+		</div>
 	);
 }
 
@@ -206,87 +257,62 @@ const zones = (): string[] => {
 };
 
 export function GrowthPreferences({ project }: { project: string }) {
+	const { value, fallback } = useLoaded(project, getGrowthSettings);
+	return value ? <GrowthForm project={project} initial={value} /> : fallback;
+}
+
+function GrowthForm({ project, initial }: { project: string; initial: GrowthSettings }) {
 	const { t } = useGrowthI18n();
-	const [settings, setSettings] = useState<GrowthSettings>();
-	const [status, setStatus] = useState("");
-	const [busy, setBusy] = useState(false);
-	useEffect(() => {
-		let active = true;
-		void getGrowthSettings(project).then(
-			(value) => {
-				if (active) setSettings(value);
-			},
-			() => {
-				if (active) setStatus(t("Loading failed"));
-			},
-		);
-		return () => {
-			active = false;
-		};
-	}, [project, t]);
-	if (!settings) return status ? <p role="alert">{status}</p> : <Loader />;
+	const [settings, setSettings] = useState(initial);
+	const { indicator } = useAutosave({
+		resourceKey: project,
+		value: settings,
+		save: async (next) => {
+			await saveGrowthSettings(project, next);
+		},
+	});
 	const timeZones = zones();
 	return (
-		<section className="space-y-4 rounded-lg border border-kumo-line p-5">
-			<div>
-				<h2 className="text-lg font-semibold">{t("Revenue and time zones")}</h2>
-				<p className="text-sm text-kumo-subtle">
-					{t("Purchases are credited to the last email clicked within the attribution window.")}
-				</p>
-			</div>
-			<div className="grid gap-4 md:grid-cols-2">
-				<Input
-					type="number"
-					min={1}
-					max={90}
-					label={t("Attribution window (days)")}
-					value={settings.attribution_window_days}
-					onChange={(event) => {
-						setSettings({
-							...settings,
-							attribution_window_days: Math.min(90, Math.max(1, Number(event.target.value) || 1)),
-						});
-					}}
-				/>
-				<Select
-					label={t("Default time zone for contacts")}
-					value={settings.default_time_zone}
-					onValueChange={(value) => {
-						if (value) setSettings({ ...settings, default_time_zone: value });
-					}}
-					items={Object.fromEntries(
-						[...new Set(["UTC", settings.default_time_zone, ...timeZones])].map((zone) => [
-							zone,
-							zone,
-						]),
-					)}
-				/>
-			</div>
-			<div className="flex items-center gap-3">
-				<Button
-					loading={busy}
-					onClick={() => {
-						setBusy(true);
-						setStatus("");
-						saveGrowthSettings(project, settings)
-							.then((saved) => {
-								setSettings(saved);
-								setStatus(t("Preferences saved"));
-							})
-							.catch(() => {
-								setStatus(t("Save failed"));
-							})
-							.finally(() => {
-								setBusy(false);
+		<>
+			<SettingsSection
+				title={t("Revenue and time zones")}
+				description={t(
+					"Purchases are credited to the last email clicked within the attribution window.",
+				)}
+			>
+				<SettingsRow>
+					<SettingsTextField
+						type="number"
+						min={1}
+						max={90}
+						label={t("Attribution window (days)")}
+						value={settings.attribution_window_days}
+						onChange={(event) => {
+							setSettings({
+								...settings,
+								attribution_window_days: Math.min(90, Math.max(1, Number(event.target.value) || 1)),
 							});
-					}}
-				>
-					{t("Save")}
-				</Button>
-				<p role="status" className="text-sm">
-					{status}
-				</p>
-			</div>
-		</section>
+						}}
+					/>
+				</SettingsRow>
+				<SettingsRow>
+					<Select
+						className="w-full"
+						label={t("Default time zone for contacts")}
+						value={settings.default_time_zone}
+						onValueChange={(value) => {
+							if (value) setSettings({ ...settings, default_time_zone: value });
+						}}
+						items={Object.fromEntries(
+							[...new Set(["UTC", settings.default_time_zone, ...timeZones])].map((zone) => [
+								zone,
+								zone,
+							]),
+						)}
+					/>
+				</SettingsRow>
+			</SettingsSection>
+			{indicator}
+		</>
 	);
 }

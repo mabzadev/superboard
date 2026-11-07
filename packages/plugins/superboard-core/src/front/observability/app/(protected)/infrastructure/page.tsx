@@ -1,17 +1,12 @@
 "use client";
 
+import DeleteConfirm from "@superboard/front-ui/common/delete-confirm.js";
+import { Button } from "@superboard/front-ui/kumo";
+import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
+import { SettingsActions, SettingsRow, SettingsSection } from "@superboard/front-ui/settings-form";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
-import { Button } from "@superboard/front-ui/ui/button.js";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@superboard/front-ui/ui/card.js";
-import { Activity, Database, ExternalLink, Gauge, RefreshCw, Users } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import {
 	getPlatformAccountErasures,
@@ -27,10 +22,18 @@ import {
 	type PlatformStatus,
 	type RuntimeMetricRow,
 } from "../../../api/platform/platformService.js";
-import IncidentsPanel from "../../../IncidentsPanel.js";
+import DeploymentConfiguration from "../../../DeploymentConfiguration.js";
+import { useObservabilityI18n, type ObservabilityI18n } from "../../../i18n.js";
+import IncidentsPanel, { useObservations, WorkerObservations } from "../../../IncidentsPanel.js";
 import { WorkerDeploymentGroups } from "../../../WorkerDeploymentGroups.js";
 
+const cell = "py-2 pe-4 text-start align-top";
+const head = "py-2 pe-4 text-start font-medium";
+
 export default function InfrastructurePage() {
+	const i18n = useObservabilityI18n();
+	const { t } = i18n;
+	const observations = useObservations();
 	const [status, setStatus] = useState<PlatformStatus | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [customJobs, setCustomJobs] = useState<PlatformCustomJob[]>([]);
@@ -40,6 +43,7 @@ export default function InfrastructurePage() {
 	const [retryingJob, setRetryingJob] = useState<string | null>(null);
 	const [resolvingDeadLetter, setResolvingDeadLetter] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [refreshes, setRefreshes] = useState(0);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -61,7 +65,7 @@ export default function InfrastructurePage() {
 							.catch((reason: unknown) => ({
 								data: null,
 								error:
-									reason instanceof Error ? reason.message : "Email operations are unavailable",
+									reason instanceof Error ? reason.message : "Email operations are unavailable.",
 							}))
 					: Promise.resolve({ data: null, error: null }),
 			]);
@@ -71,7 +75,7 @@ export default function InfrastructurePage() {
 			setEmailOperationsError(nextEmailOperations.error);
 			setError(null);
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to load infrastructure status");
+			setError(reason instanceof Error ? reason.message : "Unable to load the service status.");
 		} finally {
 			setLoading(false);
 		}
@@ -90,7 +94,7 @@ export default function InfrastructurePage() {
 				setEmailOperationsError(null);
 			} catch (reason) {
 				setEmailOperationsError(
-					reason instanceof Error ? reason.message : "Unable to resolve email dead letter",
+					reason instanceof Error ? reason.message : "Unable to resolve this quarantined email.",
 				);
 			} finally {
 				setResolvingDeadLetter(null);
@@ -107,7 +111,7 @@ export default function InfrastructurePage() {
 			setCustomJobs(next.jobs);
 			setError(null);
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to retry custom job");
+			setError(reason instanceof Error ? reason.message : "Unable to retry this job.");
 		} finally {
 			setRetryingJob(null);
 		}
@@ -126,834 +130,889 @@ export default function InfrastructurePage() {
 		};
 	}, [load]);
 
+	const windowLabel = i18n.window(status?.runtime?.windowMinutes ?? 60);
+
 	return (
-		<div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-6">
-			<div className="flex items-start justify-between gap-4">
+		<div className="ds-page space-y-5">
+			<header className="ds-page-header">
 				<div>
-					<h1 className="text-2xl font-semibold">Infrastructure</h1>
-					<p className="text-sm text-muted-foreground">
-						Live SuperBoard API, Worker, database, user and background-job status.
+					<h1 className="ds-page-title">{t("Service health")}</h1>
+					<p className="ds-page-description">
+						{t(
+							"Live status of the SuperBoard API, Workers, data stores, users and background jobs.",
+						)}
 					</p>
 				</div>
-				<Button variant="outline" onClick={() => void load()} disabled={loading}>
-					<RefreshCw className={loading ? "animate-spin" : ""} /> Refresh
-				</Button>
-			</div>
+			</header>
+			<SectionNavigation />
+			<div className="flex w-full flex-col gap-8">
+				{error && (
+					<Alert variant="destructive">
+						<AlertTitle>{t("Status unavailable")}</AlertTitle>
+						<AlertDescription>{i18n.message(error)}</AlertDescription>
+					</Alert>
+				)}
 
-			{error && (
-				<Alert variant="destructive">
-					<AlertTitle>Status unavailable</AlertTitle>
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
+				{status?.catalog && status.catalog.status !== "ok" && (
+					<Alert variant="destructive">
+						<AlertTitle>{t("Worker catalog misconfigured")}</AlertTitle>
+						<AlertDescription>
+							{status.catalog.error ?? t("The target Worker inventory is unavailable.")}
+						</AlertDescription>
+					</Alert>
+				)}
 
-			<IncidentsPanel />
-
-			{status && (
-				<>
-					{status.catalog?.status !== "ok" && (
-						<Alert variant="destructive">
-							<AlertTitle>Worker catalog misconfigured</AlertTitle>
-							<AlertDescription>
-								{status.catalog?.error ?? "The target Worker inventory is unavailable."}
-							</AlertDescription>
-						</Alert>
-					)}
-					<div className="grid gap-4 md:grid-cols-4">
-						<Metric title="Platform" value={status.status} icon={<Activity />} />
-						<Metric title="Users" value={format(status.metrics.users)} icon={<Users />} />
-						<Metric title="Projects" value={format(status.metrics.projects)} icon={<Database />} />
-						<Metric
-							title="Invocations (60 min)"
-							value={format(status.runtime?.error ? null : totalInvocations(status.runtime?.rows))}
-							icon={<Gauge />}
+				{status && (
+					<SettingsSection
+						title={t("Overview")}
+						description={t("Overall platform status and recent activity.")}
+					>
+						<ValueRow
+							label={t("Platform")}
+							value={<StatusBadge i18n={i18n} value={status.status} />}
 						/>
-					</div>
+						<ValueRow label={t("Users")} value={i18n.number(status.metrics.users)} />
+						<ValueRow label={t("Projects")} value={i18n.number(status.metrics.projects)} />
+						<ValueRow
+							label={t("Invocations ({window})", { window: windowLabel })}
+							value={i18n.number(
+								status.runtime?.error ? null : totalInvocations(status.runtime?.rows),
+							)}
+						/>
+					</SettingsSection>
+				)}
 
-					<Card>
-						<CardHeader>
-							<CardTitle>Endpoints</CardTitle>
-							<CardDescription>
-								Public surfaces generated by the active target manifest.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="grid gap-3 md:grid-cols-2">
-							{Object.entries(status.endpoints).map(([name, url]) => (
-								<div key={name} className="flex items-center justify-between rounded-md border p-3">
-									<span className="capitalize">{name.replace(/([A-Z])/g, " $1")}</span>
-									{url ? (
-										<a
-											className="flex items-center gap-1 text-sm text-primary"
-											href={url}
-											target="_blank"
-											rel="noreferrer"
-										>
-											{url}
-											<ExternalLink className="size-3" />
-										</a>
-									) : (
-										<span className="text-muted-foreground">Disabled</span>
-									)}
-								</div>
-							))}
-						</CardContent>
-					</Card>
+				<IncidentsPanel observations={observations} />
 
-					<Card>
-						<CardHeader>
-							<CardTitle>Public availability</CardTitle>
-							<CardDescription>
-								DNS and routed HTTPS checks, separate from private Worker service-binding health.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="grid gap-3 lg:grid-cols-2">
+				{status && (
+					<>
+						<SettingsSection
+							title={t("Public availability")}
+							description={t(
+								"DNS and HTTPS checks of the public addresses, separate from the internal Worker health.",
+							)}
+						>
+							{(status.publicSurfaces ?? []).length === 0 && (
+								<EmptyRow>{t("No public address is monitored.")}</EmptyRow>
+							)}
 							{(status.publicSurfaces ?? []).map((surface) => (
-								<div key={surface.id} className="rounded-md border p-4">
-									<div className="mb-2 flex items-center justify-between gap-3">
-										<strong className="capitalize">{surface.id.replace(/-/g, " ")}</strong>
-										<StatusBadge value={surface.status} />
-									</div>
-									<p className="text-sm text-muted-foreground">{surface.description}</p>
-									<div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+								<SettingsRow key={surface.id}>
+									<ItemHeader
+										title={i18n.name(surface.id)}
+										badge={<StatusBadge i18n={i18n} value={surface.status} />}
+									/>
+									<p className="text-sm text-kumo-subtle">{surface.description}</p>
+									<div className="flex flex-wrap items-center gap-3 text-xs text-kumo-subtle">
 										<span>
 											HTTP {surface.httpStatus ?? "—"} ·{" "}
 											{surface.responseTimeMs == null
-												? "no response"
-												: `${surface.responseTimeMs} ms`}
+												? t("No response")
+												: i18n.duration(surface.responseTimeMs)}
 										</span>
 										{surface.url && (
 											<a
-												className="inline-flex items-center gap-1 text-primary"
+												className="inline-flex items-center gap-1 text-kumo-brand underline"
 												href={surface.url}
 												target="_blank"
 												rel="noreferrer"
 											>
-												Open <ExternalLink className="size-3" />
+												{t("Visit")}
 											</a>
 										)}
 									</div>
-									{surface.error && (
-										<p className="mt-2 text-xs text-destructive">{surface.error}</p>
-									)}
-								</div>
+									{surface.error && <p className="text-xs text-kumo-danger">{surface.error}</p>}
+								</SettingsRow>
 							))}
-						</CardContent>
-					</Card>
+						</SettingsSection>
 
-					<Card>
-						<CardHeader>
-							<CardTitle>Data stores</CardTitle>
-							<CardDescription>
-								Logical ownership and live availability. Raw SQL is intentionally not exposed by the
-								control plane.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="grid gap-3 lg:grid-cols-2">
+						<SettingsSection
+							title={t("Data stores")}
+							description={t(
+								"Owner and live availability of each data store. Raw SQL is never exposed here.",
+							)}
+						>
 							{status.dataStores.map((store) => (
-								<div key={store.id} className="rounded-md border p-4">
-									<div className="mb-2 flex items-center justify-between gap-3">
-										<div>
-											<strong>{store.id}</strong>
-											<span className="ml-2 text-xs text-muted-foreground">
-												{store.kind} · {store.owner}
-											</span>
-										</div>
-										<StatusBadge value={store.status} />
-									</div>
-									<p className="text-sm text-muted-foreground">{store.description}</p>
+								<SettingsRow key={store.id}>
+									<ItemHeader
+										title={store.id}
+										subtitle={`${store.kind} · ${store.owner}`}
+										badge={<StatusBadge i18n={i18n} value={store.status} />}
+									/>
+									<p className="text-sm text-kumo-subtle">{store.description}</p>
 									{store.kind === "D1" && (
-										<div className="mt-3 space-y-1 border-t pt-3 text-xs text-muted-foreground">
+										<div className="space-y-1 border-t border-kumo-line pt-3 text-xs text-kumo-subtle">
 											<div className="flex items-center justify-between gap-3">
-												<span>Schema</span>
-												{store.schema ? (
-													<StatusBadge value={store.schema.status} />
-												) : (
-													<StatusBadge value="unavailable" />
-												)}
+												<span>{t("Schema")}</span>
+												<StatusBadge i18n={i18n} value={store.schema?.status ?? "unavailable"} />
 											</div>
 											{store.schema && (
 												<>
-													<p>Expected: {store.schema.expectedMigration}</p>
 													<p>
-														Applied: {store.schema.latestMigration ?? "none"} ·{" "}
-														{format(store.schema.appliedMigrationCount)} total
+														{t("Expected migration: {name}", {
+															name: store.schema.expectedMigration,
+														})}
+													</p>
+													<p>
+														{t("Applied migration: {name} · {count} in total", {
+															name: store.schema.latestMigration ?? t("None"),
+															count: i18n.number(store.schema.appliedMigrationCount),
+														})}
 													</p>
 												</>
 											)}
 										</div>
 									)}
-								</div>
+								</SettingsRow>
 							))}
-						</CardContent>
-					</Card>
+						</SettingsSection>
 
-					<Card>
-						<CardHeader>
-							<div className="flex items-center justify-between gap-3">
-								<CardTitle>API capabilities</CardTitle>
-								<StatusBadge value={status.api.status} />
-							</div>
-							<CardDescription>{status.api.description}</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="grid gap-3 lg:grid-cols-2">
-								{status.api.capabilities.map((capability) => (
-									<div key={capability.id} className="rounded-md border p-4">
-										<strong className="capitalize">{capability.id}</strong>
-										<p className="mt-1 text-sm text-muted-foreground">{capability.description}</p>
-										<p className="mt-2 text-xs text-muted-foreground">
-											Access: {capability.access}
-										</p>
-										<div className="mt-2 flex flex-wrap gap-1.5">
-											{capability.entrypoints.map((entrypoint) => (
-												<code key={entrypoint} className="rounded bg-muted px-1.5 py-0.5 text-xs">
-													{entrypoint}
-												</code>
-											))}
-										</div>
-									</div>
-								))}
-							</div>
-							<p className="text-xs text-muted-foreground">
-								Target {status.deployment.target} · Environment {status.environment}
-								{" · "}Release {status.deployment.release}
-								{" · "}Public routing {status.deployment.publicRouting}
-							</p>
-						</CardContent>
-					</Card>
+						<SettingsSection
+							title={t("Inventory")}
+							description={t("Current record counts in the API database.")}
+						>
+							{Object.entries(status.metrics).map(([name, value]) => (
+								<ValueRow key={name} label={i18n.name(name)} value={i18n.number(value)} />
+							))}
+						</SettingsSection>
 
-					<Card>
-						<CardHeader>
-							<CardTitle>Workers</CardTitle>
-							<CardDescription>
-								Target-derived deployment names, responsibilities, health, dependencies and
-								persisted job state.
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<WorkerDeploymentGroups services={status.services}>
-								{(service) => (
-									<div key={service.id} className="rounded-md border p-4">
-										<div className="mb-2 flex items-start justify-between gap-3">
-											<div>
-												<strong>{service.id}</strong>
-												<p className="font-mono text-xs text-muted-foreground">
-													{service.workerName ?? "No deployment name"} · {service.kind ?? "legacy"}
-												</p>
-											</div>
-											<StatusBadge value={service.status} />
-										</div>
-										<p className="text-sm text-muted-foreground">{service.description}</p>
-										<p className="mt-2 text-xs text-muted-foreground">
-											Health: {service.health?.mode ?? "legacy"} {service.health?.path ?? "unknown"}{" "}
-											·{" "}
-											{service.responseTimeMs == null
-												? "no response"
-												: `${service.responseTimeMs} ms`}
-										</p>
-										<WorkerValues label="Capabilities" values={service.capabilities ?? []} />
-										<WorkerValues label="Routes" values={service.routes ?? []} code />
-										<WorkerValues label="Services" values={service.dependencies?.services ?? []} />
-										<WorkerValues label="Stores" values={service.dependencies?.stores ?? []} />
-										<WorkerValues label="Queues" values={service.dependencies?.queues ?? []} />
-										{(service.dependencies?.externalWorkers ?? []).map((dependency) => (
-											<p key={dependency.binding} className="mt-1 text-xs text-muted-foreground">
-												External: {dependency.binding} → {dependency.workerName}
-											</p>
-										))}
-										<p className="mt-2 text-xs text-muted-foreground">
-											Jobs:{" "}
-											{service.jobs == null
-												? "unavailable"
-												: Object.entries(service.jobs)
-														.map(([name, value]) => `${name}: ${value}`)
-														.join(" · ") || "none"}
-										</p>
-										{service.error && (
-											<p className="mt-2 text-xs text-destructive">{service.error}</p>
-										)}
-										{runtimeFor(status.runtime?.rows, service.id) && (
-											<p className="mt-1 text-xs text-muted-foreground">
-												{runtimeFor(status.runtime?.rows, service.id)}
-											</p>
-										)}
-										{service.detail != null && (
-											<details className="mt-3 text-xs">
-												<summary className="cursor-pointer text-muted-foreground">
-													Runtime detail
-												</summary>
-												<pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2">
-													{JSON.stringify(service.detail, null, 2)}
-												</pre>
-											</details>
-										)}
-									</div>
-								)}
-							</WorkerDeploymentGroups>
-						</CardContent>
-					</Card>
+						<SettingsSection
+							title={t("Background jobs")}
+							description={t(
+								"Persisted job state; the Cloudflare Queue backlog stays available in Cloudflare analytics.",
+							)}
+						>
+							{Object.entries(status.jobs).map(([name, values]) => (
+								<ValueRow
+									key={name}
+									label={i18n.name(name)}
+									value={
+										values
+											? Object.entries(values)
+													.map(([key, value]) =>
+														t("{name}: {value}", {
+															name: i18n.name(key),
+															value: i18n.number(value),
+														}),
+													)
+													.join(" · ") || i18n.number(0)
+											: t("Unavailable")
+									}
+								/>
+							))}
+						</SettingsSection>
 
-					<Card>
-						<CardHeader>
-							<CardTitle>Cloudflare runtime</CardTitle>
-							<CardDescription>
-								Tail Worker and Analytics Engine metrics for the last{" "}
-								{status.runtime?.windowMinutes ?? 60} minutes.
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							{!status.runtime && (
-								<p className="text-sm text-muted-foreground">Observability binding is disabled.</p>
+						<SettingsSection
+							title={t("Email delivery")}
+							description={t(
+								"Transactional, marketing and test emails handled by the Email Worker, without their content.",
 							)}
-							{status.runtime?.error && (
-								<Alert variant="destructive">
-									<AlertTitle>Runtime metrics unavailable</AlertTitle>
-									<AlertDescription>{status.runtime.error}</AlertDescription>
-								</Alert>
+						>
+							{emailOperationsError && (
+								<SettingsRow>
+									<p className="text-sm text-kumo-danger" role="alert">
+										{i18n.message(emailOperationsError)}
+									</p>
+								</SettingsRow>
 							)}
-							{status.runtime?.rows.length === 0 && !status.runtime.error && (
-								<p className="text-sm text-muted-foreground">
-									No invocation has been recorded in this window.
-								</p>
-							)}
-							{status.runtime && status.runtime.rows.length > 0 && (
-								<div className="overflow-x-auto">
-									<table className="w-full text-left text-sm">
-										<thead className="border-b text-xs text-muted-foreground">
-											<tr>
-												<th className="py-2">Worker</th>
-												<th>Event</th>
-												<th>Outcome</th>
-												<th>Invocations</th>
-												<th>Exceptions</th>
-												<th>Avg CPU</th>
-												<th>Avg wall</th>
-												<th>Max wall</th>
-											</tr>
-										</thead>
-										<tbody>
-											{status.runtime.rows.map((row) => (
-												<tr
-													key={`${row.service}:${row.eventType}:${row.outcome}`}
-													className="border-b last:border-0"
-												>
-													<td className="py-2 font-medium">{row.service}</td>
-													<td>{row.eventType}</td>
-													<td>
-														<StatusBadge value={row.outcome} />
-													</td>
-													<td>{format(row.invocations)}</td>
-													<td>{format(row.exceptions)}</td>
-													<td>{milliseconds(row.averageCpuMs)}</td>
-													<td>{milliseconds(row.averageWallMs)}</td>
-													<td>{milliseconds(row.maximumWallMs)}</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
-							)}
-						</CardContent>
-					</Card>
-
-					<div className="grid gap-4 lg:grid-cols-2">
-						<Card>
-							<CardHeader>
-								<CardTitle>Data</CardTitle>
-								<CardDescription>Current API database inventory.</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-2">
-								{Object.entries(status.metrics).map(([name, value]) => (
-									<Row key={name} name={name} value={format(value)} />
-								))}
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle>Background jobs</CardTitle>
-								<CardDescription>
-									Persisted job state; Cloudflare Queue backlog remains available in Cloudflare
-									analytics.
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-2">
-								{Object.entries(status.jobs).map(([name, values]) => (
-									<Row
-										key={name}
-										name={name}
-										value={
-											values
-												? Object.entries(values)
-														.map(([key, value]) => `${key}: ${value}`)
-														.join(" · ") || "0"
-												: "Unavailable"
-										}
+							{emailOperations?.queue && (
+								<>
+									<ValueRow
+										label={t("Queue backlog")}
+										value={i18n.number(emailOperations.queue.backlogCount)}
 									/>
-								))}
-							</CardContent>
-						</Card>
-					</div>
-
-					<div className="grid gap-4 xl:grid-cols-2">
-						<Card>
-							<CardHeader>
-								<CardTitle>Email delivery operations</CardTitle>
-								<CardDescription>
-									Body-free transactional, marketing and test email state from the target-scoped
-									Email Worker.
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								{emailOperations?.queue && (
-									<div className="mb-3 grid gap-2 rounded-md border p-3 text-xs sm:grid-cols-3">
-										<Row name="Queue backlog" value={format(emailOperations.queue.backlogCount)} />
-										<Row name="Backlog bytes" value={format(emailOperations.queue.backlogBytes)} />
-										<Row
-											name="Oldest queued"
-											value={
-												emailOperations.queue.oldestMessageAt
-													? new Date(emailOperations.queue.oldestMessageAt).toLocaleString()
-													: "—"
-											}
-										/>
-									</div>
-								)}
-								{emailOperations && !emailOperations.queue && (
-									<p className="mb-3 text-xs text-muted-foreground">
-										Cloudflare Queue metrics are unavailable for this target.
-									</p>
-								)}
-								{emailOperationsError && (
-									<p className="mb-3 text-sm text-destructive" role="alert">
-										{emailOperationsError}
-									</p>
-								)}
-								{!emailOperations ? (
-									<p className="text-sm text-muted-foreground">
-										Email operations are disabled or unavailable.
-									</p>
-								) : emailOperations.messages.length === 0 ? (
-									<p className="text-sm text-muted-foreground">
-										No email operation has been recorded.
-									</p>
-								) : (
+									<ValueRow
+										label={t("Backlog size")}
+										value={i18n.bytes(emailOperations.queue.backlogBytes)}
+									/>
+									<ValueRow
+										label={t("Oldest queued message")}
+										value={i18n.date(emailOperations.queue.oldestMessageAt)}
+									/>
+								</>
+							)}
+							{emailOperations && !emailOperations.queue && (
+								<EmptyRow>
+									{t("Cloudflare Queue metrics are unavailable for this target.")}
+								</EmptyRow>
+							)}
+							{!emailOperations ? (
+								<EmptyRow>{t("Email operations are disabled or unavailable.")}</EmptyRow>
+							) : emailOperations.messages.length === 0 ? (
+								<EmptyRow>{t("No email has been recorded.")}</EmptyRow>
+							) : (
+								<SettingsRow>
 									<div className="overflow-x-auto">
-										<table className="w-full text-left text-sm">
-											<thead className="border-b text-xs text-muted-foreground">
+										<table className="w-full text-sm">
+											<thead className="border-b border-kumo-line text-xs text-kumo-subtle">
 												<tr>
-													<th className="py-2">Message</th>
-													<th>Kind</th>
-													<th>Status</th>
-													<th>Recipients</th>
-													<th>Attempts</th>
-													<th>Last error</th>
-													<th>Updated</th>
+													<th className={head}>{t("Message")}</th>
+													<th className={head}>{t("Kind")}</th>
+													<th className={head}>{t("Status")}</th>
+													<th className={head}>{t("Recipients")}</th>
+													<th className={head}>{t("Attempts")}</th>
+													<th className={head}>{t("Last error")}</th>
+													<th className={head}>{t("Updated")}</th>
 												</tr>
 											</thead>
 											<tbody>
 												{emailOperations.messages.map((message) => (
-													<tr key={message.id} className="border-b last:border-0">
-														<td className="max-w-48 py-2">
+													<tr key={message.id} className="border-b border-kumo-line last:border-0">
+														<td className={`${cell} max-w-48`}>
 															<p className="truncate" title={message.subject}>
 																{message.subject}
 															</p>
-															<p className="truncate font-mono text-xs text-muted-foreground">
+															<p className="truncate font-mono text-xs text-kumo-subtle">
 																{message.id}
 															</p>
 														</td>
-														<td>{message.kind}</td>
-														<td>
-															<StatusBadge value={message.status} />
+														<td className={cell}>{i18n.name(message.kind)}</td>
+														<td className={cell}>
+															<StatusBadge i18n={i18n} value={message.status} />
 														</td>
-														<td>
-															{message.recipientCount}
+														<td className={cell}>
+															{i18n.number(message.recipientCount)}
 															{message.failedRecipients > 0
-																? ` · ${message.failedRecipients} failed`
+																? ` · ${t("{count} failed", { count: i18n.number(message.failedRecipients) })}`
 																: ""}
 														</td>
-														<td>{message.attempts}</td>
+														<td className={cell}>{i18n.number(message.attempts)}</td>
 														<td
-															className="max-w-56 truncate text-xs text-destructive"
+															className={`${cell} max-w-56 truncate text-xs text-kumo-danger`}
 															title={message.lastError ?? undefined}
 														>
 															{message.lastError ?? "—"}
 														</td>
-														<td>{new Date(message.updatedAt).toLocaleString()}</td>
+														<td className={cell}>{i18n.date(message.updatedAt)}</td>
 													</tr>
 												))}
 											</tbody>
 										</table>
 									</div>
-								)}
-								{emailOperations && (
-									<div className="mt-6 border-t pt-4">
-										<h3 className="text-sm font-medium">Delegated SMTP transport</h3>
-										<p className="mt-1 text-xs text-muted-foreground">
-											Project-profile deliveries executed exclusively by the Email Worker. Unknown
-											outcomes remain blocked for manual reconciliation and are never retried
-											automatically.
-										</p>
-										{(emailOperations.transportDeliveries ?? []).length === 0 ? (
-											<p className="mt-3 text-sm text-muted-foreground">
-												No delegated SMTP delivery has been recorded.
-											</p>
-										) : (
-											<div className="mt-3 space-y-2">
-												{(emailOperations.transportDeliveries ?? []).map((delivery) => (
-													<div
-														key={delivery.id}
-														className="flex flex-wrap items-start justify-between gap-3 rounded-md border p-3 text-xs"
-													>
-														<div>
-															<p className="font-mono">{delivery.referenceId}</p>
-															<p className="mt-1 text-muted-foreground">
-																{delivery.source} · project {delivery.projectId}
-																{" · profile "}
-																{delivery.profileId} · {delivery.attempts} attempts
-															</p>
-															{delivery.lastError && (
-																<p className="mt-1 text-destructive">{delivery.lastError}</p>
-															)}
-														</div>
-														<div className="text-right">
-															<StatusBadge value={delivery.status} />
-															<p className="mt-1 text-muted-foreground">
-																{new Date(delivery.updatedAt).toLocaleString()}
-															</p>
-														</div>
-													</div>
-												))}
-											</div>
-										)}
-									</div>
-								)}
-							</CardContent>
-						</Card>
-
-						<Card>
-							<CardHeader>
-								<CardTitle>Email dead-letter quarantine</CardTitle>
-								<CardDescription>
-									Audited terminal Queue failures. Only payloads retained without secret redaction
-									can be replayed.
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								{!emailOperations ? (
-									<p className="text-sm text-muted-foreground">
-										Email quarantine is disabled or unavailable.
-									</p>
-								) : emailOperations.deadLetters.length === 0 ? (
-									<p className="text-sm text-muted-foreground">Email quarantine is empty.</p>
-								) : (
-									<div className="space-y-3">
-										{emailOperations.deadLetters.map((deadLetter) => (
-											<div key={deadLetter.id} className="rounded-md border p-3">
-												<div className="flex flex-wrap items-start justify-between gap-3">
-													<div>
-														<p className="font-mono text-xs">
-															{deadLetter.emailMessageId ?? deadLetter.id}
-														</p>
-														<p className="mt-1 text-xs text-muted-foreground">
-															{deadLetter.jobType ?? "unknown job"} · attempts {deadLetter.attempts}{" "}
-															· {deadLetter.sourceQueue}
-														</p>
-														<p className="mt-1 text-xs text-muted-foreground">
-															{deadLetter.resolution ?? deadLetter.status} ·{" "}
-															{new Date(
-																deadLetter.resolvedAt ?? deadLetter.receivedAt,
-															).toLocaleString()}
-														</p>
-													</div>
-													{deadLetter.status === "quarantined" && (
-														<div className="flex gap-2">
-															<Button
-																size="sm"
-																variant="outline"
-																aria-label={`Replay email dead letter ${deadLetter.id}`}
-																disabled={
-																	!deadLetter.replayable || resolvingDeadLetter === deadLetter.id
-																}
-																onClick={() => void resolveDeadLetter(deadLetter.id, "replay")}
-															>
-																Replay
-															</Button>
-															<Button
-																size="sm"
-																variant="outline"
-																aria-label={`Discard email dead letter ${deadLetter.id}`}
-																disabled={resolvingDeadLetter === deadLetter.id}
-																onClick={() => void resolveDeadLetter(deadLetter.id, "discard")}
-															>
-																Discard
-															</Button>
-														</div>
-													)}
-												</div>
-											</div>
-										))}
-									</div>
-								)}
-							</CardContent>
-						</Card>
-					</div>
-
-					<Card>
-						<CardHeader>
-							<CardTitle>Account erasure operations</CardTitle>
-							<CardDescription>
-								Durable cross-service deletion progress. Subject references are pseudonymized and
-								raw application user identifiers are never exposed here.
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							{accountErasures.length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No account-erasure operation has been recorded.
-								</p>
-							) : (
-								<div className="overflow-x-auto">
-									<table className="w-full text-left text-sm">
-										<thead className="border-b text-xs text-muted-foreground">
-											<tr>
-												<th className="py-2">Operation</th>
-												<th>Project</th>
-												<th>Subject ref</th>
-												<th>Status</th>
-												<th>Completed steps</th>
-												<th>Attempts</th>
-												<th>Last error</th>
-												<th>Updated</th>
-											</tr>
-										</thead>
-										<tbody>
-											{accountErasures.map((operation) => (
-												<tr key={operation.id} className="border-b last:border-0">
-													<td
-														className="max-w-36 truncate py-2 font-mono text-xs"
-														title={operation.id}
-													>
-														{operation.id}
-													</td>
-													<td>{operation.projectRef}</td>
-													<td className="font-mono text-xs">{operation.subjectReference}</td>
-													<td>
-														<StatusBadge value={operation.status} />
-													</td>
-													<td>{operation.completedSteps.join(" → ") || "—"}</td>
-													<td>{operation.attempts}</td>
-													<td>
-														{operation.lastErrorService && operation.lastErrorCode
-															? `${operation.lastErrorService}: ${operation.lastErrorCode}`
-															: "—"}
-													</td>
-													<td>{new Date(operation.updatedAt).toLocaleString()}</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
+								</SettingsRow>
 							)}
-						</CardContent>
-					</Card>
+						</SettingsSection>
 
-					{status.custom.status !== "disabled" && (
-						<Card>
-							<CardHeader>
-								<div className="flex items-center justify-between gap-3">
-									<div>
-										<CardTitle>Application-specific runtime</CardTitle>
-										<CardDescription>
-											{status.custom.manifest?.description ?? "Custom Worker unavailable"}
-										</CardDescription>
-									</div>
-									<StatusBadge value={status.custom.status} />
-								</div>
-							</CardHeader>
-							<CardContent className="space-y-5">
-								{status.custom.error && (
-									<p
-										className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
-										role="alert"
-									>
-										{status.custom.error}
-									</p>
+						{emailOperations && (
+							<SettingsSection
+								title={t("Delegated SMTP transport")}
+								description={t(
+									"Project SMTP deliveries sent by the Email Worker; unknown outcomes are never retried automatically.",
 								)}
-								{status.custom.manifest && (
-									<div className="grid gap-3 md:grid-cols-2">
-										{status.custom.manifest.capabilities.map((capability) => (
-											<div key={capability.id} className="rounded-md border p-3">
-												<div className="flex items-center justify-between gap-2">
-													<strong className="text-sm">{capability.id}</strong>
-													<Badge variant="outline">{capability.mode}</Badge>
-												</div>
-												<p className="mt-1 text-xs text-muted-foreground">
-													{capability.description}
-												</p>
-											</div>
-										))}
-									</div>
+							>
+								{(emailOperations.transportDeliveries ?? []).length === 0 ? (
+									<EmptyRow>{t("No delegated SMTP delivery has been recorded.")}</EmptyRow>
+								) : (
+									(emailOperations.transportDeliveries ?? []).map((delivery) => (
+										<SettingsRow key={delivery.id}>
+											<ItemHeader
+												title={<span className="font-mono">{delivery.referenceId}</span>}
+												subtitle={t(
+													"{source} · project {project} · profile {profile} · {attempts} attempts",
+													{
+														source: delivery.source,
+														project: delivery.projectId,
+														profile: delivery.profileId,
+														attempts: i18n.number(delivery.attempts),
+													},
+												)}
+												badge={<StatusBadge i18n={i18n} value={delivery.status} />}
+											/>
+											<p className="text-xs text-kumo-subtle">{i18n.date(delivery.updatedAt)}</p>
+											{delivery.lastError && (
+												<p className="text-xs text-kumo-danger">{delivery.lastError}</p>
+											)}
+										</SettingsRow>
+									))
 								)}
+							</SettingsSection>
+						)}
+
+						<SettingsSection
+							title={t("Email quarantine")}
+							description={t(
+								"Emails that failed for good. Only those kept without secret redaction can be sent again.",
+							)}
+						>
+							{!emailOperations ? (
+								<EmptyRow>{t("Email quarantine is disabled or unavailable.")}</EmptyRow>
+							) : emailOperations.deadLetters.length === 0 ? (
+								<EmptyRow>{t("Email quarantine is empty.")}</EmptyRow>
+							) : (
+								emailOperations.deadLetters.map((deadLetter) => (
+									<SettingsRow key={deadLetter.id}>
+										<ItemHeader
+											title={
+												<span className="font-mono text-xs">
+													{deadLetter.emailMessageId ?? deadLetter.id}
+												</span>
+											}
+											subtitle={t("{job} · {attempts} attempts · {queue}", {
+												job: deadLetter.jobType ?? t("Unknown job"),
+												attempts: i18n.number(deadLetter.attempts),
+												queue: deadLetter.sourceQueue,
+											})}
+											badge={
+												<StatusBadge
+													i18n={i18n}
+													value={deadLetter.resolution ?? deadLetter.status}
+												/>
+											}
+										/>
+										<p className="text-xs text-kumo-subtle">
+											{i18n.date(deadLetter.resolvedAt ?? deadLetter.receivedAt)}
+										</p>
+										{deadLetter.status === "quarantined" && (
+											<SettingsActions>
+												<Button
+													size="sm"
+													aria-label={t("Replay email dead letter {id}", { id: deadLetter.id })}
+													disabled={!deadLetter.replayable || resolvingDeadLetter === deadLetter.id}
+													onClick={() => void resolveDeadLetter(deadLetter.id, "replay")}
+												>
+													{t("Replay")}
+												</Button>
+												<DeleteConfirm
+													title={t("Discard this email?")}
+													description={t(
+														"The email leaves the quarantine and will never be sent. This cannot be undone.",
+													)}
+													confirmText={t("Discard")}
+													onConfirm={() => resolveDeadLetter(deadLetter.id, "discard")}
+												>
+													<Button
+														size="sm"
+														variant="secondary-destructive"
+														aria-label={t("Discard email dead letter {id}", { id: deadLetter.id })}
+														disabled={resolvingDeadLetter === deadLetter.id}
+													>
+														{t("Discard")}
+													</Button>
+												</DeleteConfirm>
+											</SettingsActions>
+										)}
+									</SettingsRow>
+								))
+							)}
+						</SettingsSection>
+
+						<SettingsSection
+							title={t("Account deletions")}
+							description={t(
+								"Progress of account deletions across services; people are pseudonymized.",
+							)}
+						>
+							{accountErasures.length === 0 ? (
+								<EmptyRow>{t("No account deletion has been recorded.")}</EmptyRow>
+							) : (
+								<SettingsRow>
+									<div className="overflow-x-auto">
+										<table className="w-full text-sm">
+											<thead className="border-b border-kumo-line text-xs text-kumo-subtle">
+												<tr>
+													<th className={head}>{t("Operation")}</th>
+													<th className={head}>{t("Project")}</th>
+													<th className={head}>{t("Subject reference")}</th>
+													<th className={head}>{t("Status")}</th>
+													<th className={head}>{t("Completed steps")}</th>
+													<th className={head}>{t("Attempts")}</th>
+													<th className={head}>{t("Last error")}</th>
+													<th className={head}>{t("Updated")}</th>
+												</tr>
+											</thead>
+											<tbody>
+												{accountErasures.map((operation) => (
+													<tr
+														key={operation.id}
+														className="border-b border-kumo-line last:border-0"
+													>
+														<td
+															className={`${cell} max-w-36 truncate font-mono text-xs`}
+															title={operation.id}
+														>
+															{operation.id}
+														</td>
+														<td className={cell}>{operation.projectRef}</td>
+														<td className={`${cell} font-mono text-xs`}>
+															{operation.subjectReference}
+														</td>
+														<td className={cell}>
+															<StatusBadge i18n={i18n} value={operation.status} />
+														</td>
+														<td className={cell}>{operation.completedSteps.join(" → ") || "—"}</td>
+														<td className={cell}>{i18n.number(operation.attempts)}</td>
+														<td className={cell}>
+															{operation.lastErrorService && operation.lastErrorCode
+																? `${operation.lastErrorService}: ${operation.lastErrorCode}`
+																: "—"}
+														</td>
+														<td className={cell}>{i18n.date(operation.updatedAt)}</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								</SettingsRow>
+							)}
+						</SettingsSection>
+
+						{status.custom.status !== "disabled" && (
+							<SettingsSection
+								title={t("Application services")}
+								description={t("Services specific to this application, run by its own Worker.")}
+							>
+								<SettingsRow>
+									<ItemHeader
+										title={status.custom.manifest?.description ?? t("Custom Worker unavailable")}
+										badge={<StatusBadge i18n={i18n} value={status.custom.status} />}
+									/>
+									{status.custom.error && (
+										<p className="text-sm text-kumo-danger" role="alert">
+											{status.custom.error}
+										</p>
+									)}
+								</SettingsRow>
+								{status.custom.manifest?.capabilities.map((capability) => (
+									<SettingsRow key={capability.id}>
+										<ItemHeader
+											title={capability.id}
+											badge={<Badge variant="outline">{i18n.name(capability.mode)}</Badge>}
+										/>
+										<p className="text-xs text-kumo-subtle">{capability.description}</p>
+									</SettingsRow>
+								))}
 								{status.custom.stats && (
-									<div className="grid gap-3 md:grid-cols-3">
-										<Metric
-											title="Application users"
-											value={format(status.custom.stats.users?.total)}
-											icon={<Users />}
+									<>
+										<ValueRow
+											label={t("Application users")}
+											value={i18n.number(status.custom.stats.users?.total)}
 										/>
-										<Metric
-											title="Premium users"
-											value={format(status.custom.stats.users?.premium)}
-											icon={<Users />}
+										<ValueRow
+											label={t("Premium users")}
+											value={i18n.number(status.custom.stats.users?.premium)}
 										/>
-										<Metric
-											title="Custom jobs"
-											value={format(
+										<ValueRow
+											label={t("Application jobs")}
+											value={i18n.number(
 												Object.values(status.custom.stats.jobs).reduce(
 													(sum, value) => sum + value,
 													0,
 												),
 											)}
-											icon={<Gauge />}
 										/>
 										{status.custom.stats.cancellations && (
 											<>
-												<Metric
-													title="Cancelled jobs"
-													value={format(status.custom.stats.cancellations.jobs)}
-													icon={<Gauge />}
+												<ValueRow
+													label={t("Cancelled jobs")}
+													value={i18n.number(status.custom.stats.cancellations.jobs)}
 												/>
-												<Metric
-													title="Refunds pending"
-													value={format(status.custom.stats.cancellations.refundsPending)}
-													icon={<Gauge />}
+												<ValueRow
+													label={t("Refunds pending")}
+													value={i18n.number(status.custom.stats.cancellations.refundsPending)}
 												/>
-												<Metric
-													title="Refunds applied"
-													value={format(status.custom.stats.cancellations.refundsApplied)}
-													icon={<Gauge />}
+												<ValueRow
+													label={t("Refunds applied")}
+													value={i18n.number(status.custom.stats.cancellations.refundsApplied)}
 												/>
-												<Metric
-													title="Credits refunded"
-													value={format(status.custom.stats.cancellations.creditsRefunded)}
-													icon={<Gauge />}
+												<ValueRow
+													label={t("Credits refunded")}
+													value={i18n.number(status.custom.stats.cancellations.creditsRefunded)}
 												/>
 											</>
 										)}
-									</div>
+									</>
 								)}
 								{customJobs.length > 0 ? (
-									<div className="overflow-x-auto">
-										<table className="w-full text-left text-sm">
-											<thead className="border-b text-xs text-muted-foreground">
-												<tr>
-													<th className="py-2">Job</th>
-													<th>Capability</th>
-													<th>Status</th>
-													<th>Progress</th>
-													<th>Attempts</th>
-													<th>Result</th>
-													<th>Updated</th>
-													<th>Action</th>
-												</tr>
-											</thead>
-											<tbody>
-												{customJobs.map((job) => (
-													<tr key={job.id} className="border-b last:border-0">
-														<td className="max-w-36 truncate py-2 font-mono text-xs" title={job.id}>
-															{job.id}
-														</td>
-														<td>{job.capability}</td>
-														<td>
-															<StatusBadge value={job.status} />
-														</td>
-														<td>
-															{job.progress == null ? "—" : `${Math.round(job.progress * 100)}%`}
-														</td>
-														<td>{job.attempts ?? 0}</td>
-														<td>{customJobResult(job)}</td>
-														<td>
-															{job.updatedAt ? new Date(job.updatedAt).toLocaleString() : "—"}
-														</td>
-														<td>
-															{["failed", "queued"].includes(job.status) ? (
-																<Button
-																	size="sm"
-																	variant="outline"
-																	disabled={retryingJob === job.id}
-																	onClick={() => void retryJob(job.id)}
-																>
-																	{retryingJob === job.id ? "Retrying…" : "Retry"}
-																</Button>
-															) : (
-																"—"
-															)}
-														</td>
+									<SettingsRow>
+										<div className="overflow-x-auto">
+											<table className="w-full text-sm">
+												<thead className="border-b border-kumo-line text-xs text-kumo-subtle">
+													<tr>
+														<th className={head}>{t("Job")}</th>
+														<th className={head}>{t("Capability")}</th>
+														<th className={head}>{t("Status")}</th>
+														<th className={head}>{t("Progress")}</th>
+														<th className={head}>{t("Attempts")}</th>
+														<th className={head}>{t("Result")}</th>
+														<th className={head}>{t("Updated")}</th>
+														<th className={head}>{t("Action")}</th>
 													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
+												</thead>
+												<tbody>
+													{customJobs.map((job) => (
+														<tr key={job.id} className="border-b border-kumo-line last:border-0">
+															<td
+																className={`${cell} max-w-36 truncate font-mono text-xs`}
+																title={job.id}
+															>
+																{job.id}
+															</td>
+															<td className={cell}>{job.capability}</td>
+															<td className={cell}>
+																<StatusBadge i18n={i18n} value={job.status} />
+															</td>
+															<td className={cell}>
+																{job.progress == null ? "—" : `${Math.round(job.progress * 100)} %`}
+															</td>
+															<td className={cell}>{i18n.number(job.attempts ?? 0)}</td>
+															<td className={cell}>{customJobResult(i18n, job)}</td>
+															<td className={cell}>{i18n.date(job.updatedAt)}</td>
+															<td className={cell}>
+																{["failed", "queued"].includes(job.status) ? (
+																	<Button
+																		size="sm"
+																		disabled={retryingJob === job.id}
+																		onClick={() => void retryJob(job.id)}
+																	>
+																		{retryingJob === job.id ? t("Retrying…") : t("Retry")}
+																	</Button>
+																) : (
+																	"—"
+																)}
+															</td>
+														</tr>
+													))}
+												</tbody>
+											</table>
+										</div>
+									</SettingsRow>
 								) : (
-									<p className="text-sm text-muted-foreground">
-										No application-specific job has been recorded.
-									</p>
+									<EmptyRow>{t("No application job has been recorded.")}</EmptyRow>
 								)}
-							</CardContent>
-						</Card>
-					)}
+							</SettingsSection>
+						)}
+					</>
+				)}
 
-					<p className="text-xs text-muted-foreground">
-						Updated {new Date(status.generatedAt).toLocaleString()} · environment{" "}
-						{status.environment} · target {status.deployment.target} · release{" "}
-						{status.deployment.release} · public routing {status.deployment.publicRouting}
-					</p>
-				</>
-			)}
+				<section
+					aria-labelledby="infrastructure-advanced"
+					className="space-y-8 border-t border-kumo-line pt-8"
+				>
+					<div className="space-y-1">
+						<h2 id="infrastructure-advanced" className="text-lg font-semibold">
+							{t("Advanced")}
+						</h2>
+						<p className="text-sm text-kumo-subtle">
+							{t(
+								"Technical details for operators: deployment, addresses, API, Workers, runtime metrics and running configuration.",
+							)}
+						</p>
+					</div>
+					{status && (
+						<>
+							<SettingsSection
+								title={t("Deployment")}
+								description={t("Target, environment and release currently served.")}
+							>
+								<ValueRow label={t("Target")} value={status.deployment.target} />
+								<ValueRow label={t("Environment")} value={status.environment} />
+								<ValueRow label={t("Release")} value={status.deployment.release} />
+								<ValueRow
+									label={t("Public routing")}
+									value={<StatusBadge i18n={i18n} value={status.deployment.publicRouting} />}
+								/>
+								<ValueRow label={t("Generated at")} value={i18n.date(status.generatedAt)} />
+							</SettingsSection>
+
+							<SettingsSection
+								title={t("Integration addresses")}
+								description={t("Public addresses generated from the active target manifest.")}
+							>
+								{Object.entries(status.endpoints).map(([name, url]) => (
+									<ValueRow
+										key={name}
+										label={i18n.name(name)}
+										value={
+											url ? (
+												<a
+													className="inline-flex items-center gap-1 break-all text-kumo-brand underline"
+													href={url}
+													target="_blank"
+													rel="noreferrer"
+												>
+													{url}
+												</a>
+											) : (
+												<StatusBadge i18n={i18n} value="disabled" />
+											)
+										}
+									/>
+								))}
+							</SettingsSection>
+
+							<SettingsSection
+								title={t("API capabilities")}
+								description={t("What the SuperBoard API exposes and who can call it.")}
+							>
+								<SettingsRow>
+									<ItemHeader
+										title={status.api.description}
+										badge={<StatusBadge i18n={i18n} value={status.api.status} />}
+									/>
+								</SettingsRow>
+								{status.api.capabilities.map((capability) => (
+									<SettingsRow key={capability.id}>
+										<p className="text-sm font-medium">{capability.id}</p>
+										<p className="text-sm text-kumo-subtle">{capability.description}</p>
+										<p className="text-xs text-kumo-subtle">
+											{t("Access: {access}", { access: capability.access })}
+										</p>
+										<div className="flex flex-wrap gap-1.5">
+											{capability.entrypoints.map((entrypoint) => (
+												<code
+													key={entrypoint}
+													className="rounded bg-kumo-tint px-1.5 py-0.5 text-xs"
+												>
+													{entrypoint}
+												</code>
+											))}
+										</div>
+									</SettingsRow>
+								))}
+							</SettingsSection>
+
+							<SettingsSection
+								title={t("Workers")}
+								description={t(
+									"Deployment name, role, health, dependencies and persisted jobs of each Worker.",
+								)}
+							>
+								<SettingsRow>
+									<WorkerDeploymentGroups services={status.services}>
+										{(service) => (
+											<div
+												key={service.id}
+												className="space-y-2 rounded-md border border-kumo-line p-4"
+											>
+												<ItemHeader
+													title={service.id}
+													subtitle={
+														<span className="font-mono">
+															{service.workerName ?? t("No deployment name")} ·{" "}
+															{service.kind ?? t("legacy")}
+														</span>
+													}
+													badge={<StatusBadge i18n={i18n} value={service.status} />}
+												/>
+												<p className="text-sm text-kumo-subtle">{service.description}</p>
+												<p className="text-xs text-kumo-subtle">
+													{t("Health check: {mode} {path} · {time}", {
+														mode: service.health?.mode ?? t("legacy"),
+														path: service.health?.path ?? t("unknown"),
+														time:
+															service.responseTimeMs == null
+																? t("No response")
+																: i18n.duration(service.responseTimeMs),
+													})}
+												</p>
+												<WorkerValues
+													label={t("Capabilities")}
+													values={service.capabilities ?? []}
+												/>
+												<WorkerValues label={t("Routes")} values={service.routes ?? []} code />
+												<WorkerValues
+													label={t("Services")}
+													values={service.dependencies?.services ?? []}
+												/>
+												<WorkerValues
+													label={t("Stores")}
+													values={service.dependencies?.stores ?? []}
+												/>
+												<WorkerValues
+													label={t("Queues")}
+													values={service.dependencies?.queues ?? []}
+												/>
+												{(service.dependencies?.externalWorkers ?? []).map((dependency) => (
+													<p key={dependency.binding} className="text-xs text-kumo-subtle">
+														{t("External: {binding} → {worker}", {
+															binding: dependency.binding,
+															worker: dependency.workerName,
+														})}
+													</p>
+												))}
+												<p className="text-xs text-kumo-subtle">
+													{t("Jobs: {jobs}", {
+														jobs:
+															service.jobs == null
+																? t("Unavailable")
+																: Object.entries(service.jobs)
+																		.map(([name, value]) =>
+																			t("{name}: {value}", {
+																				name: i18n.name(name),
+																				value: i18n.number(value),
+																			}),
+																		)
+																		.join(" · ") || t("None"),
+													})}
+												</p>
+												{service.error && (
+													<p className="text-xs text-kumo-danger">{service.error}</p>
+												)}
+												{runtimeFor(i18n, status.runtime?.rows, service.id) && (
+													<p className="text-xs text-kumo-subtle">
+														{runtimeFor(i18n, status.runtime?.rows, service.id)}
+													</p>
+												)}
+												{service.detail != null && (
+													<details className="text-xs">
+														<summary className="cursor-pointer text-kumo-subtle">
+															{t("Runtime detail")}
+														</summary>
+														<pre className="mt-2 max-h-48 overflow-auto rounded bg-kumo-tint p-2">
+															{JSON.stringify(service.detail, null, 2)}
+														</pre>
+													</details>
+												)}
+											</div>
+										)}
+									</WorkerDeploymentGroups>
+								</SettingsRow>
+							</SettingsSection>
+
+							<SettingsSection
+								title={t("Cloudflare runtime")}
+								description={t("Tail Worker and Analytics Engine metrics over the last {window}.", {
+									window: windowLabel,
+								})}
+							>
+								{!status.runtime && <EmptyRow>{t("Observability binding is disabled.")}</EmptyRow>}
+								{status.runtime?.error && (
+									<SettingsRow>
+										<Alert variant="destructive">
+											<AlertTitle>{t("Runtime metrics unavailable")}</AlertTitle>
+											<AlertDescription>{status.runtime.error}</AlertDescription>
+										</Alert>
+									</SettingsRow>
+								)}
+								{status.runtime?.rows.length === 0 && !status.runtime.error && (
+									<EmptyRow>{t("No invocation has been recorded in this window.")}</EmptyRow>
+								)}
+								{status.runtime && status.runtime.rows.length > 0 && (
+									<SettingsRow>
+										<div className="overflow-x-auto">
+											<table className="w-full text-sm">
+												<thead className="border-b border-kumo-line text-xs text-kumo-subtle">
+													<tr>
+														<th className={head}>{t("Worker")}</th>
+														<th className={head}>{t("Event")}</th>
+														<th className={head}>{t("Outcome")}</th>
+														<th className={head}>{t("Invocations")}</th>
+														<th className={head}>{t("Exceptions")}</th>
+														<th className={head}>{t("Average CPU")}</th>
+														<th className={head}>{t("Average duration")}</th>
+														<th className={head}>{t("Maximum duration")}</th>
+													</tr>
+												</thead>
+												<tbody>
+													{status.runtime.rows.map((row) => {
+														const outcome = i18n.outcome(row.outcome);
+														return (
+															<tr
+																key={`${row.service}:${row.eventType}:${row.outcome}`}
+																className="border-b border-kumo-line last:border-0"
+															>
+																<td className={`${cell} font-medium`}>{row.service}</td>
+																<td className={cell}>{row.eventType}</td>
+																<td className={cell}>
+																	<Badge variant={outcome.variant}>{outcome.label}</Badge>
+																</td>
+																<td className={cell}>{i18n.number(row.invocations)}</td>
+																<td className={cell}>{i18n.number(row.exceptions)}</td>
+																<td className={cell}>{i18n.duration(row.averageCpuMs)}</td>
+																<td className={cell}>{i18n.duration(row.averageWallMs)}</td>
+																<td className={cell}>{i18n.duration(row.maximumWallMs)}</td>
+															</tr>
+														);
+													})}
+												</tbody>
+											</table>
+										</div>
+									</SettingsRow>
+								)}
+							</SettingsSection>
+						</>
+					)}
+					<WorkerObservations observations={observations} />
+					<DeploymentConfiguration refreshKey={refreshes} />
+				</section>
+
+				<SettingsActions className="items-center">
+					{status && (
+						<p className="text-xs text-kumo-subtle">
+							{t("Updated {date}", { date: i18n.date(status.generatedAt) })}
+						</p>
+					)}
+					<Button
+						onClick={() => {
+							setRefreshes((count) => count + 1);
+							load().catch(() => undefined);
+						}}
+						disabled={loading}
+					>
+						{t("Refresh")}
+					</Button>
+				</SettingsActions>
+			</div>
 		</div>
 	);
 }
 
-function customJobResult(job: PlatformCustomJob): string {
+function customJobResult(i18n: ObservabilityI18n, job: PlatformCustomJob): string {
 	if (job.capability !== "reference.acceptance") return "—";
 	const acceptance = job.result?.acceptance;
 	if (!acceptance || typeof acceptance !== "object" || Array.isArray(acceptance)) {
-		return "Invalid acceptance receipt";
+		return i18n.t("Invalid acceptance receipt");
 	}
 	const value = acceptance as Record<string, unknown>;
-	const decision = typeof value.decision === "string" ? value.decision : "unknown";
-	const platform = shortRevision(value.platformRevision);
-	const reference = shortRevision(value.referenceRevision);
-	return `${decision} · platform ${platform} · reference ${reference}`;
+	return i18n.t("{decision} · platform {platform} · reference {reference}", {
+		decision: typeof value.decision === "string" ? value.decision : i18n.t("unknown"),
+		platform: shortRevision(i18n, value.platformRevision),
+		reference: shortRevision(i18n, value.referenceRevision),
+	});
 }
 
-function shortRevision(value: unknown): string {
+function shortRevision(i18n: ObservabilityI18n, value: unknown): string {
 	return typeof value === "string" && /^[0-9a-f]{40}$/.test(value)
 		? value.slice(0, 12)
-		: "unproven";
+		: i18n.t("unproven");
 }
 
-function Metric({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {
+function ValueRow({ label, value }: { label: ReactNode; value: ReactNode }) {
 	return (
-		<Card>
-			<CardContent className="flex items-center justify-between p-5">
-				<div>
-					<p className="text-xs text-muted-foreground">{title}</p>
-					<p className="text-xl font-semibold capitalize">{value}</p>
-				</div>
-				<span className="text-muted-foreground">{icon}</span>
-			</CardContent>
-		</Card>
+		<SettingsRow className="flex items-center justify-between gap-4">
+			<span className="text-sm">{label}</span>
+			<span className="min-w-0 text-end text-sm font-medium">{value}</span>
+		</SettingsRow>
 	);
 }
-function Row({ name, value }: { name: string; value: string }) {
+
+function EmptyRow({ children }: { children: ReactNode }) {
 	return (
-		<div className="flex justify-between gap-4 border-b py-2 text-sm last:border-0">
-			<span className="capitalize">{name.replace(/([A-Z])/g, " $1")}</span>
-			<strong>{value}</strong>
+		<SettingsRow>
+			<p className="text-sm text-kumo-subtle">{children}</p>
+		</SettingsRow>
+	);
+}
+
+function ItemHeader({
+	title,
+	subtitle,
+	badge,
+}: {
+	title: ReactNode;
+	subtitle?: ReactNode;
+	badge: ReactNode;
+}) {
+	return (
+		<div className="flex items-start justify-between gap-3">
+			<div className="min-w-0 space-y-0.5">
+				<p className="text-sm font-medium">{title}</p>
+				{subtitle && <p className="text-xs text-kumo-subtle">{subtitle}</p>}
+			</div>
+			{badge}
 		</div>
 	);
 }
+
 function WorkerValues({
 	label,
 	values,
@@ -965,15 +1024,15 @@ function WorkerValues({
 }) {
 	if (values.length === 0) return null;
 	return (
-		<div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-			<span>{label}:</span>
+		<div className="flex flex-wrap items-center gap-1 text-xs text-kumo-subtle">
+			<span>{label}</span>
 			{values.map((value) =>
 				code ? (
-					<code key={value} className="rounded bg-muted px-1 py-0.5">
+					<code key={value} className="rounded bg-kumo-tint px-1 py-0.5">
 						{value}
 					</code>
 				) : (
-					<span key={value} className="rounded border px-1 py-0.5">
+					<span key={value} className="rounded border border-kumo-line px-1 py-0.5">
 						{value}
 					</span>
 				),
@@ -981,31 +1040,26 @@ function WorkerValues({
 		</div>
 	);
 }
-function StatusBadge({ value }: { value: string }) {
-	const healthy = new Set(["ok", "configured", "current", "declared", "released"]);
-	const neutral = new Set(["disabled", "pending", "pending-release"]);
-	return (
-		<Badge
-			variant={healthy.has(value) ? "default" : neutral.has(value) ? "secondary" : "destructive"}
-		>
-			{value}
-		</Badge>
-	);
+
+function StatusBadge({ i18n, value }: { i18n: ObservabilityI18n; value: string }) {
+	const status = i18n.status(value);
+	return <Badge variant={status.variant}>{status.label}</Badge>;
 }
-function format(value: number | null | undefined) {
-	return value == null ? "Unavailable" : new Intl.NumberFormat().format(value);
-}
-function milliseconds(value: number | null | undefined) {
-	return value == null ? "—" : `${value.toFixed(2)} ms`;
-}
+
 function totalInvocations(rows: RuntimeMetricRow[] | undefined) {
 	return rows?.reduce((total, row) => total + row.invocations, 0) ?? null;
 }
-function runtimeFor(rows: RuntimeMetricRow[] | undefined, serviceId: string): string | null {
+
+function runtimeFor(
+	i18n: ObservabilityI18n,
+	rows: RuntimeMetricRow[] | undefined,
+	serviceId: string,
+): string | null {
 	const matching =
 		rows?.filter((row) => row.service === serviceId || row.service.includes(serviceId)) ?? [];
 	if (matching.length === 0) return null;
-	const invocations = matching.reduce((total, row) => total + row.invocations, 0);
-	const exceptions = matching.reduce((total, row) => total + row.exceptions, 0);
-	return `${new Intl.NumberFormat().format(invocations)} invocations · ${new Intl.NumberFormat().format(exceptions)} exceptions`;
+	return i18n.t("{invocations} invocations · {exceptions} exceptions", {
+		invocations: i18n.number(matching.reduce((total, row) => total + row.invocations, 0)),
+		exceptions: i18n.number(matching.reduce((total, row) => total + row.exceptions, 0)),
+	});
 }

@@ -1,25 +1,22 @@
-import { orgModel, userOrgGroupModel, userOrgModel } from ".";
-import { adapterConfig, errorConfig, typeConfig, variableConfig } from "../configs";
+import * as adapterConfig from "../configs/adapter";
+import * as errorConfig from "../configs/error";
+import type * as typeConfig from "../configs/primitives";
 import { dbUtil, timeUtil } from "../utils";
 
 export enum MfaType {
 	Otp = "otp",
 	Email = "email",
-	Sms = "sms",
 }
 
 export enum SocialAccountType {
 	Google = "Google",
-	Facebook = "Facebook",
 	GitHub = "GitHub",
-	Discord = "Discord",
 	Apple = "Apple",
 }
 
 export interface Common {
 	id: number;
 	authId: string;
-	orgSlug: string;
 	email: string | null;
 	socialAccountId: string | null;
 	socialAccountType: SocialAccountType | null;
@@ -29,7 +26,6 @@ export interface Common {
 	lastName: string | null;
 	loginCount: number;
 	otpSecret: string;
-	smsPhoneNumber: string | null;
 	linkedAuthId: string | null;
 	recoveryCodeHash: string | null;
 	invitationToken: string | null;
@@ -43,7 +39,9 @@ export interface Raw extends Common {
 	emailVerified: number;
 	otpVerified: number;
 	skipPasskeyEnroll: number;
-	smsPhoneNumberVerified: number;
+	orgSlug?: string;
+	smsPhoneNumber?: string | null;
+	smsPhoneNumberVerified?: number;
 	isActive: number;
 	mfaTypes: string;
 }
@@ -52,7 +50,6 @@ export interface Record extends Common {
 	emailVerified: boolean;
 	otpVerified: boolean;
 	skipPasskeyEnroll: boolean;
-	smsPhoneNumberVerified: boolean;
 	isActive: boolean;
 	mfaTypes: string[];
 }
@@ -69,7 +66,6 @@ export interface ApiRecord {
 	lastName?: string | null;
 	emailVerified: boolean;
 	otpVerified: boolean;
-	smsPhoneNumberVerified: boolean;
 	loginCount: number;
 	mfaTypes: string[];
 	isActive: boolean;
@@ -87,14 +83,11 @@ export interface PaginatedApiRecords {
 
 export interface ApiRecordFull extends ApiRecord {
 	roles?: string[];
-	org?: orgModel.ApiRecord | null;
-	orgGroups?: { id: number; name: string }[];
 	attributes?: globalThis.Record<string, string>;
 }
 
 export interface Create {
 	authId: string;
-	orgSlug: string;
 	locale: typeConfig.Locale;
 	email: string | null;
 	socialAccountId: string | null;
@@ -111,11 +104,8 @@ export interface Create {
 
 export interface Update {
 	email?: string;
-	orgSlug?: string;
 	password?: string | null;
 	otpSecret?: string;
-	smsPhoneNumber?: string | null;
-	smsPhoneNumberVerified?: number;
 	mfaTypes?: string;
 	firstName?: string | null;
 	lastName?: string | null;
@@ -135,15 +125,26 @@ export interface Update {
 
 const TableName = `"${adapterConfig.TableName.User}"`;
 
-export const convertToRecord = (raw: Raw): Record => ({
-	...raw,
-	emailVerified: !!raw.emailVerified,
-	skipPasskeyEnroll: !!raw.skipPasskeyEnroll,
-	otpVerified: !!raw.otpVerified,
-	smsPhoneNumberVerified: !!raw.smsPhoneNumberVerified,
-	isActive: !!raw.isActive,
-	mfaTypes: raw.mfaTypes ? raw.mfaTypes.split(",") : [],
-});
+const mfaTypeValues: string[] = Object.values(MfaType);
+
+export const convertToRecord = (raw: Raw): Record => {
+	const {
+		orgSlug: _orgSlug,
+		smsPhoneNumber: _smsPhoneNumber,
+		smsPhoneNumberVerified: _smsPhoneNumberVerified,
+		...user
+	} = raw;
+	return {
+		...user,
+		emailVerified: !!raw.emailVerified,
+		skipPasskeyEnroll: !!raw.skipPasskeyEnroll,
+		otpVerified: !!raw.otpVerified,
+		isActive: !!raw.isActive,
+		mfaTypes: raw.mfaTypes
+			? raw.mfaTypes.split(",").filter((type) => mfaTypeValues.includes(type))
+			: [],
+	};
+};
 
 export const convertToApiRecord = (record: Record, enableNames: boolean): ApiRecord => {
 	const result: ApiRecord = {
@@ -155,7 +156,6 @@ export const convertToApiRecord = (record: Record, enableNames: boolean): ApiRec
 		email: record.email,
 		locale: record.locale,
 		emailVerified: record.emailVerified,
-		smsPhoneNumberVerified: record.smsPhoneNumberVerified,
 		otpVerified: record.otpVerified,
 		mfaTypes: record.mfaTypes,
 		isActive: record.isActive,
@@ -176,22 +176,10 @@ export const convertToApiRecord = (record: Record, enableNames: boolean): ApiRec
 export const convertToApiRecordFull = (
 	record: Record,
 	enableNames: boolean,
-	enableOrg: boolean,
 	roles: string[],
-	org: orgModel.Record | null | undefined,
-	orgGroups: userOrgGroupModel.RecordWithGroupName[],
 	attributes: globalThis.Record<string, string> | undefined,
 ): ApiRecordFull => {
 	const result: ApiRecordFull = convertToApiRecord(record, enableNames);
-	if (enableOrg) {
-		result.org = org ? orgModel.convertToApiRecord(org) : null;
-		if (variableConfig.systemConfig.enableOrgGroup) {
-			result.orgGroups = orgGroups.map((orgGroup) => ({
-				id: orgGroup.orgGroupId,
-				name: orgGroup.orgGroupName,
-			}));
-		}
-	}
 
 	return {
 		...result,
@@ -239,46 +227,6 @@ export const count = async (
 	return Number(result.count);
 };
 
-export const getAllByOrg = async (
-	db: D1Database,
-	orgId: number,
-	enableNames: boolean,
-	pagination?: typeConfig.Pagination,
-) => {
-	let paginatedCondition = "";
-
-	const bind = [orgId];
-	if (pagination) {
-		paginatedCondition = "Limit $2 OFFSET $3";
-		bind.push(pagination.pageSize);
-		bind.push((pagination.pageNumber - 1) * pagination.pageSize);
-	}
-
-	const query = `
-    SELECT ${TableName}.*
-    FROM ${adapterConfig.TableName.UserOrg} LEFT JOIN ${TableName}
-      ON ${adapterConfig.TableName.UserOrg}."userId" = ${TableName}.id
-    WHERE ${adapterConfig.TableName.UserOrg}."orgId" = $1 AND ${adapterConfig.TableName.UserOrg}."deletedAt" IS NULL AND ${TableName}."deletedAt" IS NULL
-    ${paginatedCondition}
-  `;
-
-	const stmt = db.prepare(query).bind(...bind);
-	const { results: users }: { results: Raw[] } = await stmt.all();
-	return users.map((user) => convertToApiRecord(convertToRecord(user), enableNames));
-};
-
-export const countAllByOrg = async (db: D1Database, orgId: number) => {
-	const query = `
-    SELECT COUNT(*) as count
-    FROM ${adapterConfig.TableName.UserOrg} LEFT JOIN ${TableName}
-      ON ${adapterConfig.TableName.UserOrg}."userId" = ${TableName}.id
-    WHERE ${adapterConfig.TableName.UserOrg}."orgId" = $1 AND ${adapterConfig.TableName.UserOrg}."deletedAt" IS NULL AND ${TableName}."deletedAt" IS NULL
-  `;
-	const stmt = db.prepare(query).bind(orgId);
-	const result = (await stmt.first()) as { count: number };
-	return Number(result.count);
-};
-
 export const getById = async (db: D1Database, id: number): Promise<Record | null> => {
 	const stmt = db
 		.prepare(`SELECT * FROM ${TableName} WHERE id = $1 AND "deletedAt" IS NULL`)
@@ -314,32 +262,12 @@ export const getGoogleUserByGoogleId = async (
 	return user ? convertToRecord(user) : null;
 };
 
-export const getFacebookUserByFacebookId = async (
-	db: D1Database,
-	facebookId: string,
-): Promise<Record | null> => {
-	const query = `SELECT * FROM ${TableName} WHERE "socialAccountId" = $1 AND "socialAccountType" = $2  AND "deletedAt" IS NULL`;
-	const stmt = db.prepare(query).bind(facebookId, SocialAccountType.Facebook);
-	const user = (await stmt.first()) as Raw | null;
-	return user ? convertToRecord(user) : null;
-};
-
 export const getGithubUserByGithubId = async (
 	db: D1Database,
 	githubId: string,
 ): Promise<Record | null> => {
 	const query = `SELECT * FROM ${TableName} WHERE "socialAccountId" = $1 AND "socialAccountType" = $2  AND "deletedAt" IS NULL`;
 	const stmt = db.prepare(query).bind(githubId, SocialAccountType.GitHub);
-	const user = (await stmt.first()) as Raw | null;
-	return user ? convertToRecord(user) : null;
-};
-
-export const getDiscordUserByDiscordId = async (
-	db: D1Database,
-	discordId: string,
-): Promise<Record | null> => {
-	const query = `SELECT * FROM ${TableName} WHERE "socialAccountId" = $1 AND "socialAccountType" = $2  AND "deletedAt" IS NULL`;
-	const stmt = db.prepare(query).bind(discordId, SocialAccountType.Discord);
 	const user = (await stmt.first()) as Raw | null;
 	return user ? convertToRecord(user) : null;
 };
@@ -365,17 +293,6 @@ export const getOidcUserById = async (
 	return user ? convertToRecord(user) : null;
 };
 
-export const getSamlUserById = async (
-	db: D1Database,
-	userId: string,
-	idpName: string,
-): Promise<Record | null> => {
-	const query = `SELECT * FROM ${TableName} WHERE "socialAccountId" = $1 AND "socialAccountType" = $2  AND "deletedAt" IS NULL`;
-	const stmt = db.prepare(query).bind(userId, `SAML_${idpName}`);
-	const user = (await stmt.first()) as Raw | null;
-	return user ? convertToRecord(user) : null;
-};
-
 export const create = async (db: D1Database, create: Create): Promise<Record> => {
 	const createKeys: (keyof Create)[] = [
 		"authId",
@@ -383,7 +300,6 @@ export const create = async (db: D1Database, create: Create): Promise<Record> =>
 		"password",
 		"firstName",
 		"lastName",
-		"orgSlug",
 		"locale",
 		"otpSecret",
 		"socialAccountId",
@@ -399,15 +315,6 @@ export const create = async (db: D1Database, create: Create): Promise<Record> =>
 	const id = result.meta.last_row_id;
 	const record = await getById(db, id);
 	if (!record) throw new errorConfig.InternalServerError();
-
-	if (create.orgSlug) {
-		const orgRecord = await orgModel.getBySlug(db, create.orgSlug);
-		if (!orgRecord) throw new errorConfig.InternalServerError();
-		await userOrgModel.create(db, {
-			userId: id,
-			orgId: orgRecord.id,
-		});
-	}
 
 	return record;
 };
@@ -432,11 +339,8 @@ export const update = async (db: D1Database, id: number, update: Update): Promis
 		"otpSecret",
 		"mfaTypes",
 		"otpVerified",
-		"smsPhoneNumber",
-		"smsPhoneNumberVerified",
 		"email",
 		"linkedAuthId",
-		"orgSlug",
 		"skipPasskeyEnroll",
 		"recoveryCodeHash",
 		"invitationToken",
@@ -455,17 +359,6 @@ export const update = async (db: D1Database, id: number, update: Update): Promis
 export const remove = async (db: D1Database, id: number): Promise<true> => {
 	const stmt = dbUtil.d1SoftDeleteQuery(db, TableName, id);
 
-	await dbUtil.d1Run(stmt);
-	return true;
-};
-
-export const updateOrgSlug = async (
-	db: D1Database,
-	oldSlug: string,
-	newSlug: string,
-): Promise<true> => {
-	const query = `UPDATE ${TableName} set "orgSlug" = $1 where "orgSlug" = $2`;
-	const stmt = db.prepare(query).bind(newSlug, oldSlug);
 	await dbUtil.d1Run(stmt);
 	return true;
 };

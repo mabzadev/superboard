@@ -1,24 +1,17 @@
 "use client";
 
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
+import { InputArea } from "@superboard/front-ui/kumo";
 import { usePublicConfig } from "@superboard/front-ui/lib/config.js";
-import {
-	showErrorNotification,
-	showSuccessNotification,
-} from "@superboard/front-ui/lib/Notifications.js";
 import { cn } from "@superboard/front-ui/lib/utils.js";
 import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import Image from "@superboard/front-ui/next-image";
-import { Button } from "@superboard/front-ui/ui/button.js";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@superboard/front-ui/ui/card.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
-import { Label } from "@superboard/front-ui/ui/label.js";
+	AutosaveIndicator,
+	SettingsRow,
+	SettingsTextField,
+	useSettingsAutosave,
+} from "@superboard/front-ui/settings-form";
 import {
 	Select,
 	SelectContent,
@@ -26,11 +19,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@superboard/front-ui/ui/select.js";
-import { ImageIcon, Save, Undo2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ImageIcon } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AcquisitionPage } from "../../../../AcquisitionPage.js";
 import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
+import { SettingsField, SettingsGroup } from "../../../../SettingsLayout.js";
 import {
 	getSocialPreview,
 	saveSocialPreview,
@@ -56,29 +50,36 @@ const previewPlatforms = [
 	["linkedin", "LinkedIn"],
 ] as const;
 
+function publicImageUrl(value: string) {
+	if (!value.trim()) return true;
+	try {
+		return ["http:", "https:"].includes(new URL(value).protocol);
+	} catch {
+		return false;
+	}
+}
+
 export default function SocialPreviewPageContent() {
 	const { tr } = useFlowI18n();
 	const config = usePublicConfig();
 	const { selectedProject } = useProjectSelection();
 	const [form, setForm] = useState<PreviewForm>(emptyForm);
-	const [initial, setInitial] = useState<PreviewForm>(emptyForm);
+	const [loadedFor, setLoadedFor] = useState<string | null>(null);
 	const [platform, setPlatform] = useState("facebook");
 	const [error, setError] = useState<string | null>(null);
-	const [saving, setSaving] = useState(false);
 	const [imageFailed, setImageFailed] = useState(false);
 
 	const load = useCallback(async () => {
 		if (!selectedProject) return;
 		try {
 			const value = await getSocialPreview(selectedProject.id);
-			const next = {
+			setForm({
 				title: value?.title ?? "",
 				description: value?.description ?? "",
 				image_url: value?.image_url ?? "",
 				site_name: value?.site_name ?? "",
-			};
-			setForm(next);
-			setInitial(next);
+			});
+			setLoadedFor(selectedProject.id);
 			setImageFailed(false);
 			setError(null);
 		} catch (cause) {
@@ -90,20 +91,20 @@ export default function SocialPreviewPageContent() {
 		void load();
 	}, [load]);
 
-	const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(initial), [form, initial]);
-
-	const save = async () => {
-		if (!selectedProject || !form.title.trim()) return;
-		setSaving(true);
-		try {
-			await saveSocialPreview(selectedProject.id, form);
-			setInitial(form);
-			showSuccessNotification(tr("Social preview saved"));
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
-		} finally {
-			setSaving(false);
-		}
+	const titleMissing = !form.title.trim();
+	const imageInvalid = !publicImageUrl(form.image_url);
+	const autosave = useSettingsAutosave({
+		resourceKey: loadedFor ?? "",
+		value: form,
+		enabled:
+			loadedFor !== null && loadedFor === selectedProject?.id && !titleMissing && !imageInvalid,
+		save: async (value) => {
+			if (!loadedFor) return;
+			await saveSocialPreview(loadedFor, value);
+		},
+	});
+	const change = (field: keyof PreviewForm, value: string) => {
+		setForm((current) => ({ ...current, [field]: value }));
 	};
 
 	const domain =
@@ -118,172 +119,137 @@ export default function SocialPreviewPageContent() {
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<div className="space-y-4">
-					{dirty ? (
-						<div className="sticky top-0 z-10 flex items-center justify-between rounded-lg border bg-background/90 p-3 shadow-sm backdrop-blur">
-							<span className="text-sm text-muted-foreground">
-								{tr("Unsaved social preview changes")}
-							</span>
-							<div className="flex gap-2">
-								<Button
-									variant="outline"
-									onClick={() => {
-										setForm(initial);
-										setImageFailed(false);
-									}}
-								>
-									<Undo2 className="size-4" /> {tr("Discard")}
-								</Button>
-								<Button disabled={saving || !form.title.trim()} onClick={() => void save()}>
-									<Save className="size-4" />
-									{tr(saving ? "Saving…" : "Save changes")}
-								</Button>
-							</div>
-						</div>
-					) : null}
-					<div className="grid gap-6 xl:grid-cols-[420px_1fr]">
-						<Card className="h-fit">
-							<CardHeader>
-								<CardTitle>{tr("Default metadata")}</CardTitle>
-								<CardDescription>
-									{tr("Individual links may override these project defaults.")}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-4">
-								<Field
-									label={tr("Title")}
-									value={form.title}
-									onChange={(title) => setForm((value) => ({ ...value, title }))}
-								/>
-								<div className="space-y-2">
-									<Label>{tr("Description")}</Label>
-									<textarea
+				<div className="flex w-full flex-col gap-6">
+					<SettingsGroup
+						title={tr("Default metadata")}
+						description={tr("Individual links may override these project defaults.")}
+					>
+						<SettingsRow>
+							<SettingsTextField
+								label={tr("Title")}
+								value={form.title}
+								onChange={(event) => {
+									change("title", event.currentTarget.value);
+								}}
+							/>
+							{titleMissing && loadedFor !== null ? (
+								<p className="text-xs text-kumo-warning">
+									{tr("Add a title to save the social preview.")}
+								</p>
+							) : null}
+						</SettingsRow>
+						<SettingsRow>
+							<SettingsField label={tr("Description")}>
+								{(id) => (
+									<InputArea
+										id={id}
 										rows={4}
-										className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+										className="w-full"
 										value={form.description}
 										onChange={(event) => {
-											const description = event.currentTarget.value;
-											setForm((value) => ({ ...value, description }));
+											change("description", event.currentTarget.value);
 										}}
 									/>
-								</div>
-								<Field
-									label={tr("Site name or domain")}
-									value={form.site_name}
-									onChange={(site_name) => setForm((value) => ({ ...value, site_name }))}
-								/>
-								<Field
-									label={tr("Image URL")}
-									type="url"
-									value={form.image_url}
-									onChange={(image_url) => {
-										setImageFailed(false);
-										setForm((value) => ({ ...value, image_url }));
-									}}
-								/>
-								<p className="text-xs text-muted-foreground">
-									{tr(
-										"Recommended ratio 1.91:1, at least 1200 × 630 pixels. The URL must be publicly accessible over HTTPS.",
-									)}
+								)}
+							</SettingsField>
+						</SettingsRow>
+						<SettingsRow>
+							<SettingsTextField
+								label={tr("Site name or domain")}
+								value={form.site_name}
+								onChange={(event) => {
+									change("site_name", event.currentTarget.value);
+								}}
+							/>
+						</SettingsRow>
+						<SettingsRow>
+							<SettingsTextField
+								label={tr("Image URL")}
+								description={tr(
+									"Recommended ratio 1.91:1, at least 1200 × 630 pixels. The URL must be publicly accessible over HTTPS.",
+								)}
+								type="url"
+								value={form.image_url}
+								onChange={(event) => {
+									setImageFailed(false);
+									change("image_url", event.currentTarget.value);
+								}}
+							/>
+							{imageInvalid ? (
+								<p className="text-xs text-kumo-danger">
+									{tr("Enter a complete web address, starting with https://.")}
 								</p>
-								<Button
-									className="w-full"
-									disabled={!dirty || saving || !form.title.trim()}
-									onClick={() => void save()}
-								>
-									<Save className="size-4" /> {tr("Save preview")}
-								</Button>
-							</CardContent>
-						</Card>
-
-						<Card>
-							<CardHeader className="flex-row items-start justify-between gap-3">
-								<div>
-									<CardTitle>{tr("Live preview")}</CardTitle>
-									<CardDescription>
-										{tr("Platform rendering is approximate and updates as you type.")}
-									</CardDescription>
-								</div>
-								<Select value={platform} onValueChange={setPlatform}>
-									<SelectTrigger className="w-36 shrink-0" aria-label={tr("Preview platform")}>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{previewPlatforms.map(([value, label]) => (
-											<SelectItem key={value} value={value}>
-												{label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</CardHeader>
-							<CardContent className="flex min-h-[500px] items-center justify-center bg-muted/20 p-6">
-								<div
-									className={cn(
-										"w-full max-w-2xl overflow-hidden border bg-background shadow-sm",
-										platform === "x" ? "rounded-2xl" : "rounded-lg",
+							) : null}
+						</SettingsRow>
+					</SettingsGroup>
+					<SettingsGroup
+						title={tr("Live preview")}
+						description={tr("Platform rendering is approximate and updates as you type.")}
+					>
+						<SettingsRow>
+							<SettingsField label={tr("Preview platform")}>
+								{(id) => (
+									<Select value={platform} onValueChange={setPlatform}>
+										<SelectTrigger id={id} className="w-full">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{previewPlatforms.map(([value, label]) => (
+												<SelectItem key={value} value={value}>
+													{label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								)}
+							</SettingsField>
+						</SettingsRow>
+						<SettingsRow className="flex justify-center bg-kumo-tint p-6">
+							<div
+								className={cn(
+									"w-full max-w-2xl overflow-hidden border border-kumo-line bg-kumo-base shadow-sm",
+									platform === "x" ? "rounded-2xl" : "rounded-lg",
+								)}
+							>
+								<div className="relative aspect-[1.91/1] w-full bg-kumo-tint">
+									{form.image_url && !imageFailed ? (
+										<Image
+											unoptimized
+											fill
+											sizes="(max-width: 768px) 100vw, 640px"
+											src={form.image_url}
+											alt={tr("Social preview")}
+											className="object-cover"
+											onError={() => {
+												setImageFailed(true);
+											}}
+										/>
+									) : (
+										<div className="flex h-full items-center justify-center">
+											<ImageIcon className="size-12 text-kumo-subtle" />
+										</div>
 									)}
-								>
-									<div className="relative aspect-[1.91/1] w-full bg-muted">
-										{form.image_url && !imageFailed ? (
-											<Image
-												unoptimized
-												fill
-												sizes="(max-width: 768px) 100vw, 640px"
-												src={form.image_url}
-												alt={tr("Social preview")}
-												className="object-cover"
-												onError={() => setImageFailed(true)}
-											/>
-										) : (
-											<div className="flex h-full items-center justify-center">
-												<ImageIcon className="size-12 text-muted-foreground" />
-											</div>
-										)}
-									</div>
-									<div className={cn("space-y-1 p-4", platform === "facebook" && "bg-muted/40")}>
-										{platform !== "x" ? (
-											<p className="text-xs uppercase tracking-wide text-muted-foreground">
-												{domain}
-											</p>
-										) : null}
-										<h3 className="font-semibold leading-snug">
-											{form.title || tr("Your link preview title")}
-										</h3>
-										{platform !== "linkedin" ? (
-											<p className="text-sm text-muted-foreground">
-												{form.description ||
-													tr(
-														"Add a concise description that explains where the shared link leads.",
-													)}
-											</p>
-										) : null}
-									</div>
 								</div>
-							</CardContent>
-						</Card>
-					</div>
+								<div className={cn("space-y-1 p-4", platform === "facebook" && "bg-kumo-tint")}>
+									{platform !== "x" ? (
+										<p className="text-xs uppercase tracking-wide text-kumo-subtle">{domain}</p>
+									) : null}
+									<h4 className="font-semibold leading-snug">
+										{form.title || tr("Your link preview title")}
+									</h4>
+									{platform !== "linkedin" ? (
+										<p className="text-sm text-kumo-subtle">
+											{form.description ||
+												tr("Add a concise description that explains where the shared link leads.")}
+										</p>
+									) : null}
+								</div>
+							</div>
+						</SettingsRow>
+					</SettingsGroup>
+					<AutosaveIndicator status={autosave.status} onRetry={autosave.retry} />
 				</div>
 			)}
 		</AcquisitionPage>
-	);
-}
-
-function Field({
-	label,
-	value,
-	onChange,
-	type = "text",
-}: {
-	label: string;
-	value: string;
-	onChange: (value: string) => void;
-	type?: string;
-}) {
-	return (
-		<div className="space-y-2">
-			<Label>{label}</Label>
-			<Input type={type} value={value} onChange={(event) => onChange(event.currentTarget.value)} />
-		</div>
 	);
 }

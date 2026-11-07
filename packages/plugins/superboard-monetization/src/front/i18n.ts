@@ -4,8 +4,25 @@ import { useMemo } from "react";
 
 const french: Record<string, string> = {
 	"Stripe web payments": "Paiements web Stripe",
+	"Sell your products on the web with Stripe Checkout.":
+		"Vendez vos produits sur le web avec Stripe Checkout.",
+	Connection: "Connexion",
+	"Last verified {date}": "Dernière vérification le {date}",
 	"Application origin": "Origine de l’application",
+	"HTTPS address of your website. After payment, Stripe only sends customers back to pages on this address.":
+		"Adresse HTTPS de votre site. Après le paiement, Stripe ne renvoie les clients que vers des pages de cette adresse.",
+	"Enter an HTTPS address, for example https://example.com.":
+		"Saisissez une adresse HTTPS, par exemple https://example.com.",
+	"Leave empty to keep the current secret.": "Laissez vide pour conserver le secret actuel.",
+	"Replace secrets": "Remplacer les secrets",
+	"Secrets replaced.": "Secrets remplacés.",
+	"Connect Stripe": "Connecter Stripe",
+	Advanced: "Avancé",
+	"Technical details for connecting Stripe to this project.":
+		"Détails techniques pour relier Stripe à ce projet.",
 	"Stripe webhook endpoint": "Adresse de notification Stripe",
+	"Copy address": "Copier l’adresse",
+	"Address copied": "Adresse copiée",
 	"Enable Checkout session, subscription, invoice payment and charge refund events on this endpoint.":
 		"Activez les événements Checkout, abonnement, paiement de facture et remboursement sur cette adresse.",
 	"Unable to load Stripe settings.": "Impossible de charger les paramètres Stripe.",
@@ -118,11 +135,12 @@ const french: Record<string, string> = {
 		"1 achat en attente de conversion n’est pas inclus.",
 	"{count} purchases awaiting conversion are not included.":
 		"{count} achats en attente de conversion ne sont pas inclus.",
+	"Display currency": "Devise d’affichage",
+	"The currency in which you read revenue amounts.":
+		"La devise dans laquelle vous consultez les montants des revenus.",
 	"Your display currency": "Votre devise d’affichage",
 	"Only for you: other operators choose their own. Revenue totals, charts and customer spending are converted to USD at the exchange rate of each purchase day, then to this currency at the same day’s rate.":
 		"Pour vous seul : chaque opérateur choisit la sienne. Les totaux de revenus, les graphiques et les dépenses des clients sont convertis en USD au taux de change du jour de chaque achat, puis dans cette devise au taux du même jour.",
-	"Display currency saved.": "Devise d’affichage enregistrée.",
-	"Could not save the display currency.": "Impossible d’enregistrer la devise d’affichage.",
 	"Could not load the display currency.": "Impossible de charger la devise d’affichage.",
 	"No purchases match these filters.": "Aucun achat ne correspond à ces filtres.",
 	Refund: "Rembourser",
@@ -274,7 +292,11 @@ const french: Record<string, string> = {
 	"Purchase settings": "Paramètres des achats",
 	"Manage purchase and restore rules and inspect configured store credentials.":
 		"Gérez les règles d’achat et de restauration et consultez la configuration des boutiques.",
+	"Let your apps sell products and restore purchases.":
+		"Permettez à vos applications de vendre des produits et de restaurer des achats.",
 	"Enable purchases": "Activer les achats",
+	"While purchases are off, the SDK rejects purchase requests from every app in this project.":
+		"Tant que les achats sont désactivés, le SDK refuse les demandes d’achat de toutes les applications du projet.",
 	"Restore behavior": "Comportement de restauration",
 	Details: "Détails",
 	"From {from} to {to}": "De {from} vers {to}",
@@ -296,9 +318,7 @@ const french: Record<string, string> = {
 		"S’applique aux achats du bac à sable à la place du comportement ci-dessus, pour tester un autre comportement sans modifier la production.",
 	"Loading settings…": "Chargement des paramètres…",
 	"Could not load billing settings.": "Impossible de charger les paramètres de facturation.",
-	"Could not save billing settings.": "Impossible d’enregistrer les paramètres de facturation.",
 	"Settings saved.": "Paramètres enregistrés.",
-	"Save settings": "Enregistrer les paramètres",
 	"Saving…": "Enregistrement…",
 	Retry: "Réessayer",
 	"Credential configuration does not confirm provider availability.":

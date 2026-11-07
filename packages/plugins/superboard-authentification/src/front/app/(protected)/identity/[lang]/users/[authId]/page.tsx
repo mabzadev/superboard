@@ -11,8 +11,15 @@ import DeleteButton from "../../../../../../identity/components/DeleteButton.js"
 import EntityStatusLabel from "../../../../../../identity/components/EntityStatusLabel.js";
 import IsSelfLabel from "../../../../../../identity/components/IsSelfLabel.js";
 import LoadingPage from "../../../../../../identity/components/LoadingPage.js";
+import {
+	PropertyLabel,
+	PropertyList,
+	PropertyRow,
+	PropertyValue,
+} from "../../../../../../identity/components/PropertyList.js";
 import SaveButton from "../../../../../../identity/components/SaveButton.js";
 import SubmitError from "../../../../../../identity/components/SubmitError.js";
+import SwitchRow from "../../../../../../identity/components/SwitchRow.js";
 import { Badge } from "../../../../../../identity/components/ui/badge.js";
 import { Button } from "../../../../../../identity/components/ui/button.js";
 import {
@@ -21,9 +28,7 @@ import {
 	CardTitle,
 	CardContent,
 } from "../../../../../../identity/components/ui/card.js";
-import { Checkbox } from "../../../../../../identity/components/ui/checkbox.js";
 import { Input } from "../../../../../../identity/components/ui/input.js";
-import { Label } from "../../../../../../identity/components/ui/label.js";
 import {
 	Select,
 	SelectContent,
@@ -54,21 +59,17 @@ import {
 	useDeleteApiV1UsersByAuthIdMutation,
 	useDeleteApiV1UsersByAuthIdOtpMfaMutation,
 	useDeleteApiV1UsersByAuthIdPasskeysAndPasskeyIdMutation,
-	useDeleteApiV1UsersByAuthIdSmsMfaMutation,
 	useDeleteApiV1UsersInvitationsByAuthIdMutation,
 	useGetApiV1AppsQuery,
-	useGetApiV1OrgsQuery,
 	useGetApiV1RolesQuery,
 	useGetApiV1UserAttributesQuery,
 	useGetApiV1UsersByAuthIdActiveSessionsQuery,
 	useGetApiV1UsersByAuthIdConsentedAppsQuery,
 	useGetApiV1UsersByAuthIdLockedIpsQuery,
-	useGetApiV1UsersByAuthIdOrgsQuery,
 	useGetApiV1UsersByAuthIdPasskeysQuery,
 	useGetApiV1UsersByAuthIdQuery,
 	usePostApiV1UsersByAuthIdEmailMfaMutation,
 	usePostApiV1UsersByAuthIdOtpMfaMutation,
-	usePostApiV1UsersByAuthIdSmsMfaMutation,
 	usePostApiV1UsersByAuthIdVerifyEmailMutation,
 	usePostApiV1UsersInvitationsByAuthIdMutation,
 	usePutApiV1UsersByAuthIdMutation,
@@ -79,10 +80,6 @@ import { routeTool, accessTool, typeTool } from "../../../../../../identity/tool
 import useSignalValue from "../../../../../../identity/useSignalValue.js";
 import ImpersonationModal from "./ImpersonationModal.js";
 import ResendInviteModal from "./ResendInviteModal.js";
-import UserOrgGroupModal from "./UserOrgGroupModal.js";
-import UserOrgsModal from "./UserOrgsModal.js";
-
-const NO_ORG_SLUG = " ";
 
 const Page = () => {
 	const { authId } = useParams();
@@ -101,11 +98,9 @@ const Page = () => {
 	const [emailResent, setEmailResent] = useState(false);
 	const [inviteResent, setInviteResent] = useState(false);
 	const [userRoles, setUserRoles] = useState<string[] | null>([]);
-	const [orgSlug, setOrgSlug] = useState("");
 	const [attributeValues, setAttributeValues] = useState<Record<string, string>>({});
 
 	const [isUnlinking, setIsUnlinking] = useState(false);
-	const [isResettingSmsMfa, setIsResettingSmsMfa] = useState(false);
 	const [isResettingOtpMfa, setIsResettingOtpMfa] = useState(false);
 	const [isResettingEmailMfa, setIsResettingEmailMfa] = useState(false);
 	const [isRemovingPasskey, setIsRemovingPasskey] = useState(false);
@@ -113,14 +108,10 @@ const Page = () => {
 	const [inviteRevoked, setInviteRevoked] = useState(false);
 	const [showImpersonateModal, setShowImpersonateModal] = useState(false);
 	const [showResendInviteModal, setShowResendInviteModal] = useState(false);
-	const [showUserOrgGroupModal, setShowUserOrgGroupModal] = useState(false);
-	const [showUserOrgsModal, setShowUserOrgsModal] = useState(false);
 
 	const enableConsent = !!configs.ENABLE_USER_APP_CONSENT;
 	const enableAccountLock = !!configs.ACCOUNT_LOCKOUT_THRESHOLD;
 	const enablePasskeyEnrollment = !!configs.ALLOW_PASSKEY_ENROLLMENT;
-	const enableOrg = !!configs.ENABLE_ORG;
-	const enableOrgGroup = configs?.ENABLE_ORG_GROUP;
 	const enableUserAttribute = !!configs.ENABLE_USER_ATTRIBUTE;
 
 	const { data: userData, isLoading: isUserLoading } = useGetApiV1UsersByAuthIdQuery({
@@ -130,17 +121,6 @@ const Page = () => {
 
 	const { data: rolesData } = useGetApiV1RolesQuery();
 	const roles = rolesData?.roles ?? [];
-
-	const { data: orgsData } = useGetApiV1OrgsQuery(undefined, { skip: !enableOrg });
-	const orgs = orgsData?.orgs ?? [];
-
-	const org = orgs.find((org) => org.slug === user?.org?.slug);
-
-	const { data: userOrgsData } = useGetApiV1UsersByAuthIdOrgsQuery(
-		{ authId: String(authId) },
-		{ skip: !enableOrg },
-	);
-	const userOrgs = userOrgsData?.orgs ?? [];
 
 	const { data: userAttributesData } = useGetApiV1UserAttributesQuery(undefined, {
 		skip: !enableUserAttribute,
@@ -189,7 +169,6 @@ const Page = () => {
 
 	const isEmailEnrolled = configs.EMAIL_MFA_IS_REQUIRED || user?.mfaTypes.includes("email");
 	const isOtpEnrolled = configs.OTP_MFA_IS_REQUIRED || user?.mfaTypes.includes("otp");
-	const isSmsEnrolled = configs.SMS_MFA_IS_REQUIRED || user?.mfaTypes.includes("sms");
 
 	const [updateUser, { isLoading: isUpdating }] = usePutApiV1UsersByAuthIdMutation();
 	const [deleteUser, { isLoading: isDeleting }] = useDeleteApiV1UsersByAuthIdMutation();
@@ -202,9 +181,7 @@ const Page = () => {
 		usePostApiV1UsersInvitationsByAuthIdMutation();
 	const [enrollEmailMfa] = usePostApiV1UsersByAuthIdEmailMfaMutation();
 	const [enrollOtpMfa] = usePostApiV1UsersByAuthIdOtpMfaMutation();
-	const [enrollSmsMfa] = usePostApiV1UsersByAuthIdSmsMfaMutation();
 	const [unenrollEmailMfa] = useDeleteApiV1UsersByAuthIdEmailMfaMutation();
-	const [unenrollSmsMfa] = useDeleteApiV1UsersByAuthIdSmsMfaMutation();
 	const [unenrollOtpMfa] = useDeleteApiV1UsersByAuthIdOtpMfaMutation();
 	const [unlinkAccount] = useDeleteApiV1UsersByAuthIdAccountLinkingMutation();
 	const [deletePasskey] = useDeleteApiV1UsersByAuthIdPasskeysAndPasskeyIdMutation();
@@ -218,13 +195,6 @@ const Page = () => {
 		if (firstName !== user.firstName) obj.firstName = firstName ?? "";
 		if (lastName !== user.lastName) obj.lastName = lastName ?? "";
 		if (locale !== user.locale) obj.locale = locale;
-		if (enableOrg) {
-			if (orgSlug && orgSlug !== user.org?.slug) {
-				obj.orgSlug = orgSlug;
-			} else if (!orgSlug && user.org?.slug) {
-				obj.orgSlug = orgSlug;
-			}
-		}
 		if (enableUserAttribute) {
 			const fullAttributeValues: Record<number, string | null> = {};
 			userAttributes.forEach((userAttribute) => {
@@ -240,8 +210,6 @@ const Page = () => {
 		firstName,
 		lastName,
 		locale,
-		orgSlug,
-		enableOrg,
 		enableUserAttribute,
 		userAttributes,
 		attributeValues,
@@ -255,8 +223,6 @@ const Page = () => {
 	);
 
 	const canWriteUser = accessTool.isAllowedAccess(accessTool.Access.WriteUser, userInfo?.roles);
-
-	const canWriteOrg = accessTool.isAllowedAccess(accessTool.Access.WriteOrg, userInfo?.roles);
 
 	const invitationExpiryDate = user?.invitationExpiresAt
 		? new Date(user.invitationExpiresAt)
@@ -289,7 +255,6 @@ const Page = () => {
 			setIsActive(user.isActive);
 			setUserRoles(user.roles);
 			setLocale(user.locale);
-			setOrgSlug(user.org?.slug ?? "");
 			setAttributeValues(user.attributes ?? {});
 		}
 	}, [user]);
@@ -352,15 +317,6 @@ const Page = () => {
 		setIsResettingOtpMfa(false);
 	};
 
-	const handleClickResetSmsMfa = () => setIsResettingSmsMfa(true);
-
-	const handleCancelResetSmsMfa = () => setIsResettingSmsMfa(false);
-
-	const handleConfirmResetSmsMfa = async () => {
-		await unenrollSmsMfa({ authId: String(authId) });
-		setIsResettingSmsMfa(false);
-	};
-
 	const handleClickResetEmailMfa = () => setIsResettingEmailMfa(true);
 
 	const handleCancelResetEmailMfa = () => setIsResettingEmailMfa(false);
@@ -372,10 +328,6 @@ const Page = () => {
 
 	const handleEnrollOtpMfa = async () => {
 		await enrollOtpMfa({ authId: String(authId) });
-	};
-
-	const handleEnrollSmsMfa = async () => {
-		await enrollSmsMfa({ authId: String(authId) });
 	};
 
 	const handleEnrollEmailMfa = async () => {
@@ -430,7 +382,7 @@ const Page = () => {
 	const renderEmailButtons = (user: UserDetail) => {
 		if (user.socialAccountId || !canWriteUser) return null;
 		return (
-			<div className="flex items-center gap-4 max-md:gap-2 max-md:flex-col max-md:items-start">
+			<div className="flex flex-wrap items-center justify-end gap-2">
 				{user.isActive && !isEmailEnrolled && (
 					<Button size="sm" data-testid="enrollEmailButton" onClick={handleEnrollEmailMfa}>
 						{t("users.enrollMfa")}
@@ -467,7 +419,7 @@ const Page = () => {
 		if (!canWriteUser || inviteRevoked) return null;
 
 		return (
-			<div className="flex items-center gap-4 max-md:gap-2 max-md:flex-col max-md:items-start">
+			<div className="flex flex-wrap items-center justify-end gap-2">
 				{!inviteResent && (
 					<Button
 						size="sm"
@@ -500,7 +452,7 @@ const Page = () => {
 	const renderOtpButtons = (user: UserDetail) => {
 		if (!canWriteUser) return null;
 		return (
-			<>
+			<div className="flex flex-wrap justify-end gap-2">
 				{user.mfaTypes.includes("otp") && user.isActive && (
 					<Button size="sm" data-testid="resetOtpButton" onClick={handleClickResetOtpMfa}>
 						{t("users.resetMfa")}
@@ -511,52 +463,40 @@ const Page = () => {
 						{t("users.enrollMfa")}
 					</Button>
 				)}
-			</>
-		);
-	};
-
-	const renderSmsButtons = (user: UserDetail) => {
-		if (!canWriteUser) return null;
-		return (
-			<>
-				{user.mfaTypes.includes("sms") && user.isActive && (
-					<Button size="sm" data-testid="resetSmsButton" onClick={handleClickResetSmsMfa}>
-						{t("users.resetMfa")}
-					</Button>
-				)}
-				{user.isActive && !isSmsEnrolled && (
-					<Button size="sm" data-testid="enrollSmsButton" onClick={handleEnrollSmsMfa}>
-						{t("users.enrollMfa")}
-					</Button>
-				)}
-			</>
+			</div>
 		);
 	};
 
 	const renderIpButtons = (lockedIPs: string[]) => {
 		if (!lockedIPs.length || !canWriteUser) return null;
 		return (
-			<Button size="sm" data-testid="unlockIpButton" onClick={handleUnlock}>
-				{t("users.unlock")}
-			</Button>
+			<div className="flex justify-end">
+				<Button size="sm" data-testid="unlockIpButton" onClick={handleUnlock}>
+					{t("users.unlock")}
+				</Button>
+			</div>
 		);
 	};
 
 	const renderUnlinkAccountButtons = () => {
 		if (!canWriteUser) return null;
 		return (
-			<Button size="sm" onClick={handleClickUnlink}>
-				{t("users.unlink")}
-			</Button>
+			<div className="flex justify-end">
+				<Button size="sm" onClick={handleClickUnlink}>
+					{t("users.unlink")}
+				</Button>
+			</div>
 		);
 	};
 
 	const renderRemovePasskeyButton = () => {
 		if (!canWriteUser) return null;
 		return (
-			<Button size="sm" onClick={handleClickRemovePasskey}>
-				{t("users.removePasskey")}
-			</Button>
+			<div className="flex justify-end">
+				<Button size="sm" onClick={handleClickRemovePasskey}>
+					{t("users.removePasskey")}
+				</Button>
+			</div>
 		);
 	};
 
@@ -574,461 +514,322 @@ const Page = () => {
 				}}
 			/>
 			<section>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="w-48">{t("common.property")}</TableHead>
-							<TableHead>{t("common.value")}</TableHead>
-							<TableHead className="w-96 max-md:hidden" />
-						</TableRow>
-					</TableHeader>
-					<TableBody className="divide-y">
-						<TableRow>
-							<TableCell>{t("users.authId")}</TableCell>
-							<TableCell>
-								<div className="flex items-center gap-2 max-md:flex-col max-md:items-start">
-									{user.authId}
-									{isSelf && <IsSelfLabel />}
-									{canImpersonate && !isSelf && (
-										<Button size="sm" onClick={handleClickImpersonate}>
-											{t("users.impersonate")}
-										</Button>
+				<PropertyList>
+					<PropertyRow>
+						<PropertyLabel>{t("users.authId")}</PropertyLabel>
+						<PropertyValue className="flex flex-col gap-2">
+							<div className="flex items-center gap-2">
+								{user.authId}
+								{isSelf && <IsSelfLabel />}
+							</div>
+							{canImpersonate && !isSelf && (
+								<div className="flex justify-end">
+									<Button size="sm" onClick={handleClickImpersonate}>
+										{t("users.impersonate")}
+									</Button>
+								</div>
+							)}
+						</PropertyValue>
+						{showImpersonateModal && (
+							<ImpersonationModal
+								user={user}
+								show={showImpersonateModal}
+								onClose={handleCloseImpersonate}
+							/>
+						)}
+					</PropertyRow>
+					{user.email && (
+						<PropertyRow>
+							<PropertyLabel>{t("users.email")}</PropertyLabel>
+							<PropertyValue className="flex flex-col gap-2">
+								<ConfirmModal
+									title={t("users.resetEmailMfaTitle")}
+									show={isResettingEmailMfa}
+									onConfirm={handleConfirmResetEmailMfa}
+									onClose={handleCancelResetEmailMfa}
+									confirmButtonText={t("users.resetMfa")}
+								/>
+								<div className="flex flex-wrap items-center gap-2">
+									<p>{user.email}</p>
+									{configs.ENABLE_EMAIL_VERIFICATION && <UserEmailVerified user={user} />}
+									{isEmailEnrolled && (
+										<Badge variant="secondary">{t("users.emailMfaEnrolled")}</Badge>
 									)}
 								</div>
-							</TableCell>
-							{showImpersonateModal && (
-								<ImpersonationModal
-									user={user}
-									show={showImpersonateModal}
-									onClose={handleCloseImpersonate}
+								{renderEmailButtons(user)}
+							</PropertyValue>
+						</PropertyRow>
+					)}
+					{user.socialAccountId && (
+						<PropertyRow>
+							<PropertyLabel>{t("users.social")}</PropertyLabel>
+							<PropertyValue>
+								{user.socialAccountType}: {user.socialAccountId}
+							</PropertyValue>
+						</PropertyRow>
+					)}
+					{!user.socialAccountId && (
+						<>
+							<ConfirmModal
+								title={t("users.resetOtpMfaTitle")}
+								show={isResettingOtpMfa}
+								onConfirm={handleConfirmResetOtpMfa}
+								onClose={handleCancelResetOtpMfa}
+								confirmButtonText={t("users.resetMfa")}
+							/>
+							<PropertyRow>
+								<PropertyLabel>{t("users.otpMfa")}</PropertyLabel>
+								<PropertyValue className="flex flex-col gap-2">
+									{isOtpEnrolled && !user.otpVerified && (
+										<div className="flex">
+											<Badge variant="secondary">{t("users.otpMfaEnrolled")}</Badge>
+										</div>
+									)}
+									{isOtpEnrolled && user.otpVerified && (
+										<div className="flex">
+											<Badge>{t("users.otpMfaVerified")}</Badge>
+										</div>
+									)}
+									{renderOtpButtons(user)}
+								</PropertyValue>
+							</PropertyRow>
+						</>
+					)}
+					{!user.socialAccountId && enablePasskeyEnrollment && (
+						<>
+							<ConfirmModal
+								title={t("users.removePasskeyTitle")}
+								show={isRemovingPasskey}
+								onConfirm={handleConfirmRemovePasskey}
+								onClose={handleCancelRemovePasskey}
+								confirmButtonText={t("users.removePasskey")}
+							/>
+							<PropertyRow>
+								<PropertyLabel>{t("users.passkey")}</PropertyLabel>
+								<PropertyValue className="flex flex-col gap-2">
+									{!!passkeys.length && (
+										<>
+											<div className="flex">
+												<Badge variant="secondary">{t("users.passkeyEnrolled")}</Badge>
+											</div>
+											{renderRemovePasskeyButton()}
+										</>
+									)}
+								</PropertyValue>
+							</PropertyRow>
+						</>
+					)}
+					{user.linkedAuthId && (
+						<>
+							<ConfirmModal
+								title={t("users.unlinkTitle")}
+								show={isUnlinking}
+								onConfirm={handleConfirmUnlink}
+								onClose={handleCancelUnlink}
+								confirmButtonText={t("users.unlink")}
+							/>
+							<PropertyRow>
+								<PropertyLabel>{t("users.linkedWith")}</PropertyLabel>
+								<PropertyValue className="flex flex-col gap-2">
+									<a
+										className="text-cyan-600 cursor-pointer flex items-center gap-1"
+										onClick={handleClickLinkedAccount}
+									>
+										{user.linkedAuthId}
+										<ArrowTopRightOnSquareIcon className="w-4 h-4" />
+									</a>
+									{renderUnlinkAccountButtons()}
+								</PropertyValue>
+							</PropertyRow>
+						</>
+					)}
+					<PropertyRow>
+						<PropertyLabel>{t("users.locale")}</PropertyLabel>
+						<PropertyValue>
+							{configs.SUPPORTED_LOCALES.length > 1 && (
+								<Select
+									value={locale}
+									disabled={!canWriteUser}
+									onValueChange={(val) => setLocale(val)}
+								>
+									<SelectTrigger data-testid="localeSelect">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectGroup>
+											{configs.SUPPORTED_LOCALES.map((locale: string) => (
+												<SelectItem
+													key={locale}
+													disabled={!canWriteUser}
+													data-testid={`localeOption-${locale}`}
+													value={locale}
+												>
+													{locale.toUpperCase()}
+												</SelectItem>
+											))}
+										</SelectGroup>
+									</SelectContent>
+								</Select>
+							)}
+							{configs.SUPPORTED_LOCALES.length <= 1 && user.locale}
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("users.loginCount")}</PropertyLabel>
+						<PropertyValue>{user.loginCount}</PropertyValue>
+					</PropertyRow>
+					<PropertyRow inline>
+						<PropertyLabel>{t("users.status")}</PropertyLabel>
+						<PropertyValue>
+							{isSelf && <EntityStatusLabel isEnabled={user.isActive} />}
+							{!isSelf && (
+								<Switch
+									checked={isActive}
+									disabled={!canWriteUser || isPendingInvitation}
+									onClick={() => setIsActive(!isActive)}
 								/>
 							)}
-						</TableRow>
-						{user.email && (
-							<TableRow>
-								<TableCell>{t("users.email")}</TableCell>
-								<TableCell>
-									<ConfirmModal
-										title={t("users.resetEmailMfaTitle")}
-										show={isResettingEmailMfa}
-										onConfirm={handleConfirmResetEmailMfa}
-										onClose={handleCancelResetEmailMfa}
-										confirmButtonText={t("users.resetMfa")}
-									/>
-									<div className="flex flex-col gap-2">
-										<div className="flex items-center gap-4 max-md:gap-2 max-md:flex-col max-md:items-start">
-											<p>{user.email}</p>
-											{configs.ENABLE_EMAIL_VERIFICATION && <UserEmailVerified user={user} />}
-											{isEmailEnrolled && (
-												<Badge variant="secondary">{t("users.emailMfaEnrolled")}</Badge>
-											)}
-											<div className="md:hidden">{renderEmailButtons(user)}</div>
-										</div>
-									</div>
-								</TableCell>
-								<TableCell className="max-md:hidden">{renderEmailButtons(user)}</TableCell>
-							</TableRow>
-						)}
-						{user.socialAccountId && (
-							<TableRow>
-								<TableCell>{t("users.social")}</TableCell>
-								<TableCell>
-									{user.socialAccountType}: {user.socialAccountId}
-								</TableCell>
-							</TableRow>
-						)}
-						{!user.socialAccountId && (
-							<>
-								<ConfirmModal
-									title={t("users.resetOtpMfaTitle")}
-									show={isResettingOtpMfa}
-									onConfirm={handleConfirmResetOtpMfa}
-									onClose={handleCancelResetOtpMfa}
-									confirmButtonText={t("users.resetMfa")}
-								/>
-								<TableRow>
-									<TableCell>{t("users.otpMfa")}</TableCell>
-									<TableCell>
-										<div className="flex max-md:flex-col gap-2">
-											{isOtpEnrolled && !user.otpVerified && (
-												<div className="flex">
-													<Badge variant="secondary">{t("users.otpMfaEnrolled")}</Badge>
-												</div>
-											)}
-											{isOtpEnrolled && user.otpVerified && (
-												<div className="flex">
-													<Badge>{t("users.otpMfaVerified")}</Badge>
-												</div>
-											)}
-											<div className="md:hidden">{renderOtpButtons(user)}</div>
-										</div>
-									</TableCell>
-									<TableCell className="max-md:hidden">{renderOtpButtons(user)}</TableCell>
-								</TableRow>
-							</>
-						)}
-						{!user.socialAccountId && (
-							<>
-								<ConfirmModal
-									title={t("users.resetSmsMfaTitle")}
-									show={isResettingSmsMfa}
-									onConfirm={handleConfirmResetSmsMfa}
-									onClose={handleCancelResetSmsMfa}
-									confirmButtonText={t("users.resetMfa")}
-								/>
-								<TableRow>
-									<TableCell>{t("users.smsMfa")}</TableCell>
-									<TableCell>
-										<div className="flex max-md:flex-col gap-2">
-											{isSmsEnrolled && !user.smsPhoneNumberVerified && (
-												<div className="flex">
-													<Badge variant="secondary">{t("users.smsMfaEnrolled")}</Badge>
-												</div>
-											)}
-											{isSmsEnrolled && user.smsPhoneNumberVerified && (
-												<div className="flex">
-													<Badge>{t("users.smsMfaVerified")}</Badge>
-												</div>
-											)}
-											<div className="md:hidden">{renderSmsButtons(user)}</div>
-										</div>
-									</TableCell>
-									<TableCell className="max-md:hidden">{renderSmsButtons(user)}</TableCell>
-								</TableRow>
-							</>
-						)}
-						{!user.socialAccountId && enablePasskeyEnrollment && (
-							<>
-								<ConfirmModal
-									title={t("users.removePasskeyTitle")}
-									show={isRemovingPasskey}
-									onConfirm={handleConfirmRemovePasskey}
-									onClose={handleCancelRemovePasskey}
-									confirmButtonText={t("users.removePasskey")}
-								/>
-								<TableRow>
-									<TableCell>{t("users.passkey")}</TableCell>
-									<TableCell>
-										{!!passkeys.length && (
-											<div className="flex max-md:flex-col gap-2">
-												<Badge variant="secondary">{t("users.passkeyEnrolled")}</Badge>
-												<div className="md:hidden">{renderRemovePasskeyButton()}</div>
-											</div>
+						</PropertyValue>
+					</PropertyRow>
+					{isPendingInvitation && (
+						<>
+							<ConfirmModal
+								title={t("users.revokeInviteTitle")}
+								show={isRevokingInvite}
+								onConfirm={handleConfirmRevokeInvitation}
+								onClose={handleCancelRevokeInvitation}
+								confirmButtonText={t("users.revokeInvite")}
+							/>
+							<ResendInviteModal
+								show={showResendInviteModal}
+								isLoading={isResendingInvitation}
+								defaultLocale={defaultInviteLocale}
+								supportedLocales={configs.SUPPORTED_LOCALES ?? []}
+								spaApps={spaApps}
+								onClose={handleCloseResendInvitation}
+								onConfirm={handleResendInvitation}
+							/>
+							<PropertyRow>
+								<PropertyLabel>{t("users.inviteStatus")}</PropertyLabel>
+								<PropertyValue className="flex flex-col gap-2">
+									<div className="flex flex-wrap items-center gap-4">
+										{isInvitationExpired ? (
+											<Badge variant="warning">{t("users.inviteExpired")}</Badge>
+										) : (
+											<EntityStatusLabel isEnabled={false} isInviting />
 										)}
-									</TableCell>
-									{!!passkeys.length && (
-										<TableCell className="max-md:hidden">{renderRemovePasskeyButton()}</TableCell>
-									)}
-								</TableRow>
-							</>
-						)}
-						{user.linkedAuthId && (
-							<>
-								<ConfirmModal
-									title={t("users.unlinkTitle")}
-									show={isUnlinking}
-									onConfirm={handleConfirmUnlink}
-									onClose={handleCancelUnlink}
-									confirmButtonText={t("users.unlink")}
-								/>
-								<TableRow>
-									<TableCell>{t("users.linkedWith")}</TableCell>
-									<TableCell>
-										<div className="flex max-md:flex-col gap-2">
-											<a
-												className="text-cyan-600 cursor-pointer flex items-center gap-1"
-												onClick={handleClickLinkedAccount}
-											>
-												{user.linkedAuthId}
-												<ArrowTopRightOnSquareIcon className="w-4 h-4" />
-											</a>
-											<div className="md:hidden">{renderUnlinkAccountButtons()}</div>
-										</div>
-									</TableCell>
-									<TableCell className="max-md:hidden">{renderUnlinkAccountButtons()}</TableCell>
-								</TableRow>
-							</>
-						)}
-						<TableRow>
-							<TableCell>{t("users.locale")}</TableCell>
-							<TableCell>
-								{configs.SUPPORTED_LOCALES.length > 1 && (
-									<Select
-										value={locale}
-										disabled={!canWriteUser}
-										onValueChange={(val) => setLocale(val)}
-									>
-										<SelectTrigger data-testid="localeSelect">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectGroup>
-												{configs.SUPPORTED_LOCALES.map((locale: string) => (
-													<SelectItem
-														key={locale}
-														disabled={!canWriteUser}
-														data-testid={`localeOption-${locale}`}
-														value={locale}
-													>
-														{locale.toUpperCase()}
-													</SelectItem>
-												))}
-											</SelectGroup>
-										</SelectContent>
-									</Select>
-								)}
-								{configs.SUPPORTED_LOCALES.length <= 1 && user.locale}
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("users.loginCount")}</TableCell>
-							<TableCell>{user.loginCount}</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("users.status")}</TableCell>
-							<TableCell>
-								{isSelf && <EntityStatusLabel isEnabled={user.isActive} />}
-								{!isSelf && (
-									<Switch
-										checked={isActive}
-										disabled={!canWriteUser || isPendingInvitation}
-										onClick={() => setIsActive(!isActive)}
-									/>
-								)}
-							</TableCell>
-						</TableRow>
-						{isPendingInvitation && (
-							<>
-								<ConfirmModal
-									title={t("users.revokeInviteTitle")}
-									show={isRevokingInvite}
-									onConfirm={handleConfirmRevokeInvitation}
-									onClose={handleCancelRevokeInvitation}
-									confirmButtonText={t("users.revokeInvite")}
-								/>
-								<ResendInviteModal
-									show={showResendInviteModal}
-									isLoading={isResendingInvitation}
-									defaultLocale={defaultInviteLocale}
-									supportedLocales={configs.SUPPORTED_LOCALES ?? []}
-									spaApps={spaApps}
-									onClose={handleCloseResendInvitation}
-									onConfirm={handleResendInvitation}
-								/>
-								<TableRow>
-									<TableCell>{t("users.inviteStatus")}</TableCell>
-									<TableCell>
-										<div className="flex items-center gap-4 max-md:flex-col max-md:items-start">
-											<div className="flex items-center gap-4">
-												{isInvitationExpired ? (
-													<Badge variant="warning">{t("users.inviteExpired")}</Badge>
-												) : (
-													<EntityStatusLabel isEnabled={false} isInviting />
-												)}
-												{invitationExpiryDate && (
-													<span className="text-sm text-muted-foreground">
-														{t("users.inviteExpiresAt")}: {invitationExpiryDate.toLocaleString()}
-													</span>
-												)}
-											</div>
-											<div className="md:hidden">{renderInviteButtons()}</div>
-										</div>
-									</TableCell>
-									<TableCell className="max-md:hidden">{renderInviteButtons()}</TableCell>
-								</TableRow>
-							</>
-						)}
-						{!user.socialAccountId && enableAccountLock && (
-							<TableRow>
-								<TableCell>{t("users.lockedIPs")}</TableCell>
-								<TableCell>
-									<div className="flex max-md:flex-col gap-2">
-										<div className="flex items-center gap-6">
-											{lockedIPs?.map((ip) => (
-												<Badge data-testid="lockedIpBadge" variant="secondary" key={ip}>
-													{ip || t("users.noIP")}
-												</Badge>
-											))}
-										</div>
-										<div className="md:hidden">{renderIpButtons(lockedIPs)}</div>
+										{invitationExpiryDate && (
+											<span className="text-sm text-muted-foreground">
+												{t("users.inviteExpiresAt")}: {invitationExpiryDate.toLocaleString()}
+											</span>
+										)}
 									</div>
-								</TableCell>
-								<TableCell className="max-md:hidden">{renderIpButtons(lockedIPs)}</TableCell>
-							</TableRow>
-						)}
-						<TableRow>
-							<TableCell>{t("users.roles")}</TableCell>
-							<TableCell>
-								<div className="flex items-center flex-wrap gap-6 max-md:flex-col max-md:items-start">
-									{roles?.map((role) => (
-										<div key={role.id} className="flex items-center gap-2">
-											<Checkbox
-												id={`role-${role.id}`}
-												disabled={!canWriteUser}
-												data-testid="roleInput"
-												onClick={() => handleToggleUserRole(role.name)}
-												checked={userRoles?.includes(role.name) ?? false}
-											/>
-											<Label htmlFor={`role-${role.id}`} className="flex">
-												{role.name}
-											</Label>
-										</div>
+									{renderInviteButtons()}
+								</PropertyValue>
+							</PropertyRow>
+						</>
+					)}
+					{!user.socialAccountId && enableAccountLock && (
+						<PropertyRow>
+							<PropertyLabel>{t("users.lockedIPs")}</PropertyLabel>
+							<PropertyValue className="flex flex-col gap-2">
+								<div className="flex flex-wrap items-center gap-2">
+									{lockedIPs?.map((ip) => (
+										<Badge data-testid="lockedIpBadge" variant="secondary" key={ip}>
+											{ip || t("users.noIP")}
+										</Badge>
 									))}
 								</div>
-							</TableCell>
-						</TableRow>
-						{enableOrg && (
-							<TableRow>
-								<UserOrgsModal
-									authId={user.authId}
-									show={showUserOrgsModal}
-									onClose={() => setShowUserOrgsModal(false)}
+								{renderIpButtons(lockedIPs)}
+							</PropertyValue>
+						</PropertyRow>
+					)}
+					<PropertyRow>
+						<PropertyLabel>{t("users.roles")}</PropertyLabel>
+						<PropertyValue className="flex flex-col gap-3">
+							{roles?.map((role) => (
+								<SwitchRow
+									key={role.id}
+									id={`role-${role.id}`}
+									label={role.name}
+									disabled={!canWriteUser}
+									data-testid="roleInput"
+									onClick={() => handleToggleUserRole(role.name)}
+									checked={userRoles?.includes(role.name) ?? false}
 								/>
-								<TableCell>{t("users.allOrgs")}</TableCell>
-								<TableCell>
-									<div className="flex items-center gap-2">
-										{userOrgs?.map((org) => org.name).join(", ")}
-										{canWriteUser && canWriteOrg && (
-											<Button
-												variant="default"
-												size="sm"
-												data-testid="manageAllOrgsButton"
-												onClick={() => setShowUserOrgsModal(true)}
-											>
-												{t("users.manageUserOrgs")}
-											</Button>
-										)}
-									</div>
-								</TableCell>
-							</TableRow>
-						)}
-						{enableOrg && (
-							<TableRow>
-								<TableCell>{t("users.org")}</TableCell>
-								<TableCell>
-									<Select
-										value={orgSlug || NO_ORG_SLUG}
-										onValueChange={setOrgSlug}
+							))}
+						</PropertyValue>
+					</PropertyRow>
+					{configs.ENABLE_NAMES && (
+						<>
+							<PropertyRow>
+								<PropertyLabel>{t("users.firstName")}</PropertyLabel>
+								<PropertyValue>
+									<Input
 										disabled={!canWriteUser}
-									>
-										<SelectTrigger data-testid="orgSelect">
-											<SelectValue data-testid="orgSelectValue" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectGroup>
-												<SelectItem key={0} value={NO_ORG_SLUG}>
-													{t("users.noOrg")}
-												</SelectItem>
-												{userOrgs.map((org) => (
-													<SelectItem key={org.id} value={org.slug}>
-														{org.name}
-													</SelectItem>
-												))}
-											</SelectGroup>
-										</SelectContent>
-									</Select>
-								</TableCell>
-							</TableRow>
-						)}
-						{enableOrg && enableOrgGroup && org && (
-							<TableRow>
-								<UserOrgGroupModal
-									orgId={org.id}
-									authId={user.authId}
-									show={showUserOrgGroupModal}
-									onClose={() => setShowUserOrgGroupModal(false)}
-								/>
-								<TableCell>{t("users.orgGroup")}</TableCell>
-								<TableCell>
-									<div className="flex items-center gap-2">
-										{user.orgGroups?.map((orgGroup) => orgGroup.name).join(", ")}
-										{canWriteUser && canWriteOrg && (
-											<Button
-												variant="default"
-												size="sm"
-												data-testid="manageUserOrgGroupButton"
-												onClick={() => setShowUserOrgGroupModal(true)}
-											>
-												{t("users.manageUserOrgGroup")}
-											</Button>
+										data-testid="firstNameInput"
+										onChange={(e) => setFirstName(e.target.value)}
+										value={firstName ?? ""}
+									/>
+								</PropertyValue>
+							</PropertyRow>
+							<PropertyRow>
+								<PropertyLabel>{t("users.lastName")}</PropertyLabel>
+								<PropertyValue>
+									<Input
+										disabled={!canWriteUser}
+										data-testid="lastNameInput"
+										onChange={(e) => setLastName(e.target.value)}
+										value={lastName ?? ""}
+									/>
+								</PropertyValue>
+							</PropertyRow>
+						</>
+					)}
+					{enableUserAttribute &&
+						userAttributes.map((userAttribute) => {
+							const validationLocale =
+								userAttribute.validationLocales?.find((locale) => locale.locale === appLocale)
+									?.value || userAttribute.validationLocales?.[0]?.value;
+							return (
+								<PropertyRow key={userAttribute.id}>
+									<PropertyLabel>
+										{userAttribute.locales?.find((locale) => locale.locale === appLocale)?.value ??
+											userAttribute.name}
+									</PropertyLabel>
+									<PropertyValue className="flex flex-col gap-2">
+										<Input
+											disabled={!canWriteUser}
+											data-testid={userAttribute.name}
+											onChange={(e) =>
+												setAttributeValues({
+													...attributeValues,
+													[userAttribute.name]: e.target.value,
+												})
+											}
+											value={attributeValues[userAttribute.name] ?? ""}
+										/>
+										{userAttribute.unique && <p>{t("users.uniqueAttribute")}</p>}
+										{userAttribute.validationRegex && validationLocale && (
+											<p>* {validationLocale}</p>
 										)}
-									</div>
-								</TableCell>
-							</TableRow>
-						)}
-						{configs.ENABLE_NAMES && (
-							<>
-								<TableRow>
-									<TableCell>{t("users.firstName")}</TableCell>
-									<TableCell>
-										<Input
-											disabled={!canWriteUser}
-											data-testid="firstNameInput"
-											onChange={(e) => setFirstName(e.target.value)}
-											value={firstName ?? ""}
-										/>
-									</TableCell>
-								</TableRow>
-								<TableRow>
-									<TableCell>{t("users.lastName")}</TableCell>
-									<TableCell>
-										<Input
-											disabled={!canWriteUser}
-											data-testid="lastNameInput"
-											onChange={(e) => setLastName(e.target.value)}
-											value={lastName ?? ""}
-										/>
-									</TableCell>
-								</TableRow>
-							</>
-						)}
-						{enableUserAttribute &&
-							userAttributes.map((userAttribute) => {
-								const validationLocale =
-									userAttribute.validationLocales?.find((locale) => locale.locale === appLocale)
-										?.value || userAttribute.validationLocales?.[0]?.value;
-								return (
-									<TableRow key={userAttribute.id}>
-										<TableCell>
-											{userAttribute.locales?.find((locale) => locale.locale === appLocale)
-												?.value ?? userAttribute.name}
-										</TableCell>
-										<TableCell>
-											<div className="flex flex-col gap-2">
-												<Input
-													disabled={!canWriteUser}
-													data-testid={userAttribute.name}
-													onChange={(e) =>
-														setAttributeValues({
-															...attributeValues,
-															[userAttribute.name]: e.target.value,
-														})
-													}
-													value={attributeValues[userAttribute.name] ?? ""}
-												/>
-												{userAttribute.unique && <p>{t("users.uniqueAttribute")}</p>}
-												{userAttribute.validationRegex && validationLocale && (
-													<p>* {validationLocale}</p>
-												)}
-											</div>
-										</TableCell>
-									</TableRow>
-								);
-							})}
-						<TableRow>
-							<TableCell>{t("common.createdAt")}</TableCell>
-							<TableCell>{user.createdAt} UTC</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("common.updatedAt")}</TableCell>
-							<TableCell>{user.updatedAt} UTC</TableCell>
-						</TableRow>
-					</TableBody>
-				</Table>
+									</PropertyValue>
+								</PropertyRow>
+							);
+						})}
+					<PropertyRow>
+						<PropertyLabel>{t("common.createdAt")}</PropertyLabel>
+						<PropertyValue>{t("common.utcTime", { time: user.createdAt })}</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("common.updatedAt")}</PropertyLabel>
+						<PropertyValue>{t("common.utcTime", { time: user.updatedAt })}</PropertyValue>
+					</PropertyRow>
+				</PropertyList>
 			</section>
 			<SubmitError />
 			{canWriteUser && (
-				<section className="flex items-center gap-4 mt-8">
+				<section className="mt-8 flex items-center justify-end gap-4">
 					<SaveButton
 						isLoading={isUpdating}
 						disabled={!Object.keys(updateObj).length || isDeleting}

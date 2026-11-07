@@ -163,6 +163,52 @@ describe("Email Worker health", () => {
 		});
 	});
 
+	it("sends with the requested sender name and keeps the default one otherwise", async () => {
+		const storedFromNames: unknown[] = [];
+		const db = {
+			prepare(sql: string) {
+				return {
+					bind(...args: unknown[]) {
+						return { _sql: sql, _args: args };
+					},
+				};
+			},
+			async batch(statements: Array<{ _sql: string; _args: unknown[] }>) {
+				for (const statement of statements)
+					if (statement._sql.includes("INTO email_messages"))
+						storedFromNames.push(statement._args[8]);
+				return [];
+			},
+		} as unknown as D1Database;
+		const env = environment({
+			DB: db,
+			EMAIL_QUEUE: {
+				send: vi.fn().mockResolvedValue(undefined),
+			} as unknown as Queue<EmailQueueJob>,
+		});
+		const send = (extra: Record<string, unknown>) =>
+			worker.fetch(
+				new Request("https://email.internal/internal/v1/messages", {
+					method: "POST",
+					headers: { "content-type": "application/json", "x-internal-token": "internal-secret" },
+					body: JSON.stringify({
+						kind: "transactional",
+						to: "customer@example.test",
+						subject: "Support update",
+						text: "Hello",
+						...extra,
+					}),
+				}),
+				env,
+				{} as ExecutionContext,
+			);
+
+		expect((await send({ fromName: "Acme Care" })).status).toBe(202);
+		expect((await send({})).status).toBe(202);
+		expect((await send({ fromName: "Acme\r\nBcc: attacker@example.com" })).status).toBe(422);
+		expect(storedFromNames).toEqual(["Acme Care", "SuperBoard"]);
+	});
+
 	it("deduplicates identical business events and rejects key reuse with another payload", async () => {
 		const messages = new Map<string, StoredEmail>();
 		const byKey = new Map<string, StoredEmail>();

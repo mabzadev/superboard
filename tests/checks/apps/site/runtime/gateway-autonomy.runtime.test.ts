@@ -73,7 +73,10 @@ test("Gateway publishes working optional routes, enforces policies and keeps unr
 	expect(head.status).toBe(404);
 	const list = await SELF.fetch("https://site.example/api/v1/gateway/routes", { headers });
 	expect(list.status).toBe(200);
-	expect(await list.json()).toEqual({ data: [] });
+	expect(await list.json()).toEqual({
+		data: [],
+		access_policy: { allowed_operator_ids: [], version: null },
+	});
 	const route = await command("update_gateway_route", "PUT", "/api/v1/gateway/routes/health", {
 		method: "GET",
 		path_pattern: "/health-check",

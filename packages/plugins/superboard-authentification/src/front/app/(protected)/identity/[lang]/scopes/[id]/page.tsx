@@ -10,18 +10,16 @@ import DeleteButton from "../../../../../../identity/components/DeleteButton.js"
 import FieldError from "../../../../../../identity/components/FieldError.js";
 import LoadingPage from "../../../../../../identity/components/LoadingPage.js";
 import LocaleEditor from "../../../../../../identity/components/LocaleEditor.js";
+import {
+	PropertyLabel,
+	PropertyList,
+	PropertyRow,
+	PropertyValue,
+} from "../../../../../../identity/components/PropertyList.js";
 import RequiredProperty from "../../../../../../identity/components/RequiredProperty.js";
 import SaveButton from "../../../../../../identity/components/SaveButton.js";
 import SubmitError from "../../../../../../identity/components/SubmitError.js";
 import { Input } from "../../../../../../identity/components/ui/input.js";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "../../../../../../identity/components/ui/table.js";
 import { useRouter } from "../../../../../../identity/i18n/navigation.js";
 import { useAuth } from "../../../../../../identity/melody-react.js";
 import {
@@ -120,77 +118,69 @@ const Page = () => {
 				}}
 			/>
 			<section>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="max-md:w-24 md:w-48">{t("common.property")}</TableHead>
-							<TableHead>{t("common.value")}</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody className="divide-y">
-						<TableRow>
-							<TableCell>
-								<RequiredProperty title={t("scopes.name")} />
-							</TableCell>
-							<TableCell>
-								{isSystem ? (
-									values.name
-								) : (
-									<Input
-										disabled={!canWriteScope}
-										data-testid="nameInput"
-										onChange={(e) => onChange("name", e.target.value)}
-										value={values.name}
-									/>
-								)}
-								{showErrors && <FieldError error={errors.name} />}
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("common.note")}</TableCell>
-							<TableCell>
+				<PropertyList>
+					<PropertyRow>
+						<PropertyLabel>
+							<RequiredProperty title={t("scopes.name")} />
+						</PropertyLabel>
+						<PropertyValue>
+							{isSystem ? (
+								values.name
+							) : (
 								<Input
-									data-testid="noteInput"
 									disabled={!canWriteScope}
-									onChange={(e) => onChange("note", e.target.value)}
-									value={values.note}
+									data-testid="nameInput"
+									onChange={(e) => onChange("name", e.target.value)}
+									value={values.name}
 								/>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("scopes.type")}</TableCell>
-							<TableCell>
-								<ClientTypeLabel type={scope.type} />
-							</TableCell>
-						</TableRow>
-						{configs.ENABLE_USER_APP_CONSENT && scope.type === "spa" && (
-							<TableRow>
-								<TableCell>{t("scopes.locales")}</TableCell>
-								<TableCell>
-									<LocaleEditor
-										description={`* ${t("scopes.localeNote")}`}
-										supportedLocales={configs.SUPPORTED_LOCALES}
-										values={values.locales ?? []}
-										disabled={!canWriteScope}
-										onChange={(locales) => onChange("locales", locales)}
-									/>
-								</TableCell>
-							</TableRow>
-						)}
-						<TableRow>
-							<TableCell>{t("common.createdAt")}</TableCell>
-							<TableCell>{scope.createdAt} UTC</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("common.updatedAt")}</TableCell>
-							<TableCell>{scope.updatedAt} UTC</TableCell>
-						</TableRow>
-					</TableBody>
-				</Table>
+							)}
+							{showErrors && <FieldError error={errors.name} />}
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("common.note")}</PropertyLabel>
+						<PropertyValue>
+							<Input
+								data-testid="noteInput"
+								disabled={!canWriteScope}
+								onChange={(e) => onChange("note", e.target.value)}
+								value={values.note}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("scopes.type")}</PropertyLabel>
+						<PropertyValue>
+							<ClientTypeLabel type={scope.type} />
+						</PropertyValue>
+					</PropertyRow>
+					{configs.ENABLE_USER_APP_CONSENT && scope.type === "spa" && (
+						<PropertyRow>
+							<PropertyLabel>{t("scopes.locales")}</PropertyLabel>
+							<PropertyValue>
+								<LocaleEditor
+									description={`* ${t("scopes.localeNote")}`}
+									supportedLocales={configs.SUPPORTED_LOCALES}
+									values={values.locales ?? []}
+									disabled={!canWriteScope}
+									onChange={(locales) => onChange("locales", locales)}
+								/>
+							</PropertyValue>
+						</PropertyRow>
+					)}
+					<PropertyRow>
+						<PropertyLabel>{t("common.createdAt")}</PropertyLabel>
+						<PropertyValue>{t("common.utcTime", { time: scope.createdAt })}</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("common.updatedAt")}</PropertyLabel>
+						<PropertyValue>{t("common.utcTime", { time: scope.updatedAt })}</PropertyValue>
+					</PropertyRow>
+				</PropertyList>
 			</section>
 			<SubmitError />
 			{canWriteScope && (
-				<section className="flex items-center gap-4 mt-8">
+				<section className="mt-8 flex items-center justify-end gap-4">
 					<SaveButton
 						isLoading={isUpdating}
 						disabled={!canUpdate || isDeleting}

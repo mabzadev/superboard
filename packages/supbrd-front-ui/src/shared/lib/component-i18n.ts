@@ -27,6 +27,10 @@ const english = {
 	"date.lastMonth": "Last month",
 	"date.last3Months": "Last 3 months",
 	"notification.genericError": "Something went wrong, please try again",
+	"autosave.saving": "Saving…",
+	"autosave.saved": "All changes saved.",
+	"autosave.failed": "Changes could not be saved.",
+	"autosave.retry": "Try again",
 };
 
 export type ComponentMessage = keyof typeof english;
@@ -55,6 +59,10 @@ const french: Record<ComponentMessage, string> = {
 	"date.lastMonth": "Dernier mois",
 	"date.last3Months": "3 derniers mois",
 	"notification.genericError": "Une erreur s’est produite, veuillez réessayer",
+	"autosave.saving": "Enregistrement…",
+	"autosave.saved": "Modifications enregistrées.",
+	"autosave.failed": "Impossible d’enregistrer les modifications.",
+	"autosave.retry": "Réessayer",
 };
 
 export type ComponentLocale = "en" | "fr";

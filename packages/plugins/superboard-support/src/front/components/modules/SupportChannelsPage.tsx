@@ -7,12 +7,14 @@ import {
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
 import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
+import {
+	SettingsActions,
+	SettingsRow,
+	SettingsTextField,
+} from "@superboard/front-ui/settings-form";
 import { Button } from "@superboard/front-ui/ui/button.js";
-import { Card, CardContent, CardHeader, CardTitle } from "@superboard/front-ui/ui/card.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
-import { Label } from "@superboard/front-ui/ui/label.js";
 import { Cable, KeyRound, Link2, Plus, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
 	createSupportProvider,
@@ -27,6 +29,7 @@ import {
 import { listSupportInboxes, type SupportInbox } from "../../api/support/workforceService.js";
 import { useSupportI18n } from "../../i18n.js";
 import { SupportModulePage as ModulePage } from "../support/SupportModulePage.js";
+import { SettingsSelectField } from "../support/SupportSettingsFields.js";
 import {
 	AccessNotice,
 	SupportEmpty,
@@ -220,6 +223,10 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 		}
 	};
 
+	const compatibleInboxes = inboxes.items.filter(
+		(inbox) => inbox.status === "active" && inbox.channel_type === provider,
+	);
+
 	return (
 		<ModulePage
 			title={t("Channels")}
@@ -231,36 +238,45 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 			) : (
 				<div className="space-y-6">
 					<SupportSection title={t("Channels")}>
+						<p className="text-sm text-kumo-subtle">
+							{t(
+								"Inboxes that receive customer conversations, with the state of their connection.",
+							)}
+						</p>
 						{channels.length === 0 ? (
 							<SupportEmpty
 								title={t("No connected inboxes")}
 								description={t("Create an inbox from Workforce, then attach a connection here.")}
 							/>
 						) : (
-							<div className="grid gap-3">
+							<RowGroup>
 								{channels.map((channel) => (
-									<Card key={channel.id}>
-										<CardContent className="flex items-center justify-between gap-4 p-4">
-											<div className="flex items-center gap-3">
-												<Cable className="h-5 w-5 text-muted-foreground" />
-												<div>
-													<p className="font-medium">{channel.name}</p>
-													<p className="text-sm text-muted-foreground">
-														{t(
-															providerLabels[channel.provider || channel.channel_type] ||
-																channel.channel_type,
-														)}
-													</p>
-												</div>
+									<SettingsRow
+										key={channel.id}
+										className="flex items-center justify-between gap-4 space-y-0"
+									>
+										<div className="flex min-w-0 items-center gap-3">
+											<Cable className="h-5 w-5 shrink-0 text-kumo-subtle" />
+											<div className="min-w-0">
+												<p className="font-medium">{channel.name}</p>
+												<p className="text-sm text-kumo-subtle">
+													{t(
+														providerLabels[channel.provider || channel.channel_type] ||
+															channel.channel_type,
+													)}
+												</p>
 											</div>
-											<SupportStatus value={channel.provider_status || channel.status} />
-										</CardContent>
-									</Card>
+										</div>
+										<SupportStatus value={channel.provider_status || channel.status} />
+									</SettingsRow>
 								))}
-							</div>
+							</RowGroup>
 						)}
 					</SupportSection>
 					<SupportSection title={t("Connections")}>
+						<p className="text-sm text-kumo-subtle">
+							{t("Credentials and authorizations that link a customer channel to an inbox.")}
+						</p>
 						<SupportSearchToolbar
 							query={providers.query}
 							setQuery={providers.setQuery}
@@ -269,77 +285,61 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 							loading={providers.loading}
 						/>
 						<SupportError message={providers.error} />
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-base">{t("Add a connection")}</CardTitle>
-							</CardHeader>
-							<CardContent className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto]">
-								<div className="space-y-2">
-									<Label>{t("Channel")}</Label>
-									<select
-										className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-										value={provider}
-										onChange={(event) => {
-											setProvider(event.target.value);
-											setInboxId(scopedInboxId ?? "");
-										}}
-									>
-										{Object.entries(providerLabels).map(([value, label]) => (
-											<option key={value} value={value}>
-												{t(label)}
-											</option>
-										))}
-									</select>
-								</div>
-								<div className="space-y-2">
-									<Label>{t("Display name")}</Label>
-									<Input
-										placeholder={t("Customer care")}
-										value={displayName}
-										onChange={(event) => setDisplayName(event.target.value)}
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label>{t("Inbox")}</Label>
-									<select
-										aria-label={t("Inbox")}
-										className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-										value={inboxId}
-										disabled={Boolean(scopedInboxId)}
-										onChange={(event) => setInboxId(event.target.value)}
-									>
-										<option value="">{t("Select an inbox")}</option>
-										{inboxes.items
-											.filter(
-												(inbox) => inbox.status === "active" && inbox.channel_type === provider,
-											)
-											.map((inbox) => (
-												<option key={inbox.id} value={inbox.id}>
-													{inbox.name}
-												</option>
-											))}
-									</select>
-									{!inboxes.loading &&
-									!inboxes.items.some(
-										(inbox) => inbox.status === "active" && inbox.channel_type === provider,
-									) ? (
-										<p className="text-xs text-muted-foreground">
-											{t("Create an active {provider} inbox in Workforce first.", {
-												provider: t(providerLabels[provider] || provider),
-											})}
-										</p>
-									) : null}
-								</div>
-								<div className="flex items-end">
+						<RowGroup
+							title={t("Add a connection")}
+							description={t("Attach a customer channel to an active inbox of the same type.")}
+						>
+							<SettingsRow>
+								<SettingsSelectField
+									label={t("Channel")}
+									value={provider}
+									onChange={(event) => {
+										setProvider(event.target.value);
+										setInboxId(scopedInboxId ?? "");
+									}}
+								>
+									{Object.entries(providerLabels).map(([value, label]) => (
+										<option key={value} value={value}>
+											{t(label)}
+										</option>
+									))}
+								</SettingsSelectField>
+								<SettingsTextField
+									label={t("Display name")}
+									placeholder={t("Customer care")}
+									value={displayName}
+									onChange={(event) => setDisplayName(event.target.value)}
+								/>
+								<SettingsSelectField
+									label={t("Inbox")}
+									description={
+										!inboxes.loading && compatibleInboxes.length === 0
+											? t("Create an active {provider} inbox in Workforce first.", {
+													provider: t(providerLabels[provider] || provider),
+												})
+											: undefined
+									}
+									value={inboxId}
+									disabled={Boolean(scopedInboxId)}
+									onChange={(event) => setInboxId(event.target.value)}
+								>
+									<option value="">{t("Select an inbox")}</option>
+									{compatibleInboxes.map((inbox) => (
+										<option key={inbox.id} value={inbox.id}>
+											{inbox.name}
+										</option>
+									))}
+								</SettingsSelectField>
+								<SettingsActions>
 									<Button
 										disabled={saving || !displayName.trim() || !inboxId}
 										onClick={() => void addProvider()}
 									>
 										<Plus /> {t("Add")}
 									</Button>
-								</div>
-							</CardContent>
-						</Card>
+								</SettingsActions>
+							</SettingsRow>
+						</RowGroup>
 						{providers.loading ? (
 							<SupportLoading />
 						) : providers.items.length === 0 ? (
@@ -348,43 +348,43 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 								description={t("Add the channel your customers use to contact your team.")}
 							/>
 						) : (
-							<div className="space-y-3">
+							<RowGroup>
 								{providers.items.map((endpoint) => (
-									<Card key={endpoint.id}>
-										<CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-											<div>
+									<SettingsRow key={endpoint.id}>
+										<div className="flex flex-wrap items-start justify-between gap-3">
+											<div className="min-w-0">
 												<p className="font-medium">{endpoint.display_name}</p>
-												<p className="text-sm text-muted-foreground">
+												<p className="text-sm text-kumo-subtle">
 													{t(providerLabels[endpoint.provider] || endpoint.provider)}
 												</p>
 											</div>
-											<div className="flex items-center gap-2">
-												<SupportStatus value={endpoint.status} />
-												{(credentialFields[endpoint.provider]?.length ?? 0) > 0 &&
-												canManageCredentials ? (
-													<Button
-														variant="outline"
-														onClick={() => {
-															setSelectedEndpoint(endpoint);
-															setCredentials({});
-														}}
-													>
-														<KeyRound /> {t("Configure")}
-													</Button>
-												) : null}
+											<SupportStatus value={endpoint.status} />
+										</div>
+										<SettingsActions className="gap-2">
+											{(credentialFields[endpoint.provider]?.length ?? 0) > 0 &&
+											canManageCredentials ? (
 												<Button
-													aria-label={t("Delete {name}", { name: endpoint.display_name })}
-													size="icon"
-													variant="ghost"
-													onClick={() => void removeProvider(endpoint)}
+													variant="outline"
+													onClick={() => {
+														setSelectedEndpoint(endpoint);
+														setCredentials({});
+													}}
 												>
-													<Trash2 />
+													<KeyRound /> {t("Configure")}
 												</Button>
-											</div>
-										</CardContent>
-									</Card>
+											) : null}
+											<Button
+												aria-label={t("Delete {name}", { name: endpoint.display_name })}
+												size="icon"
+												variant="ghost"
+												onClick={() => void removeProvider(endpoint)}
+											>
+												<Trash2 />
+											</Button>
+										</SettingsActions>
+									</SettingsRow>
 								))}
-							</div>
+							</RowGroup>
 						)}
 						<SupportLoadMore
 							visible={providers.hasMore}
@@ -399,35 +399,31 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 							</AccessNotice>
 						) : null}
 						{selectedEndpoint ? (
-							<Card>
-								<CardHeader>
-									<CardTitle className="text-base">
-										{t("Secure configuration for {name}", { name: selectedEndpoint.display_name })}
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									<p className="text-sm text-muted-foreground">
-										{t("Values are encrypted per project and cannot be read back after saving.")}
-									</p>
-									<div className="grid gap-4 md:grid-cols-2">
-										{fields.map((field) => (
-											<div className="space-y-2" key={field}>
-												<Label>{t(credentialLabels[field] ?? field.replaceAll("_", " "))}</Label>
-												<Input
-													autoComplete="new-password"
-													type="password"
-													value={credentials[field] || ""}
-													onChange={(event) =>
-														setCredentials((current) => ({
-															...current,
-															[field]: event.target.value,
-														}))
-													}
-												/>
-											</div>
-										))}
-									</div>
-									<div className="flex justify-end gap-2">
+							<RowGroup
+								title={t("Secure configuration for {name}", {
+									name: selectedEndpoint.display_name,
+								})}
+								description={t(
+									"Values are encrypted per project and cannot be read back after saving.",
+								)}
+							>
+								<SettingsRow>
+									{fields.map((field) => (
+										<SettingsTextField
+											key={field}
+											label={t(credentialLabels[field] ?? field.replaceAll("_", " "))}
+											autoComplete="new-password"
+											type="password"
+											value={credentials[field] || ""}
+											onChange={(event) =>
+												setCredentials((current) => ({
+													...current,
+													[field]: event.target.value,
+												}))
+											}
+										/>
+									))}
+									<SettingsActions>
 										<Button
 											variant="outline"
 											onClick={() => {
@@ -453,13 +449,35 @@ export default function SupportChannelsPage({ inboxId: scopedInboxId }: { inboxI
 										>
 											{t("Save securely")}
 										</Button>
-									</div>
-								</CardContent>
-							</Card>
+									</SettingsActions>
+								</SettingsRow>
+							</RowGroup>
 						) : null}
 					</SupportSection>
 				</div>
 			)}
 		</ModulePage>
+	);
+}
+
+function RowGroup({
+	title,
+	description,
+	children,
+}: {
+	title?: string;
+	description?: string;
+	children: ReactNode;
+}) {
+	return (
+		<div className="divide-y divide-kumo-line rounded-lg border border-kumo-line">
+			{title ? (
+				<div className="space-y-1 p-4">
+					<h4 className="text-sm font-semibold">{title}</h4>
+					{description ? <p className="text-sm text-kumo-subtle">{description}</p> : null}
+				</div>
+			) : null}
+			{children}
+		</div>
 	);
 }

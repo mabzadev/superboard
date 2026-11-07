@@ -39,7 +39,6 @@ export const parseGetAuthorizeDto = async (c: Context<typeConfig.Context>): Prom
       c.req.query('locale'),
     ),
     policy: c.req.query('policy') ?? undefined,
-    org: c.req.query('org') ?? undefined,
   })
   await validateUtil.dto(queryDto)
 
@@ -106,7 +105,6 @@ export const getAuthorize = async (c: Context<typeConfig.Context>) => {
     if (
       !queryDto.policy ||
       queryDto.policy === oauthDto.Policy.SignInOrSignUp ||
-      queryDto.policy.startsWith(oauthDto.Policy.SamSso) ||
       queryDto.policy.startsWith(oauthDto.Policy.Oidc)
     ) {
       if (queryDto.authorizeMethod === 'popup') {
@@ -119,21 +117,14 @@ export const getAuthorize = async (c: Context<typeConfig.Context>) => {
         return c.redirect(url)
       }
     } else {
-      const queryString = `step=${queryDto.policy}&state=${queryDto.state}&code=${authCode}&locale=${queryDto.locale}&redirect_uri=${queryDto.redirectUri}&org=${queryDto.org}`
+      const queryString = `step=${queryDto.policy}&state=${queryDto.state}&code=${authCode}&locale=${queryDto.locale}&redirect_uri=${queryDto.redirectUri}`
       return c.redirect(`${routeConfig.IdentityRoute.ProcessView}?${queryString}`)
     }
   }
 
   const queryString = requestUtil.getQueryString(c)
 
-  const {
-    ENABLE_SAML_SSO_AS_SP: enableSamlSso,
-    OIDC_AUTH_PROVIDERS: oidcAuthProviders,
-  } = env(c)
-
-  if (enableSamlSso && queryDto.policy?.startsWith(oauthDto.Policy.SamSso)) {
-    return c.redirect(`${routeConfig.InternalRoute.SamlSp}/login?${queryString}`)
-  }
+  const { OIDC_AUTH_PROVIDERS: oidcAuthProviders } = env(c)
 
   if (oidcAuthProviders?.length && queryDto.policy?.startsWith(oauthDto.Policy.Oidc)) {
     const url = await prepareOidcRedirect(

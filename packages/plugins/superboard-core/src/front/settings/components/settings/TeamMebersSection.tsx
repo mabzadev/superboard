@@ -4,9 +4,9 @@ import {
 	showGenericError,
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
+import { SettingsActions, SettingsRow, SettingsSection } from "@superboard/front-ui/settings-form";
 import type { InstanceMember } from "@superboard/front-ui/types";
 import { Button } from "@superboard/front-ui/ui/button.js";
-import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { trackEvent, EVENTS } from "../../analytics/index.js";
@@ -62,37 +62,25 @@ const TeamMebersSection = () => {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center gap-3">
-				<div className="flex flex-col gap-0.5 flex-1">
-					<h2 className="text-sm font-semibold">{t("team.title")}</h2>
-					<span className="text-xs text-muted-foreground">{t("team.description")}</span>
-				</div>
+			<SettingsSection title={t("team.title")} description={t("team.description")}>
+				{members.map((member) => (
+					<MemberSectionElement
+						key={member.id}
+						member={member}
+						onRemove={(email) => void handleRemoveMember(email)}
+					/>
+				))}
+				{membersQuery.isSuccess && members.length === 0 ? (
+					<SettingsRow>
+						<p className="text-sm text-kumo-subtle">{t("team.empty")}</p>
+					</SettingsRow>
+				) : null}
+			</SettingsSection>
+			<SettingsActions>
 				<Button variant="outline" size="sm" onClick={() => setInviteDialogOpen(true)}>
-					<Plus className="h-3.5 w-3.5" />
 					{t("team.add")}
 				</Button>
-			</div>
-
-			<div className="rounded-xl border border-sidebar-border overflow-hidden">
-				<div className="grid grid-cols-[1fr_140px_40px] items-center px-4 py-2.5 bg-muted/40 border-b border-sidebar-border">
-					<span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-						{t("team.member")}
-					</span>
-					<span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-right">
-						{t("team.role")}
-					</span>
-					<span />
-				</div>
-				<div className="divide-y divide-sidebar-border">
-					{members.map((member) => (
-						<MemberSectionElement
-							key={member.id}
-							member={member}
-							onRemove={(email) => void handleRemoveMember(email)}
-						/>
-					))}
-				</div>
-			</div>
+			</SettingsActions>
 
 			<AddNewMemberDialog
 				open={inviteDialogOpen}

@@ -53,8 +53,6 @@ export const authenticationSettingDefinitions: Record<string, AuthenticationSett
 	REPLACE_EMAIL_VERIFICATION_WITH_WELCOME_EMAIL: flag("login"),
 	ENABLE_PASSWORD_RESET: flag("login"),
 	ENABLE_USER_APP_CONSENT: flag("login"),
-	ENABLE_APP_BANNER: flag("login"),
-	ENABLE_ORG: flag("login"),
 	ENABLE_USER_ATTRIBUTE: flag("login"),
 	BLOCKED_POLICIES: { type: "list", group: "advanced" },
 	AUTHORIZATION_CODE_EXPIRES_IN: duration(3600),
@@ -64,9 +62,8 @@ export const authenticationSettingDefinitions: Record<string, AuthenticationSett
 	ID_TOKEN_EXPIRES_IN: duration(86400),
 	SERVER_SESSION_EXPIRES_IN: duration(),
 	OTP_MFA_IS_REQUIRED: flag("security"),
-	SMS_MFA_IS_REQUIRED: flag("security"),
 	EMAIL_MFA_IS_REQUIRED: flag("security"),
-	ENFORCE_ONE_MFA_ENROLLMENT: { type: "list", group: "security", choices: ["otp", "sms", "email"] },
+	ENFORCE_ONE_MFA_ENROLLMENT: { type: "list", group: "security", choices: ["otp", "email"] },
 	ALLOW_EMAIL_MFA_AS_BACKUP: flag("security"),
 	ALLOW_PASSKEY_ENROLLMENT: flag("security"),
 	ENABLE_RECOVERY_CODE: flag("security"),
@@ -85,21 +82,43 @@ export const authenticationSettingDefinitions: Record<string, AuthenticationSett
 	CHANGE_EMAIL_CODE_THRESHOLD: threshold(),
 	EMAIL_VERIFICATION_CODE_THRESHOLD: threshold(),
 	EMAIL_MFA_EMAIL_THRESHOLD: threshold(),
-	SMS_MFA_MESSAGE_THRESHOLD: threshold(),
 	MFA_CODE_VERIFY_THRESHOLD: threshold(),
 	AUTH_CODE_VERIFIER_THRESHOLD: threshold(),
 	GOOGLE_AUTH_CLIENT_ID: text("providers"),
-	FACEBOOK_AUTH_CLIENT_ID: text("providers"),
 	GITHUB_AUTH_CLIENT_ID: text("providers"),
 	GITHUB_AUTH_APP_NAME: text("providers"),
-	DISCORD_AUTH_CLIENT_ID: text("providers"),
 	APPLE_AUTH_CLIENT_ID: text("providers"),
 	OIDC_AUTH_PROVIDERS: { type: "list", group: "providers" },
 	ENABLE_EMAIL_LOG: flag("advanced"),
-	ENABLE_SMS_LOG: flag("advanced"),
 	ENABLE_SIGN_IN_LOG: flag("advanced"),
 };
 const listItemPattern = /^[a-zA-Z0-9_-]{1,100}$/u;
+
+const retiredAuthenticationSettings = new Set([
+	"ENABLE_APP_BANNER",
+	"SMS_MFA_IS_REQUIRED",
+	"SMS_MFA_MESSAGE_THRESHOLD",
+	"FACEBOOK_AUTH_CLIENT_ID",
+	"DISCORD_AUTH_CLIENT_ID",
+	"ENABLE_SMS_LOG",
+	"ENABLE_ORG",
+]);
+
+/** Drops settings and choices that SuperBoard no longer supports from values saved by an earlier version. */
+export function withoutRetiredAuthenticationSettings(value: unknown): unknown {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+	const result: Record<string, unknown> = {};
+	for (const [key, setting] of Object.entries(value)) {
+		if (retiredAuthenticationSettings.has(key)) continue;
+		result[key] =
+			key === "ENFORCE_ONE_MFA_ENROLLMENT" && Array.isArray(setting)
+				? setting.filter((method: unknown) => method !== "sms")
+				: key === "BLOCKED_POLICIES" && Array.isArray(setting)
+					? setting.filter((policy: unknown) => policy !== "change_org")
+					: setting;
+	}
+	return result;
+}
 
 export class AuthenticationSettingsError extends Error {
 	constructor(public readonly field: string) {
@@ -185,9 +204,23 @@ export function authenticationSettingsFromEnvironment(environment: object): Auth
 	return values;
 }
 
+const authenticationProvidersWithSecret = ["github", "apple"] as const;
+export type AuthenticationProviderWithSecret = (typeof authenticationProvidersWithSecret)[number];
+
+export interface AuthenticationDeploymentStatus {
+	providerSecrets: Record<AuthenticationProviderWithSecret, boolean>;
+}
+
+export function authenticationProviderSecrets(
+	configured: (provider: AuthenticationProviderWithSecret) => boolean,
+): AuthenticationDeploymentStatus["providerSecrets"] {
+	return { github: configured("github"), apple: configured("apple") };
+}
+
 export interface AuthenticationSettingsSnapshot {
 	revision: number;
 	values: AuthenticationSettings;
 	updatedAt: string | null;
 	serverUrl?: string;
+	deployment?: AuthenticationDeploymentStatus;
 }

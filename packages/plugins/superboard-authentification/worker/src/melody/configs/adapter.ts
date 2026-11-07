@@ -1,7 +1,5 @@
 export enum TableName {
   App = 'app',
-  Banner = 'banner',
-  AppBanner = 'app_banner',
   User = 'user',
   UserAttribute = 'user_attribute',
   UserAttributeValue = 'user_attribute_value',
@@ -12,13 +10,7 @@ export enum TableName {
   Scope = 'scope',
   AppScope = 'app_scope',
   ScopeLocale = 'scope_locale',
-  Org = 'org',
-  OrgGroup = 'org_group',
-  UserOrg = 'user_org',
-  UserOrgGroup = 'user_org_group',
-  SamlIdp = 'saml_idp',
   EmailLog = 'email_log',
-  SmsLog = 'sms_log',
   SignInLog = 'sign_in_log',
 }
 
@@ -27,18 +19,14 @@ export enum BaseKVKey {
   DeprecatedJwtPublicSecret = 'deprecatedJwtPublicSecret',
   JwtPrivateSecret = 'jwtPrivateSecret',
   SessionSecret = 'sessionSecret',
-  SamlSpCert = 'samlSpCrt',
-  SamlSpKey = 'samlSpKey',
   RefreshToken = 'RT',
   AuthCode = 'AC',
   EmbeddedSession = 'ES',
   EmailMfaCode = 'EMC',
   EmailMfaRememberDevice = 'EMRD',
   OtpMfaRememberDevice = 'OMRD',
-  SmsMfaRememberDevice = 'SMRD',
   OtpMfaCode = 'OMC',
   OtpMfaUsedStep = 'OMUS',
-  SmsMfaCode = 'SMC',
   PasswordlessCode = 'PLC',
   EmailVerificationCode = 'EVC',
   PasskeyEnrollChallenge = 'PEC',
@@ -50,13 +38,11 @@ export enum BaseKVKey {
   FailedChangeEmailCodeAttempts = 'FCECA',
   FailedEmailVerificationCodeAttempts = 'FEVCA',
   FailedAuthCodeVerifierAttempts = 'FACVA',
-  SmsMfaMessageAttempts = 'SMMA',
   EmailMfaEmailAttempts = 'EMEA',
   PasswordResetAttempts = 'PRA',
   ChangeEmailCode = 'CEC',
   ChangeEmailAttempts = 'CEA',
   OidcCodeVerifier = 'OVC',
-  SamlResponseId = 'SAMLR',
 }
 
 export const getKVKey = (
@@ -80,9 +66,5 @@ export const getEmailMfaRememberDeviceCookieKey = (userId: number) => {
 
 export const getOtpMfaRememberDeviceCookieKey = (userId: number) => {
   return `${BaseKVKey.OtpMfaRememberDevice}-${userId}`
-}
-
-export const getSmsMfaRememberDeviceCookieKey = (userId: number) => {
-  return `${BaseKVKey.SmsMfaRememberDevice}-${userId}`
 }
 

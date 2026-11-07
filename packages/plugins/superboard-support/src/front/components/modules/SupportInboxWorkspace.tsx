@@ -1,8 +1,14 @@
+import { showErrorNotification } from "@superboard/front-ui/lib/Notifications.js";
 import { ModulePage, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
-import { Button } from "@superboard/front-ui/ui/button.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
+import {
+	AutosaveIndicator,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+	SwitchField,
+	useSettingsAutosave,
+} from "@superboard/front-ui/settings-form";
 import { Label } from "@superboard/front-ui/ui/label.js";
-import { Switch } from "@superboard/front-ui/ui/switch.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { useState } from "react";
 
@@ -15,11 +21,15 @@ import {
 import { useSupportI18n } from "../../i18n.js";
 import { SupportEntityPage } from "../support/SupportEntityPage.js";
 import { SupportDetail } from "../support/SupportModulePage.js";
-import { SupportError, supportChannelLabel } from "../support/SupportUi.js";
+import { SettingsValidatedField } from "../support/SupportSettingsFields.js";
+import { supportChannelLabel } from "../support/SupportUi.js";
 import SupportAutomationsPage from "./SupportAutomationsPage.js";
+import { SupportAssistantTasks } from "./SupportCaptainPage.js";
 import SupportChannelsPage from "./SupportChannelsPage.js";
+import SupportContactsPage from "./SupportContactsPage.js";
 import { SupportInboxMembers } from "./SupportInboxMembers.js";
 import InboxPage from "./SupportInboxPage.js";
+import SupportNotificationsPage from "./SupportNotificationsPage.js";
 import SupportProactivePage from "./SupportProactivePage.js";
 import { SupportQualityPage } from "./SupportQualityPage.js";
 import SupportReportsPage from "./SupportReportsPage.js";
@@ -27,7 +37,10 @@ import SupportReportsPage from "./SupportReportsPage.js";
 const hubSections = {
 	inboxes: "Inboxes",
 	channels: "Channels",
+	contacts: "Contacts",
+	notifications: "Notifications",
 	automations: "Automations",
+	assistant: "Assistant tasks",
 	proactive: "Proactive Support",
 	reports: "Reports",
 };
@@ -52,7 +65,7 @@ function InboxHub() {
 		<ModulePage
 			title={t("Inbox")}
 			description={t(
-				"Inboxes, channels, automations, proactive messages and reports for every inbox.",
+				"Inboxes, channels, contacts, notifications, automations, assistant tasks, proactive messages and reports for every inbox.",
 			)}
 		>
 			<Tabs
@@ -61,6 +74,7 @@ function InboxHub() {
 					const url = new URL(window.location.href);
 					if (value === "inboxes") url.searchParams.delete("section");
 					else url.searchParams.set("section", value);
+					url.searchParams.delete("contact");
 					window.history.replaceState(null, "", url);
 					setSection(value);
 				}}
@@ -79,6 +93,12 @@ function InboxHub() {
 					<TabsContent value="channels">
 						<SupportChannelsPage />
 					</TabsContent>
+					<TabsContent className="pt-4" value="contacts">
+						<SupportContactsPage embedded />
+					</TabsContent>
+					<TabsContent value="notifications">
+						<SupportNotificationsPage />
+					</TabsContent>
 					<TabsContent className="space-y-4" value="automations">
 						<p className="text-sm text-muted-foreground">
 							{t(
@@ -86,6 +106,9 @@ function InboxHub() {
 							)}
 						</p>
 						<SupportAutomationsPage />
+					</TabsContent>
+					<TabsContent className="pt-4" value="assistant">
+						<SupportAssistantTasks />
 					</TabsContent>
 					<TabsContent value="proactive">
 						<SupportProactivePage />
@@ -218,7 +241,7 @@ function InboxDetails({
 				<TabsContent value="conversations">
 					<InboxPage inboxId={inbox.id} />
 				</TabsContent>
-				<TabsContent value="general">
+				<TabsContent value="general" forceMount className="data-[state=inactive]:hidden">
 					<InboxSettings inbox={inbox} project={project} update={update} />
 				</TabsContent>
 				<TabsContent value="members">
@@ -253,85 +276,88 @@ function InboxSettings({
 }) {
 	const { t, locale } = useSupportI18n();
 	const [draft, setDraft] = useState(inbox);
-	const [saving, setSaving] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-	const save = async () => {
-		setSaving(true);
-		try {
-			const result = await updateSupportInbox(project, inbox.id, {
-				name: draft.name.trim(),
-				status: draft.status,
-				auto_assignment: draft.auto_assignment,
-				allow_reopen: draft.allow_reopen,
-				csat_enabled: draft.csat_enabled,
-			});
-			update(result.data);
-			setDraft(result.data);
-			setError(null);
-		} catch (cause) {
-			setError(moduleErrorMessage(cause, locale));
-		} finally {
-			setSaving(false);
-		}
+	const changes = {
+		name: draft.name.trim(),
+		status: draft.status,
+		auto_assignment: draft.auto_assignment,
+		allow_reopen: draft.allow_reopen,
+		csat_enabled: draft.csat_enabled,
 	};
+	const autosave = useSettingsAutosave({
+		resourceKey: `${project}:${inbox.id}`,
+		value: changes,
+		enabled: changes.name !== "",
+		save: async (value) => {
+			try {
+				update((await updateSupportInbox(project, inbox.id, value)).data);
+			} catch (cause) {
+				showErrorNotification(moduleErrorMessage(cause, locale));
+				throw cause;
+			}
+		},
+	});
 	return (
-		<form
-			className="space-y-5 rounded-md border p-5"
-			onSubmit={(event) => {
-				event.preventDefault();
-				void save().catch((cause: unknown) => {
-					setError(moduleErrorMessage(cause, locale));
-				});
-			}}
-		>
-			<SupportError message={error} />
-			<Label htmlFor="inbox-name">{t("Name")}</Label>
-			<Input
-				id="inbox-name"
-				value={draft.name}
-				required
-				onChange={(event) => {
-					setDraft({ ...draft, name: event.target.value });
-				}}
-			/>
-			<Label htmlFor="inbox-identifier">{t("Identifier")}</Label>
-			<Input id="inbox-identifier" value={inbox.identifier} readOnly />
-			<p className="text-sm text-muted-foreground">
-				{t("Channel: {channel}", { channel: t(supportChannelLabel(inbox.channel_type)) })}
-			</p>
-			{(
-				[
-					["auto_assignment", "Automatic assignment"],
-					["allow_reopen", "Allow customer reopening"],
-					["csat_enabled", "Customer satisfaction"],
-				] as const
-			).map(([key, label]) => (
-				<div className="flex items-center justify-between" key={key}>
-					<Label htmlFor={`inbox-${key}`}>{t(label)}</Label>
-					<Switch
-						id={`inbox-${key}`}
-						checked={draft[key]}
-						onCheckedChange={(value) => {
-							setDraft({ ...draft, [key]: value });
+		<div className="space-y-8 pt-4">
+			<SettingsSection
+				title={t("Inbox")}
+				description={t("How this inbox is named and which channel it receives.")}
+			>
+				<SettingsRow>
+					<SwitchField
+						id="inbox-enabled"
+						label={t("Enabled")}
+						checked={draft.status !== "disabled"}
+						onCheckedChange={(enabled) => {
+							setDraft({ ...draft, status: enabled ? "active" : "disabled" });
 						}}
 					/>
-				</div>
-			))}
-			<div className="flex items-center justify-between">
-				<Label htmlFor="inbox-enabled">{t("Enabled")}</Label>
-				<Switch
-					id="inbox-enabled"
-					checked={draft.status !== "disabled"}
-					onCheckedChange={(enabled) => {
-						setDraft({ ...draft, status: enabled ? "active" : "disabled" });
-					}}
-				/>
-			</div>
-			<div className="flex justify-end">
-				<Button type="submit" disabled={saving || !draft.name.trim()}>
-					{t("Save settings")}
-				</Button>
-			</div>
-		</form>
+				</SettingsRow>
+				<SettingsRow>
+					<SettingsValidatedField
+						id="inbox-name"
+						label={t("Name")}
+						value={draft.name}
+						required
+						error={changes.name === "" ? t("Enter a name for this inbox.") : undefined}
+						onChange={(event) => {
+							setDraft({ ...draft, name: event.target.value });
+						}}
+					/>
+					<SettingsTextField
+						id="inbox-identifier"
+						label={t("Identifier")}
+						description={t("Channel: {channel}", {
+							channel: t(supportChannelLabel(inbox.channel_type)),
+						})}
+						value={inbox.identifier}
+						readOnly
+					/>
+				</SettingsRow>
+			</SettingsSection>
+			<SettingsSection
+				title={t("Conversations")}
+				description={t("How conversations received in this inbox are handled.")}
+			>
+				{(
+					[
+						["auto_assignment", "Automatic assignment"],
+						["allow_reopen", "Allow customer reopening"],
+						["csat_enabled", "Customer satisfaction"],
+					] as const
+				).map(([key, label]) => (
+					<SettingsRow key={key}>
+						<SwitchField
+							id={`inbox-${key}`}
+							label={t(label)}
+							checked={draft[key]}
+							onCheckedChange={(value) => {
+								setDraft({ ...draft, [key]: value });
+							}}
+						/>
+					</SettingsRow>
+				))}
+			</SettingsSection>
+			<AutosaveIndicator status={autosave.status} onRetry={autosave.retry} />
+		</div>
 	);
 }

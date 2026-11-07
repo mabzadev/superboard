@@ -27,6 +27,11 @@ import { MESSAGE_WITH_ATTACHMENTS } from "./message-records";
 import native from "./native";
 import { claimSupportNotificationDeliveries } from "./notifications";
 import operations, { ensureSupportContact } from "./operations";
+import {
+	customerFormat,
+	formatCustomerDateTime,
+	resolveInactiveConversations,
+} from "./project-settings";
 import providers from "./providers";
 import { consumeRealtimeTicket, issueRealtimeTicket } from "./realtime";
 import { decryptCredentialPayload } from "./secrets";
@@ -632,11 +637,15 @@ app.post("/v1/conversations/:conversationId/transcript", async (c) => {
 	)
 		.bind(conversation.id)
 		.all<Record<string, unknown>>();
+	const format = await customerFormat(c.env.DB, projectId);
 	const transcript = messages.results
-		.map(
-			(message) =>
-				`[${String(message.created_at)}] ${String(message.sender_kind)}: ${String(message.body || "")}`,
-		)
+		.map((message) => {
+			const sender =
+				message.sender_kind === "agent" && format.businessName
+					? format.businessName
+					: String(message.sender_kind);
+			return `[${formatCustomerDateTime(message.created_at, format)}] ${sender}: ${typeof message.body === "string" ? message.body : ""}`;
+		})
 		.join("\n");
 	return c.json({
 		data: { conversation_id: conversation.id, transcript, message_count: messages.results.length },
@@ -3085,8 +3094,10 @@ export async function claimScheduledSupportJobs(env: Env) {
 			{ contentType: "json" },
 		);
 	}
+	const autoResolved = await resolveInactiveConversations(env);
 	return {
 		notification_deliveries: notificationDeliveries,
+		auto_resolved: autoResolved,
 		scheduled_jobs: due.results.length,
 		campaigns: scheduledCampaigns.results.length,
 		slas: dueSlas.results.length,

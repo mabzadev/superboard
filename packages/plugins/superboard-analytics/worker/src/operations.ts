@@ -9,6 +9,7 @@ import { identityHashCandidates } from "./crypto";
 import type { AnalyticsContext } from "./http";
 import { httpError, positiveLimit, readJson } from "./http";
 import { commitAnalyticsMutation } from "./mutations";
+import { localDayExpression, projectReportTimezone } from "./timezone";
 import type { AnalyticsOperationPayload, AnalyticsOperationType, Env } from "./types";
 
 type OperationRow = {
@@ -292,17 +293,37 @@ async function replayDeadLetters(
 }
 
 async function rebuildRollups(db: D1Database, projectId: string): Promise<Record<string, unknown>> {
+	const [timezone, bounds] = await Promise.all([
+		projectReportTimezone(db, projectId),
+		db
+			.prepare(
+				`SELECT MIN(occurred_at) AS first_event, MAX(occurred_at) AS last_event
+         FROM analytics_events_hot WHERE project_id = ?`,
+			)
+			.bind(projectId)
+			.first<{ first_event: string | null; last_event: string | null }>(),
+	]);
+	const now = new Date().toISOString();
+	const day = localDayExpression(
+		"occurred_at",
+		bounds?.first_event ?? now,
+		bounds?.last_event ?? now,
+		timezone,
+	);
 	const result = await db.batch([
 		db.prepare("DELETE FROM analytics_daily_metrics WHERE project_id = ?").bind(projectId),
 		db
 			.prepare(
 				`INSERT INTO analytics_daily_metrics
         (project_id, application_id, metric_date, metric_name, dimension_key, event_count)
-       SELECT project_id, application_id, substr(occurred_at, 1, 10), 'event', event_name, COUNT(*)
-       FROM analytics_events_hot WHERE project_id = ?
-       GROUP BY project_id, application_id, substr(occurred_at, 1, 10), event_name`,
+       SELECT project_id, application_id, metric_date, 'event', event_name, COUNT(*)
+       FROM (
+         SELECT project_id, application_id, ${day.sql} AS metric_date, event_name
+         FROM analytics_events_hot WHERE project_id = ?
+       )
+       GROUP BY project_id, application_id, metric_date, event_name`,
 			)
-			.bind(projectId),
+			.bind(...day.bindings, projectId),
 	]);
 	return { rebuilt_rows: Number(result[1].meta.changes ?? 0) };
 }

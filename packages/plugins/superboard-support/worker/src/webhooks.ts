@@ -1073,10 +1073,12 @@ async function sendProviderDelivery(
 		.run();
 	const endpoint = await env.DB.prepare(`
     SELECT endpoint.provider, endpoint.settings_json, credential.encrypted_payload,
-      credential.credential_version, conversation.external_user_id, conversation.subject
+      credential.credential_version, conversation.external_user_id, conversation.subject,
+      project.business_name
     FROM support_provider_endpoints endpoint
     INNER JOIN support_provider_credentials credential ON credential.endpoint_id = endpoint.id
     INNER JOIN conversations conversation ON conversation.id = ? AND conversation.project_id = endpoint.project_id
+    LEFT JOIN support_project_settings project ON project.project_id = endpoint.project_id
     WHERE endpoint.id = ? AND endpoint.project_id = ?
       AND endpoint.status IN ('configured', 'validated', 'live_validated', 'degraded')
   `)
@@ -1088,6 +1090,7 @@ async function sendProviderDelivery(
 			credential_version: number;
 			external_user_id: string;
 			subject: string | null;
+			business_name: string | null;
 		}>();
 	if (!endpoint) {
 		await failProviderDelivery(env, job.projectId, delivery, "configuration_required", true);
@@ -1117,6 +1120,7 @@ async function sendProviderDelivery(
 			recipient: String(request.recipient || endpoint.external_user_id),
 			subject: endpoint.subject || "Support update",
 			body: String(request.body || ""),
+			senderName: endpoint.business_name,
 			settings,
 			credentials,
 		});
@@ -1203,6 +1207,18 @@ type ProviderDeliveryRecord = {
 	provider_reference?: string | null;
 };
 
+function replySenderName(input: {
+	senderName?: string | null;
+	credentials: Record<string, unknown>;
+}) {
+	const configured =
+		typeof input.credentials.from_name === "string" ? input.credentials.from_name : "";
+	const name = (configured || input.senderName || "")
+		.replace(/\p{Cc}+/gu, " ")
+		.replace(/ {2,}/gu, " ");
+	return name.trim().slice(0, 320) || null;
+}
+
 export async function outboundProviderRequest(
 	env: Env,
 	input: {
@@ -1213,6 +1229,7 @@ export async function outboundProviderRequest(
 		recipient: string;
 		subject: string;
 		body: string;
+		senderName?: string | null;
 		settings: Record<string, unknown>;
 		credentials: Record<string, unknown>;
 	},
@@ -1229,6 +1246,7 @@ export async function outboundProviderRequest(
 			input.credentials.access_token,
 			"OAuth authorization is required before sending email",
 		);
+		const fromName = replySenderName(input);
 		return env.EMAIL_SERVICE.fetch("https://email.internal/internal/v1/messages", {
 			method: "POST",
 			headers: { "content-type": "application/json", "x-internal-token": env.EMAIL_INTERNAL_TOKEN },
@@ -1237,6 +1255,7 @@ export async function outboundProviderRequest(
 				to: input.recipient,
 				subject: input.subject,
 				text: input.body,
+				...(fromName ? { fromName } : {}),
 				idempotencyKey: input.idempotencyKey,
 				projectId: input.projectId,
 				templateKey: "support.conversation.message",
@@ -1261,7 +1280,7 @@ export async function outboundProviderRequest(
 					security: String(input.credentials.security || "starttls"),
 					username: input.credentials.username ? String(input.credentials.username) : null,
 					from_email: String(input.credentials.from_email || ""),
-					from_name: input.credentials.from_name ? String(input.credentials.from_name) : null,
+					from_name: replySenderName(input),
 					reply_to: input.credentials.reply_to ? String(input.credentials.reply_to) : null,
 				},
 				secret: {

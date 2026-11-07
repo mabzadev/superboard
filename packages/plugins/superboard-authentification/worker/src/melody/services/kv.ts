@@ -222,7 +222,6 @@ export const stampEmailMfaCode = async (
 	mfaCode: string,
 	expiresIn: number,
 	isOtpFallback: boolean,
-	isSmsFallback: boolean,
 ) => {
 	const key = adapterConfig.getKVKey(adapterConfig.BaseKVKey.EmailMfaCode, authCode);
 	const storedCode = await kv.get(key);
@@ -236,52 +235,17 @@ export const stampEmailMfaCode = async (
 			await kv.put(stampKey, "1", { expirationTtl: expiresIn });
 		}
 
-		if (isSmsFallback) {
-			const stampKey = adapterConfig.getKVKey(adapterConfig.BaseKVKey.SmsMfaCode, authCode);
-
-			await kv.put(stampKey, "1", { expirationTtl: expiresIn });
-		}
-
-		if (!isOtpFallback && !isSmsFallback) {
+		if (!isOtpFallback) {
 			await kv.put(key, "1", { expirationTtl: expiresIn });
 		}
 	}
 	return isValid;
 };
 
-export const stampSmsMfaCode = async (
-	kv: KVNamespace,
-	authCode: string,
-	mfaCode: string,
-	expiresIn: number,
-) => {
-	const key = adapterConfig.getKVKey(adapterConfig.BaseKVKey.SmsMfaCode, authCode);
-	const storedCode = await kv.get(key);
-
-	const isValid = storedCode && storedCode === mfaCode;
-
-	if (isValid) {
-		await kv.put(key, "1", { expirationTtl: expiresIn });
-	}
-	return isValid;
-};
-
-export const storeSmsMfaCode = async (kv: KVNamespace, authCode: string, mfaCode: string) => {
-	await kv.put(adapterConfig.getKVKey(adapterConfig.BaseKVKey.SmsMfaCode, authCode), mfaCode, {
-		expirationTtl: variableConfig.systemConfig.smsMfaCodeExpiresIn,
-	});
-};
-
 export const storeEmailMfaCode = async (kv: KVNamespace, authCode: string, mfaCode: string) => {
 	await kv.put(adapterConfig.getKVKey(adapterConfig.BaseKVKey.EmailMfaCode, authCode), mfaCode, {
 		expirationTtl: variableConfig.systemConfig.emailMfaCodeExpiresIn,
 	});
-};
-
-export const smsMfaCodeVerified = async (kv: KVNamespace, authCode: string) => {
-	const key = adapterConfig.getKVKey(adapterConfig.BaseKVKey.SmsMfaCode, authCode);
-	const storedCode = await kv.get(key);
-	return storedCode && storedCode === "1";
 };
 
 export const stampOtpMfaCode = async (
@@ -487,34 +451,6 @@ export const setFailedPasswordResetCodeAttempts = async (
 	await kv.put(key, String(count), { expirationTtl: 1800 });
 };
 
-export const getSmsMfaMessageAttemptsByIP = async (
-	kv: KVNamespace,
-	userId: number,
-	ip?: string,
-) => {
-	const key = adapterConfig.getKVKey(
-		adapterConfig.BaseKVKey.SmsMfaMessageAttempts,
-		String(userId),
-		ip,
-	);
-	const stored = await kv.get(key);
-	return stored ? Number(stored) : 0;
-};
-
-export const setSmsMfaMessageAttempts = async (
-	kv: KVNamespace,
-	userId: number,
-	ip: string | undefined,
-	count: number,
-) => {
-	const key = adapterConfig.getKVKey(
-		adapterConfig.BaseKVKey.SmsMfaMessageAttempts,
-		String(userId),
-		ip,
-	);
-	await kv.put(key, String(count), { expirationTtl: 1800 });
-};
-
 export const getEmailMfaEmailAttemptsByIP = async (
 	kv: KVNamespace,
 	userId: number,
@@ -632,26 +568,6 @@ export const verifyOidcCodeVerifier = async (kv: KVNamespace, codeVerifier: stri
 	const isValid = storedCode && storedCode === "1";
 	if (isValid) await kv.delete(key);
 	return isValid;
-};
-
-export const isSamlResponseConsumed = async (
-	kv: KVNamespace,
-	responseId: string,
-): Promise<boolean> => {
-	const stored = await kv.get(
-		adapterConfig.getKVKey(adapterConfig.BaseKVKey.SamlResponseId, responseId),
-	);
-	return stored === "1";
-};
-
-export const markSamlResponseConsumed = async (
-	kv: KVNamespace,
-	responseId: string,
-	expiresIn: number,
-) => {
-	await kv.put(adapterConfig.getKVKey(adapterConfig.BaseKVKey.SamlResponseId, responseId), "1", {
-		expirationTtl: expiresIn,
-	});
 };
 
 export const storeChangeEmailCode = async (
@@ -830,45 +746,5 @@ export const verifyOtpMfaRememberDevice = async (
 
 export const bypassOtpMfa = async (kv: KVNamespace, authCode: string, expiresIn: number) => {
 	const key = adapterConfig.getKVKey(adapterConfig.BaseKVKey.OtpMfaCode, authCode);
-	await kv.put(key, "1", { expirationTtl: expiresIn });
-};
-
-export const storeSmsMfaRememberDevice = async (
-	kv: KVNamespace,
-	userId: number,
-	deviceId: string,
-	cookieValue: string,
-) => {
-	const key = adapterConfig.getKVKey(
-		adapterConfig.BaseKVKey.SmsMfaRememberDevice,
-		String(userId),
-		deviceId,
-	);
-
-	await kv.put(key, cookieValue, { expirationTtl: thirtyDaysInSeconds });
-};
-
-export const verifySmsMfaRememberDevice = async (
-	kv: KVNamespace,
-	userId: number,
-	cookieValue?: string,
-) => {
-	if (!cookieValue) return false;
-
-	const [deviceId, cookieCode] = cookieValue.split("-");
-	if (!deviceId || !cookieCode) return false;
-
-	const key = adapterConfig.getKVKey(
-		adapterConfig.BaseKVKey.SmsMfaRememberDevice,
-		String(userId),
-		deviceId,
-	);
-	const storedCode = await kv.get(key);
-	const isValid = storedCode && storedCode === cookieCode;
-	return isValid;
-};
-
-export const bypassSmsMfa = async (kv: KVNamespace, authCode: string, expiresIn: number) => {
-	const key = adapterConfig.getKVKey(adapterConfig.BaseKVKey.SmsMfaCode, authCode);
 	await kv.put(key, "1", { expirationTtl: expiresIn });
 };

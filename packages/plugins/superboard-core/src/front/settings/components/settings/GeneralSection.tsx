@@ -2,139 +2,180 @@
 
 import { useOptionalFrontContext } from "@superboard/front-ui/context";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
-import {
-	showGenericError,
-	showSuccessNotification,
-} from "@superboard/front-ui/lib/Notifications.js";
+import { useQuery } from "@superboard/front-ui/query";
+import { SettingsRow, SettingsSection } from "@superboard/front-ui/settings-form";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
-import { Separator } from "@superboard/front-ui/ui/separator.js";
 import type { ReactNode } from "react";
 
-import { useDeleteInstanceMutation } from "../../hooks/mutations/useInstanceMutations.js";
-import { useInstancesQuery } from "../../hooks/queries/useInstanceQueries.js";
+import { getSdkConfiguration, type SdkPlatform } from "../../api/app/appService.js";
 import { useSettingsI18n } from "../../i18n.js";
-import AdminOnlyDisplay from "../../lib/adminOnlyDisplay.js";
-import DangerZoneSection from "./DangerZoneSection.js";
 
 const SDK_APPS_PATH = "/core/libraries";
+const platforms: readonly SdkPlatform[] = ["web", "ios", "android"];
 
 export default function GeneralSection() {
 	const { t } = useSettingsI18n();
 	const front = useOptionalFrontContext();
-	const { selectedInstance, setSelectedInstance, projectType } = useProjectSelection();
-	const instancesQuery = useInstancesQuery();
-	const deleteInstanceMutation = useDeleteInstanceMutation();
+	const { selectedInstance, selectedProject, projectType } = useProjectSelection();
 	const deployments = front?.environments?.length
 		? front.environments
 		: front?.deployment
 			? [front.deployment]
 			: [];
 
-	const handleDeleteInstance = async () => {
-		if (!selectedInstance) return;
-		try {
-			await deleteInstanceMutation.mutateAsync(selectedInstance.id);
-			showSuccessNotification(t("danger.deleted"));
-			const result = await instancesQuery.refetch();
-			const lastInstance = result.data?.at(-1);
-			if (lastInstance) setSelectedInstance(lastInstance);
-		} catch {
-			showGenericError();
-		}
-	};
-
 	return (
-		<div className="flex max-w-[800px] flex-col gap-8 py-4">
-			<SettingsBlock title={t("general.title")} description={t("general.description")}>
+		<div className="flex max-w-3xl flex-col gap-8 py-4">
+			<SettingsSection title={t("general.title")} description={t("general.description")}>
 				{selectedInstance ? (
-					<dl className="grid gap-3 text-sm sm:grid-cols-[180px_1fr]">
-						<dt className="text-muted-foreground">{t("general.name")}</dt>
-						<dd className="font-medium">{selectedInstance.name}</dd>
-						<dt className="text-muted-foreground">{t("general.instance")}</dt>
-						<dd>
-							<code>{selectedInstance.id}</code>
-						</dd>
-					</dl>
+					<>
+						<Detail label={t("general.name")}>
+							<span className="font-medium">{selectedInstance.name}</span>
+						</Detail>
+						<Detail label={t("general.instance")}>
+							<code className="break-all">{selectedInstance.id}</code>
+						</Detail>
+					</>
 				) : (
-					<p className="text-sm text-muted-foreground">{t("general.unavailable")}</p>
+					<SettingsRow>
+						<p className="text-sm text-kumo-subtle">{t("general.unavailable")}</p>
+					</SettingsRow>
 				)}
-			</SettingsBlock>
+			</SettingsSection>
 
-			<SettingsBlock
+			<SettingsSection
 				title={t("general.environments")}
 				description={t("general.environmentsDescription")}
 			>
-				<ul className="divide-y rounded-xl border">
-					{selectedInstance
-						? (["production", "test"] as const).map((environment) => (
-								<li key={environment} className="flex items-center gap-3 px-4 py-3 text-sm">
-									<span className="w-28 shrink-0 text-muted-foreground">
-										{t(`general.${environment}`)}
-									</span>
-									<span className="flex-1 font-medium">
+				{selectedInstance
+					? (["production", "test"] as const).map((environment) => (
+							<SettingsRow key={environment}>
+								<LabelledState
+									label={t(`general.${environment}`)}
+									state={
+										projectType === environment ? (
+											<Badge variant="success">{t("general.active")}</Badge>
+										) : null
+									}
+								>
+									<span className="text-sm font-medium">
 										{selectedInstance[environment]?.name ?? "—"}
 									</span>
-									{projectType === environment ? (
-										<Badge variant="secondary">{t("general.active")}</Badge>
-									) : null}
-								</li>
-							))
-						: null}
-					{deployments.map((deployment) => (
-						<li key={deployment.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
-							<span className="w-28 shrink-0 text-muted-foreground">{t("general.deployment")}</span>
-							<span className="flex-1 font-medium">
+								</LabelledState>
+							</SettingsRow>
+						))
+					: null}
+				{deployments.map((deployment) => (
+					<SettingsRow key={deployment.id}>
+						<LabelledState
+							label={t("general.deployment")}
+							state={
+								deployment.id === front?.deployment?.id ? (
+									<Badge variant="success">{t("general.active")}</Badge>
+								) : null
+							}
+						>
+							<span className="text-sm font-medium">
 								{deployment.label} · {deployment.environment}
 							</span>
-							<a className="underline" href={deployment.consoleUrl}>
+						</LabelledState>
+						<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+							<a className="text-kumo-brand underline" href={deployment.consoleUrl}>
 								{t("general.console")}
 							</a>
-							<code className="text-xs">{deployment.apiUrl}</code>
-							{deployment.id === front?.deployment?.id ? (
-								<Badge variant="secondary">{t("general.active")}</Badge>
-							) : null}
-						</li>
-					))}
-				</ul>
-			</SettingsBlock>
+							<span className="text-kumo-subtle">
+								{t("general.api")} <code className="break-all text-xs">{deployment.apiUrl}</code>
+							</span>
+						</div>
+					</SettingsRow>
+				))}
+				{!selectedInstance && deployments.length === 0 ? (
+					<SettingsRow>
+						<p className="text-sm text-kumo-subtle">{t("general.noEnvironment")}</p>
+					</SettingsRow>
+				) : null}
+			</SettingsSection>
 
-			<SettingsBlock
+			<SettingsSection
 				title={t("general.maintenance")}
 				description={t("general.maintenanceDescription")}
 			>
-				<div className="flex flex-wrap gap-3 text-sm">
-					{(["web", "ios", "android"] as const).map((platform) => (
-						<a key={platform} className="underline" href={`${SDK_APPS_PATH}?tab=${platform}`}>
-							{t(`sdk.${platform}`)}
-						</a>
-					))}
-				</div>
-			</SettingsBlock>
-
-			<AdminOnlyDisplay>
-				<Separator />
-				<DangerZoneSection handleRemoveProject={() => void handleDeleteInstance()} />
-			</AdminOnlyDisplay>
+				{platforms.map((platform) => (
+					<MaintenanceRow key={platform} platform={platform} projectRef={selectedProject?.id} />
+				))}
+			</SettingsSection>
 		</div>
 	);
 }
 
-function SettingsBlock({
-	title,
-	description,
+function Detail({ label, children }: { label: string; children: ReactNode }) {
+	return (
+		<SettingsRow className="space-y-1">
+			<p className="text-xs text-kumo-subtle">{label}</p>
+			<div className="text-sm">{children}</div>
+		</SettingsRow>
+	);
+}
+
+function LabelledState({
+	label,
+	state,
 	children,
 }: {
-	title: string;
-	description: string;
+	label: string;
+	state: ReactNode;
 	children: ReactNode;
 }) {
 	return (
-		<section className="flex flex-col gap-4">
-			<div className="flex flex-col gap-0.5">
-				<h2 className="text-sm font-semibold">{title}</h2>
-				<span className="text-xs text-muted-foreground">{description}</span>
+		<div className="flex items-center justify-between gap-4">
+			<div className="min-w-0 space-y-1">
+				<p className="text-xs text-kumo-subtle">{label}</p>
+				{children}
 			</div>
-			{children}
-		</section>
+			{state}
+		</div>
+	);
+}
+
+function MaintenanceRow({
+	platform,
+	projectRef,
+}: {
+	platform: SdkPlatform;
+	projectRef: string | undefined;
+}) {
+	const { t } = useSettingsI18n();
+	const query = useQuery({
+		queryKey: ["sdk-configuration", projectRef, platform],
+		queryFn: () => getSdkConfiguration(projectRef ?? "", platform),
+		enabled: Boolean(projectRef),
+	});
+	const label = t(`sdk.${platform}`);
+	const state = query.isError ? (
+		<Badge variant="default">{t("general.statusUnavailable")}</Badge>
+	) : query.isSuccess ? (
+		!query.data ? (
+			<Badge variant="outline">{t("general.notConfigured")}</Badge>
+		) : query.data.configuration.maintenance_enabled === true ? (
+			<Badge variant="warning">{t("general.maintenanceOn")}</Badge>
+		) : (
+			<Badge variant="default">{t("general.maintenanceOff")}</Badge>
+		)
+	) : null;
+	return (
+		<SettingsRow>
+			<div className="flex items-center justify-between gap-4">
+				<span className="text-sm font-medium">{label}</span>
+				<div className="flex shrink-0 items-center gap-3">
+					{state}
+					<a
+						className="text-sm text-kumo-brand underline"
+						href={`${SDK_APPS_PATH}?tab=${platform}`}
+						aria-label={t("general.configure", { platform: label })}
+					>
+						{t("general.configureShort")}
+					</a>
+				</div>
+			</div>
+		</SettingsRow>
 	);
 }

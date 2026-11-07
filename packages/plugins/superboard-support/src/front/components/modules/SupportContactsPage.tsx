@@ -7,11 +7,16 @@ import {
 } from "@superboard/front-ui/lib/Notifications.js";
 import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
+import {
+	SettingsActions,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+	SwitchField,
+} from "@superboard/front-ui/settings-form";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
-import { Label } from "@superboard/front-ui/ui/label.js";
-import { Switch } from "@superboard/front-ui/ui/switch.js";
 import { Building2, Plus, RefreshCw, Save, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -31,6 +36,7 @@ import {
 	type SupportContactNote,
 } from "../../api/support/operationsService.js";
 import { useSupportI18n } from "../../i18n.js";
+import { SettingsSelectField } from "../support/SupportSettingsFields.js";
 import { SupportSection } from "../support/SupportUi.js";
 
 type Draft = {
@@ -243,39 +249,51 @@ export default function SupportContactsPage({ embedded = false }: { embedded?: b
 							{t("The customer ID comes from the existing application identity.")}
 						</p>
 					</div>
-					<div className="grid gap-4 md:grid-cols-2">
-						<Field
-							id="contact-customer-id"
-							label={t("Customer ID")}
-							value={draft.external_user_id}
-							onChange={(value) => setDraft({ ...draft, external_user_id: value })}
-						/>
-						<Field
-							id="contact-name"
-							label={t("Name")}
-							value={draft.name}
-							onChange={(value) => setDraft({ ...draft, name: value })}
-						/>
-						<Field
-							id="contact-email"
-							label={t("Email")}
-							type="email"
-							value={draft.email}
-							onChange={(value) => setDraft({ ...draft, email: value })}
-						/>
-						<Field
-							id="contact-phone"
-							label={t("Phone")}
-							value={draft.phone}
-							onChange={(value) => setDraft({ ...draft, phone: value })}
-						/>
-						<div className="space-y-2">
-							<Label htmlFor="contact-company">{t("Company")}</Label>
-							<select
+					<SettingsSection
+						title={t("Profile")}
+						description={t("How this customer is identified and reached.")}
+					>
+						<SettingsRow>
+							<SettingsTextField
+								id="contact-customer-id"
+								label={t("Customer ID")}
+								value={draft.external_user_id}
+								onChange={(event) => {
+									setDraft({ ...draft, external_user_id: event.target.value });
+								}}
+							/>
+							<SettingsTextField
+								id="contact-name"
+								label={t("Name")}
+								value={draft.name}
+								onChange={(event) => {
+									setDraft({ ...draft, name: event.target.value });
+								}}
+							/>
+							<SettingsTextField
+								id="contact-email"
+								label={t("Email")}
+								type="email"
+								value={draft.email}
+								onChange={(event) => {
+									setDraft({ ...draft, email: event.target.value });
+								}}
+							/>
+							<SettingsTextField
+								id="contact-phone"
+								label={t("Phone")}
+								value={draft.phone}
+								onChange={(event) => {
+									setDraft({ ...draft, phone: event.target.value });
+								}}
+							/>
+							<SettingsSelectField
 								id="contact-company"
-								className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+								label={t("Company")}
 								value={draft.company_id}
-								onChange={(event) => setDraft({ ...draft, company_id: event.target.value })}
+								onChange={(event) => {
+									setDraft({ ...draft, company_id: event.target.value });
+								}}
 							>
 								<option value="">{t("No company")}</option>
 								{companies.map((company) => (
@@ -283,81 +301,89 @@ export default function SupportContactsPage({ embedded = false }: { embedded?: b
 										{company.name}
 									</option>
 								))}
-							</select>
-						</div>
-						<div className="flex items-center justify-between rounded-md border px-3">
-							<Label htmlFor="contact-blocked">{t("Blocked")}</Label>
-							<Switch
+							</SettingsSelectField>
+						</SettingsRow>
+						<SettingsRow>
+							<SwitchField
 								id="contact-blocked"
+								label={t("Blocked")}
 								checked={draft.blocked}
 								onCheckedChange={(blocked) => setDraft({ ...draft, blocked })}
 							/>
-						</div>
-					</div>
-					<div className="space-y-3">
-						<div className="flex items-center justify-between gap-3">
-							<Label>{t("Custom attributes")}</Label>
-							<Button
-								size="sm"
-								type="button"
-								variant="outline"
-								onClick={() =>
-									setDraft({
-										...draft,
-										custom_attributes: [
-											...draft.custom_attributes,
-											{ id: crypto.randomUUID(), key: "", value: "" },
-										],
-									})
-								}
-							>
-								<Plus className="h-4 w-4" />
-								{t("Add attribute")}
-							</Button>
-						</div>
+						</SettingsRow>
+					</SettingsSection>
+					<SettingsSection
+						title={t("Custom attributes")}
+						description={t("Extra details about this customer, as name and value pairs.")}
+					>
 						{draft.custom_attributes.length === 0 ? (
-							<p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-								{t("No custom attributes on this contact.")}
-							</p>
+							<SettingsRow>
+								<p className="text-sm text-kumo-subtle">
+									{t("No custom attributes on this contact.")}
+								</p>
+							</SettingsRow>
 						) : (
 							draft.custom_attributes.map((attribute, index) => (
-								<div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]" key={attribute.id}>
-									<Input
+								<SettingsRow key={attribute.id}>
+									<SettingsTextField
+										label={t("Attribute name")}
 										aria-label={t("Attribute {index} name", { index: index + 1 })}
-										placeholder={t("Attribute name")}
 										value={attribute.key}
 										onChange={(event) => {
 											editAttribute(attribute.id, { key: event.target.value });
 										}}
 									/>
-									<Input
+									<SettingsTextField
+										label={t("Value")}
 										aria-label={t("Attribute {index} value", { index: index + 1 })}
-										placeholder={t("Value")}
 										value={attribute.value}
 										onChange={(event) => {
 											editAttribute(attribute.id, { value: event.target.value });
 										}}
 									/>
-									<Button
-										aria-label={t("Remove attribute {index}", { index: index + 1 })}
-										size="icon"
-										type="button"
-										variant="ghost"
-										onClick={() =>
-											setDraft({
-												...draft,
-												custom_attributes: draft.custom_attributes.filter(
-													(item) => item.id !== attribute.id,
-												),
-											})
-										}
-									>
-										<Trash2 />
-									</Button>
-								</div>
+									<SettingsActions>
+										<Button
+											aria-label={t("Remove attribute {index}", { index: index + 1 })}
+											size="sm"
+											type="button"
+											variant="ghost"
+											onClick={() =>
+												setDraft({
+													...draft,
+													custom_attributes: draft.custom_attributes.filter(
+														(item) => item.id !== attribute.id,
+													),
+												})
+											}
+										>
+											<Trash2 />
+										</Button>
+									</SettingsActions>
+								</SettingsRow>
 							))
 						)}
-					</div>
+						<SettingsRow>
+							<SettingsActions>
+								<Button
+									size="sm"
+									type="button"
+									variant="outline"
+									onClick={() =>
+										setDraft({
+											...draft,
+											custom_attributes: [
+												...draft.custom_attributes,
+												{ id: crypto.randomUUID(), key: "", value: "" },
+											],
+										})
+									}
+								>
+									<Plus className="h-4 w-4" />
+									{t("Add attribute")}
+								</Button>
+							</SettingsActions>
+						</SettingsRow>
+					</SettingsSection>
 					<div className="flex justify-end">
 						<Button disabled={busy || !draft.external_user_id.trim()} onClick={() => void save()}>
 							<Save className="h-4 w-4" />
@@ -370,17 +396,19 @@ export default function SupportContactsPage({ embedded = false }: { embedded?: b
 						<p className="text-sm text-muted-foreground">
 							{t("Notes are visible only to dashboard operators.")}
 						</p>
-						<div className="flex gap-2">
-							<Input
-								value={note}
-								maxLength={8000}
-								placeholder={t("Add context for the support team")}
-								onChange={(event) => setNote(event.target.value)}
-							/>
+						<Input
+							aria-label={t("Add context for the support team")}
+							className="w-full"
+							value={note}
+							maxLength={8000}
+							placeholder={t("Add context for the support team")}
+							onChange={(event) => setNote(event.target.value)}
+						/>
+						<SettingsActions>
 							<Button disabled={!note.trim()} onClick={() => void addNote()}>
 								{t("Add note")}
 							</Button>
-						</div>
+						</SettingsActions>
 						<div className="space-y-2">
 							{notes.map((item) => (
 								<div
@@ -512,24 +540,22 @@ export default function SupportContactsPage({ embedded = false }: { embedded?: b
 				<p className="text-sm text-muted-foreground">
 					{t("Create reusable company records, then choose one in a contact’s form.")}
 				</p>
-				<div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-					<Input
-						aria-label={t("Company name")}
-						placeholder={t("Company name")}
-						value={companyName}
-						onChange={(event) => setCompanyName(event.target.value)}
-					/>
-					<Input
-						aria-label={t("Domain (optional)")}
-						placeholder={t("Domain (optional)")}
-						value={companyDomain}
-						onChange={(event) => setCompanyDomain(event.target.value)}
-					/>
+				<SettingsTextField
+					label={t("Company name")}
+					value={companyName}
+					onChange={(event) => setCompanyName(event.target.value)}
+				/>
+				<SettingsTextField
+					label={t("Domain (optional)")}
+					value={companyDomain}
+					onChange={(event) => setCompanyDomain(event.target.value)}
+				/>
+				<SettingsActions>
 					<Button disabled={busy || !companyName.trim()} onClick={() => void addCompany()}>
 						<Plus className="h-4 w-4" />
 						{t("Create company")}
 					</Button>
-				</div>
+				</SettingsActions>
 				{companies.length > 0 && (
 					<div className="divide-y rounded-md border">
 						{companies.map((company) => (
@@ -562,25 +588,4 @@ function contactDraft(contact: SupportContact): Draft {
 			value: value == null ? "" : String(value),
 		})),
 	};
-}
-
-function Field({
-	id,
-	label,
-	value,
-	onChange,
-	type = "text",
-}: {
-	id: string;
-	label: string;
-	value: string;
-	onChange: (value: string) => void;
-	type?: string;
-}) {
-	return (
-		<div className="space-y-2">
-			<Label htmlFor={id}>{label}</Label>
-			<Input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} />
-		</div>
-	);
 }

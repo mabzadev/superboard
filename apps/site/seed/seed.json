@@ -889,27 +889,6 @@
 				}
 			},
 			{
-				"id": "view:identity--en--orgs",
-				"slug": "identity--en--orgs",
-				"status": "published",
-				"data": {
-					"name": "Organizations",
-					"plugin_id": "superboard-user",
-					"route_id": "superboard.identity_by_lang_orgs",
-					"path": "/auth/orgs",
-					"description": "",
-					"renderer_id": "superboard-user.renderer.admin_surface",
-					"presentation": {
-						"schema_version": "1.0.0",
-						"blocks": []
-					},
-					"bindings": {
-						"data_sources": [],
-						"commands": []
-					}
-				}
-			},
-			{
 				"id": "view:identity--en--logs",
 				"slug": "identity--en--logs",
 				"status": "published",
@@ -918,27 +897,6 @@
 					"plugin_id": "superboard-user",
 					"route_id": "superboard.auth_logs",
 					"path": "/auth/logs",
-					"description": "",
-					"renderer_id": "superboard-user.renderer.admin_surface",
-					"presentation": {
-						"schema_version": "1.0.0",
-						"blocks": []
-					},
-					"bindings": {
-						"data_sources": [],
-						"commands": []
-					}
-				}
-			},
-			{
-				"id": "view:identity--en--saml",
-				"slug": "identity--en--saml",
-				"status": "published",
-				"data": {
-					"name": "SAML SSO",
-					"plugin_id": "superboard-user",
-					"route_id": "superboard.identity_by_lang_saml",
-					"path": "/auth/saml",
 					"description": "",
 					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {

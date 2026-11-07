@@ -1,6 +1,5 @@
 import type { Scope } from "../services/auth/api.js";
-import { Checkbox } from "./ui/checkbox.js";
-import { Label } from "./ui/label.js";
+import SwitchRow from "./SwitchRow.js";
 
 const ScopesEditor = ({
 	scopes,
@@ -14,20 +13,17 @@ const ScopesEditor = ({
 	disabled?: boolean;
 }) => {
 	return (
-		<section className="flex max-md:flex-col gap-6 max-md:gap-2 flex-wrap">
+		<section className="flex flex-col gap-3">
 			{scopes.map((scope) => (
-				<div key={scope.id} className="flex items-center gap-2">
-					<Checkbox
-						data-testid="scopeInput"
-						id={`scope-${scope.id}`}
-						onClick={() => onToggleScope(scope.name)}
-						checked={value?.includes(scope.name)}
-						disabled={disabled}
-					/>
-					<Label data-testid="scopeLabel" htmlFor={`scope-${scope.id}`} className="flex">
-						{scope.name}
-					</Label>
-				</div>
+				<SwitchRow
+					key={scope.id}
+					data-testid="scopeInput"
+					id={`scope-${scope.id}`}
+					label={<span data-testid="scopeLabel">{scope.name}</span>}
+					onClick={() => onToggleScope(scope.name)}
+					checked={value?.includes(scope.name)}
+					disabled={disabled}
+				/>
 			))}
 		</section>
 	);

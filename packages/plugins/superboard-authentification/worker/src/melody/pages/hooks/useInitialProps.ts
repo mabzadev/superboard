@@ -19,13 +19,10 @@ export interface InitialProps {
   termsLink: string;
   privacyPolicyLink: string;
   googleClientId: string;
-  facebookClientId: string;
   githubClientId: string;
-  discordClientId: string;
   appleClientId: string;
   oidcProviders: string[];
   enableUserAttribute: boolean;
-  enableAppBanner: boolean;
 }
 
 const useInitialProps = () => {
@@ -48,9 +45,7 @@ const useInitialProps = () => {
         locales: locales as typeConfig.Locale[],
         logoUrl: 'logoUrl' in intialProps ? String(intialProps.logoUrl) : '',
         googleClientId: 'googleClientId' in intialProps ? String(intialProps.googleClientId) : '',
-        facebookClientId: 'facebookClientId' in intialProps ? String(intialProps.facebookClientId) : '',
         githubClientId: 'githubClientId' in intialProps ? String(intialProps.githubClientId) : '',
-        discordClientId: 'discordClientId' in intialProps ? String(intialProps.discordClientId) : '',
         appleClientId: 'appleClientId' in intialProps ? String(intialProps.appleClientId) : '',
         oidcProviders: 'oidcProviders' in intialProps && intialProps.oidcProviders ? String(intialProps.oidcProviders).split(',') : [],
         enableLocaleSelector: 'enableLocaleSelector' in intialProps ? Boolean(intialProps.enableLocaleSelector) : false,
@@ -60,7 +55,6 @@ const useInitialProps = () => {
         enablePasswordlessSignIn: 'enablePasswordlessSignIn' in intialProps ? Boolean(intialProps.enablePasswordlessSignIn) : false,
         usePasswordlessAsMagicLink: 'usePasswordlessAsMagicLink' in intialProps ? Boolean(intialProps.usePasswordlessAsMagicLink) : false,
         enableMfaRememberDevice: 'enableMfaRememberDevice' in intialProps ? Boolean(intialProps.enableMfaRememberDevice) : false,
-        enableAppBanner: 'enableAppBanner' in intialProps ? Boolean(intialProps.enableAppBanner) : false,
         enableNames: 'enableNames' in intialProps ? Boolean(intialProps.enableNames) : false,
         namesIsRequired: 'namesIsRequired' in intialProps ? Boolean(intialProps.namesIsRequired) : false,
         enableUserAttribute: 'enableUserAttribute' in intialProps ? Boolean(intialProps.enableUserAttribute) : false,

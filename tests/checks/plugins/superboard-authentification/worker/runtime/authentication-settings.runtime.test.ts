@@ -112,6 +112,74 @@ test("an operator saves settings and subsequent public authentication requests a
 	).toBe(1);
 });
 
+test("settings report which provider secrets the deployment holds without revealing them", async () => {
+	const deployment = {
+		providerSecrets: { github: true, apple: false },
+	};
+	const read = await (await request("GET")).text();
+	expect(read).not.toContain("runtime-github-client-secret");
+	expect(JSON.parse(read)).toMatchObject({ deployment });
+	const saved = await request("PUT", { revision: 0, values: { ENABLE_SIGN_UP: true } });
+	expect(await saved.json()).toMatchObject({ deployment });
+});
+
+test("a configuration saved before banners, Facebook, Discord, SMS and organizations were removed keeps working", async () => {
+	await database
+		.prepare(
+			"INSERT INTO identity_configuration (realm,revision,values_json,operation_id,updated_at) VALUES (?,?,?,?,?)",
+		)
+		.bind(
+			"test:local",
+			3,
+			JSON.stringify({
+				EMAIL_SENDER_NAME: "Saved sender",
+				ENABLE_APP_BANNER: true,
+				FACEBOOK_AUTH_CLIENT_ID: "facebook-id",
+				DISCORD_AUTH_CLIENT_ID: "discord-id",
+				SMS_MFA_IS_REQUIRED: true,
+				SMS_MFA_MESSAGE_THRESHOLD: 5,
+				ENABLE_SMS_LOG: true,
+				ENABLE_ORG: true,
+				BLOCKED_POLICIES: ["change_org", "change_email"],
+				ENFORCE_ONE_MFA_ENROLLMENT: ["sms", "otp"],
+			}),
+			crypto.randomUUID(),
+			"2026-11-01T00:00:00.000Z",
+		)
+		.run();
+	const read = await request("GET");
+	expect(read.status).toBe(200);
+	const settings = await read.json<{ revision: number; values: Record<string, unknown> }>();
+	expect(settings.values).toMatchObject({
+		EMAIL_SENDER_NAME: "Saved sender",
+		ENFORCE_ONE_MFA_ENROLLMENT: ["otp"],
+		BLOCKED_POLICIES: ["change_email"],
+	});
+	for (const retired of [
+		"ENABLE_APP_BANNER",
+		"FACEBOOK_AUTH_CLIENT_ID",
+		"DISCORD_AUTH_CLIENT_ID",
+		"SMS_MFA_IS_REQUIRED",
+		"SMS_MFA_MESSAGE_THRESHOLD",
+		"ENABLE_SMS_LOG",
+		"ENABLE_ORG",
+	])
+		expect(settings.values).not.toHaveProperty(retired);
+	const saved = await request("PUT", {
+		revision: settings.revision,
+		values: { EMAIL_SENDER_NAME: "Updated sender" },
+	});
+	expect(saved.status).toBe(200);
+	const stored = await database
+		.prepare("SELECT values_json FROM identity_configuration WHERE realm=?")
+		.bind("test:local")
+		.first<{ values_json: string }>();
+	expect(JSON.parse(stored?.values_json ?? "{}")).not.toHaveProperty("FACEBOOK_AUTH_CLIENT_ID");
+	expect((await request("PUT", { revision: 4, values: { ENABLE_APP_BANNER: true } })).status).toBe(
+		422,
+	);
+});
+
 test("settings reject unauthorized callers, secret fields and invalid values without writing", async () => {
 	expect((await SELF.fetch(`https://identity.test${path}`)).status).toBe(401);
 	expect(

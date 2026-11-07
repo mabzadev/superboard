@@ -136,14 +136,6 @@ export const magicLinkEmail = Object.freeze({
   },
 })
 
-export const smsMfaMsg = Object.freeze({
-  body: {
-    en: 'Your verification code is',
-    fr: 'Votre code de vérification est',
-    zh: '您的验证码是',
-  },
-})
-
 export const invitationEmail = Object.freeze({
   subject: {
     en: `You've been invited to join ${systemConfig.name}`,

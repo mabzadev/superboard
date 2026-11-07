@@ -158,7 +158,7 @@ const PRODUCTION_SECRET_METADATA = Object.freeze({
 		rotation: "publish-overlapping-public-keys-before-retiring-the-old-key",
 	}),
 	MELODY_AUTH_SECRETS: Object.freeze({
-		source: "generated-rs256-and-saml-keyset",
+		source: "generated-rs256-keyset",
 		rotation: "publish-new-jwks-verify-overlap-then-retire-old-signing-material",
 	}),
 	APPLE_ROOT_CERTIFICATES_B64: Object.freeze({

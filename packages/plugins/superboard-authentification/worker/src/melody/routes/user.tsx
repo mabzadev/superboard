@@ -2,7 +2,7 @@ import { Hono } from "hono";
 
 import { routeConfig, typeConfig } from "../configs";
 import { userHandler } from "../handlers";
-import { authMiddleware, configMiddleware } from "../middlewares";
+import { authMiddleware } from "../middlewares";
 
 const BaseRoute = routeConfig.InternalRoute.ApiUsers;
 const userRoutes = new Hono<typeConfig.Context>();
@@ -83,18 +83,6 @@ userRoutes.delete(
 );
 
 userRoutes.post(
-	`${BaseRoute}/:authId/sms-mfa`,
-	authMiddleware.s2sWriteUser,
-	userHandler.postUserSmsMfa,
-);
-
-userRoutes.delete(
-	`${BaseRoute}/:authId/sms-mfa`,
-	authMiddleware.s2sWriteUser,
-	userHandler.deleteUserSmsMfa,
-);
-
-userRoutes.post(
 	`${BaseRoute}/:authId/account-linking/:linkingAuthId`,
 	authMiddleware.s2sWriteUser,
 	userHandler.linkAccount,
@@ -122,38 +110,6 @@ userRoutes.delete(
 	`${BaseRoute}/:authId/active-sessions/:sessionId`,
 	authMiddleware.s2sWriteUser,
 	userHandler.deleteUserActiveSession,
-);
-
-userRoutes.post(
-	`${BaseRoute}/:authId/org-groups/:orgGroupId`,
-	configMiddleware.enableOrgGroup,
-	authMiddleware.s2sWriteUser,
-	authMiddleware.s2sWriteOrg,
-	userHandler.postUserOrgGroup,
-);
-
-userRoutes.delete(
-	`${BaseRoute}/:authId/org-groups/:orgGroupId`,
-	configMiddleware.enableOrgGroup,
-	authMiddleware.s2sWriteUser,
-	authMiddleware.s2sWriteOrg,
-	userHandler.deleteUserOrgGroup,
-);
-
-userRoutes.get(
-	`${BaseRoute}/:authId/orgs`,
-	configMiddleware.enableOrg,
-	authMiddleware.s2sReadUser,
-	authMiddleware.s2sReadOrg,
-	userHandler.getUserOrgs,
-);
-
-userRoutes.post(
-	`${BaseRoute}/:authId/orgs`,
-	configMiddleware.enableOrg,
-	authMiddleware.s2sWriteUser,
-	authMiddleware.s2sWriteOrg,
-	userHandler.postUserOrgs,
 );
 
 userRoutes.post(

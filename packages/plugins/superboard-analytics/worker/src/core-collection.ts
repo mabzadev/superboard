@@ -4,23 +4,17 @@ import { ingestAnalyticsEvents } from "./ingestion.js";
 import type { Env } from "./types.js";
 
 export async function collectAnalyticsProjection(env: Env) {
-	const policies = new Map<string, { enabled: number; active: number }>();
+	const policies = new Map<string, { active: number }>();
 	return consumeCoreCollection(env, "superboard-analytics", async (item) => {
 		const policyKey = `${item.project.projectId}:${item.event.application_id}`;
 		let policy = policies.get(policyKey);
 		if (!policy) {
 			policy = (await env.DB.prepare(`SELECT
-			 COALESCE((SELECT data_collection_enabled FROM analytics_project_settings WHERE project_id=?),1) enabled,
 			 COALESCE((SELECT active FROM analytics_applications WHERE project_id=? AND application_id=?),1) active`)
-				.bind(
-					String(item.project.projectId),
-					String(item.project.projectId),
-					item.event.application_id,
-				)
-				.first<{ enabled: number; active: number }>()) ?? { enabled: 1, active: 1 };
+				.bind(String(item.project.projectId), item.event.application_id)
+				.first<{ active: number }>()) ?? { active: 1 };
 			policies.set(policyKey, policy);
 		}
-		if (policy.enabled !== 1) return false;
 		if (policy.active !== 1) return true;
 		const customer = item.event.properties.customer_event;
 		const event =

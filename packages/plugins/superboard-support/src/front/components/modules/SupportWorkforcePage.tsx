@@ -6,17 +6,19 @@ import {
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
 import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
+import {
+	SettingsActions,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+	SwitchField,
+} from "@superboard/front-ui/settings-form";
 import { Button } from "@superboard/front-ui/ui/button.js";
-import { Card, CardContent, CardHeader, CardTitle } from "@superboard/front-ui/ui/card.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
-import { Label } from "@superboard/front-ui/ui/label.js";
-import { Switch } from "@superboard/front-ui/ui/switch.js";
 import { Plus, Trash2, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
 	createSupportCapacityPolicy,
-	createSupportInbox,
 	createSupportLeave,
 	createSupportMembership,
 	createSupportTeam,
@@ -46,6 +48,7 @@ import {
 } from "../../api/support/workforceService.js";
 import { useSupportI18n } from "../../i18n.js";
 import { SupportModulePage as ModulePage } from "../support/SupportModulePage.js";
+import { SettingsSelectField } from "../support/SupportSettingsFields.js";
 import {
 	SupportEmpty,
 	SupportError,
@@ -95,15 +98,6 @@ const emptyTeam = {
 	allow_auto_assign: true,
 	active: true,
 };
-const emptyInbox = {
-	name: "",
-	identifier: "",
-	channel_type: "api",
-	status: "active" as const,
-	auto_assignment: true,
-	allow_reopen: true,
-	csat_enabled: true,
-};
 const emptyCapacity = { name: "", default_capacity: 10, active: true };
 const emptyLeave = { membershipId: "", startsAt: "", endsAt: "", reason: "" };
 
@@ -117,7 +111,6 @@ export default function SupportWorkforcePage() {
 	const [summaryError, setSummaryError] = useState<string | null>(null);
 	const [member, setMember] = useState(emptyMember);
 	const [team, setTeam] = useState(emptyTeam);
-	const [inbox, setInbox] = useState(emptyInbox);
 	const [capacity, setCapacity] = useState(emptyCapacity);
 	const [leave, setLeave] = useState(emptyLeave);
 	const [routing, setRouting] = useState({
@@ -177,25 +170,6 @@ export default function SupportWorkforcePage() {
 			setTeam(emptyTeam);
 			await Promise.all([teams.reload(), loadSummary()]);
 			showSuccessNotification(t("Support team created"));
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause, locale));
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	const saveInbox = async () => {
-		if (!projectRef || !inbox.name.trim() || !inbox.identifier.trim()) return;
-		setSaving(true);
-		try {
-			await createSupportInbox(projectRef, {
-				...inbox,
-				name: inbox.name.trim(),
-				identifier: inbox.identifier.trim(),
-			});
-			setInbox(emptyInbox);
-			await Promise.all([inboxes.reload(), loadSummary()]);
-			showSuccessNotification(t("Support inbox created"));
 		} catch (cause) {
 			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
@@ -450,9 +424,9 @@ export default function SupportWorkforcePage() {
 						<SupportMetric label={t("Active inboxes")} value={summary?.active_inboxes ?? "—"} />
 						<SupportMetric label={t("Members on leave")} value={summary?.active_leaves ?? "—"} />
 					</div>
-					<div className="space-y-4">
+					<div className="space-y-6">
 						{view === "members" && (
-							<div className="space-y-4">
+							<div className="space-y-6">
 								<SupportSearchToolbar
 									filters={viewSelect}
 									query={memberships.query}
@@ -462,81 +436,73 @@ export default function SupportWorkforcePage() {
 									loading={memberships.loading}
 								/>
 								<SupportError message={memberships.error} />
-								<Card>
-									<CardHeader>
-										<CardTitle className="text-base">{t("Add a Support member")}</CardTitle>
-									</CardHeader>
-									<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-										<Field label={t("Identity user ID")}>
-											<Input
-												value={member.auth_user_id}
-												onChange={(e) =>
-													setMember((v) => ({
-														...v,
-														auth_user_id: e.target.value,
-													}))
-												}
-											/>
-										</Field>
-										<Field label={t("Display name")}>
-											<Input
-												value={member.display_name}
-												onChange={(e) =>
-													setMember((v) => ({
-														...v,
-														display_name: e.target.value,
-													}))
-												}
-											/>
-										</Field>
-										<Field label={t("Support role")}>
-											<NativeSelect
-												value={member.role}
-												onChange={(value) =>
-													setMember((v) => ({
-														...v,
-														role: value as "agent" | "supervisor",
-													}))
-												}
-												options={["agent", "supervisor"]}
-											/>
-										</Field>
-										<Field label={t("Availability")}>
-											<NativeSelect
-												value={member.availability}
-												onChange={(value) =>
-													setMember((v) => ({
-														...v,
-														availability: value as "online" | "busy" | "offline",
-													}))
-												}
-												options={["online", "busy", "offline"]}
-											/>
-										</Field>
-										<Field label={t("Capacity")}>
-											<Input
-												type="number"
-												min={0}
-												value={member.capacity}
-												onChange={(e) =>
-													setMember((v) => ({
-														...v,
-														capacity: Number(e.target.value),
-													}))
-												}
-											/>
-										</Field>
-										<div className="flex items-end">
-											<Button
-												className="w-full"
-												disabled={saving}
-												onClick={() => void saveMember()}
-											>
+								<SettingsSection
+									title={t("Add a Support member")}
+									description={t("Give an existing user access to Support conversations.")}
+								>
+									<SettingsRow>
+										<SettingsTextField
+											label={t("Identity user ID")}
+											value={member.auth_user_id}
+											onChange={(e) =>
+												setMember((v) => ({
+													...v,
+													auth_user_id: e.target.value,
+												}))
+											}
+										/>
+										<SettingsTextField
+											label={t("Display name")}
+											value={member.display_name}
+											onChange={(e) =>
+												setMember((v) => ({
+													...v,
+													display_name: e.target.value,
+												}))
+											}
+										/>
+										<SelectField
+											label={t("Support role")}
+											value={member.role}
+											onChange={(value) =>
+												setMember((v) => ({
+													...v,
+													role: value as "agent" | "supervisor",
+												}))
+											}
+											options={["agent", "supervisor"]}
+										/>
+										<SelectField
+											label={t("Availability")}
+											value={member.availability}
+											onChange={(value) =>
+												setMember((v) => ({
+													...v,
+													availability: value as "online" | "busy" | "offline",
+												}))
+											}
+											options={["online", "busy", "offline"]}
+										/>
+										<SettingsTextField
+											label={t("Capacity")}
+											description={t("Maximum number of conversations at the same time.")}
+											type="number"
+											min={0}
+											value={member.capacity}
+											onChange={(e) =>
+												setMember((v) => ({
+													...v,
+													capacity: Number(e.target.value),
+												}))
+											}
+										/>
+										<SettingsActions>
+											<Button disabled={saving} onClick={() => void saveMember()}>
 												<Plus /> {t("Add member")}
 											</Button>
-										</div>
-									</CardContent>
-								</Card>
+										</SettingsActions>
+									</SettingsRow>
+								</SettingsSection>
 								{memberships.loading ? (
 									<SupportLoading />
 								) : memberships.items.length === 0 ? (
@@ -547,43 +513,28 @@ export default function SupportWorkforcePage() {
 										)}
 									/>
 								) : (
-									<div className="grid gap-3">
+									<SettingsSection
+										title={t("Members")}
+										description={t("Switch a member off to stop assigning conversations to them.")}
+									>
 										{memberships.items.map((item) => (
-											<Card key={item.id}>
-												<CardContent className="flex items-center justify-between gap-4 p-4">
-													<div>
-														<p className="font-medium">{item.display_name}</p>
-														<p className="text-sm text-muted-foreground">
-															{t("{user} · {role} · capacity {capacity}", {
-																user: item.auth_user_id,
-																role: t(optionLabel(item.role)),
-																capacity: item.capacity,
-															})}
-														</p>
-													</div>
-													<div className="flex items-center gap-2">
-														<SupportStatus value={item.active ? item.availability : "disabled"} />
-														<Button
-															disabled={saving}
-															size="sm"
-															variant="outline"
-															onClick={() => void setMemberActive(item)}
-														>
-															{item.active ? t("Disable") : t("Enable")}
-														</Button>
-														<Button
-															aria-label={t("Remove {name}", { name: item.display_name })}
-															size="icon"
-															variant="ghost"
-															onClick={() => void removeMember(item.id)}
-														>
-															<Trash2 />
-														</Button>
-													</div>
-												</CardContent>
-											</Card>
+											<RecordRow
+												key={item.id}
+												title={item.display_name}
+												detail={t("{user} · {role} · capacity {capacity}", {
+													user: item.auth_user_id,
+													role: t(optionLabel(item.role)),
+													capacity: item.capacity,
+												})}
+												status={item.active ? item.availability : "disabled"}
+												active={item.active}
+												disabled={saving}
+												onActiveChange={() => void setMemberActive(item)}
+												removeLabel={t("Remove {name}", { name: item.display_name })}
+												onRemove={() => void removeMember(item.id)}
+											/>
 										))}
-									</div>
+									</SettingsSection>
 								)}
 								<SupportLoadMore
 									visible={memberships.hasMore}
@@ -593,7 +544,7 @@ export default function SupportWorkforcePage() {
 							</div>
 						)}
 						{view === "teams" && (
-							<div className="space-y-4">
+							<div className="space-y-6">
 								<SupportSearchToolbar
 									filters={viewSelect}
 									query={teams.query}
@@ -603,39 +554,37 @@ export default function SupportWorkforcePage() {
 									loading={teams.loading}
 								/>
 								<SupportError message={teams.error} />
-								<Card>
-									<CardHeader>
-										<CardTitle className="text-base">{t("Create a team")}</CardTitle>
-									</CardHeader>
-									<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-										<Field label={t("Name")}>
-											<Input
-												value={team.name}
-												onChange={(e) => setTeam((v) => ({ ...v, name: e.target.value }))}
-											/>
-										</Field>
-										<Field label={t("Description")}>
-											<Input
-												value={team.description}
-												onChange={(e) => setTeam((v) => ({ ...v, description: e.target.value }))}
-											/>
-										</Field>
-										<div className="flex items-center gap-3 pt-7">
-											<Switch
-												checked={team.allow_auto_assign}
-												onCheckedChange={(value) =>
-													setTeam((v) => ({ ...v, allow_auto_assign: value }))
-												}
-											/>
-											<Label>{t("Automatic assignment")}</Label>
-										</div>
-										<div className="flex items-end">
-											<Button className="w-full" disabled={saving} onClick={() => void saveTeam()}>
+								<SettingsSection
+									title={t("Create a team")}
+									description={t("Group agents to route conversations to them together.")}
+								>
+									<SettingsRow>
+										<SettingsTextField
+											label={t("Name")}
+											value={team.name}
+											onChange={(e) => setTeam((v) => ({ ...v, name: e.target.value }))}
+										/>
+										<SettingsTextField
+											label={t("Description")}
+											value={team.description}
+											onChange={(e) => setTeam((v) => ({ ...v, description: e.target.value }))}
+										/>
+									</SettingsRow>
+									<SettingsRow>
+										<SwitchField
+											label={t("Automatic assignment")}
+											checked={team.allow_auto_assign}
+											onCheckedChange={(value) =>
+												setTeam((v) => ({ ...v, allow_auto_assign: value }))
+											}
+										/>
+										<SettingsActions>
+											<Button disabled={saving} onClick={() => void saveTeam()}>
 												<Plus /> {t("Create team")}
 											</Button>
-										</div>
-									</CardContent>
-								</Card>
+										</SettingsActions>
+									</SettingsRow>
+								</SettingsSection>
 								{teams.loading ? (
 									<SupportLoading />
 								) : teams.items.length === 0 ? (
@@ -644,39 +593,24 @@ export default function SupportWorkforcePage() {
 										description={t("Create a team to group agents and route conversations.")}
 									/>
 								) : (
-									<div className="grid gap-3">
+									<SettingsSection
+										title={t("Teams")}
+										description={t("Switch a team off to stop routing conversations to it.")}
+									>
 										{teams.items.map((item) => (
-											<Card key={item.id}>
-												<CardContent className="flex items-center justify-between p-4">
-													<div>
-														<p className="font-medium">{item.name}</p>
-														<p className="text-sm text-muted-foreground">
-															{item.description || t("No description")}
-														</p>
-													</div>
-													<div className="flex items-center gap-2">
-														<SupportStatus value={item.active ? "active" : "disabled"} />
-														<Button
-															disabled={saving}
-															size="sm"
-															variant="outline"
-															onClick={() => void setTeamActive(item.id, item.active)}
-														>
-															{item.active ? t("Disable") : t("Enable")}
-														</Button>
-														<Button
-															aria-label={t("Delete {name}", { name: item.name })}
-															size="icon"
-															variant="ghost"
-															onClick={() => void removeTeam(item.id)}
-														>
-															<Trash2 />
-														</Button>
-													</div>
-												</CardContent>
-											</Card>
+											<RecordRow
+												key={item.id}
+												title={item.name}
+												detail={item.description || t("No description")}
+												status={item.active ? "active" : "disabled"}
+												active={item.active}
+												disabled={saving}
+												onActiveChange={() => void setTeamActive(item.id, item.active)}
+												removeLabel={t("Delete {name}", { name: item.name })}
+												onRemove={() => void removeTeam(item.id)}
+											/>
 										))}
-									</div>
+									</SettingsSection>
 								)}
 								<SupportLoadMore
 									visible={teams.hasMore}
@@ -686,7 +620,7 @@ export default function SupportWorkforcePage() {
 							</div>
 						)}
 						{view === "inboxes" && (
-							<div className="space-y-4">
+							<div className="space-y-6">
 								<SupportSearchToolbar
 									filters={viewSelect}
 									query={inboxes.query}
@@ -696,98 +630,36 @@ export default function SupportWorkforcePage() {
 									loading={inboxes.loading}
 								/>
 								<SupportError message={inboxes.error} />
-								<Card>
-									<CardHeader>
-										<CardTitle className="text-base">{t("Create an inbox")}</CardTitle>
-									</CardHeader>
-									<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-										<Field label={t("Name")}>
-											<Input
-												value={inbox.name}
-												onChange={(event) =>
-													setInbox((value) => ({ ...value, name: event.target.value }))
-												}
-											/>
-										</Field>
-										<Field label={t("Identifier")}>
-											<Input
-												value={inbox.identifier}
-												onChange={(event) =>
-													setInbox((value) => ({ ...value, identifier: event.target.value }))
-												}
-											/>
-										</Field>
-										<Field label={t("Channel type")}>
-											<NativeSelect
-												value={inbox.channel_type}
-												onChange={(channel_type) => {
-													setInbox((value) => ({ ...value, channel_type }));
-												}}
-												options={[
-													"api",
-													"widget",
-													"email_google",
-													"email_microsoft",
-													"smtp",
-													"whatsapp_cloud",
-													"facebook_messenger",
-													"instagram",
-													"twilio_sms",
-													"twilio_voice",
-													"telegram",
-													"line",
-													"twitter",
-												]}
-											/>
-										</Field>
-										<div className="flex items-end">
-											<Button className="w-full" disabled={saving} onClick={() => void saveInbox()}>
-												<Plus /> {t("Create inbox")}
-											</Button>
-										</div>
-									</CardContent>
-								</Card>
 								{inboxes.loading ? (
 									<SupportLoading />
 								) : inboxes.items.length === 0 ? (
 									<SupportEmpty
 										title={t("No Support inboxes")}
-										description={t("Create an inbox before connecting a customer channel.")}
+										description={t("Create inboxes from the Inbox page.")}
 									/>
 								) : (
-									<div className="grid gap-3">
+									<SettingsSection
+										title={t("Inboxes")}
+										description={t(
+											"Inboxes are created from the Inbox page. Switch one off to stop receiving its conversations.",
+										)}
+									>
 										{inboxes.items.map((item) => (
-											<Card key={item.id}>
-												<CardContent className="flex items-center justify-between gap-3 p-4">
-													<div>
-														<p className="font-medium">{item.name}</p>
-														<p className="text-sm text-muted-foreground">
-															{item.identifier} · {t(supportChannelLabel(item.channel_type))}
-														</p>
-													</div>
-													<div className="flex items-center gap-2">
-														<SupportStatus value={item.status} />
-														<Button
-															disabled={saving}
-															size="sm"
-															variant="outline"
-															onClick={() => void setInboxActive(item.id, item.status === "active")}
-														>
-															{item.status === "active" ? t("Disable") : t("Enable")}
-														</Button>
-														<Button
-															aria-label={t("Delete {name}", { name: item.name })}
-															size="icon"
-															variant="ghost"
-															onClick={() => void removeInbox(item.id)}
-														>
-															<Trash2 />
-														</Button>
-													</div>
-												</CardContent>
-											</Card>
+											<RecordRow
+												key={item.id}
+												title={item.name}
+												detail={`${item.identifier} · ${t(supportChannelLabel(item.channel_type))}`}
+												status={item.status}
+												active={item.status === "active"}
+												disabled={saving}
+												onActiveChange={() =>
+													void setInboxActive(item.id, item.status === "active")
+												}
+												removeLabel={t("Delete {name}", { name: item.name })}
+												onRemove={() => void removeInbox(item.id)}
+											/>
 										))}
-									</div>
+									</SettingsSection>
 								)}
 								<SupportLoadMore
 									visible={inboxes.hasMore}
@@ -797,61 +669,39 @@ export default function SupportWorkforcePage() {
 							</div>
 						)}
 						{view === "routing" && (
-							<div className="space-y-4">
+							<div className="space-y-6">
 								<div className="flex flex-wrap items-center gap-2">{viewSelect}</div>
 								<SupportError message={routingError} />
-								<Card>
-									<CardHeader>
-										<CardTitle className="text-base">{t("Membership routing")}</CardTitle>
-									</CardHeader>
-									<CardContent className="grid gap-4 md:grid-cols-3">
-										<Field label={t("Member")}>
-											<NativeSelect
-												value={routing.membershipId}
-												onChange={(membershipId) =>
-													setRouting((value) => ({ ...value, membershipId }))
-												}
-												optionsWithLabels={memberships.items.map((item) => ({
-													value: item.id,
-													label: item.display_name,
-												}))}
-											/>
-										</Field>
-										<Field label={t("Team")}>
-											<NativeSelect
-												value={routing.teamId}
-												onChange={(teamId) => {
-													const next = { ...routing, teamId };
-													setRouting(next);
-													void reloadRouting(next);
-												}}
-												optionsWithLabels={teams.items.map((item) => ({
-													value: item.id,
-													label: item.name,
-												}))}
-											/>
-										</Field>
-										<Field label={t("Inbox")}>
-											<NativeSelect
-												value={routing.inboxId}
-												onChange={(inboxId) => {
-													const next = { ...routing, inboxId };
-													setRouting(next);
-													void reloadRouting(next);
-												}}
-												optionsWithLabels={inboxes.items.map((item) => ({
-													value: item.id,
-													label: item.name,
-												}))}
-											/>
-										</Field>
-										<div className="flex flex-wrap gap-2 md:col-span-3">
-											<Button
-												disabled={saving || !routing.teamId || !routing.membershipId}
-												onClick={() => void updateRouting("team", true)}
-											>
-												{t("Add to team")}
-											</Button>
+								<SettingsSection
+									title={t("Membership routing")}
+									description={t("Choose the teams and inboxes a member works in.")}
+								>
+									<SettingsRow>
+										<SelectField
+											label={t("Member")}
+											value={routing.membershipId}
+											onChange={(membershipId) =>
+												setRouting((value) => ({ ...value, membershipId }))
+											}
+											optionsWithLabels={memberships.items.map((item) => ({
+												value: item.id,
+												label: item.display_name,
+											}))}
+										/>
+										<SelectField
+											label={t("Team")}
+											value={routing.teamId}
+											onChange={(teamId) => {
+												const next = { ...routing, teamId };
+												setRouting(next);
+												void reloadRouting(next);
+											}}
+											optionsWithLabels={teams.items.map((item) => ({
+												value: item.id,
+												label: item.name,
+											}))}
+										/>
+										<SettingsActions>
 											<Button
 												disabled={saving || !routing.teamId || !routing.membershipId}
 												variant="outline"
@@ -860,11 +710,28 @@ export default function SupportWorkforcePage() {
 												{t("Remove from team")}
 											</Button>
 											<Button
-												disabled={saving || !routing.inboxId || !routing.membershipId}
-												onClick={() => void updateRouting("inbox", true)}
+												disabled={saving || !routing.teamId || !routing.membershipId}
+												onClick={() => void updateRouting("team", true)}
 											>
-												{t("Add to inbox")}
+												{t("Add to team")}
 											</Button>
+										</SettingsActions>
+									</SettingsRow>
+									<SettingsRow>
+										<SelectField
+											label={t("Inbox")}
+											value={routing.inboxId}
+											onChange={(inboxId) => {
+												const next = { ...routing, inboxId };
+												setRouting(next);
+												void reloadRouting(next);
+											}}
+											optionsWithLabels={inboxes.items.map((item) => ({
+												value: item.id,
+												label: item.name,
+											}))}
+										/>
+										<SettingsActions>
 											<Button
 												disabled={saving || !routing.inboxId || !routing.membershipId}
 												variant="outline"
@@ -872,17 +739,29 @@ export default function SupportWorkforcePage() {
 											>
 												{t("Remove from inbox")}
 											</Button>
-										</div>
-									</CardContent>
-								</Card>
-								<div className="space-y-4">
-									<RoutingList title={t("Team members")} items={teamMembers} />
-									<RoutingList title={t("Inbox members")} items={inboxMembers} />
-								</div>
+											<Button
+												disabled={saving || !routing.inboxId || !routing.membershipId}
+												onClick={() => void updateRouting("inbox", true)}
+											>
+												{t("Add to inbox")}
+											</Button>
+										</SettingsActions>
+									</SettingsRow>
+								</SettingsSection>
+								<RoutingList
+									title={t("Team members")}
+									description={t("Members of the selected team.")}
+									items={teamMembers}
+								/>
+								<RoutingList
+									title={t("Inbox members")}
+									description={t("Members of the selected inbox.")}
+									items={inboxMembers}
+								/>
 							</div>
 						)}
 						{view === "leaves" && (
-							<div className="space-y-4">
+							<div className="space-y-6">
 								<SupportSearchToolbar
 									filters={viewSelect}
 									query={leaves.query}
@@ -892,56 +771,52 @@ export default function SupportWorkforcePage() {
 									loading={leaves.loading}
 								/>
 								<SupportError message={leaves.error} />
-								<Card>
-									<CardHeader>
-										<CardTitle className="text-base">{t("Schedule leave")}</CardTitle>
-									</CardHeader>
-									<CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-										<Field label={t("Member")}>
-											<NativeSelect
-												value={leave.membershipId}
-												onChange={(membershipId) => {
-													setLeave((value) => ({ ...value, membershipId }));
-												}}
-												optionsWithLabels={memberships.items.map((item) => ({
-													value: item.id,
-													label: item.display_name,
-												}))}
-											/>
-										</Field>
-										<Field label={t("Starts")}>
-											<Input
-												type="datetime-local"
-												value={leave.startsAt}
-												onChange={(event) =>
-													setLeave((value) => ({ ...value, startsAt: event.target.value }))
-												}
-											/>
-										</Field>
-										<Field label={t("Ends")}>
-											<Input
-												type="datetime-local"
-												value={leave.endsAt}
-												onChange={(event) =>
-													setLeave((value) => ({ ...value, endsAt: event.target.value }))
-												}
-											/>
-										</Field>
-										<Field label={t("Reason")}>
-											<Input
-												value={leave.reason}
-												onChange={(event) =>
-													setLeave((value) => ({ ...value, reason: event.target.value }))
-												}
-											/>
-										</Field>
-										<div className="flex items-end">
-											<Button className="w-full" disabled={saving} onClick={() => void saveLeave()}>
+								<SettingsSection
+									title={t("Schedule leave")}
+									description={t("Scheduled leave is applied to automatic assignment.")}
+								>
+									<SettingsRow>
+										<SelectField
+											label={t("Member")}
+											value={leave.membershipId}
+											onChange={(membershipId) => {
+												setLeave((value) => ({ ...value, membershipId }));
+											}}
+											optionsWithLabels={memberships.items.map((item) => ({
+												value: item.id,
+												label: item.display_name,
+											}))}
+										/>
+										<SettingsTextField
+											label={t("Starts")}
+											type="datetime-local"
+											value={leave.startsAt}
+											onChange={(event) =>
+												setLeave((value) => ({ ...value, startsAt: event.target.value }))
+											}
+										/>
+										<SettingsTextField
+											label={t("Ends")}
+											type="datetime-local"
+											value={leave.endsAt}
+											onChange={(event) =>
+												setLeave((value) => ({ ...value, endsAt: event.target.value }))
+											}
+										/>
+										<SettingsTextField
+											label={t("Reason")}
+											value={leave.reason}
+											onChange={(event) =>
+												setLeave((value) => ({ ...value, reason: event.target.value }))
+											}
+										/>
+										<SettingsActions>
+											<Button disabled={saving} onClick={() => void saveLeave()}>
 												<Plus /> {t("Schedule")}
 											</Button>
-										</div>
-									</CardContent>
-								</Card>
+										</SettingsActions>
+									</SettingsRow>
+								</SettingsSection>
 								{leaves.loading ? (
 									<SupportLoading />
 								) : leaves.items.length === 0 ? (
@@ -950,16 +825,22 @@ export default function SupportWorkforcePage() {
 										description={t("Scheduled leave is applied to automatic assignment.")}
 									/>
 								) : (
-									leaves.items.map((item) => (
-										<Card key={item.id}>
-											<CardContent className="flex items-center justify-between gap-3 p-4">
-												<div>
+									<SettingsSection
+										title={t("Leave")}
+										description={t("Upcoming and current leave periods.")}
+									>
+										{leaves.items.map((item) => (
+											<SettingsRow
+												key={item.id}
+												className="flex items-center justify-between gap-4 space-y-0"
+											>
+												<div className="min-w-0">
 													<p className="font-medium">
 														{memberships.items.find(
 															(memberItem) => memberItem.id === item.membership_id,
 														)?.display_name || item.membership_id}
 													</p>
-													<p className="text-sm text-muted-foreground">
+													<p className="text-sm text-kumo-subtle">
 														{new Date(item.starts_at).toLocaleString(locale)} –{" "}
 														{new Date(item.ends_at).toLocaleString(locale)}
 													</p>
@@ -972,14 +853,14 @@ export default function SupportWorkforcePage() {
 												>
 													<Trash2 />
 												</Button>
-											</CardContent>
-										</Card>
-									))
+											</SettingsRow>
+										))}
+									</SettingsSection>
 								)}
 							</div>
 						)}
 						{view === "capacity" && (
-							<div className="space-y-4">
+							<div className="space-y-6">
 								<SupportSearchToolbar
 									filters={viewSelect}
 									query={capacities.query}
@@ -989,101 +870,84 @@ export default function SupportWorkforcePage() {
 									loading={capacities.loading}
 								/>
 								<SupportError message={capacities.error} />
-								<Card>
-									<CardHeader>
-										<CardTitle className="text-base">{t("Create a capacity policy")}</CardTitle>
-									</CardHeader>
-									<CardContent className="grid gap-4 md:grid-cols-3">
-										<Field label={t("Name")}>
-											<Input
-												value={capacity.name}
-												onChange={(event) =>
-													setCapacity((value) => ({ ...value, name: event.target.value }))
-												}
-											/>
-										</Field>
-										<Field label={t("Default capacity")}>
-											<Input
-												type="number"
-												min={0}
-												value={capacity.default_capacity}
-												onChange={(event) =>
-													setCapacity((value) => ({
-														...value,
-														default_capacity: Number(event.target.value),
-													}))
-												}
-											/>
-										</Field>
-										<div className="flex items-end">
-											<Button
-												className="w-full"
-												disabled={saving}
-												onClick={() => void saveCapacity()}
-											>
+								<SettingsSection
+									title={t("Create a capacity policy")}
+									description={t("Limit how many conversations an agent handles at the same time.")}
+								>
+									<SettingsRow>
+										<SettingsTextField
+											label={t("Name")}
+											value={capacity.name}
+											onChange={(event) =>
+												setCapacity((value) => ({ ...value, name: event.target.value }))
+											}
+										/>
+										<SettingsTextField
+											label={t("Default capacity")}
+											type="number"
+											min={0}
+											value={capacity.default_capacity}
+											onChange={(event) =>
+												setCapacity((value) => ({
+													...value,
+													default_capacity: Number(event.target.value),
+												}))
+											}
+										/>
+										<SettingsActions>
+											<Button disabled={saving} onClick={() => void saveCapacity()}>
 												<Plus /> {t("Create policy")}
 											</Button>
-										</div>
-									</CardContent>
-								</Card>
-								{capacities.items.map((item) => (
-									<Card key={item.id}>
-										<CardContent className="flex items-center justify-between p-4">
-											<div>
-												<p className="font-medium">{item.name}</p>
-												<p className="text-sm text-muted-foreground">
-													{t("Default capacity: {count}", { count: item.default_capacity })}
-												</p>
-											</div>
-											<div className="flex items-center gap-2">
-												<SupportStatus value={item.active ? "active" : "disabled"} />
-												<Button
-													disabled={saving}
-													size="sm"
-													variant="outline"
-													onClick={() => void setCapacityActive(item.id, item.active)}
-												>
-													{item.active ? t("Disable") : t("Enable")}
-												</Button>
-												<Button
-													aria-label={t("Delete {name}", { name: item.name })}
-													size="icon"
-													variant="ghost"
-													onClick={() => void removeCapacity(item.id)}
-												>
-													<Trash2 />
-												</Button>
-											</div>
-										</CardContent>
-									</Card>
-								))}
-								<Card>
-									<CardHeader>
-										<CardTitle className="flex items-center gap-2">
-											<UsersRound /> {t("Assignment load")}
-										</CardTitle>
-									</CardHeader>
-									<CardContent className="space-y-3">
-										{(summary?.assignments ?? []).length === 0 ? (
-											<SupportEmpty
-												title={t("No active assignments")}
-												description={t(
-													"Assignment load will appear when conversations are routed to agents.",
-												)}
+										</SettingsActions>
+									</SettingsRow>
+								</SettingsSection>
+								{capacities.items.length > 0 && (
+									<SettingsSection
+										title={t("Capacity policies")}
+										description={t("Switch a policy off to stop applying its limit.")}
+									>
+										{capacities.items.map((item) => (
+											<RecordRow
+												key={item.id}
+												title={item.name}
+												detail={t("Default capacity: {count}", { count: item.default_capacity })}
+												status={item.active ? "active" : "disabled"}
+												active={item.active}
+												disabled={saving}
+												onActiveChange={() => void setCapacityActive(item.id, item.active)}
+												removeLabel={t("Delete {name}", { name: item.name })}
+												onRemove={() => void removeCapacity(item.id)}
 											/>
-										) : (
-											summary?.assignments.map((assignment) => (
-												<div
-													key={assignment.assigned_user_id}
-													className="flex justify-between rounded-md border p-3"
-												>
-													<span>{assignment.assigned_user_id}</span>
-													<strong>{assignment.count}</strong>
-												</div>
-											))
-										)}
-									</CardContent>
-								</Card>
+										))}
+									</SettingsSection>
+								)}
+								<SettingsSection
+									title={
+										<span className="flex items-center gap-2">
+											<UsersRound className="size-4" /> {t("Assignment load")}
+										</span>
+									}
+									description={t("Open conversations currently assigned to each agent.")}
+								>
+									{(summary?.assignments ?? []).length === 0 ? (
+										<SettingsRow>
+											<p className="text-sm font-medium">{t("No active assignments")}</p>
+											<p className="text-sm text-kumo-subtle">
+												{t("Assignment load will appear when conversations are routed to agents.")}
+											</p>
+										</SettingsRow>
+									) : (
+										summary?.assignments.map((assignment) => (
+											<SettingsRow
+												key={assignment.assigned_user_id}
+												className="flex justify-between gap-4 space-y-0"
+											>
+												<span>{assignment.assigned_user_id}</span>
+												<strong>{assignment.count}</strong>
+											</SettingsRow>
+										))
+									)}
+								</SettingsSection>
 							</div>
 						)}
 					</div>
@@ -1093,21 +957,54 @@ export default function SupportWorkforcePage() {
 	);
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function RecordRow({
+	title,
+	detail,
+	status,
+	active,
+	disabled,
+	onActiveChange,
+	removeLabel,
+	onRemove,
+}: {
+	title: string;
+	detail: string;
+	status: string;
+	active: boolean;
+	disabled: boolean;
+	onActiveChange(): void;
+	removeLabel: string;
+	onRemove(): void;
+}) {
 	return (
-		<div className="space-y-2">
-			<Label>{label}</Label>
-			{children}
-		</div>
+		<SettingsRow>
+			<SwitchField
+				label={title}
+				description={detail}
+				trailing={
+					<>
+						<SupportStatus value={status} />
+						<Button aria-label={removeLabel} size="icon" variant="ghost" onClick={onRemove}>
+							<Trash2 />
+						</Button>
+					</>
+				}
+				checked={active}
+				disabled={disabled}
+				onCheckedChange={onActiveChange}
+			/>
+		</SettingsRow>
 	);
 }
 
-function NativeSelect({
+function SelectField({
+	label,
 	value,
 	onChange,
 	options = [],
 	optionsWithLabels = [],
 }: {
+	label: string;
 	value: string;
 	onChange: (value: string) => void;
 	options?: string[];
@@ -1116,8 +1013,8 @@ function NativeSelect({
 	const { t } = useSupportI18n();
 
 	return (
-		<select
-			className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+		<SettingsSelectField
+			label={label}
 			value={value}
 			onChange={(event) => onChange(event.target.value)}
 		>
@@ -1132,30 +1029,35 @@ function NativeSelect({
 					{option.label}
 				</option>
 			))}
-		</select>
+		</SettingsSelectField>
 	);
 }
 
-function RoutingList({ title, items }: { title: string; items: SupportMembership[] }) {
+function RoutingList({
+	title,
+	description,
+	items,
+}: {
+	title: string;
+	description: string;
+	items: SupportMembership[];
+}) {
 	const { t } = useSupportI18n();
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="text-base">{title}</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-2">
-				{items.length === 0 ? (
-					<p className="text-sm text-muted-foreground">{t("No linked members.")}</p>
-				) : (
-					items.map((item) => (
-						<div className="flex items-center justify-between rounded-md border p-3" key={item.id}>
-							<span>{item.display_name}</span>
-							<SupportStatus value={item.active ? item.availability : "disabled"} />
-						</div>
-					))
-				)}
-			</CardContent>
-		</Card>
+		<SettingsSection title={title} description={description}>
+			{items.length === 0 ? (
+				<SettingsRow>
+					<p className="text-sm text-kumo-subtle">{t("No linked members.")}</p>
+				</SettingsRow>
+			) : (
+				items.map((item) => (
+					<SettingsRow className="flex items-center justify-between gap-4 space-y-0" key={item.id}>
+						<span>{item.display_name}</span>
+						<SupportStatus value={item.active ? item.availability : "disabled"} />
+					</SettingsRow>
+				))
+			)}
+		</SettingsSection>
 	);
 }

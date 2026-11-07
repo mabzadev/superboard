@@ -42,6 +42,7 @@ export function parseEmailMessage(
   const kind = String(input.kind || "transactional");
   if (!KINDS.has(kind)) fail("kind_invalid");
   const replyTo = input.replyTo == null ? null : normalizeEmail(input.replyTo);
+  const fromName = senderName(input.fromName);
   const headers = stringRecord(input.headers, "headers", 30);
   const metadata = objectValue(input.metadata, "metadata");
   const templateKey =
@@ -64,12 +65,21 @@ export function parseEmailMessage(
     subject,
     text,
     html,
+    ...(fromName ? { fromName } : {}),
     replyTo,
     headers,
     metadata,
     templateKey,
     projectId,
   };
+}
+
+function senderName(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value !== "string") fail("from_name_invalid");
+  const result = value.trim();
+  if (result.length > 320 || /\p{Cc}/u.test(result)) fail("from_name_invalid");
+  return result || null;
 }
 
 export function parseEmailSmtpTransportRequest(

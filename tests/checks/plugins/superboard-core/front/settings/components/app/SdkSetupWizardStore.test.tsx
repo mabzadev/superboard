@@ -93,7 +93,7 @@ describe("SDK setup store integration step", () => {
 
 	it("explains in French that purchase verification does not read the reference", async () => {
 		render(<SdkSetupWizard platform="android" />, { wrapper: wrapper("fr") });
-		fireEvent.click(await screen.findByRole("button", { name: /Store Integration/u }));
+		fireEvent.click(await screen.findByRole("button", { name: /Intégration du store/u }));
 
 		expect(
 			await screen.findByRole("heading", { name: "Google Play Developer API" }),

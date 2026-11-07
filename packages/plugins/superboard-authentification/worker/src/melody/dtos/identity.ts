@@ -106,14 +106,9 @@ export class GetProcessDto {
 	@IsString()
 	locale: typeConfig.Locale;
 
-	@IsString()
-	@IsOptional()
-	org: string | undefined;
-
 	constructor(dto: GetProcessDto) {
 		this.code = dto.code;
 		this.locale = dto.locale;
-		this.org = dto.org;
 	}
 }
 
@@ -121,7 +116,6 @@ export const parseGetProcess = async (c: Context<typeConfig.Context>) => {
 	const queryDto = new GetProcessDto({
 		code: c.req.query("code") ?? "",
 		locale: requestUtil.getLocaleFromQuery(c, c.req.query("locale")),
-		org: c.req.query("org"),
 	});
 	await validateUtil.dto(queryDto);
 	return queryDto;
@@ -140,17 +134,6 @@ export class PostProcessMfaEnrollDto extends GetProcessDto {
 	}
 }
 
-export class PostProcessOrgSwitchDto extends GetProcessDto {
-	@IsString()
-	@IsNotEmpty()
-	org: string;
-
-	constructor(dto: PostProcessOrgSwitchDto) {
-		super(dto);
-		this.org = dto.org;
-	}
-}
-
 export class PostAuthorizeMfaDto extends GetProcessDto {
 	@IsString()
 	@IsNotEmpty()
@@ -164,17 +147,6 @@ export class PostAuthorizeMfaDto extends GetProcessDto {
 		super(dto);
 		this.mfaCode = dto.mfaCode;
 		this.rememberDevice = dto.rememberDevice;
-	}
-}
-
-export class PostSetupSmsMfaDto extends GetProcessDto {
-	@IsString()
-	@IsNotEmpty()
-	phoneNumber: string;
-
-	constructor(dto: PostSetupSmsMfaDto) {
-		super(dto);
-		this.phoneNumber = dto.phoneNumber;
 	}
 }
 
@@ -347,10 +319,6 @@ export class GetVerifyEmailViewDto {
 
 	@IsString()
 	@IsOptional()
-	org: string | undefined;
-
-	@IsString()
-	@IsOptional()
 	invitationToken: string | undefined;
 
 	@IsString()
@@ -360,7 +328,6 @@ export class GetVerifyEmailViewDto {
 	constructor(dto: GetVerifyEmailViewDto) {
 		this.id = dto.id?.trim();
 		this.locale = dto.locale;
-		this.org = dto.org;
 		this.invitationToken = dto.invitationToken?.trim();
 		this.signinUrl = dto.signinUrl?.trim();
 	}
@@ -374,13 +341,8 @@ export class GetAuthCodeExpiredViewDto {
 	@IsOptional()
 	redirect_uri: string | undefined;
 
-	@IsString()
-	@IsOptional()
-	org: string | undefined;
-
 	constructor(dto: GetAuthCodeExpiredViewDto) {
 		this.locale = dto.locale;
 		this.redirect_uri = dto.redirect_uri;
-		this.org = dto.org;
 	}
 }

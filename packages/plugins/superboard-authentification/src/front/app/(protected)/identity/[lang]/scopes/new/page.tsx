@@ -7,18 +7,16 @@ import Breadcrumb from "../../../../../../identity/components/Breadcrumb.js";
 import ClientTypeSelector from "../../../../../../identity/components/ClientTypeSelector.js";
 import FieldError from "../../../../../../identity/components/FieldError.js";
 import LocaleEditor from "../../../../../../identity/components/LocaleEditor.js";
+import {
+	PropertyLabel,
+	PropertyList,
+	PropertyRow,
+	PropertyValue,
+} from "../../../../../../identity/components/PropertyList.js";
 import RequiredProperty from "../../../../../../identity/components/RequiredProperty.js";
 import SaveButton from "../../../../../../identity/components/SaveButton.js";
 import SubmitError from "../../../../../../identity/components/SubmitError.js";
 import { Input } from "../../../../../../identity/components/ui/input.js";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "../../../../../../identity/components/ui/table.js";
 import { useRouter } from "../../../../../../identity/i18n/navigation.js";
 import { usePostApiV1ScopesMutation } from "../../../../../../identity/services/auth/api.js";
 import { configSignal } from "../../../../../../identity/signals/index.js";
@@ -69,64 +67,63 @@ const Page = () => {
 				}}
 			/>
 			<section>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="max-md:w-24 md:w-48">{t("common.property")}</TableHead>
-							<TableHead>{t("common.value")}</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody className="divide-y">
-						<TableRow>
-							<TableCell>
-								<RequiredProperty title={t("scopes.name")} />
-							</TableCell>
-							<TableCell>
-								<Input
-									data-testid="nameInput"
-									onChange={(e) => onChange("name", e.target.value)}
-									value={values.name}
+				<PropertyList>
+					<PropertyRow>
+						<PropertyLabel>
+							<RequiredProperty title={t("scopes.name")} />
+						</PropertyLabel>
+						<PropertyValue>
+							<Input
+								data-testid="nameInput"
+								onChange={(e) => onChange("name", e.target.value)}
+								value={values.name}
+							/>
+							{showErrors && <FieldError error={errors.name} />}
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("common.note")}</PropertyLabel>
+						<PropertyValue>
+							<Input
+								data-testid="noteInput"
+								onChange={(e) => onChange("note", e.target.value)}
+								value={values.note}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>
+							<RequiredProperty title={t("scopes.type")} />
+						</PropertyLabel>
+						<PropertyValue>
+							<ClientTypeSelector value={values.type} onChange={handleUpdateType} />
+							{showErrors && <FieldError error={errors.type} />}
+						</PropertyValue>
+					</PropertyRow>
+					{configs.ENABLE_USER_APP_CONSENT && values.type === "spa" && (
+						<PropertyRow>
+							<PropertyLabel>{t("scopes.locales")}</PropertyLabel>
+							<PropertyValue>
+								<LocaleEditor
+									description={`* ${t("scopes.localeNote")}`}
+									supportedLocales={configs.SUPPORTED_LOCALES}
+									values={values.locales ?? []}
+									onChange={(locales) => onChange("locales", locales)}
 								/>
-								{showErrors && <FieldError error={errors.name} />}
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("common.note")}</TableCell>
-							<TableCell>
-								<Input
-									data-testid="noteInput"
-									onChange={(e) => onChange("note", e.target.value)}
-									value={values.note}
-								/>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>
-								<RequiredProperty title={t("scopes.type")} />
-							</TableCell>
-							<TableCell>
-								<ClientTypeSelector value={values.type} onChange={handleUpdateType} />
-								{showErrors && <FieldError error={errors.type} />}
-							</TableCell>
-						</TableRow>
-						{configs.ENABLE_USER_APP_CONSENT && values.type === "spa" && (
-							<TableRow>
-								<TableCell>{t("scopes.locales")}</TableCell>
-								<TableCell>
-									<LocaleEditor
-										description={`* ${t("scopes.localeNote")}`}
-										supportedLocales={configs.SUPPORTED_LOCALES}
-										values={values.locales ?? []}
-										onChange={(locales) => onChange("locales", locales)}
-									/>
-								</TableCell>
-							</TableRow>
-						)}
-					</TableBody>
-				</Table>
+							</PropertyValue>
+						</PropertyRow>
+					)}
+				</PropertyList>
 			</section>
 			<SubmitError />
-			<SaveButton className="mt-8" isLoading={isCreating} onClick={handleSubmit} />
+			<div className="mt-8 flex justify-end">
+				<SaveButton
+					isLoading={isCreating}
+					onClick={() => {
+						handleSubmit().catch(() => undefined);
+					}}
+				/>
+			</div>
 		</section>
 	);
 };

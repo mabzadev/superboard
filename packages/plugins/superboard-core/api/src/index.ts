@@ -462,12 +462,6 @@ app
 			},
 			{
 				surface: "sdk",
-				path: "/v1/auth/saml/sp/v1/*",
-				executionPath: "/auth/hosted/saml/sp/v1/*",
-				aliases: ["/saml/sp/v1/*"],
-			},
-			{
-				surface: "sdk",
 				path: "/v1/auth/client.js",
 				executionPath: "/auth/hosted/client.js",
 				aliases: ["/client.js"],
@@ -504,7 +498,7 @@ app
 		if (url.pathname.startsWith("/auth/hosted/")) {
 			const hostedPath = url.pathname.slice("/auth/hosted".length);
 			if (
-				!/^\/(?:oauth2\/v1\/|identity\/v1\/|embedded-auth\/v1\/|saml\/sp\/v1\/)/u.test(
+				!/^\/(?:oauth2\/v1\/|identity\/v1\/|embedded-auth\/v1\/)/u.test(
 					hostedPath,
 				) &&
 				![

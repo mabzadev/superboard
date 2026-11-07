@@ -6,6 +6,7 @@ import { sha256Hex } from "./crypto";
 import type { AnalyticsContext } from "./http";
 import { httpError, positiveLimit, readJson } from "./http";
 import { commitAnalyticsMutation } from "./mutations";
+import { DEFAULT_REPORT_TIMEZONE, localDayExpression, projectReportTimezone } from "./timezone";
 
 type MutationResult = Awaited<ReturnType<typeof commitAnalyticsMutation>>;
 
@@ -371,17 +372,22 @@ export async function analyzeEvent(c: AnalyticsContext) {
 	if (property && !/^[A-Za-z0-9_.:-]+$/u.test(property)) {
 		throw httpError("analytics_property_invalid", "Event property is invalid", 400);
 	}
+	const timezone = await projectReportTimezone(c.env.DB, projectId(c));
+	const firstSeriesInstant = new Date(
+		Math.max(Date.parse(from), Date.parse(to) - 400 * 86_400_000),
+	).toISOString();
+	const day = localDayExpression("occurred_at", firstSeriesInstant, to, timezone);
 	const [series, properties, totals] = await Promise.all([
 		c.env.DB.prepare(
-			`SELECT substr(occurred_at, 1, 10) AS date, COUNT(*) AS events,
+			`SELECT ${day.sql} AS date, COUNT(*) AS events,
               COUNT(DISTINCT COALESCE(user_id_hash, anonymous_id_hash,
                                       app_instance_id_hash)) AS users
        FROM analytics_events_hot
        WHERE project_id = ? AND event_name = ?
          AND occurred_at >= ? AND occurred_at <= ?
-       GROUP BY substr(occurred_at, 1, 10) ORDER BY date`,
+       GROUP BY date ORDER BY date`,
 		)
-			.bind(projectId(c), eventName, from, to)
+			.bind(...day.bindings, projectId(c), eventName, from, to)
 			.all<Record<string, unknown>>(),
 		c.env.DB.prepare(
 			`SELECT DISTINCT property.key AS property
@@ -1212,19 +1218,16 @@ export async function deleteAnnotation(c: AnalyticsContext, id: string): Promise
 
 export async function getAnalyticsSettings(c: AnalyticsContext) {
 	const row = await c.env.DB.prepare(
-		`SELECT hot_retention_days, timezone, data_collection_enabled, updated_at
+		`SELECT hot_retention_days, timezone, updated_at
      FROM analytics_project_settings WHERE project_id = ?`,
 	)
 		.bind(projectId(c))
 		.first<Record<string, unknown>>();
 	return row
-		? {
-				...row,
-				data_collection_enabled: Number(row.data_collection_enabled) === 1,
-			}
+		? { ...row, data_collection_enabled: true }
 		: {
 				hot_retention_days: 35,
-				timezone: "UTC",
+				timezone: DEFAULT_REPORT_TIMEZONE,
 				data_collection_enabled: true,
 				updated_at: null,
 			};
@@ -1240,15 +1243,11 @@ export async function updateAnalyticsSettings(c: AnalyticsContext): Promise<Muta
 		366,
 	);
 	const timezone = optionalText(body.timezone, 64) ?? String(current.timezone);
-	const enabled =
-		body.data_collection_enabled === undefined
-			? Boolean(current.data_collection_enabled)
-			: body.data_collection_enabled === true;
 	const now = new Date().toISOString();
 	const data = {
 		hot_retention_days: retention,
 		timezone,
-		data_collection_enabled: enabled,
+		data_collection_enabled: true,
 		updated_at: now,
 	};
 	return mutation(c, {
@@ -1260,14 +1259,13 @@ export async function updateAnalyticsSettings(c: AnalyticsContext): Promise<Muta
 		statements: [
 			c.env.DB.prepare(
 				`INSERT INTO analytics_project_settings
-        (project_id, hot_retention_days, timezone, data_collection_enabled, updated_at)
-       VALUES (?, ?, ?, ?, ?)
+        (project_id, hot_retention_days, timezone, updated_at)
+       VALUES (?, ?, ?, ?)
        ON CONFLICT(project_id) DO UPDATE SET
          hot_retention_days = excluded.hot_retention_days,
          timezone = excluded.timezone,
-         data_collection_enabled = excluded.data_collection_enabled,
          updated_at = excluded.updated_at`,
-			).bind(projectId(c), retention, timezone, enabled ? 1 : 0, now),
+			).bind(projectId(c), retention, timezone, now),
 		],
 	});
 }

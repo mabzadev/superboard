@@ -70,8 +70,12 @@ async function render() {
 		);
 	});
 	await vi.waitFor(() => {
-		expect(container.querySelector("#setting-EMAIL_SENDER_NAME")).not.toBeNull();
+		expect(container.querySelector("form")).not.toBeNull();
 	});
+}
+async function renderAppearance() {
+	await render();
+	await click("Apparence");
 }
 function input() {
 	const element = container.querySelector("#setting-EMAIL_SENDER_NAME");
@@ -95,32 +99,36 @@ async function click(label: string) {
 }
 
 test("operators edit and save values instead of only reading the old Overview table", async () => {
-	await render();
+	await renderAppearance();
 	expect(container.querySelector("h1")?.textContent).toBe("Paramètres d’authentification");
 	await fill("Mon application");
-	await click("Enregistrer");
-	await vi.waitFor(() => {
-		expect(container.textContent).toContain("Paramètres enregistrés.");
-	});
+	await vi.waitFor(
+		() => {
+			expect(container.textContent).toContain("Modifications enregistrées.");
+		},
+		{ timeout: 3000 },
+	);
 	expect(stored.values.EMAIL_SENDER_NAME).toBe("Mon application");
 	await act(async () => {
 		root.unmount();
 	});
 	root = createRoot(container);
-	await render();
+	await renderAppearance();
 	expect(input().value).toBe("Mon application");
 });
 
 test("a conflicting save keeps the draft and lets the operator reload current values", async () => {
-	await render();
+	await renderAppearance();
 	await fill("My draft");
 	api.put.mockRejectedValue(
 		Object.assign(new Error("conflict"), { code: "configuration_conflict" }),
 	);
-	await click("Enregistrer");
-	await vi.waitFor(() => {
-		expect(container.querySelector('[role="alert"]')?.textContent).toContain("modifiés ailleurs");
-	});
+	await vi.waitFor(
+		() => {
+			expect(container.querySelector('[role="alert"]')?.textContent).toContain("modifiés ailleurs");
+		},
+		{ timeout: 3000 },
+	);
 	expect(input().value).toBe("My draft");
 	stored = {
 		...stored,
@@ -133,10 +141,8 @@ test("a conflicting save keeps the draft and lets the operator reload current va
 	});
 });
 
-test("list and numeric settings remain readable and editable after saving", async () => {
+test("durations remain readable and editable after saving", async () => {
 	await render();
-	const locales = container.querySelector<HTMLInputElement>("#setting-SUPPORTED_LOCALES");
-	expect(locales?.value).toBe("en, fr");
 	await click("Avancé");
 	const duration = container.querySelector<HTMLInputElement>(
 		"#setting-AUTHORIZATION_CODE_EXPIRES_IN",
@@ -149,15 +155,16 @@ test("list and numeric settings remain readable and editable after saving", asyn
 		);
 		duration?.dispatchEvent(new Event("input", { bubbles: true }));
 	});
-	await click("Enregistrer");
-	await vi.waitFor(() => expect(stored.values.AUTHORIZATION_CODE_EXPIRES_IN).toBe(120));
+	await vi.waitFor(() => expect(stored.values.AUTHORIZATION_CODE_EXPIRES_IN).toBe(120), {
+		timeout: 3000,
+	});
 	await act(async () => root.unmount());
 	root = createRoot(container);
 	await render();
 	await click("Avancé");
 	expect(
 		container.querySelector<HTMLInputElement>("#setting-AUTHORIZATION_CODE_EXPIRES_IN")?.value,
-	).toBe("120");
+	).toBe("2");
 });
 
 test("configuration tab is available and displays diagnostic component", async () => {

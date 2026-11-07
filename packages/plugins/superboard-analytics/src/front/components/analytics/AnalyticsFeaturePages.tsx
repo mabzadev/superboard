@@ -12,6 +12,17 @@ import {
 } from "@superboard/front-ui/modules/ModulePage.js";
 import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
+import {
+	AutosaveIndicator,
+	SettingsActions,
+	SettingsDependents,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+	SwitchField,
+	useSettingsAutosave,
+	type AutosaveStatus,
+} from "@superboard/front-ui/settings-form";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
@@ -33,7 +44,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@superboard/front-ui/ui/select.js";
-import { Switch } from "@superboard/front-ui/ui/switch.js";
 import {
 	Table as FrontTable,
 	TableHeader as FrontTableHeader,
@@ -1524,45 +1534,207 @@ export function AnalyticsAlertsPage() {
 	);
 }
 
+const settingsTabs = ["applications", "collection", "hooks", "annotations", "advanced"] as const;
+type SettingsTab = (typeof settingsTabs)[number];
+
+const allCollectedEvents = "*";
+const alertEvent = "alert.triggered";
+const listSeparator = /[,\n]/u;
+const statusPriority: readonly AutosaveStatus[] = ["error", "saving", "pending", "saved"];
+const panelClass = "space-y-8";
+const timezoneListId = "analytics-reporting-timezones";
+
+interface ProcessingDraft {
+	projectId: string;
+	retentionDays: string;
+	timezone: string;
+}
+
+type ProcessingChange = Partial<Omit<ProcessingDraft, "projectId">>;
+
+interface HookDraft {
+	name: string;
+	endpoint: string;
+	collected: boolean;
+	someEventsOnly: boolean;
+	eventNames: string;
+	alerts: boolean;
+	signed: boolean;
+	secret: string;
+}
+
+const newHook: HookDraft = {
+	name: "",
+	endpoint: "",
+	collected: true,
+	someEventsOnly: false,
+	eventNames: "",
+	alerts: false,
+	signed: false,
+	secret: "",
+};
+
+function isSettingsTab(value: string | null): value is SettingsTab {
+	return settingsTabs.some((tab) => tab === value);
+}
+
+function requestedTab(): SettingsTab {
+	const requested = new URLSearchParams(globalThis.location?.search ?? "").get("tab");
+	return isSettingsTab(requested) ? requested : "applications";
+}
+
+function processingDraft(projectId: string, settings: AnalyticsSettings): ProcessingDraft {
+	return {
+		projectId,
+		retentionDays: String(settings.hot_retention_days),
+		timezone: settings.timezone,
+	};
+}
+
+function retentionDays(value: string) {
+	const text = value.trim();
+	const days = Number(text);
+	return /^\d+$/u.test(text) && days >= 1 && days <= 366 ? days : null;
+}
+
+function isTimezone(value: string) {
+	const timeZone = value.trim();
+	if (!timeZone) return false;
+	try {
+		return Boolean(new Intl.DateTimeFormat("en", { timeZone }).resolvedOptions().timeZone);
+	} catch {
+		return false;
+	}
+}
+
+function listedEvents(value: string) {
+	return value
+		.split(listSeparator)
+		.map((item) => item.trim())
+		.filter(Boolean);
+}
+
+function hookEventTypes(hook: HookDraft) {
+	const collected = hook.someEventsOnly ? listedEvents(hook.eventNames) : [allCollectedEvents];
+	return [...new Set([...(hook.collected ? collected : []), ...(hook.alerts ? [alertEvent] : [])])];
+}
+
+function hookReady(hook: HookDraft) {
+	return (
+		hook.name.trim() !== "" &&
+		hook.endpoint.trim() !== "" &&
+		hookEventTypes(hook).length > 0 &&
+		(!hook.collected || !hook.someEventsOnly || listedEvents(hook.eventNames).length > 0) &&
+		(!hook.signed || hook.secret !== "")
+	);
+}
+
+function combinedStatus(...statuses: AutosaveStatus[]): AutosaveStatus {
+	return statusPriority.find((status) => statuses.includes(status)) ?? "idle";
+}
+
+function useProcessingAutosave(draft: ProcessingDraft | null) {
+	const valid =
+		draft !== null && retentionDays(draft.retentionDays) !== null && isTimezone(draft.timezone);
+	const autosave = useSettingsAutosave({
+		resourceKey: draft?.projectId ?? "",
+		value: draft,
+		enabled: valid,
+		save: async (next) => {
+			if (!next) return;
+			await updateAnalyticsSettings(next.projectId, {
+				hot_retention_days: retentionDays(next.retentionDays) ?? undefined,
+				timezone: next.timezone.trim(),
+			});
+		},
+	});
+	return { retry: autosave.retry, status: valid ? autosave.status : "idle" };
+}
+
+function useApplicationActivity(
+	projectId: string,
+	applications: AnalyticsApplication[],
+	onSaved: (saved: Record<string, boolean>) => void,
+) {
+	const [changes, setChanges] = useState<{ projectId: string; active: Record<string, boolean> }>({
+		projectId,
+		active: {},
+	});
+	const active = changes.projectId === projectId ? changes.active : {};
+	const autosave = useSettingsAutosave({
+		resourceKey: projectId,
+		value: active,
+		save: async (next) => {
+			const changed = Object.entries(next).filter(
+				([id, value]) =>
+					applications.find((application) => application.application_id === id)?.active !== value,
+			);
+			await Promise.all(
+				changed.map(([id, value]) => updateAnalyticsApplication(projectId, id, { active: value })),
+			);
+			onSaved(Object.fromEntries(changed));
+		},
+	});
+	const setActive = (applicationId: string, value: boolean) => {
+		setChanges((current) => ({
+			projectId,
+			active: {
+				...(current.projectId === projectId ? current.active : {}),
+				[applicationId]: value,
+			},
+		}));
+	};
+	return { active, setActive, status: autosave.status, retry: autosave.retry };
+}
+
 export function AnalyticsSettingsPage() {
 	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
-	const [tab, setTab] = useState(() => {
-		const requested = new URLSearchParams(globalThis.location?.search ?? "").get("tab");
-		return requested && ["applications", "collection", "hooks", "annotations"].includes(requested)
-			? requested
-			: "applications";
-	});
-	const [settings, setSettings] = useState<AnalyticsSettings | null>(null);
+	const projectId = selectedProject?.id ?? "";
+	const [tab, setTab] = useState(requestedTab);
+	const [draft, setDraft] = useState<ProcessingDraft | null>(null);
 	const [applications, setApplications] = useState<AnalyticsApplication[]>([]);
 	const [hooks, setHooks] = useState<AnalyticsHook[]>([]);
 	const [annotations, setAnnotations] = useState<AnalyticsAnnotation[]>([]);
-	const [hookName, setHookName] = useState("");
-	const [hookUrl, setHookUrl] = useState("");
-	const [hookEvents, setHookEvents] = useState("*");
-	const [hookSecret, setHookSecret] = useState("");
+	const [hook, setHook] = useState(newHook);
 	const [annotation, setAnnotation] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const processing = useProcessingAutosave(draft);
+	const activity = useApplicationActivity(projectId, applications, (saved) => {
+		setApplications((current) =>
+			current.map((application) =>
+				Object.hasOwn(saved, application.application_id)
+					? { ...application, active: saved[application.application_id] === true }
+					: application,
+			),
+		);
+	});
 	const load = useCallback(async () => {
-		if (!selectedProject) return;
-		try {
-			const [settingsData, applicationData, hookData, annotationData] = await Promise.all([
-				getAnalyticsSettings(selectedProject.id),
-				getAnalyticsApplications(selectedProject.id),
-				getAnalyticsHooks(selectedProject.id),
-				getAnalyticsAnnotations(selectedProject.id),
-			]);
-			setSettings(settingsData);
-			setApplications(applicationData.items);
-			setHooks(hookData.items);
-			setAnnotations(annotationData.items);
-			setError(null);
-		} catch (cause) {
-			setError(moduleErrorMessage(cause, locale));
-		}
-	}, [selectedProject, locale]);
-	useEffect(() => void load(), [load]);
+		if (!projectId) return;
+		await Promise.all([
+			getAnalyticsSettings(projectId),
+			getAnalyticsApplications(projectId),
+			getAnalyticsHooks(projectId),
+			getAnalyticsAnnotations(projectId),
+		]).then(
+			([settingsData, applicationData, hookData, annotationData]) => {
+				setDraft((current) =>
+					current?.projectId === projectId ? current : processingDraft(projectId, settingsData),
+				);
+				setApplications(applicationData.items);
+				setHooks(hookData.items);
+				setAnnotations(annotationData.items);
+				setError(null);
+			},
+			(cause: unknown) => {
+				setError(moduleErrorMessage(cause, locale));
+			},
+		);
+	}, [projectId, locale]);
+	useEffect(() => {
+		load().catch(() => undefined);
+	}, [load]);
 	const run = async (action: () => Promise<unknown>, message: string) => {
 		setBusy(true);
 		try {
@@ -1575,6 +1747,10 @@ export function AnalyticsSettingsPage() {
 			setBusy(false);
 		}
 	};
+	const editable = draft?.projectId === projectId ? draft : null;
+	const changeProcessing = (change: ProcessingChange) => {
+		setDraft((current) => (current ? { ...current, ...change } : current));
+	};
 	return (
 		<ModulePage
 			title={t("Analytics settings")}
@@ -1586,6 +1762,7 @@ export function AnalyticsSettingsPage() {
 			<Tabs
 				value={tab}
 				onValueChange={(value) => {
+					if (!isSettingsTab(value)) return;
 					setTab(value);
 					const url = new URL(window.location.href);
 					url.searchParams.set("tab", value);
@@ -1595,343 +1772,542 @@ export function AnalyticsSettingsPage() {
 			>
 				<TabsList aria-label={t("Settings sections")} className="h-auto flex-wrap">
 					<TabsTrigger value="applications">{t("Applications")}</TabsTrigger>
-					<TabsTrigger value="collection">{t("Analytics processing")}</TabsTrigger>
+					<TabsTrigger value="collection">{t("Reports")}</TabsTrigger>
 					<TabsTrigger value="hooks">{t("Webhooks")}</TabsTrigger>
 					<TabsTrigger value="annotations">{t("Annotations")}</TabsTrigger>
+					<TabsTrigger value="advanced">{t("Advanced")}</TabsTrigger>
 				</TabsList>
-				{!selectedProject ? (
+				{!projectId ? (
 					<div className="pt-4">
 						<EmptyProject />
 					</div>
 				) : (
 					<>
-						<TabsContent value="applications">
-							<Card>
-								<CardHeader>
-									<CardTitle>{t("Observed applications")}</CardTitle>
-									<CardDescription>
-										{t("Applications appear automatically after their first accepted event.")}
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="space-y-3">
-									{applications.map((application) => (
-										<div
-											key={application.application_id}
-											className="flex flex-col gap-3 rounded-xl border p-4 md:flex-row md:items-center md:justify-between"
-										>
-											<div>
-												<div className="flex items-center gap-2">
-													<span className="font-medium">{application.name}</span>
-													<Badge variant="outline">{application.platform || t("Unknown")}</Badge>
-												</div>
-												<p className="mt-1 font-mono text-xs text-muted-foreground">
-													{application.application_id}
-												</p>
-												<p className="mt-1 text-xs text-muted-foreground">
-													{t("Last seen at", { date: date(application.last_seen_at, locale) })}
-												</p>
-											</div>
-											<div className="flex items-center gap-3">
-												<Label htmlFor={`application-${application.application_id}`}>
-													{t("Process events")}
-												</Label>
-												<Switch
-													id={`application-${application.application_id}`}
-													checked={application.active}
-													onCheckedChange={(active) =>
-														void run(
-															() =>
-																updateAnalyticsApplication(
-																	selectedProject.id,
-																	application.application_id,
-																	{ active },
-																),
-															active ? t("Application enabled") : t("Application disabled"),
-														)
-													}
-												/>
-											</div>
-										</div>
-									))}
-									{!applications.length && (
-										<EmptyState compact>{t("No applications observed.")}</EmptyState>
-									)}
-								</CardContent>
-							</Card>
+						<TabsContent value="applications" className={panelClass}>
+							<ApplicationsPanel
+								applications={applications}
+								active={activity.active}
+								onActiveChange={activity.setActive}
+							/>
 						</TabsContent>
-						<TabsContent value="collection">
-							{settings && (
-								<Card className="max-w-2xl">
-									<CardHeader>
-										<CardTitle>{t("Processing & retention")}</CardTitle>
-										<CardDescription>
-											{t("Set Analytics processing, hot-event retention and reporting timezone.")}
-										</CardDescription>
-									</CardHeader>
-									<CardContent className="space-y-5">
-										<div className="flex items-center justify-between rounded-lg border p-4">
-											<div>
-												<div className="font-medium">{t("Process collected events")}</div>
-												<div className="text-sm text-muted-foreground">
-													{t("Core collection continues while Analytics processing is paused.")}
-												</div>
-											</div>
-											<Switch
-												aria-label={t("Process collected events")}
-												checked={settings.data_collection_enabled}
-												onCheckedChange={(data_collection_enabled) =>
-													setSettings({ ...settings, data_collection_enabled })
-												}
-											/>
-										</div>
-										<Field label={t("Hot-event retention (days)")}>
-											<Input
-												aria-label={t("Hot-event retention (days)")}
-												type="number"
-												min={1}
-												max={366}
-												value={settings.hot_retention_days}
-												onChange={(event) =>
-													setSettings({
-														...settings,
-														hot_retention_days: Number(event.target.value),
-													})
-												}
-											/>
-										</Field>
-										<Field label={t("Reporting timezone")}>
-											<Input
-												aria-label={t("Reporting timezone")}
-												value={settings.timezone}
-												onChange={(event) =>
-													setSettings({
-														...settings,
-														timezone: event.target.value,
-													})
-												}
-											/>
-										</Field>
-										<Button
-											disabled={busy}
-											onClick={() =>
-												void run(
-													() => updateAnalyticsSettings(selectedProject.id, settings),
-													t("Analytics settings saved"),
-												)
-											}
-										>
-											<Save className="size-4" />
-											{t("Save settings")}
-										</Button>
-									</CardContent>
-								</Card>
-							)}
+						<TabsContent value="collection" className={panelClass}>
+							{editable && <ProcessingPanel draft={editable} onChange={changeProcessing} />}
 						</TabsContent>
-						<TabsContent value="hooks" className="space-y-5">
-							<Card className="max-w-2xl">
-								<CardHeader>
-									<CardTitle className="text-base">{t("Signed webhook")}</CardTitle>
-									<CardDescription>
-										{t("Only public HTTPS endpoints are accepted. Secrets are encrypted at rest.")}
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									<Field label={t("Name")}>
-										<Input
-											aria-label={t("Name")}
-											value={hookName}
-											onChange={(event) => setHookName(event.target.value)}
-											placeholder={t("Data warehouse")}
-										/>
-									</Field>
-									<Field label={t("Endpoint")}>
-										<Input
-											type="url"
-											aria-label={t("Endpoint")}
-											value={hookUrl}
-											onChange={(event) => setHookUrl(event.target.value)}
-											placeholder={t("https://hooks.example.com/analytics")}
-										/>
-									</Field>
-									<Field label={t("Events")}>
-										<Input
-											aria-label={t("Events")}
-											value={hookEvents}
-											onChange={(event) => setHookEvents(event.target.value)}
-											placeholder={t("*, alert.triggered")}
-										/>
-									</Field>
-									<Field label={t("Signing secret")}>
-										<Input
-											type="password"
-											aria-label={t("Signing secret")}
-											value={hookSecret}
-											onChange={(event) => setHookSecret(event.target.value)}
-										/>
-									</Field>
-									<Button
-										className="w-full"
-										disabled={busy || !hookName.trim() || !hookUrl.trim()}
-										onClick={() =>
-											void run(async () => {
-												await createAnalyticsHook(selectedProject.id, {
-													name: hookName.trim(),
-													endpoint_url: hookUrl.trim(),
-													event_types: hookEvents
-														.split(",")
-														.map((item) => item.trim())
-														.filter(Boolean),
-													secret: hookSecret || undefined,
-													enabled: true,
-												});
-												setHookName("");
-												setHookUrl("");
-												setHookSecret("");
-											}, t("Webhook created"))
-										}
-									>
-										<Webhook className="size-4" />
-										{t("Add webhook")}
-									</Button>
-								</CardContent>
-							</Card>
-							<Card>
-								<CardHeader>
-									<CardTitle>{t("Destinations")}</CardTitle>
-									<CardDescription>
-										{t("Deliveries are idempotent, signed and retried with backoff.")}
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="space-y-3">
-									{hooks.map((hook) => (
-										<div
-											key={hook.id}
-											className="flex items-start justify-between gap-4 rounded-xl border p-4"
-										>
-											<div>
-												<div className="flex items-center gap-2">
-													<span className="font-medium">{hook.name}</span>
-													<StatusBadge
-														ok={hook.enabled}
-														okText={t("Active")}
-														badText={t("Paused")}
-													/>
-												</div>
-												<p className="mt-1 break-all text-sm text-muted-foreground">
-													{hook.endpoint_url}
-												</p>
-												<p className="mt-2 text-xs text-muted-foreground">
-													{hook.event_types.join(", ")} ·{" "}
-													{hook.secret_configured ? t("HMAC signed") : t("Unsigned")} ·{" "}
-													{hook.last_delivery_status
-														? t(labelize(hook.last_delivery_status))
-														: t("no deliveries")}
-												</p>
-											</div>
-											<Button
-												variant="ghost"
-												size="icon"
-												aria-label={t("Delete item", { name: hook.name })}
-												onClick={() =>
-													void run(
-														() => deleteAnalyticsHook(selectedProject.id, hook.id),
-														t("Webhook deleted"),
-													)
-												}
-											>
-												<Trash2 className="size-4" />
-											</Button>
-										</div>
-									))}
-									{!hooks.length && (
-										<EmptyState compact>{t("No webhook destinations.")}</EmptyState>
-									)}
-								</CardContent>
-							</Card>
+						<TabsContent value="hooks" className={panelClass}>
+							<WebhooksPanel
+								hooks={hooks}
+								draft={hook}
+								busy={busy}
+								onDraftChange={setHook}
+								onCreate={() =>
+									void run(async () => {
+										await createAnalyticsHook(projectId, {
+											name: hook.name.trim(),
+											endpoint_url: hook.endpoint.trim(),
+											event_types: hookEventTypes(hook),
+											secret: hook.signed ? hook.secret : undefined,
+											enabled: true,
+										});
+										setHook((current) => ({ ...current, name: "", endpoint: "", secret: "" }));
+									}, t("Webhook created"))
+								}
+								onDelete={(item) =>
+									void run(() => deleteAnalyticsHook(projectId, item.id), t("Webhook deleted"))
+								}
+							/>
 						</TabsContent>
-						<TabsContent value="annotations" className="space-y-5">
-							<Card className="max-w-2xl">
-								<CardHeader>
-									<CardTitle className="text-base">{t("Add annotation")}</CardTitle>
-									<CardDescription>
-										{t("Mark releases or campaigns on the analytics timeline.")}
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									<Field label={t("Title")}>
-										<Input
-											aria-label={t("Annotation title")}
-											value={annotation}
-											onChange={(event) => setAnnotation(event.target.value)}
-											placeholder={t("Version 3.2 released")}
-										/>
-									</Field>
-									<Button
-										className="w-full"
-										disabled={busy || !annotation.trim()}
-										onClick={() =>
-											void run(async () => {
-												await createAnalyticsAnnotation(selectedProject.id, {
-													title: annotation.trim(),
-													annotation_at: new Date().toISOString(),
-												});
-												setAnnotation("");
-											}, t("Annotation added"))
-										}
-									>
-										<Plus className="size-4" />
-										{t("Add now")}
-									</Button>
-								</CardContent>
-							</Card>
-							<Card>
-								<CardHeader>
-									<CardTitle>{t("Timeline")}</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-3">
-									{annotations.map((item) => (
-										<div
-											key={item.id}
-											className="flex items-center justify-between gap-4 rounded-xl border p-4"
-										>
-											<div className="flex items-center gap-3">
-												<span
-													className="size-3 rounded-full"
-													style={{ backgroundColor: item.color }}
-												/>
-												<div>
-													<div className="font-medium">{item.title}</div>
-													<div className="text-xs text-muted-foreground">
-														{date(item.annotation_at, locale)}
-													</div>
-												</div>
-											</div>
-											<Button
-												variant="ghost"
-												size="icon"
-												aria-label={t("Delete item", { name: item.title })}
-												onClick={() =>
-													void run(
-														() => deleteAnalyticsAnnotation(selectedProject.id, item.id),
-														t("Annotation deleted"),
-													)
-												}
-											>
-												<Trash2 className="size-4" />
-											</Button>
-										</div>
-									))}
-									{!annotations.length && (
-										<EmptyState compact>{t("No timeline annotations.")}</EmptyState>
-									)}
-								</CardContent>
-							</Card>
+						<TabsContent value="annotations" className={panelClass}>
+							<AnnotationsPanel
+								annotations={annotations}
+								title={annotation}
+								busy={busy}
+								onTitleChange={setAnnotation}
+								onCreate={() =>
+									void run(async () => {
+										await createAnalyticsAnnotation(projectId, {
+											title: annotation.trim(),
+											annotation_at: new Date().toISOString(),
+										});
+										setAnnotation("");
+									}, t("Annotation added"))
+								}
+								onDelete={(item) =>
+									void run(
+										() => deleteAnalyticsAnnotation(projectId, item.id),
+										t("Annotation deleted"),
+									)
+								}
+							/>
+						</TabsContent>
+						<TabsContent value="advanced" className={panelClass}>
+							<AdvancedPanel
+								draft={editable}
+								applications={applications}
+								onChange={changeProcessing}
+							/>
 						</TabsContent>
 					</>
 				)}
 			</Tabs>
+			<AutosaveIndicator
+				status={combinedStatus(processing.status, activity.status)}
+				onRetry={() => {
+					processing.retry();
+					activity.retry();
+				}}
+			/>
 			<PluginDiagnosticsLink locale={locale} />
 		</ModulePage>
+	);
+}
+
+function StateBadge({ on }: { on: boolean }) {
+	const { t } = useAnalyticsI18n();
+	return <Badge variant={on ? "success" : "default"}>{on ? t("Enabled") : t("Off")}</Badge>;
+}
+
+function EmptyRow({ children }: { children: string }) {
+	return (
+		<SettingsRow>
+			<p className="text-sm text-kumo-subtle">{children}</p>
+		</SettingsRow>
+	);
+}
+
+function ApplicationsPanel({
+	applications,
+	active,
+	onActiveChange,
+}: {
+	applications: AnalyticsApplication[];
+	active: Record<string, boolean>;
+	onActiveChange(applicationId: string, active: boolean): void;
+}) {
+	const { t, locale } = useAnalyticsI18n();
+	return (
+		<SettingsSection
+			title={t("Observed applications")}
+			description={t("Choose which applications have their events processed.")}
+		>
+			{applications.length ? (
+				applications.map((application) => {
+					const checked = active[application.application_id] ?? application.active;
+					return (
+						<SettingsRow key={application.application_id}>
+							<SwitchField
+								label={application.name}
+								description={`${application.platform || t("Unknown")} · ${t("Last seen at", {
+									date: date(application.last_seen_at, locale),
+								})}`}
+								trailing={<StateBadge on={checked} />}
+								checked={checked}
+								onCheckedChange={(next) => {
+									onActiveChange(application.application_id, next);
+								}}
+							/>
+						</SettingsRow>
+					);
+				})
+			) : (
+				<EmptyRow>
+					{`${t("No applications observed.")} ${t("Applications appear automatically after their first accepted event.")}`}
+				</EmptyRow>
+			)}
+		</SettingsSection>
+	);
+}
+
+function ProcessingPanel({
+	draft,
+	onChange,
+}: {
+	draft: ProcessingDraft;
+	onChange(change: ProcessingChange): void;
+}) {
+	const { t } = useAnalyticsI18n();
+	const timezones = useMemo(() => Intl.supportedValuesOf("timeZone"), []);
+	const timezoneValid = isTimezone(draft.timezone);
+	return (
+		<SettingsSection
+			title={t("Time zone")}
+			description={t("Days in reports and dashboards start and end in this time zone.")}
+		>
+			<SettingsRow>
+				<SettingsTextField
+					label={t("Reporting timezone")}
+					description={t("A time zone name, such as Europe/Paris or UTC.")}
+					list={timezoneListId}
+					autoComplete="off"
+					aria-invalid={!timezoneValid}
+					value={draft.timezone}
+					onChange={(event) => {
+						onChange({ timezone: event.target.value });
+					}}
+				/>
+				<datalist id={timezoneListId}>
+					{timezones.map((zone) => (
+						<option key={zone} value={zone} />
+					))}
+				</datalist>
+				{!timezoneValid && (
+					<p className="text-sm text-kumo-danger">
+						{t("Enter a valid time zone, such as Europe/Paris.")}
+					</p>
+				)}
+			</SettingsRow>
+		</SettingsSection>
+	);
+}
+
+function WebhooksPanel({
+	hooks,
+	draft,
+	busy,
+	onDraftChange,
+	onCreate,
+	onDelete,
+}: {
+	hooks: AnalyticsHook[];
+	draft: HookDraft;
+	busy: boolean;
+	onDraftChange(draft: HookDraft): void;
+	onCreate(): void;
+	onDelete(hook: AnalyticsHook): void;
+}) {
+	const { t } = useAnalyticsI18n();
+	const change = (patch: Partial<HookDraft>) => {
+		onDraftChange({ ...draft, ...patch });
+	};
+	return (
+		<>
+			<SettingsSection
+				title={t("Destinations")}
+				description={t(
+					"Services that receive analytics events. Failed deliveries are retried automatically.",
+				)}
+			>
+				{hooks.length ? (
+					hooks.map((hook) => (
+						<HookRow
+							key={hook.id}
+							hook={hook}
+							onDelete={() => {
+								onDelete(hook);
+							}}
+						/>
+					))
+				) : (
+					<EmptyRow>{t("No webhook destinations.")}</EmptyRow>
+				)}
+			</SettingsSection>
+			<div className="space-y-3">
+				<SettingsSection
+					title={t("New webhook")}
+					description={t("Send analytics events to another service over HTTPS.")}
+				>
+					<SettingsRow>
+						<SettingsTextField
+							label={t("Name")}
+							value={draft.name}
+							placeholder={t("Data warehouse")}
+							onChange={(event) => {
+								change({ name: event.target.value });
+							}}
+						/>
+					</SettingsRow>
+					<SettingsRow>
+						<SettingsTextField
+							label={t("Endpoint")}
+							description={t("Only public HTTPS addresses are accepted.")}
+							type="url"
+							value={draft.endpoint}
+							placeholder={t("https://hooks.example.com/analytics")}
+							onChange={(event) => {
+								change({ endpoint: event.target.value });
+							}}
+						/>
+					</SettingsRow>
+					<SettingsRow>
+						<SwitchField
+							label={t("Send collected events")}
+							description={t("Events received from your applications.")}
+							checked={draft.collected}
+							onCheckedChange={(collected) => {
+								change({ collected });
+							}}
+						/>
+						{draft.collected && (
+							<SettingsDependents>
+								<SwitchField
+									label={t("Only some events")}
+									checked={draft.someEventsOnly}
+									onCheckedChange={(someEventsOnly) => {
+										change({ someEventsOnly });
+									}}
+								/>
+								{draft.someEventsOnly && (
+									<SettingsDependents>
+										<SettingsTextField
+											label={t("Event names")}
+											description={t("Separate names with commas.")}
+											value={draft.eventNames}
+											placeholder={t("checkout.completed, app.opened")}
+											onChange={(event) => {
+												change({ eventNames: event.target.value });
+											}}
+										/>
+									</SettingsDependents>
+								)}
+							</SettingsDependents>
+						)}
+					</SettingsRow>
+					<SettingsRow>
+						<SwitchField
+							label={t("Send triggered alerts")}
+							description={t("Sent when an analytics alert fires.")}
+							checked={draft.alerts}
+							onCheckedChange={(alerts) => {
+								change({ alerts });
+							}}
+						/>
+					</SettingsRow>
+					<SettingsRow>
+						<SwitchField
+							label={t("Sign deliveries")}
+							description={t(
+								"The receiving service can check each delivery with a shared secret, encrypted at rest.",
+							)}
+							checked={draft.signed}
+							onCheckedChange={(signed) => {
+								change({ signed });
+							}}
+						/>
+						{draft.signed && (
+							<SettingsDependents>
+								<SettingsTextField
+									label={t("Signing secret")}
+									type="password"
+									autoComplete="new-password"
+									value={draft.secret}
+									onChange={(event) => {
+										change({ secret: event.target.value });
+									}}
+								/>
+							</SettingsDependents>
+						)}
+					</SettingsRow>
+				</SettingsSection>
+				<SettingsActions>
+					<Button disabled={busy || !hookReady(draft)} onClick={onCreate}>
+						<Webhook className="size-4" />
+						{t("Add webhook")}
+					</Button>
+				</SettingsActions>
+			</div>
+		</>
+	);
+}
+
+function HookRow({ hook, onDelete }: { hook: AnalyticsHook; onDelete(): void }) {
+	const { t, locale } = useAnalyticsI18n();
+	const events = hook.event_types
+		.map((type) =>
+			type === allCollectedEvents
+				? t("All collected events")
+				: type === alertEvent
+					? t("Triggered alerts")
+					: type,
+		)
+		.join(", ");
+	const delivery = hook.last_delivery_status
+		? [
+				t(labelize(hook.last_delivery_status)),
+				hook.last_delivery_at ? date(hook.last_delivery_at, locale) : "",
+			]
+				.filter(Boolean)
+				.join(" · ")
+		: null;
+	return (
+		<SettingsRow>
+			<div className="flex items-start justify-between gap-4">
+				<div className="min-w-0 space-y-1">
+					<p className="text-sm font-medium">{hook.name}</p>
+					<p className="break-all text-sm text-kumo-subtle">{hook.endpoint_url}</p>
+					<p className="text-xs text-kumo-subtle">{t("Hook events", { events })}</p>
+					<p className="text-xs text-kumo-subtle">
+						{delivery ? t("Last delivery", { status: delivery }) : t("No deliveries yet")}
+					</p>
+				</div>
+				<div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+					<StateBadge on={hook.enabled} />
+					<Badge variant={hook.secret_configured ? "success" : "warning"}>
+						{hook.secret_configured ? t("Signed") : t("Unsigned")}
+					</Badge>
+					<Button
+						variant="ghost"
+						size="icon"
+						aria-label={t("Delete item", { name: hook.name })}
+						onClick={onDelete}
+					>
+						<Trash2 className="size-4" />
+					</Button>
+				</div>
+			</div>
+		</SettingsRow>
+	);
+}
+
+function AnnotationsPanel({
+	annotations,
+	title,
+	busy,
+	onTitleChange,
+	onCreate,
+	onDelete,
+}: {
+	annotations: AnalyticsAnnotation[];
+	title: string;
+	busy: boolean;
+	onTitleChange(title: string): void;
+	onCreate(): void;
+	onDelete(annotation: AnalyticsAnnotation): void;
+}) {
+	const { t, locale } = useAnalyticsI18n();
+	return (
+		<>
+			<SettingsSection
+				title={t("Timeline")}
+				description={t("Releases and campaigns marked on the analytics timeline.")}
+			>
+				{annotations.length ? (
+					annotations.map((item) => (
+						<SettingsRow key={item.id}>
+							<div className="flex items-center justify-between gap-4">
+								<div className="flex min-w-0 items-center gap-3">
+									<span
+										className="size-3 shrink-0 rounded-full"
+										style={{ backgroundColor: item.color }}
+									/>
+									<div className="min-w-0">
+										<p className="text-sm font-medium">{item.title}</p>
+										<p className="text-xs text-kumo-subtle">{date(item.annotation_at, locale)}</p>
+									</div>
+								</div>
+								<Button
+									variant="ghost"
+									size="icon"
+									aria-label={t("Delete item", { name: item.title })}
+									onClick={() => {
+										onDelete(item);
+									}}
+								>
+									<Trash2 className="size-4" />
+								</Button>
+							</div>
+						</SettingsRow>
+					))
+				) : (
+					<EmptyRow>{t("No timeline annotations.")}</EmptyRow>
+				)}
+			</SettingsSection>
+			<div className="space-y-3">
+				<SettingsSection
+					title={t("Add annotation")}
+					description={t("Mark releases or campaigns on the analytics timeline.")}
+				>
+					<SettingsRow>
+						<SettingsTextField
+							label={t("Title")}
+							aria-label={t("Annotation title")}
+							value={title}
+							placeholder={t("Version 3.2 released")}
+							onChange={(event) => {
+								onTitleChange(event.target.value);
+							}}
+						/>
+					</SettingsRow>
+				</SettingsSection>
+				<SettingsActions>
+					<Button disabled={busy || !title.trim()} onClick={onCreate}>
+						<Plus className="size-4" />
+						{t("Add now")}
+					</Button>
+				</SettingsActions>
+			</div>
+		</>
+	);
+}
+
+function AdvancedPanel({
+	draft,
+	applications,
+	onChange,
+}: {
+	draft: ProcessingDraft | null;
+	applications: AnalyticsApplication[];
+	onChange(change: ProcessingChange): void;
+}) {
+	const { t } = useAnalyticsI18n();
+	return (
+		<>
+			{draft && (
+				<SettingsSection
+					title={t("Data retention")}
+					description={t(
+						"How long each event stays in the event explorer; older events remain archived.",
+					)}
+				>
+					<SettingsRow>
+						<SettingsTextField
+							label={t("Detailed event retention (days)")}
+							description={t("Between 1 and 366 days.")}
+							inputMode="numeric"
+							aria-invalid={retentionDays(draft.retentionDays) === null}
+							value={draft.retentionDays}
+							onChange={(event) => {
+								onChange({ retentionDays: event.target.value });
+							}}
+						/>
+						{retentionDays(draft.retentionDays) === null && (
+							<p className="text-sm text-kumo-danger">
+								{t("Enter a number of days between 1 and 366.")}
+							</p>
+						)}
+					</SettingsRow>
+				</SettingsSection>
+			)}
+			<SettingsSection
+				title={t("Application identifiers")}
+				description={t("Technical identifiers sent by your applications with each event.")}
+			>
+				{applications.length ? (
+					<FrontTable className="w-full text-start text-sm">
+						<FrontTableHeader>
+							<FrontTableRow>
+								<FrontTableHead className="px-4">{t("Application")}</FrontTableHead>
+								<FrontTableHead className="px-4">{t("Identifier")}</FrontTableHead>
+								<FrontTableHead className="px-4">{t("Platform")}</FrontTableHead>
+							</FrontTableRow>
+						</FrontTableHeader>
+						<FrontTableBody>
+							{applications.map((application) => (
+								<FrontTableRow key={application.application_id}>
+									<FrontTableCell className="px-4 font-medium">{application.name}</FrontTableCell>
+									<FrontTableCell className="px-4 font-mono text-xs">
+										{application.application_id}
+									</FrontTableCell>
+									<FrontTableCell className="px-4">
+										{application.platform || t("Unknown")}
+									</FrontTableCell>
+								</FrontTableRow>
+							))}
+						</FrontTableBody>
+					</FrontTable>
+				) : (
+					<EmptyRow>{t("No applications observed.")}</EmptyRow>
+				)}
+			</SettingsSection>
+		</>
 	);
 }
 

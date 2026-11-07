@@ -26,14 +26,6 @@ const editors: Record<string, Editor> = {
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/apps/[id]/page.js")),
 		create: lazy(() => import("./app/(protected)/identity/[lang]/apps/new/page.js")),
 	},
-	banners: {
-		view: "settings",
-		tab: "appearance",
-		label: "banners",
-		identity: true,
-		edit: lazy(() => import("./app/(protected)/identity/[lang]/apps/banners/[id]/page.js")),
-		create: lazy(() => import("./app/(protected)/identity/[lang]/apps/banners/new/page.js")),
-	},
 	roles: {
 		view: "settings",
 		tab: "access",
@@ -50,14 +42,6 @@ const editors: Record<string, Editor> = {
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/scopes/[id]/page.js")),
 		create: lazy(() => import("./app/(protected)/identity/[lang]/scopes/new/page.js")),
 	},
-	orgs: {
-		view: "settings",
-		tab: "access",
-		label: "organizations",
-		identity: true,
-		edit: lazy(() => import("./app/(protected)/identity/[lang]/orgs/[id]/page.js")),
-		create: lazy(() => import("./app/(protected)/identity/[lang]/orgs/new/page.js")),
-	},
 	fields: {
 		view: "settings",
 		tab: "fields",
@@ -65,14 +49,6 @@ const editors: Record<string, Editor> = {
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/user-attributes/[id]/page.js")),
 		create: lazy(() => import("./app/(protected)/identity/[lang]/user-attributes/new/page.js")),
-	},
-	saml: {
-		view: "settings",
-		tab: "sign-in",
-		label: "sso",
-		identity: true,
-		edit: lazy(() => import("./app/(protected)/identity/[lang]/saml/[id]/page.js")),
-		create: lazy(() => import("./app/(protected)/identity/[lang]/saml/new/page.js")),
 	},
 	users: {
 		view: "users",
@@ -87,13 +63,6 @@ const editors: Record<string, Editor> = {
 		label: "email",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/logs/email/[id]/page.js")),
-	},
-	sms: {
-		view: "users",
-		tab: "activity",
-		label: "sms",
-		identity: true,
-		edit: lazy(() => import("./app/(protected)/identity/[lang]/logs/sms/[id]/page.js")),
 	},
 	"sign-in": {
 		view: "users",

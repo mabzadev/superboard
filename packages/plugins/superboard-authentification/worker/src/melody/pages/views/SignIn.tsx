@@ -2,7 +2,6 @@ import { typeConfig } from '../../configs'
 import {
   View, useSubmitError, useSignInForm,
   useInitialProps, usePasskeyVerifyForm,
-  useAppBanners,
 } from '../hooks'
 import { getAuthorizeParams } from '../tools/param'
 import { SignIn as SignInBlock } from '../blocks'
@@ -48,11 +47,6 @@ const SignIn = ({
     initialProps,
   })
 
-  const { appBanners } = useAppBanners({
-    initialProps,
-    params,
-  })
-
   return (
     <SignInBlock
       onSubmitError={handleSubmitError}
@@ -71,7 +65,6 @@ const SignIn = ({
       isVerifyingPasskey={isVerifyingPasskey}
       isPasswordlessSigningIn={isPasswordlessSigningIn}
       magicLinkSent={magicLinkSent}
-      appBanners={appBanners}
     />
   )
 }

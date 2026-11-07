@@ -3,7 +3,7 @@ import {
   errorConfig, typeConfig,
 } from '../configs'
 import {
-  emailLogModel, signInLogModel, smsLogModel,
+  emailLogModel, signInLogModel,
 } from '../models'
 import {
   currentProjectId,
@@ -77,62 +77,6 @@ export const getEmailLogById = async (
 ): Promise<emailLogModel.Record> => {
   const projectId = await requestProjectId(c)
   const log = await emailLogModel.getById(
-    c.env.DB,
-    id,
-    projectId,
-  )
-
-  if (!log) throw new errorConfig.NotFound()
-
-  return log
-}
-
-export const getSmsLogs = async (
-  c: Context<typeConfig.Context>,
-  pagination: typeConfig.Pagination | undefined,
-): Promise<emailLogModel.PaginatedRecords> => {
-  const projectId = await requestProjectId(c)
-  const logs = await smsLogModel.getAll(
-    c.env.DB,
-    { pagination, projectId },
-  )
-  const count = pagination
-    ? await smsLogModel.count(
-      c.env.DB,
-      projectId,
-    )
-    : logs.length
-
-  return {
-    logs, count,
-  }
-}
-
-export const deleteSmsLogs = async (
-  c: Context<typeConfig.Context>,
-  before: string,
-) => {
-  const projectId = await requestProjectId(c)
-  const targetDate = before.replace(
-    'T',
-    ' ',
-  ).replace(
-    'Z',
-    '',
-  )
-  await smsLogModel.destroy(
-    c.env.DB,
-    targetDate,
-    projectId,
-  )
-}
-
-export const getSmsLogById = async (
-  c: Context<typeConfig.Context>,
-  id: number,
-): Promise<smsLogModel.Record> => {
-  const projectId = await requestProjectId(c)
-  const log = await smsLogModel.getById(
     c.env.DB,
     id,
     projectId,

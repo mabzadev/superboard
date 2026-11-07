@@ -1,7 +1,11 @@
+import { showErrorNotification } from "@superboard/front-ui/lib/Notifications.js";
 import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
-import { Button } from "@superboard/front-ui/ui/button.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
-import { Label } from "@superboard/front-ui/ui/label.js";
+import {
+	AutosaveIndicator,
+	SettingsRow,
+	SettingsSection,
+	useSettingsAutosave,
+} from "@superboard/front-ui/settings-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { useEffect, useState } from "react";
 
@@ -10,6 +14,7 @@ import { getSupportAction } from "../../api/support/nativeClient.js";
 import { useSupportI18n } from "../../i18n.js";
 import { SupportEntityPage } from "../support/SupportEntityPage.js";
 import { SupportDetail } from "../support/SupportModulePage.js";
+import { SettingsSelectField, SettingsValidatedField } from "../support/SupportSettingsFields.js";
 import { SupportError, SupportMetric } from "../support/SupportUi.js";
 import SupportHelpCenterPage, { type HelpCenterSection } from "./SupportHelpCenterPage.js";
 
@@ -99,7 +104,7 @@ function HelpCenterDetails({
 						<SupportHelpCenterPage portalId={portal.id} section={section} />
 					</TabsContent>
 				))}
-				<TabsContent value="settings">
+				<TabsContent value="settings" forceMount className="data-[state=inactive]:hidden">
 					<PortalSettings portal={portal} project={project} update={update} />
 				</TabsContent>
 				<TabsContent value="reports">
@@ -121,79 +126,77 @@ function PortalSettings({
 }) {
 	const { t, locale } = useSupportI18n();
 	const [draft, setDraft] = useState(portal);
-	const [saving, setSaving] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-	const save = async () => {
-		setSaving(true);
-		try {
-			const result = await supportPortals.update(project, portal.id, {
-				name: draft.name,
-				slug: draft.slug,
-				locale: draft.locale,
-				status: draft.status,
-				custom_domain: draft.custom_domain || null,
-			});
-			update(result.data);
-			setDraft(result.data);
-			setError(null);
-		} catch (cause) {
-			setError(moduleErrorMessage(cause, locale));
-		} finally {
-			setSaving(false);
-		}
+	const changes = {
+		name: draft.name,
+		slug: draft.slug,
+		locale: draft.locale,
+		status: draft.status,
+		custom_domain: draft.custom_domain || null,
 	};
-	return (
-		<form
-			className="space-y-4 rounded-md border p-5"
-			onSubmit={(event) => {
-				event.preventDefault();
-				void save().catch((cause: unknown) => {
-					setError(moduleErrorMessage(cause, locale));
-				});
+	const missing = (["name", "slug", "locale"] as const).filter((key) => !draft[key].trim());
+	const autosave = useSettingsAutosave({
+		resourceKey: `${project}:${portal.id}`,
+		value: changes,
+		enabled: missing.length === 0,
+		save: async (value) => {
+			try {
+				update((await supportPortals.update(project, portal.id, value)).data);
+			} catch (cause) {
+				showErrorNotification(moduleErrorMessage(cause, locale));
+				throw cause;
+			}
+		},
+	});
+	const field = (key: "name" | "slug" | "locale" | "custom_domain", label: string) => (
+		<SettingsValidatedField
+			id={`portal-${key}`}
+			label={t(label)}
+			value={draft[key] ?? ""}
+			required={key !== "custom_domain"}
+			error={
+				key !== "custom_domain" && missing.includes(key) ? t("This field is required.") : undefined
+			}
+			onChange={(event) => {
+				setDraft({ ...draft, [key]: event.target.value });
 			}}
-		>
-			<SupportError message={error} />
-			{(
-				[
-					["name", "Name"],
-					["slug", "Slug"],
-					["locale", "Locale"],
-					["custom_domain", "Custom domain"],
-				] as const
-			).map(([key, label]) => (
-				<div className="space-y-2" key={key}>
-					<Label htmlFor={`portal-${key}`}>{t(label)}</Label>
-					<Input
-						id={`portal-${key}`}
-						value={draft[key] ?? ""}
-						required={key !== "custom_domain"}
-						onChange={(event) => {
-							setDraft({ ...draft, [key]: event.target.value });
-						}}
-					/>
-				</div>
-			))}
-			<Label htmlFor="portal-status">{t("Status")}</Label>
-			<select
-				id="portal-status"
-				className="h-9 rounded-md border bg-background px-3"
-				value={draft.status}
-				onChange={(event) => {
-					const value = event.target.value;
-					if (value === "draft" || value === "published" || value === "disabled")
-						setDraft({ ...draft, status: value });
-				}}
+		/>
+	);
+	return (
+		<div className="space-y-8 pt-4">
+			<SettingsSection
+				title={t("Portal")}
+				description={t("Name, language and publication status of this help center.")}
 			>
-				<option value="draft">{t("Draft")}</option>
-				<option value="published">{t("Published")}</option>
-				<option value="disabled">{t("Disabled")}</option>
-			</select>
-			<div className="flex justify-end">
-				<Button type="submit" disabled={saving}>
-					{t("Save settings")}
-				</Button>
-			</div>
-		</form>
+				<SettingsRow>
+					{field("name", "Name")}
+					{field("locale", "Locale")}
+					<SettingsSelectField
+						id="portal-status"
+						label={t("Status")}
+						value={draft.status}
+						onChange={(event) => {
+							const value = event.target.value;
+							if (value === "draft" || value === "published" || value === "disabled")
+								setDraft({ ...draft, status: value });
+						}}
+					>
+						<option value="draft">{t("Draft")}</option>
+						<option value="published">{t("Published")}</option>
+						<option value="disabled">{t("Disabled")}</option>
+					</SettingsSelectField>
+				</SettingsRow>
+			</SettingsSection>
+			<SettingsSection
+				title={t("Advanced")}
+				description={t("The web address customers use to open this help center.")}
+			>
+				<SettingsRow>
+					{field("slug", "Slug")}
+					{field("custom_domain", "Custom domain")}
+				</SettingsRow>
+			</SettingsSection>
+			<AutosaveIndicator status={autosave.status} onRetry={autosave.retry} />
+		</div>
 	);
 }
 

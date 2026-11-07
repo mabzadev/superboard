@@ -41,6 +41,8 @@
 		"./utils/*": "./src/shared/utils/*.ts",
 		"./deployment-i18n": "./src/deployment-i18n.ts",
 		"./deployment-i18n.js": "./src/deployment-i18n.ts",
+		"./settings-form": "./src/settings-form.tsx",
+		"./settings-form.js": "./src/settings-form.tsx",
 		"./section-navigation": "./src/section-navigation.tsx",
 		"./section-navigation.js": "./src/section-navigation.tsx",
 		"./toaster": "./src/toaster.tsx",

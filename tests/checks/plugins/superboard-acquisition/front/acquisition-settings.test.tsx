@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { render, screen, waitFor } from "../../../packages/supbrd-front-ui/render.js";
+import { render, screen, waitFor, within } from "../../../packages/supbrd-front-ui/render.js";
 
 vi.mock("@superboard/front-ui/section-navigation.js", () => ({
 	SectionNavigation: () => <div data-testid="section-nav" />,
@@ -47,6 +47,8 @@ describe("AcquisitionSettingsPage", () => {
 			releasePointerCapture: { configurable: true, value: () => undefined },
 			scrollIntoView: { configurable: true, value: () => undefined },
 		});
+		if (!("PointerEvent" in window))
+			Object.defineProperty(window, "PointerEvent", { value: MouseEvent, configurable: true });
 		window.history.replaceState(null, "", "/acquisition/settings");
 		mockFlowsApi.listEnvironments.mockResolvedValue([
 			{
@@ -54,6 +56,7 @@ describe("AcquisitionSettingsPage", () => {
 				name: "Production",
 				key: "production",
 				kind: "production",
+				active: 1,
 				allow_draft: false,
 			},
 		]);
@@ -110,12 +113,72 @@ describe("AcquisitionSettingsPage", () => {
 			expect.stringMatching(/^\/_emdash\/admin\/plugins-manager\/[^/]+\/configuration$/),
 		);
 
-		await waitFor(() => {
-			expect(
-				screen.getByText("Production", { selector: '[data-slot="card-title"]' }),
-			).toBeInTheDocument();
-			expect(screen.getAllByText("production").length).toBeGreaterThan(0);
+		expect(
+			await screen.findByRole("heading", { level: 3, name: "Production" }),
+		).toBeInTheDocument();
+		expect(screen.getByText("Published versions only")).toBeInTheDocument();
+	});
+
+	it("shows the raw project and environment identifiers in the SDK tab", async () => {
+		render(<AcquisitionSettingsPage defaultTab="sdk" />);
+		expect(await screen.findByText("Environment identifier")).toBeInTheDocument();
+		expect(screen.getByText("production", { selector: "code" })).toBeInTheDocument();
+		expect(screen.getByText("test-project", { selector: "code" })).toBeInTheDocument();
+	});
+
+	it("rotates an SDK key only after confirmation and shows the new key", async () => {
+		const user = userEvent.setup();
+		mockFlowsApi.rotateEnvironmentKey.mockResolvedValue({ id: "env-1", sdk_key: "sk_new_123" });
+		render(<AcquisitionSettingsPage />);
+		await user.click(await screen.findByRole("button", { name: "Rotate SDK key" }));
+		expect(mockFlowsApi.rotateEnvironmentKey).not.toHaveBeenCalled();
+		const confirmation = await screen.findByRole("alertdialog");
+		await user.click(within(confirmation).getByRole("button", { name: "Rotate SDK key" }));
+		await waitFor(() =>
+			expect(mockFlowsApi.rotateEnvironmentKey).toHaveBeenCalledWith("test-project", "env-1"),
+		);
+		expect(await screen.findByText("sk_new_123")).toBeInTheDocument();
+	});
+
+	it("offers draft releases only while creating a development environment", async () => {
+		const user = userEvent.setup();
+		render(<AcquisitionSettingsPage />);
+		await user.click(screen.getByRole("button", { name: "New environment" }));
+		const dialog = await screen.findByRole("dialog");
+		expect(within(dialog).getByRole("switch", { name: "Allow draft releases" })).toBeChecked();
+		await user.click(within(dialog).getByRole("combobox", { name: "Kind" }));
+		await user.click(await screen.findByRole("option", { name: "Production" }));
+		expect(
+			within(dialog).queryByRole("switch", { name: "Allow draft releases" }),
+		).not.toBeInTheDocument();
+	});
+
+	it("saves an edited language group automatically and never saves the loaded values back", async () => {
+		const user = userEvent.setup();
+		mockFlowsApi.saveLocalization.mockImplementation(
+			async (_project: string, body: Record<string, unknown>) => body,
+		);
+		render(<AcquisitionSettingsPage defaultTab="localization" />);
+		const name = await screen.findByDisplayValue("Global");
+		expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument();
+		await new Promise((resolve) => {
+			setTimeout(resolve, 800);
 		});
+		expect(mockFlowsApi.saveLocalization).not.toHaveBeenCalled();
+		await user.type(name, " EU");
+		await waitFor(
+			() =>
+				expect(mockFlowsApi.saveLocalization).toHaveBeenCalledWith("test-project", {
+					id: "loc-1",
+					name: "Global EU",
+					default_locale: "en",
+					locales: ["en", "fr"],
+					fallbacks: { fr: "en" },
+				}),
+			{ timeout: 3000 },
+		);
+		expect(mockFlowsApi.saveLocalization).toHaveBeenCalledTimes(1);
+		expect(await screen.findByText("All changes saved.")).toBeInTheDocument();
 	});
 
 	it("opens legacy configuration links on the default tab", () => {

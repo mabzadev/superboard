@@ -12,7 +12,6 @@ import {
   MfaEnroll,
   OtpSetup,
   OtpMfa,
-  SmsMfa,
   EmailMfa,
   PasskeyEnroll,
   ResetPassword,
@@ -27,8 +26,6 @@ import {
   PasswordlessVerify,
   RecoveryCodeEnroll,
   RecoveryCodeSignIn,
-  SwitchOrg,
-  ChangeOrg,
 } from './views'
 import { Layout } from './blocks'
 import { getLocaleFromParams } from './tools/param'
@@ -60,8 +57,6 @@ const Main = () => {
         return OtpSetup
       case View.OtpMfa:
         return OtpMfa
-      case View.SmsMfa:
-        return SmsMfa
       case View.PasswordlessVerify:
         return PasswordlessVerify
       case View.EmailMfa:
@@ -70,8 +65,6 @@ const Main = () => {
         return PasskeyEnroll
       case View.RecoveryCodeEnroll:
         return RecoveryCodeEnroll
-      case View.SwitchOrg:
-        return SwitchOrg
       case View.ResetPassword:
         return ResetPassword
       case View.UpdateInfo:
@@ -86,8 +79,6 @@ const Main = () => {
         return ManageRecoveryCode
       case View.ChangeEmail:
         return ChangeEmail
-      case View.ChangeOrg:
-        return ChangeOrg
       case View.AuthCodeExpired:
         return AuthCodeExpired
       case View.VerifyEmail:

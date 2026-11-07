@@ -1,6 +1,7 @@
 import { parseAnalyticsEventV1 } from "@superboard/contracts/analytics";
 
 import { httpError, optionalIsoTimestamp, positiveLimit } from "./http";
+import { localDate, localDayExpression, projectReportTimezone } from "./timezone";
 
 export type AnalyticsQuery = {
 	applicationId: string | null;
@@ -134,10 +135,13 @@ export async function analyticsOverview(db: D1Database, projectId: string, query
 }
 
 async function overviewSeries(db: D1Database, projectId: string, query: AnalyticsQuery) {
+	const timezone = await projectReportTimezone(db, projectId);
 	const applicationWhere = query.applicationId ? " AND application_id = ?" : "";
+	const firstDay = localDate(query.from, timezone);
+	const lastDay = localDate(query.to, timezone);
 	const bindings = query.applicationId
-		? [projectId, query.from.slice(0, 10), query.to.slice(0, 10), query.applicationId]
-		: [projectId, query.from.slice(0, 10), query.to.slice(0, 10)];
+		? [projectId, firstDay, lastDay, query.applicationId]
+		: [projectId, firstDay, lastDay];
 	const rows = await db
 		.prepare(
 			`SELECT metric_date, SUM(event_count) AS event_count
@@ -295,21 +299,36 @@ export async function queryRetention(db: D1Database, projectId: string, url: URL
 	const query = analyticsQueryFromUrl(url);
 	const days = Math.min(90, Math.max(1, Number(url.searchParams.get("days") ?? 30) || 30));
 	const applicationWhere = query.applicationId ? " AND i.application_id = ?" : "";
-	const bindings: unknown[] = [projectId, query.from, query.to, days];
+	const timezone = await projectReportTimezone(db, projectId);
+	const installedDay = localDayExpression("i.installed_at", query.from, query.to, timezone);
+	const lastEvent = new Date(Date.parse(query.to) + (days + 1) * 86_400_000).toISOString();
+	const eventDay = localDayExpression("e.occurred_at", query.from, lastEvent, timezone);
+	const cohortDay = localDayExpression("installed_at", query.from, query.to, timezone);
+	const bindings: unknown[] = [
+		...installedDay.bindings,
+		...eventDay.bindings,
+		...installedDay.bindings,
+		projectId,
+		query.from,
+		query.to,
+	];
 	if (query.applicationId) bindings.push(query.applicationId);
+	bindings.push(days);
 	const rows = await db
 		.prepare(
-			`SELECT substr(i.installed_at, 1, 10) AS cohort_date,
-        CAST(julianday(substr(e.occurred_at, 1, 10)) - julianday(substr(i.installed_at, 1, 10)) AS INTEGER) AS day_number,
-        COUNT(DISTINCT i.app_instance_id_hash) AS retained_subjects
-       FROM analytics_installations i
-       JOIN analytics_events_hot e
-         ON e.project_id = i.project_id
-        AND e.application_id = i.application_id
-        AND e.app_instance_id_hash = i.app_instance_id_hash
-       WHERE i.project_id = ? AND i.installed_at >= ? AND i.installed_at <= ?
-         AND CAST(julianday(substr(e.occurred_at, 1, 10)) - julianday(substr(i.installed_at, 1, 10)) AS INTEGER)
-           BETWEEN 0 AND ?${applicationWhere}
+			`SELECT cohort_date, day_number,
+        COUNT(DISTINCT app_instance_id_hash) AS retained_subjects
+       FROM (
+         SELECT i.app_instance_id_hash, ${installedDay.sql} AS cohort_date,
+           CAST(julianday(${eventDay.sql}) - julianday(${installedDay.sql}) AS INTEGER) AS day_number
+         FROM analytics_installations i
+         JOIN analytics_events_hot e
+           ON e.project_id = i.project_id
+          AND e.application_id = i.application_id
+          AND e.app_instance_id_hash = i.app_instance_id_hash
+         WHERE i.project_id = ? AND i.installed_at >= ? AND i.installed_at <= ?${applicationWhere}
+       )
+       WHERE day_number BETWEEN 0 AND ?
        GROUP BY cohort_date, day_number
        ORDER BY cohort_date ASC, day_number ASC`,
 		)
@@ -321,14 +340,20 @@ export async function queryRetention(db: D1Database, projectId: string, url: URL
 		}>();
 	const cohortSizes = await db
 		.prepare(
-			`SELECT substr(installed_at, 1, 10) AS cohort_date, COUNT(*) AS cohort_size
+			`SELECT ${cohortDay.sql} AS cohort_date, COUNT(*) AS cohort_size
        FROM analytics_installations
        WHERE project_id = ? AND installed_at >= ? AND installed_at <= ?${
 					query.applicationId ? " AND application_id = ?" : ""
 				}
        GROUP BY cohort_date ORDER BY cohort_date ASC`,
 		)
-		.bind(projectId, query.from, query.to, ...(query.applicationId ? [query.applicationId] : []))
+		.bind(
+			...cohortDay.bindings,
+			projectId,
+			query.from,
+			query.to,
+			...(query.applicationId ? [query.applicationId] : []),
+		)
 		.all<{ cohort_date: string; cohort_size: number }>();
 	const sizes = new Map(
 		cohortSizes.results.map((row) => [row.cohort_date, Number(row.cohort_size)]),

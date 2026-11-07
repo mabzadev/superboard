@@ -53,7 +53,7 @@ test("authentication list bookmarks open their grouped tab without losing locale
 		["/auth/customers?lang=fr#profile", "/auth/users?lang=fr&tab=profiles#profile"],
 		["/identity/fr/apps", "/auth/settings?tab=apps&lang=fr"],
 		["/auth/logs?lang=en", "/auth/settings?lang=en&tab=logs"],
-		["/auth/saml", "/auth/settings?tab=login&section=sso"],
+		["/auth/saml", "/auth/settings?tab=login"],
 		["/auth/directory/users", "/auth/users?tab=accounts&section=directory"],
 		["/auth", "/auth/users?tab=accounts"],
 	]) {
@@ -65,14 +65,10 @@ test("authentication list bookmarks open their grouped tab without losing locale
 test("authentication editors preserve record identifiers and return to their owning view", () => {
 	const collections = [
 		["apps", "apps", "apps"],
-		["apps/banners", "apps", "banners"],
 		["roles", "roles", "roles"],
 		["scopes", "permissions", "scopes"],
-		["orgs", "organizations", "orgs"],
 		["user-attributes", "fields", "fields"],
-		["saml", "login", "saml"],
 		["logs/email", "logs", "email"],
-		["logs/sms", "logs", "sms"],
 		["logs/sign-in", "logs", "sign-in"],
 	];
 	for (const [collection, tab, editor] of collections)
@@ -94,6 +90,19 @@ test("authentication editors preserve record identifiers and return to their own
 		canonicalFrontHref("/auth/register/with-email?invite=token"),
 		"/auth/register?invite=token",
 	);
+});
+
+test("records of removed authentication features land on their former area without an editor", () => {
+	for (const [before, after] of [
+		["/auth/orgs/42?lang=fr", "/auth/settings?lang=fr&tab=organizations"],
+		["/identity/fr/orgs/42", "/auth/settings?tab=organizations&lang=fr"],
+		["/auth/apps/banners/7", "/auth/settings?tab=apps"],
+		["/auth/logs/sms/9", "/auth/settings?tab=logs"],
+		["/auth/saml/3", "/auth/settings?tab=login"],
+	]) {
+		assert.equal(canonicalFrontHref(before), after);
+		assert.equal(canonicalFrontHref(after), after);
+	}
 });
 
 test("pages merged into workspace tabs keep their bookmarks on the matching tab", () => {
