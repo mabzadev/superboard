@@ -586,6 +586,38 @@ export async function ensureNativeFrontMenus(
 					parentId: settingsGroup?.id ?? supportParent.id,
 				});
 			}
+			const dataParent = items.find(
+				(item) => item.customUrl === "/data/content" && item.parentId === null,
+			);
+			if (dataParent) {
+				const fr = locale === "fr";
+				const entries = [
+					["/data/database", fr ? "Base de données" : "Database"],
+					["/data/storage", fr ? "Stockage" : "Storage"],
+					["/data/functions", fr ? "Fonctions" : "Functions"],
+					["/data/vectors", fr ? "Vecteurs" : "Vectors"],
+					["/data/api", fr ? "API et clés" : "API and keys"],
+				] as const;
+				let sortOrder =
+					Math.max(
+						-1,
+						...items
+							.filter((item) => item.parentId === dataParent.id)
+							.map((item) => item.sortOrder),
+					) + 1;
+				for (const [customUrl, label] of entries) {
+					if (items.some((item) => canonicalFrontHref(item.customUrl ?? "") === customUrl))
+						continue;
+					await repository.createItem(menu.id, locale, {
+						type: "custom",
+						label,
+						customUrl,
+						parentId: dataParent.id,
+						sortOrder,
+					});
+					sortOrder += 1;
+				}
+			}
 			const monetizationParent = items.find(
 				(i) => i.customUrl === "/monetization/customers" && i.parentId === null,
 			);

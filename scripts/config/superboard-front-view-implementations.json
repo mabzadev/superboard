@@ -562,6 +562,41 @@
 			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.system_files.tsx"
 		},
 		{
+			"plugin_id": "superboard-files",
+			"route_id": "superboard.data_database",
+			"path": "/data/database",
+			"status": "registered",
+			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_database.tsx"
+		},
+		{
+			"plugin_id": "superboard-files",
+			"route_id": "superboard.data_storage",
+			"path": "/data/storage",
+			"status": "registered",
+			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_storage.tsx"
+		},
+		{
+			"plugin_id": "superboard-files",
+			"route_id": "superboard.data_functions",
+			"path": "/data/functions",
+			"status": "registered",
+			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_functions.tsx"
+		},
+		{
+			"plugin_id": "superboard-files",
+			"route_id": "superboard.data_vectors",
+			"path": "/data/vectors",
+			"status": "registered",
+			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_vectors.tsx"
+		},
+		{
+			"plugin_id": "superboard-files",
+			"route_id": "superboard.data_api",
+			"path": "/data/api",
+			"status": "registered",
+			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_api.tsx"
+		},
+		{
 			"plugin_id": "superboard-flows",
 			"route_id": "superboard.flows",
 			"path": "/acquisition/overview",

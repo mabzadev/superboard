@@ -855,7 +855,15 @@ test("menus seeded before the section simplification adopt it while edited menus
 			"/support/help-center",
 			"/support/settings",
 		]);
-		expect(sectionOf("/data/content")).toEqual(["/data/content", "/data/files"]);
+		expect(sectionOf("/data/content")).toEqual([
+			"/data/content",
+			"/data/files",
+			"/data/database",
+			"/data/storage",
+			"/data/functions",
+			"/data/vectors",
+			"/data/api",
+		]);
 		const analytics = items.find(
 			(item) => item.parentId === null && item.customUrl === "/analytics",
 		)!;
@@ -1181,4 +1189,84 @@ test("an installed Data settings View is archived and its address opens the cont
 	expect(canonicalFrontHref("/data/settings?tab=files&lang=fr")).toBe(
 		"/data/content?tab=files&lang=fr",
 	);
+});
+
+const backendDataPages = new Set([
+	"/data/database",
+	"/data/storage",
+	"/data/functions",
+	"/data/vectors",
+	"/data/api",
+]);
+
+function menusWithoutBackendDataPages() {
+	return seedJson.menus.map((menu) => ({
+		...menu,
+		items: menu.items.map((item) =>
+			item.url === "/data/content" && item.children
+				? {
+						...item,
+						children: item.children.filter((child) => !backendDataPages.has(child.url)),
+					}
+				: item,
+		),
+	}));
+}
+
+test("the previous default menu gains the backend Data pages and becomes the new default", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: menusWithoutBackendDataPages() });
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	const repo = new MenuRepository(db);
+	for (const menu of await repo.findByName("superboard-admin")) {
+		const definition = seedJson.menus.find((entry) => entry.locale === menu.locale);
+		if (!definition) throw new Error(`Default menu is missing for ${menu.locale}`);
+		const items = await repo.findItems(menu.id);
+		expect(storedMenuShape(items)).toEqual(seedMenuShape(definition.items));
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		expect(await repo.findItems(menu.id)).toEqual(items);
+	}
+});
+
+test("an edited menu gains the backend Data pages after its own Data links", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: menusWithoutBackendDataPages() });
+	const repo = new MenuRepository(db);
+	const menus = await repo.findByName("superboard-admin");
+	for (const menu of menus) {
+		const data = (await repo.findItems(menu.id)).find(
+			(item) => item.parentId === null && item.customUrl === "/data/content",
+		);
+		if (!data) throw new Error("Data section is missing");
+		await repo.createItem(menu.id, menu.locale, {
+			type: "custom",
+			label: "My exports",
+			customUrl: "/data/files?folder=exports",
+			parentId: data.id,
+			sortOrder: 10,
+		});
+	}
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	for (const menu of menus) {
+		const fr = menu.locale === "fr";
+		const items = await repo.findItems(menu.id);
+		const data = items.find((item) => item.parentId === null && item.customUrl === "/data/content");
+		if (!data) throw new Error("Data section is missing");
+		expect(
+			items
+				.filter((item) => item.parentId === data.id)
+				.map(({ label, customUrl }) => [label, customUrl]),
+		).toEqual([
+			[fr ? "Contenus" : "Content", "/data/content"],
+			[fr ? "Fichiers et médias" : "Files and media", "/data/files"],
+			["My exports", "/data/files?folder=exports"],
+			[fr ? "Base de données" : "Database", "/data/database"],
+			[fr ? "Stockage" : "Storage", "/data/storage"],
+			[fr ? "Fonctions" : "Functions", "/data/functions"],
+			[fr ? "Vecteurs" : "Vectors", "/data/vectors"],
+			[fr ? "API et clés" : "API and keys", "/data/api"],
+		]);
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		expect(await repo.findItems(menu.id)).toEqual(items);
+	}
 });

@@ -31,6 +31,31 @@
 						"type": "custom",
 						"label": "Files and media",
 						"url": "/data/files"
+					},
+					{
+						"type": "custom",
+						"label": "Database",
+						"url": "/data/database"
+					},
+					{
+						"type": "custom",
+						"label": "Storage",
+						"url": "/data/storage"
+					},
+					{
+						"type": "custom",
+						"label": "Functions",
+						"url": "/data/functions"
+					},
+					{
+						"type": "custom",
+						"label": "Vectors",
+						"url": "/data/vectors"
+					},
+					{
+						"type": "custom",
+						"label": "API and keys",
+						"url": "/data/api"
 					}
 				]
 			},
@@ -276,6 +301,31 @@
 						"type": "custom",
 						"label": "Fichiers et médias",
 						"url": "/data/files"
+					},
+					{
+						"type": "custom",
+						"label": "Base de données",
+						"url": "/data/database"
+					},
+					{
+						"type": "custom",
+						"label": "Stockage",
+						"url": "/data/storage"
+					},
+					{
+						"type": "custom",
+						"label": "Fonctions",
+						"url": "/data/functions"
+					},
+					{
+						"type": "custom",
+						"label": "Vecteurs",
+						"url": "/data/vectors"
+					},
+					{
+						"type": "custom",
+						"label": "API et clés",
+						"url": "/data/api"
 					}
 				]
 			},

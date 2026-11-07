@@ -13,9 +13,10 @@ const topologyPath = join(root, "scripts/config/emdash-plugin-topology.json");
 const parityReleasePath = join(root, "scripts/config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "scripts/config/superboard-front-bundle.json");
-const manifestMigrationPath = join(root, "apps/site/migrations/0063_plugin_manifest_refresh.sql");
+const manifestMigrationPath = join(root, "apps/site/migrations/0064_plugin_manifest_refresh.sql");
 const compatibilityPath = join(root, "scripts/config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0063_plugin_manifest_refresh.sql"),
 	join(root, "apps/site/migrations/0062_plugin_manifest_refresh.sql"),
 	join(root, "apps/site/migrations/0059_plugin_manifest_refresh.sql"),
 	join(root, "apps/site/migrations/0058_plugin_manifest_refresh.sql"),
@@ -447,8 +448,55 @@ const pluginOperations = {
 		],
 	},
 	"superboard-files": {
-		commands: ["create_upload_ticket", "complete_upload", "delete_object", "collect_garbage"],
-		dataSources: ["objects", "object_metadata", "download_ticket", "storage_usage"],
+		commands: [
+			"create_upload_ticket",
+			"complete_upload",
+			"delete_object",
+			"collect_garbage",
+			"create_data_table",
+			"update_data_table",
+			"delete_data_table",
+			"add_data_column",
+			"update_data_column",
+			"delete_data_column",
+			"insert_data_row",
+			"update_data_row",
+			"delete_data_row",
+			"run_data_sql",
+			"update_data_settings",
+			"create_data_bucket",
+			"update_data_bucket",
+			"delete_data_bucket",
+			"deploy_data_function",
+			"delete_data_function",
+			"rollback_data_function",
+			"invoke_data_function",
+			"schedule_data_function",
+			"unschedule_data_function",
+			"create_vector_collection",
+			"update_vector_collection",
+			"delete_vector_collection",
+			"create_service_key",
+			"revoke_service_key",
+		],
+		dataSources: [
+			"objects",
+			"object_metadata",
+			"download_ticket",
+			"storage_usage",
+			"data_status",
+			"data_tables",
+			"data_table",
+			"data_rows",
+			"data_settings",
+			"data_buckets",
+			"data_bucket_objects",
+			"data_functions",
+			"data_function",
+			"data_function_runs",
+			"data_vector_collections",
+			"data_keys",
+		],
 	},
 	"superboard-paywalls": {
 		commands: [
