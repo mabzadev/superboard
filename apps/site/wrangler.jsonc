@@ -81,8 +81,8 @@
     "SUPERBOARD_PUBLIC_ENDPOINTS_JSON": "{\"api\":\"https://api.mabza.dev\",\"shortlinks\":\"https://in.mabza.dev\",\"sdk\":\"https://sdk.mabza.dev\",\"site\":\"https://board.mabza.dev\",\"mcp\":\"https://board.mabza.dev/mcp\"}",
     "SUPERBOARD_PLUGIN_IDS": "[\"superboard-analytics\",\"superboard-audit\",\"superboard-billing\",\"superboard-content\",\"superboard-dynamic-links\",\"superboard-email\",\"superboard-files\",\"superboard-flows\",\"superboard-gateway\",\"superboard-marketing\",\"superboard-mcp\",\"superboard-observability\",\"superboard-onboardings\",\"superboard-paywalls\",\"superboard-products\",\"superboard-settings\",\"superboard-support\",\"superboard-user\"]",
     "SUPERBOARD_RELEASE_OPERATIONS": "enabled",
-    "D1_EXPECTED_MIGRATION": "0064_plugin_manifest_refresh.sql",
-    "TARGET_ARTIFACT_CHECKSUM": "sha256:1c1250eea8978563a4fc313e18e4cfbec83d5a20e8652a64750663676b00e45c"
+    "D1_EXPECTED_MIGRATION": "0065_plugin_manifest_refresh.sql",
+    "TARGET_ARTIFACT_CHECKSUM": "sha256:6f4a6eda25758819127fa39df3ddb4bfc3c6bd9a59a2051d93c46400b003cfe2"
   },
   "triggers": {
     "crons": [
