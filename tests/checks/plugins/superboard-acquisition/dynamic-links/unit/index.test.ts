@@ -1,5 +1,5 @@
 import { signProjectContext, type InternalProjectContext } from "@superboard/contracts";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import app from "../../../../../../packages/plugins/superboard-acquisition/dynamic-links/src/index";
 
@@ -71,6 +71,132 @@ describe("dynamic-links worker", () => {
 	});
 });
 
+describe("dynamic-links domain verification", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("does not mark a domain verified when its DNS record is missing", async () => {
+		const database = recordingDatabase();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => Response.json({ Status: 3 })),
+		);
+		const response = await verify(database.db);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ data: { id: "domain-1", verified: false } });
+		expect(database.queries.some((query) => query.includes("status='verified'"))).toBe(false);
+	});
+
+	it("marks a domain verified once its TXT record holds the verification token", async () => {
+		const database = recordingDatabase();
+		const lookup = vi.fn(async () =>
+			Response.json({
+				Status: 0,
+				Answer: [{ name: "_superboard.links.example.com", type: 16, data: '"token-1"' }],
+			}),
+		);
+		vi.stubGlobal("fetch", lookup);
+		const response = await verify(database.db);
+		expect(await response.json()).toEqual({
+			data: {
+				id: "domain-1",
+				verified: true,
+				status: "verified",
+				check: {
+					result: "verified",
+					record: { type: "TXT", name: "_superboard.links.example.com", value: "token-1" },
+					found: ["token-1"],
+				},
+			},
+		});
+		expect(
+			database.queries.some(
+				(query) =>
+					query.includes("status='verified'") &&
+					query.includes("dns_verified_at=CURRENT_TIMESTAMP"),
+			),
+		).toBe(true);
+		const [url, init] = lookup.mock.calls[0] as unknown as [string, RequestInit];
+		expect(new URL(url).searchParams.get("name")).toBe("_superboard.links.example.com");
+		expect(new URL(url).searchParams.get("type")).toBe("TXT");
+		expect(new Headers(init.headers).get("accept")).toBe("application/dns-json");
+	});
+
+	it("reports the values it found when the TXT record does not match", async () => {
+		const database = recordingDatabase();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => Response.json({ Status: 0, Answer: [{ type: 16, data: '"old-token"' }] })),
+		);
+		const response = await verify(database.db);
+		expect(await response.json()).toMatchObject({
+			data: {
+				verified: false,
+				status: "pending",
+				check: { result: "mismatch", found: ["old-token"] },
+			},
+		});
+		expect(database.queries.some((query) => query.includes("status='verified'"))).toBe(false);
+	});
+});
+
+async function verify(database: D1Database) {
+	const pathname = "/internal/v1/domains/domain-1/verify";
+	const context: InternalProjectContext = {
+		module: "dynamic-links",
+		method: "POST",
+		pathname,
+		projectId: 12,
+		projectRef: "10-test",
+		instanceId: 10,
+		environment: "test",
+		actorId: 2,
+		role: "owner",
+		requestId: "verify-request",
+		issuedAt: Math.floor(Date.now() / 1_000),
+	};
+	return app.request(
+		pathname,
+		{
+			method: "POST",
+			headers: {
+				...(await headers(context)),
+				"content-type": "application/json",
+				"idempotency-key": crypto.randomUUID(),
+			},
+			body: JSON.stringify({ verified: true }),
+		},
+		env(database),
+	);
+}
+function recordingDatabase() {
+	const queries: string[] = [];
+	const statement = (query: string) => {
+		const result = {
+			first: async () =>
+				query.includes("FROM domains")
+					? {
+							id: "domain-1",
+							hostname: "links.example.com",
+							status: "pending",
+							verification_token: "token-1",
+						}
+					: null,
+			run: async () => ({ meta: { changes: 1 } }),
+			all: async () => ({ results: [] }),
+		};
+		return { ...result, bind: () => result };
+	};
+	const db = {
+		prepare: (query: string) => {
+			queries.push(query);
+			return statement(query);
+		},
+		batch: async () => [],
+	} as unknown as D1Database;
+	return { db, queries };
+}
 async function headers(context: InternalProjectContext) {
 	return {
 		"x-internal-token": "secret",

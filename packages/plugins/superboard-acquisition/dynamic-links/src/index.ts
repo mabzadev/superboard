@@ -9,6 +9,8 @@ import { RequestBodyError, readJsonObjectLimited } from "@superboard/contracts/r
 import { configuredSecrets } from "@superboard/contracts/secret";
 import { Hono, type Context, type Next } from "hono";
 
+import { checkDomainVerification, domainVerificationRecord } from "./domain-verification";
+
 type Variables = { projectId: string; projectContext: InternalProjectContext };
 type DynamicContext = Context<{ Bindings: Env; Variables: Variables }>;
 type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 413 | 422 | 500;
@@ -529,8 +531,11 @@ app.get("/internal/v1/domains", async (c) =>
 				"SELECT id,hostname,status,verification_token,verified_at,is_default,created_at,updated_at FROM domains WHERE project_id=? ORDER BY is_default DESC,created_at",
 			)
 				.bind(c.get("projectId"))
-				.all()
-		).results,
+				.all<{ hostname: string; verification_token: string }>()
+		).results.map((domain) => ({
+			...domain,
+			verification_record: domainVerificationRecord(domain.hostname, domain.verification_token),
+		})),
 	}),
 );
 app.post("/internal/v1/domains", async (c) =>
@@ -547,23 +552,37 @@ app.post("/internal/v1/domains", async (c) =>
 			)
 				.bind(id, c.get("projectId"), hostname, token, boolean(body.is_default, false) ? 1 : 0)
 				.run();
-			return { id, hostname, status: "pending", verification_token: token };
+			return {
+				id,
+				hostname,
+				status: "pending",
+				verification_token: token,
+				verification_record: domainVerificationRecord(hostname, token),
+			};
 		},
 		201,
 	),
 );
 app.post("/internal/v1/domains/:id/verify", async (c) =>
 	mutation(c, "domain.verify", async () => {
-		await owned(c.env.DB, "domains", c.get("projectId"), c.req.param("id"), "domain");
-		const body = await objectBody(c.req.raw);
-		const valid = body.verified === true;
-		if (valid)
+		const id = c.req.param("id");
+		const domain = await c.env.DB.prepare(
+			"SELECT hostname,status,verification_token FROM domains WHERE project_id=? AND id=?",
+		)
+			.bind(c.get("projectId"), id)
+			.first<{ hostname: string; status: string; verification_token: string }>();
+		if (!domain) throw new DynamicError("domain_not_found", "domain was not found", 404);
+		const check = await checkDomainVerification(
+			domainVerificationRecord(domain.hostname, domain.verification_token),
+		);
+		const verified = check.result === "verified";
+		if (verified)
 			await c.env.DB.prepare(
-				"UPDATE domains SET status='verified',verified_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND project_id=?",
+				"UPDATE domains SET status='verified',verified_at=CURRENT_TIMESTAMP,dns_verified_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND project_id=?",
 			)
-				.bind(c.req.param("id"), c.get("projectId"))
+				.bind(id, c.get("projectId"))
 				.run();
-		return { id: c.req.param("id"), verified: valid };
+		return { id, verified, status: verified ? "verified" : domain.status, check };
 	}),
 );
 app.delete("/internal/v1/domains/:id", async (c) =>

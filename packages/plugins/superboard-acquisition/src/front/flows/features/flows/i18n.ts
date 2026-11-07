@@ -825,6 +825,47 @@ const frCopy: Record<string, string> = {
 	"{variables} CSS variables · {properties} properties · {instances} instances":
 		"{variables} variables CSS · {properties} propriétés · {instances} instances",
 	"Resize inspector": "Redimensionner l’inspecteur",
+	"Release environments": "Environnements de publication",
+	"Each environment has its own SDK key, shown only once when it is created or rotated.":
+		"Chaque environnement a sa propre clé SDK, affichée une seule fois à sa création ou à son renouvellement.",
+	Inactive: "Inactif",
+	"No environments yet.": "Aucun environnement pour le moment.",
+	"Rotate this SDK key?": "Renouveler cette clé SDK ?",
+	"The current key stops working immediately. Applications that use it need the new key.":
+		"La clé actuelle cesse de fonctionner immédiatement. Les applications qui l’utilisent auront besoin de la nouvelle clé.",
+	"Used by the SDK to select this environment.":
+		"Utilisé par le SDK pour choisir cet environnement.",
+	"Test unpublished workflow versions in this environment.":
+		"Tester dans cet environnement les versions de workflow non publiées.",
+	"Choose the language group to edit, or create a new one.":
+		"Choisissez le groupe de langues à modifier, ou créez-en un nouveau.",
+	"Language:fallback pairs separated by commas. fr-CH:fr uses French when Swiss French is missing.":
+		"Paires langue:repli séparées par des virgules. fr-CH:fr utilise le français quand le français suisse manque.",
+	"Enter a name, a default language and at least one language to save.":
+		"Indiquez un nom, une langue par défaut et au moins une langue pour enregistrer.",
+	"Environment identifier": "Identifiant de l’environnement",
+	"Notes for the developers who integrate the SDK.":
+		"Notes pour les développeurs qui intègrent le SDK.",
+	"Ownership of this domain is not verified yet. Publish the DNS record below, then verify it.":
+		"La propriété de ce domaine n’est pas encore vérifiée. Publiez l’enregistrement DNS ci-dessous, puis lancez la vérification.",
+	"Remove this domain?": "Retirer ce domaine ?",
+	"This domain stops serving dynamic links. Adding it again requires a new DNS verification.":
+		"Ce domaine cesse de servir les liens dynamiques. L’ajouter à nouveau demandera une nouvelle vérification DNS.",
+	"Paused rules are kept but not evaluated.":
+		"Les règles en pause sont conservées mais ne sont pas évaluées.",
+	"Delete this redirect rule?": "Supprimer cette règle de redirection ?",
+	"Links stop using this rule as soon as it is deleted.":
+		"Les liens cessent d’utiliser cette règle dès sa suppression.",
+	"Add a title to save the social preview.": "Ajoutez un titre pour enregistrer l’aperçu social.",
+	"Enter a complete web address, starting with https://.":
+		"Saisissez une adresse web complète, commençant par https://.",
+	"No TXT record was found at {name} yet. DNS changes can take several minutes to propagate.":
+		"Aucun enregistrement TXT n’a encore été trouvé pour {name}. La propagation DNS peut prendre plusieurs minutes.",
+	"A TXT record exists at {name}, but its value does not match. Value found: {values}":
+		"Un enregistrement TXT existe pour {name}, mais sa valeur ne correspond pas. Valeur trouvée : {values}",
+	"The DNS lookup could not be completed. Try again in a moment.":
+		"La recherche DNS n’a pas abouti. Réessayez dans un instant.",
+	"Checking DNS…": "Vérification du DNS…",
 };
 
 export type FlowMessageKey = keyof typeof en;
