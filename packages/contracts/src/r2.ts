@@ -18,21 +18,39 @@ const KEYED_METHODS = new Set<PropertyKey>([
 	"resumeMultipartUpload",
 ]);
 
-type Method = (...args: unknown[]) => unknown;
-
-interface ListedObjects {
-	objects?: object[];
-	delimitedPrefixes?: string[];
-}
-
 function relativeObject<T extends object>(object: T, folder: string): T {
 	return new Proxy(object, {
 		get(target, property) {
 			const value: unknown = Reflect.get(target, property, target);
 			if (property === "key" && typeof value === "string") return value.slice(folder.length);
-			return typeof value === "function" ? (value as Method).bind(target) : value;
+			if (typeof value !== "function") return value;
+			const bound: unknown = value.bind(target);
+			return bound;
 		},
 	});
+}
+
+function relativeListing(listed: unknown, folder: string): unknown {
+	if (typeof listed !== "object" || listed === null) return listed;
+	const objects: unknown = Reflect.get(listed, "objects");
+	const prefixes: unknown = Reflect.get(listed, "delimitedPrefixes");
+	return {
+		...listed,
+		...(Array.isArray(objects)
+			? {
+					objects: objects.map((object: unknown) =>
+						typeof object === "object" && object !== null ? relativeObject(object, folder) : object,
+					),
+				}
+			: {}),
+		...(Array.isArray(prefixes)
+			? {
+					delimitedPrefixes: prefixes.map((prefix: unknown) =>
+						typeof prefix === "string" ? prefix.slice(folder.length) : prefix,
+					),
+				}
+			: {}),
+	};
 }
 
 /**
@@ -45,33 +63,26 @@ export function scopedR2Bucket<B extends object>(bucket: B, folder: R2Folder): B
 		get(target, property) {
 			const value: unknown = Reflect.get(target, property, target);
 			if (typeof value !== "function") return value;
-			const method = value as Method;
 			if (KEYED_METHODS.has(property)) {
-				return (key: string, ...rest: unknown[]) => method.call(target, `${folder}${key}`, ...rest);
+				return (key: string, ...rest: unknown[]): unknown =>
+					Reflect.apply(value, target, [`${folder}${key}`, ...rest]);
 			}
 			if (property === "delete") {
-				return (keys: string | string[]) =>
-					method.call(
-						target,
+				return (keys: string | string[]): unknown =>
+					Reflect.apply(value, target, [
 						Array.isArray(keys) ? keys.map((key) => `${folder}${key}`) : `${folder}${keys}`,
-					);
+					]);
 			}
 			if (property === "list") {
-				return async (options: { prefix?: string } = {}) => {
-					const listed = (await method.call(target, {
-						...options,
-						prefix: `${folder}${options.prefix ?? ""}`,
-					})) as ListedObjects;
-					return {
-						...listed,
-						objects: listed.objects?.map((object) => relativeObject(object, folder)),
-						delimitedPrefixes: listed.delimitedPrefixes?.map((prefix) =>
-							prefix.slice(folder.length),
-						),
-					};
+				return async (options: { prefix?: string } = {}): Promise<unknown> => {
+					const listed: unknown = await Reflect.apply(value, target, [
+						{ ...options, prefix: `${folder}${options.prefix ?? ""}` },
+					]);
+					return relativeListing(listed, folder);
 				};
 			}
-			return method.bind(target);
+			const bound: unknown = value.bind(target);
+			return bound;
 		},
 	});
 }

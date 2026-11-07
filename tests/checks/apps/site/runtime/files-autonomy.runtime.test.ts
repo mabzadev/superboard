@@ -1,4 +1,5 @@
 import { createProjectContextHeaders } from "@superboard/contracts/project-context";
+import { R2_FOLDERS, scopedR2Bucket } from "@superboard/contracts/r2";
 import { SELF } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { expect, test } from "vitest";
@@ -15,6 +16,7 @@ import {
 } from "./retirement-api-helpers.js";
 
 const bindings = env as typeof env & { HEALTH_FILES_DB: D1Database; HEALTH_FILES_R2: R2Bucket };
+const storedFiles = scopedR2Bucket(bindings.HEALTH_FILES_R2, R2_FOLDERS.files);
 const secret = "files-autonomy-secret";
 const runtime = {
 	DB: bindings.HEALTH_FILES_DB,
@@ -109,7 +111,9 @@ test("Files completes a real R2 upload, preserves bytes and scopes metadata and 
 	expect((await call("GET", `/internal/v1/operator/objects/${ticket.id}/content`)).status).toBe(
 		404,
 	);
-	expect(await bindings.HEALTH_FILES_R2.head(ticket.object_key)).not.toBeNull();
+	expect(
+		await bindings.HEALTH_FILES_R2.head(`${R2_FOLDERS.files}${ticket.object_key}`),
+	).not.toBeNull();
 });
 
 test("Files returns actionable input errors and allows retry after an interrupted upload", async () => {
@@ -145,7 +149,7 @@ test("Files returns actionable input errors and allows retry after an interrupte
 	const incomplete = await call("PUT", `${path}/content`, "hi", 3);
 	expect(incomplete.status, await incomplete.clone().text()).toBe(422);
 	expect(await incomplete.json()).toMatchObject({ error: { code: "FILE_SIZE_MISMATCH" } });
-	expect(await bindings.HEALTH_FILES_R2.head(ticket.object_key)).toBeNull();
+	expect(await storedFiles.head(ticket.object_key)).toBeNull();
 	expect((await call("PUT", `${path}/content`, "hello", 3)).status).toBe(200);
 	expect((await call("POST", `${path}/complete`, {}, 3)).status).toBe(201);
 	expect(
@@ -167,7 +171,7 @@ test("Files collects expired uploads abandoned during a Worker restart and prese
 		4,
 	);
 	const ticket = (await created.json()).data;
-	await bindings.HEALTH_FILES_R2.put(ticket.object_key, "hello");
+	await storedFiles.put(ticket.object_key, "hello");
 	await bindings.HEALTH_FILES_DB.prepare(
 		"UPDATE operator_file_uploads SET state='uploading',expires_at='2000-01-01' WHERE id=?",
 	)
@@ -176,11 +180,11 @@ test("Files collects expired uploads abandoned during a Worker restart and prese
 	expect(
 		await (await call("POST", "/internal/v1/operator/collect-garbage", {}, 5)).json(),
 	).toMatchObject({ data: { collected: 0 } });
-	expect(await bindings.HEALTH_FILES_R2.head(ticket.object_key)).not.toBeNull();
+	expect(await storedFiles.head(ticket.object_key)).not.toBeNull();
 	expect(
 		await (await call("POST", "/internal/v1/operator/collect-garbage", {}, 4)).json(),
 	).toMatchObject({ data: { collected: 1 } });
-	expect(await bindings.HEALTH_FILES_R2.head(ticket.object_key)).toBeNull();
+	expect(await storedFiles.head(ticket.object_key)).toBeNull();
 	expect(
 		(await call("PUT", `/internal/v1/operator/upload-tickets/${ticket.id}/content`, "hello", 4))
 			.status,
@@ -199,7 +203,10 @@ test("canonical Files APIs persist metadata and bytes, return a working download
 	const scope = await prepareApiPlugin(plugin);
 	const base = `/api/v1/files/projects/${scope.production_project_ref}`;
 	const db = pluginDatabase("files");
-	const bucket = (env as unknown as { HEALTH_FILES_R2: R2Bucket }).HEALTH_FILES_R2;
+	const bucket = scopedR2Bucket(
+		(env as unknown as { HEALTH_FILES_R2: R2Bucket }).HEALTH_FILES_R2,
+		R2_FOLDERS.files,
+	);
 	const issue = () =>
 		apiCommand(plugin, "create_upload_ticket", {
 			method: "POST",

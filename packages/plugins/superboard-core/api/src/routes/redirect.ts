@@ -106,15 +106,15 @@ async function defaultDomainId(c: any) {
 	return created.id;
 }
 
-async function imageUrlFromBody(c: any, body: Record<string, any>) {
+async function imageUrlFromBody(c: RedirectContext, body: Record<string, any>) {
 	const explicit = firstValue(body, "image_url");
 	if (explicit) return String(explicit);
 
-	const file = firstValue(body, "image");
-	if (!file || typeof file === "string") return null;
+	const file: unknown = firstValue(body, "image");
+	if (!(file instanceof File)) return null;
 	if (!c.env.R2) throw new Error("R2 bucket is required to store quick link images");
 
-	const name = String(file.name || "quick-link-image").replace(/[^a-zA-Z0-9._-]/g, "-");
+	const name = (file.name || "quick-link-image").replace(/[^a-zA-Z0-9._-]/g, "-");
 	const key = `quick-links/${crypto.randomUUID()}-${name}`;
 	await applicationFilesBucket(c.env.R2).put(key, await file.arrayBuffer(), {
 		httpMetadata: { contentType: file.type || "application/octet-stream" },

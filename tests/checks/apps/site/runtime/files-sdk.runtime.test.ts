@@ -43,7 +43,7 @@ test("Files stores SDK uploads with known or streamed length in real R2 and refu
 		ALLOWED_FILE_CONTENT_TYPES_JSON: '["application/pdf"]',
 	};
 	try {
-		await workerEnv.FILES.put("legacy/sdk-file", "legacy bytes");
+		await workerEnv.FILES.put("files/legacy/sdk-file", "legacy bytes");
 		await workerEnv.DB.prepare(
 			"INSERT INTO application_files(id,user_id,object_key,filename,content_type,byte_size) VALUES ('018fc174-7c54-4d9b-8bfc-5fd23bc2b067','files-sdk-owner','legacy/sdk-file','legacy.pdf','application/pdf',12)",
 		).run();
@@ -110,7 +110,7 @@ test("Files stores SDK uploads with known or streamed length in real R2 and refu
 			)
 				.bind(payload.file.id)
 				.first<{ object_key: string }>();
-			expect(await (await workerEnv.FILES.get(record!.object_key))!.text()).toBe(
+			expect(await (await workerEnv.FILES.get(`files/${record!.object_key}`))!.text()).toBe(
 				new TextDecoder().decode(bytes),
 			);
 		}
