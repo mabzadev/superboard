@@ -2,6 +2,7 @@ import type { FlowContext, SqlRow } from "../d1/helpers";
 import { audit, isoNow, parseJsonObject, projectId } from "../d1/helpers";
 import { failure } from "../http/errors";
 import { optionalString } from "../http/validation";
+import { archiveBucket } from "../runtime/archive";
 import { flowRuntimeName } from "../runtime/names";
 import { decryptFlowValue } from "../services/crypto";
 
@@ -405,7 +406,7 @@ export async function exportSurveyCsv(context: FlowContext, surveyId: string) {
 	})();
 	await Promise.all([
 		producer,
-		context.env.ARCHIVE.put(key, stream.readable, {
+		archiveBucket(context.env).put(key, stream.readable, {
 			httpMetadata: { contentType: "text/csv; charset=utf-8" },
 			customMetadata: { projectId: String(projectId(context)), surveyId },
 		}),

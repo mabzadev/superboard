@@ -168,7 +168,7 @@ export async function startInstallation(input, token, fetchImpl = fetch) {
 			})
 		).result;
 	if (!uuid.test(trigger?.trigger_uuid ?? "")) throw new Error("INSTALLATION_TRIGGER_INVALID");
-	const bucket = `superboard-${target.target}-backups`;
+	const bucket = target.environments.production.r2.name;
 	try {
 		await api.request(`${base}/r2/buckets/${bucket}`);
 	} catch (error) {

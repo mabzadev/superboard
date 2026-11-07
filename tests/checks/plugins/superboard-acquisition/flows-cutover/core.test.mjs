@@ -91,7 +91,9 @@ test("backup evidence covers API, both legacy sources and Flows before any schem
 				database.time_travel_command &&
 				database.export_command &&
 				database.upload_command &&
-				database.r2_bucket === "flows-archive",
+				database.r2_bucket === "flows-archive" &&
+				database.r2_key.startsWith("flows/flows-cutover/42-test/") &&
+				database.upload_command.includes(`flows-archive/${database.r2_key}`),
 		),
 	);
 });

@@ -75,7 +75,7 @@ function memoryBucket(initial: Record<string, string> = {}) {
 		},
 		async get(key: string) {
 			const object = entry(key);
-			return object && { ...object, body: new Blob([objects.get(key)!]).stream() };
+			return object && { ...object, body: new Blob([new Uint8Array(objects.get(key)!)]).stream() };
 		},
 		async head(key: string) {
 			return entry(key);

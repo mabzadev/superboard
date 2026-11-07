@@ -108,9 +108,7 @@ export function targetReadiness(target, environment) {
 		developmentMailCaptured: environment !== "development" || target.mail?.transport === "capture",
 		legacyMessagingDisabled: target.features?.messaging === false,
 		frontMediaIsolated: Boolean(
-			environmentResources.siteMedia?.name &&
-			environmentResources.r2?.name &&
-			environmentResources.siteMedia.name !== environmentResources.r2.name,
+			environmentResources.siteMedia?.name && environmentResources.r2?.name,
 		),
 	};
 	return {

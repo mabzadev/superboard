@@ -290,8 +290,10 @@ describe("public redirects", () => {
 		expect(response.status).toBe(200);
 		const body: any = await response.json();
 		expect(puts).toHaveLength(1);
-		expect(puts[0].key).toMatch(/^quick-links\/.+-image\.png$/);
-		expect(body.link.image_url).toContain("/quick-link-assets/");
+		expect(puts[0].key).toMatch(/^files\/quick-links\/.+-image\.png$/);
+		expect(body.link.image_url).toContain(
+			`/quick-link-assets/${encodeURIComponent(puts[0].key.slice("files/".length))}`,
+		);
 		expect(state.quickLinks[0].image_url).toBe(body.link.image_url);
 	});
 

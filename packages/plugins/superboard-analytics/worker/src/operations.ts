@@ -6,6 +6,7 @@ import {
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 
 import { identityHashCandidates } from "./crypto";
+import { eventArchiveBucket } from "./event-archive";
 import type { AnalyticsContext } from "./http";
 import { httpError, positiveLimit, readJson } from "./http";
 import { commitAnalyticsMutation } from "./mutations";
@@ -231,7 +232,7 @@ async function exportAnalytics(
 		.all<Record<string, unknown>>();
 	const key = `v1/exports/project=${encodeURIComponent(payload.projectId)}/job=${encodeURIComponent(payload.jobId)}.ndjson`;
 	const lines = rows.results.map((row) => stableAnalyticsJson(row)).join("\n");
-	await env.EVENT_ARCHIVE.put(key, lines ? `${lines}\n` : "", {
+	await eventArchiveBucket(env).put(key, lines ? `${lines}\n` : "", {
 		httpMetadata: { contentType: "application/x-ndjson; charset=UTF-8" },
 		customMetadata: {
 			project_id: payload.projectId,
@@ -345,7 +346,7 @@ async function eraseSubject(
 		.bind(projectId, ...hashes)
 		.all<{ event_id: string; archive_key: string }>();
 	for (let index = 0; index < indexed.results.length; index += 1_000) {
-		await env.EVENT_ARCHIVE.delete(
+		await eventArchiveBucket(env).delete(
 			indexed.results.slice(index, index + 1_000).map((row) => row.archive_key),
 		);
 	}

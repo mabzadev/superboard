@@ -2,6 +2,7 @@ import { DEAD_LETTER_MAX_RECORDS, deadLetterPayload } from "@superboard/contract
 import { readTextLimited } from "@superboard/contracts/request-body";
 import { isSafePublicHttpsUrl } from "@superboard/contracts/url-security";
 
+import { attachmentsBucket } from "./attachments-bucket";
 import {
 	canAutomaticallyDeliverCaptainResult,
 	captainErrorCode,
@@ -2593,7 +2594,7 @@ async function processExport(
 					.bind(job.projectId)
 					.all();
 	const key = `exports/${job.projectId}/${job.exportId}.json`;
-	await env.ATTACHMENTS.put(key, JSON.stringify({ data: rows.results }), {
+	await attachmentsBucket(env).put(key, JSON.stringify({ data: rows.results }), {
 		httpMetadata: { contentType: "application/json" },
 	});
 	await env.DB.prepare(`
@@ -2633,7 +2634,7 @@ async function processImport(
 		}>();
 	if (!request) return;
 	try {
-		const object = await env.ATTACHMENTS.get(request.storage_key);
+		const object = await attachmentsBucket(env).get(request.storage_key);
 		if (!object)
 			throw failure("contact_import_file_not_found", "Contact import file was not found", 422);
 		if (object.size > 10 * 1024 * 1024) {
