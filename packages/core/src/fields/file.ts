@@ -4,8 +4,8 @@ import type { FieldDefinition, FieldUIHints, FileValue } from "./types.js";
 
 export interface FileOptions {
 	required?: boolean;
-	maxSize?: number;
-	allowedTypes?: string[];
+	maxSize?: number; // In bytes
+	allowedTypes?: string[]; // MIME types — exact (image/png) or prefix (image/)
 	helpText?: string;
 }
 
@@ -21,7 +21,7 @@ export function file(options: FileOptions = {}): FieldDefinition<FileValue> {
 		meta: z.record(z.string(), z.unknown()).optional(),
 	});
 
-	const schema: z.ZodTypeAny = options.required ? fileObjSchema : fileObjSchema.optional();
+	const schema: z.ZodType = options.required ? fileObjSchema : fileObjSchema.optional();
 
 	const ui: FieldUIHints = {
 		widget: "file",

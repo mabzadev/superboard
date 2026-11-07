@@ -11,13 +11,18 @@ export interface NumberOptions {
 	helpText?: string;
 }
 
+/**
+ * Number field - numeric input
+ */
 export function number(options: NumberOptions = {}): FieldDefinition<number> {
 	let numberSchema = z.number();
 
+	// Integer constraint
 	if (options.integer) {
 		numberSchema = numberSchema.int("Must be an integer");
 	}
 
+	// Range constraints
 	if (options.min !== undefined) {
 		numberSchema = numberSchema.min(options.min, `Must be at least ${options.min}`);
 	}
@@ -26,7 +31,8 @@ export function number(options: NumberOptions = {}): FieldDefinition<number> {
 		numberSchema = numberSchema.max(options.max, `Must be at most ${options.max}`);
 	}
 
-	const schema: z.ZodTypeAny = options.required ? numberSchema : numberSchema.optional();
+	// Optional vs required
+	const schema: z.ZodType = options.required ? numberSchema : numberSchema.optional();
 
 	const ui: FieldUIHints = {
 		widget: "number",

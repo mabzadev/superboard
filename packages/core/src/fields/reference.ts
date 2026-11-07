@@ -2,6 +2,10 @@ import { z } from "astro/zod";
 
 import type { FieldDefinition } from "./types.js";
 
+/**
+ * Reference field
+ * References another content item by ID
+ */
 export function reference(
 	collection: string,
 	options?: {

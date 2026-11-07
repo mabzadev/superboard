@@ -1,32 +1,33 @@
+import type { InviteResult } from "./contributor-invitation.js";
 import {
 	verifyDiscordSignature,
 	interactionResponse,
 	interactionResponseWithButton,
-	addRole,
-	hasRole,
+	editInteractionResponse,
 	postMessage,
 } from "./discord.js";
 import { verifyGitHubSignature, githubAuthUrl, exchangeGitHubCode } from "./github.js";
 import {
-	findByGitHubId,
-	findByDiscordId,
-	storeLink,
 	storeOAuthState,
 	consumeOAuthState,
 	isDeliveryProcessed,
 	markDeliveryProcessed,
 	recordContributor,
-	hasContributed,
 } from "./kv.js";
 import type { DiscordInteraction, GitHubPRPayload } from "./types.js";
 
+export { ContributorInvitation } from "./contributor-invitation.js";
+export { ContributorLinks } from "./contributor-links.js";
+
+const links = (env: Env) => env.CONTRIBUTOR_LINKS.getByName("global");
+
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const url = new URL(request.url);
 
 		switch (url.pathname) {
 			case "/interactions":
-				return handleInteraction(request, env);
+				return handleInteraction(request, env, ctx);
 			case "/callback/github":
 				return handleGitHubCallback(request, env);
 			case "/webhook/github":
@@ -37,7 +38,13 @@ export default {
 	},
 } satisfies ExportedHandler<Env>;
 
-async function handleInteraction(request: Request, env: Env): Promise<Response> {
+// ─── Discord Interaction Handler ─────────────────────────────────
+
+async function handleInteraction(
+	request: Request,
+	env: Env,
+	ctx: ExecutionContext,
+): Promise<Response> {
 	if (request.method !== "POST") {
 		return new Response("Method not allowed", { status: 405 });
 	}
@@ -49,15 +56,40 @@ async function handleInteraction(request: Request, env: Env): Promise<Response> 
 
 	const interaction: DiscordInteraction = await request.json();
 
+	// Discord PING verification
 	if (interaction.type === 1) {
 		return Response.json({ type: 1 });
 	}
+	if (interaction.guild_id !== env.DISCORD_GUILD_ID) {
+		return interactionResponse("This command can only be used in the EmDash server.", true);
+	}
 
-	if (interaction.type === 2 && interaction.data?.name === "link") {
-		return handleLinkCommand(interaction, env);
+	if (
+		interaction.type === 2 &&
+		(interaction.data?.name === "link" || interaction.data?.name === "unlink")
+	) {
+		// Acknowledge before waiting on the shared link queue or Discord API.
+		ctx.waitUntil(completeLinkInteraction(interaction, env));
+		return Response.json({ type: 5, data: { flags: 64 } });
 	}
 
 	return interactionResponse("Unknown command.", true);
+}
+
+async function completeLinkInteraction(interaction: DiscordInteraction, env: Env): Promise<void> {
+	let response: Response;
+	try {
+		response =
+			interaction.data?.name === "unlink"
+				? await handleUnlinkCommand(interaction, env)
+				: await handleLinkCommand(interaction, env);
+	} catch {
+		response = interactionResponse(
+			"Could not prepare your account link. Please try /link again.",
+			true,
+		);
+	}
+	await editInteractionResponse(env, interaction.token, response);
 }
 
 async function handleLinkCommand(interaction: DiscordInteraction, env: Env): Promise<Response> {
@@ -65,16 +97,18 @@ async function handleLinkCommand(interaction: DiscordInteraction, env: Env): Pro
 	if (!user) {
 		return interactionResponse("This command can only be used in a server.", true);
 	}
+	const { existing, generation } = await links(env).getLinkContext(user.id);
 
+	// Generate state token and store it
 	const state = crypto.randomUUID();
 	await storeOAuthState(env.KV, state, {
 		discord_id: user.id,
 		discord_username: user.username,
+		link_generation: generation,
 	});
 
 	const authUrl = githubAuthUrl(env, state);
 
-	const existing = await findByDiscordId(env.KV, user.id);
 	if (existing) {
 		return interactionResponseWithButton(
 			`Your Discord account is linked to GitHub user **${existing.github_login}**. ` +
@@ -92,6 +126,32 @@ async function handleLinkCommand(interaction: DiscordInteraction, env: Env): Pro
 	);
 }
 
+async function handleUnlinkCommand(interaction: DiscordInteraction, env: Env): Promise<Response> {
+	const user = interaction.member?.user;
+	if (!user) {
+		return interactionResponse("This command can only be used in a server.", true);
+	}
+
+	try {
+		const result = await links(env).unlink(user.id, interaction.id);
+		return interactionResponse(
+			result.unlinked
+				? "Your GitHub account has been unlinked and your Contributor role removed."
+				: result.roleRemoved
+					? "Your Contributor role has been removed. Your Discord account was not linked to a GitHub account."
+					: "Your Discord account is not linked to a GitHub account.",
+			true,
+		);
+	} catch {
+		return interactionResponse(
+			"Could not unlink your account or remove the Contributor role. Please try again.",
+			true,
+		);
+	}
+}
+
+// ─── GitHub OAuth Callback ───────────────────────────────────────
+
 async function handleGitHubCallback(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
 	const code = url.searchParams.get("code");
@@ -101,16 +161,19 @@ async function handleGitHubCallback(request: Request, env: Env): Promise<Respons
 		return htmlResponse("Missing code or state parameter.", 400);
 	}
 
+	// Validate and consume the state token
 	const oauthState = await consumeOAuthState(env.KV, state);
 	if (!oauthState) {
 		return htmlResponse("Invalid or expired link. Please run /link in Discord again.", 400);
 	}
 
+	// Exchange code for GitHub identity
 	const githubUser = await exchangeGitHubCode(env, code);
 	if (!githubUser) {
 		return htmlResponse("Failed to verify your GitHub account. Please try again.", 500);
 	}
 
+	// Transfer the account link and reconcile the Contributor role.
 	const link = {
 		github_id: githubUser.id,
 		github_login: githubUser.login,
@@ -118,26 +181,34 @@ async function handleGitHubCallback(request: Request, env: Env): Promise<Respons
 		discord_username: oauthState.discord_username,
 		linked_at: new Date().toISOString(),
 	};
-	await storeLink(env.KV, link);
+	let contributed: boolean;
+	let roleGranted: boolean;
+	let shouldWelcome: boolean;
+	try {
+		const result = await links(env).link(link, oauthState.link_generation ?? 0);
+		if (result.status === "stale") {
+			return htmlResponse("This link request was canceled. Please run /link again.", 400);
+		}
+		({ contributed, roleGranted, shouldWelcome } = result);
+	} catch {
+		return htmlResponse(
+			"Could not link your account or update the Contributor role. Please run /link again.",
+			502,
+		);
+	}
 
-	const contributed = await hasContributed(env.KV, githubUser.id);
-	const alreadyHasRole = contributed
-		? await hasRole(env, oauthState.discord_id, env.DISCORD_CONTRIBUTOR_ROLE_ID)
-		: false;
-
-	let roleGranted = false;
-	if (contributed && !alreadyHasRole) {
-		roleGranted = await addRole(env, oauthState.discord_id, env.DISCORD_CONTRIBUTOR_ROLE_ID);
-		if (roleGranted) {
-			await postMessage(
-				env,
-				env.DISCORD_CHANNEL_ID,
+	if (shouldWelcome) {
+		try {
+			await links(env).postWelcomeIfLinked(
+				githubUser.id,
+				oauthState.discord_id,
 				pick(welcomeMessages, {
 					user: `<@${oauthState.discord_id}>`,
 					login: githubUser.login,
 				}),
-				[oauthState.discord_id],
 			);
+		} catch (error) {
+			console.error("Could not complete Contributor welcome delivery", error);
 		}
 	}
 
@@ -161,6 +232,8 @@ async function handleGitHubCallback(request: Request, env: Env): Promise<Respons
 	return htmlResponse(statusMessage, 200);
 }
 
+// ─── GitHub Webhook Handler ──────────────────────────────────────
+
 async function handleGitHubWebhook(request: Request, env: Env): Promise<Response> {
 	if (request.method !== "POST") {
 		return new Response("Method not allowed", { status: 405 });
@@ -179,6 +252,7 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 		return new Response("Invalid signature", { status: 401 });
 	}
 
+	// Deduplicate retries
 	const deliveryId = request.headers.get("X-GitHub-Delivery");
 	if (deliveryId && (await isDeliveryProcessed(env.KV, deliveryId))) {
 		return new Response("Already processed", { status: 200 });
@@ -186,10 +260,12 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 
 	const payload: GitHubPRPayload = JSON.parse(body);
 
+	// Verify this is from the expected repository
 	if (payload.repository.full_name !== env.GITHUB_REPO) {
 		return new Response("Wrong repository", { status: 200 });
 	}
 
+	// Only care about merged PRs
 	if (payload.action !== "closed" || !payload.pull_request.merged) {
 		return new Response("Not a merge", { status: 200 });
 	}
@@ -200,38 +276,51 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 	const prTitle = payload.pull_request.title;
 	const prUrl = payload.pull_request.html_url;
 
-	if (
-		payload.pull_request.user.login === env.GITHUB_OWNER_LOGIN ||
-		payload.pull_request.user.login.endsWith("[bot]")
-	) {
+	// Skip bots and the repo owner
+	if (shouldSkipContributor(payload.pull_request.user, env.GITHUB_OWNER_LOGIN)) {
 		return new Response("Skipped owner/bot", { status: 200 });
 	}
 
+	// Record this contributor (for retroactive role grant at /link time)
 	await recordContributor(env.KV, githubId, githubLogin);
 
-	const link = await findByGitHubId(env.KV, githubId);
+	const link = await links(env).grantRoleForGitHub(githubId);
 
 	const prLink = `[#${prNumber} ${prTitle}](<${prUrl}>)`;
 
-	if (link) {
-		await postMessage(
-			env,
-			env.DISCORD_CHANNEL_ID,
+	if (link.linked && link.discordId) {
+		await links(env).postMergeIfLinked(
+			githubId,
+			link.discordId,
 			pick(linkedMergeMessages, {
-				user: `<@${link.discord_id}>`,
+				user: `<@${link.discordId}>`,
 				login: githubLogin,
 				pr: prLink,
 			}),
-			[link.discord_id],
 		);
-	} else {
-		await postMessage(
+	} else if (link.linked) {
+		const posted = await postMessage(
 			env,
 			env.DISCORD_CHANNEL_ID,
-			pick(unlinkedMergeMessages, { login: githubLogin, pr: prLink }),
+			`PR merged by **${githubLogin}**: ${prLink}`,
 		);
+		if (!posted) throw new Error("Discord rejected merge announcement");
+	} else {
+		const inviteResult = await env.CONTRIBUTOR_INVITATIONS.getByName(String(githubId)).invite({
+			githubId,
+			githubLogin,
+			prNumber,
+		});
+		if (shouldAnnounceUnlinkedMerge(inviteResult, prNumber)) {
+			await postMessage(
+				env,
+				env.DISCORD_CHANNEL_ID,
+				pick(unlinkedMergeMessages, { login: githubLogin, pr: prLink }),
+			);
+		}
 	}
 
+	// Mark delivery processed after all side effects succeed
 	if (deliveryId) {
 		await markDeliveryProcessed(env.KV, deliveryId);
 	}
@@ -239,10 +328,27 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 	return new Response("OK", { status: 200 });
 }
 
+export function shouldSkipContributor(
+	user: GitHubPRPayload["pull_request"]["user"],
+	ownerLogin: string,
+): boolean {
+	return user.login === ownerLogin || user.type === "Bot" || user.login.endsWith("[bot]");
+}
+
+export function shouldAnnounceUnlinkedMerge(inviteResult: InviteResult, prNumber: number): boolean {
+	return (
+		inviteResult.invited ||
+		(inviteResult.record !== undefined && inviteResult.record.prNumber !== prNumber)
+	);
+}
+
+// ─── Message Templates ───────────────────────────────────────────
+
 type Vars = Record<string, string>;
 
 const PLACEHOLDER_RE = /\{(\w+)\}/g;
 
+/** Pick a random template and substitute {key} placeholders. */
 function pick(templates: string[], vars: Vars): string {
 	const template = templates[Math.floor(Math.random() * templates.length)]!;
 	return template.replace(PLACEHOLDER_RE, (_, key: string) => vars[key] ?? `{${key}}`);
@@ -269,6 +375,8 @@ const welcomeMessages = [
 	"{user} just linked their GitHub (**{login}**) and they're already a contributor! Welcome to the team!",
 	"Say hello to {user}! They linked as **{login}** on GitHub, and they've already got merged PRs. Contributor role well earned!",
 ];
+
+// ─── Helpers ─────────────────────────────────────────────────────
 
 function htmlResponse(body: string, status: number): Response {
 	return new Response(

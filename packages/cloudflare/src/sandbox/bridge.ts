@@ -1,29 +1,87 @@
-import type { D1Database } from "@cloudflare/workers-types";
+/**
+ * PluginBridge WorkerEntrypoint
+ *
+ * Provides controlled access to database operations for sandboxed plugins.
+ * The sandbox gets a SERVICE BINDING to this entrypoint, not direct DB access.
+ * All operations are validated and scoped to the plugin.
+ *
+ */
+
+import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { WorkerEntrypoint } from "cloudflare:workers";
-import type { ContentCreateOptions, Database, I18nConfig, SandboxEmailSendCallback } from "emdash";
-import {
-	ContentRepository,
-	createSandboxRouteError,
-	getSandboxRouteErrorDetails,
-	ulid,
-	PluginStorageRepository,
-	resolveContentCreateLocale,
+import type {
+	CommentCountOptions,
+	CommentListOptions,
+	ConditionalDeleteResult,
+	ConditionalWriteResult,
+	ContentActionCallbacks,
+	ContentCreateOptions,
+	CronTaskInfo,
+	Database,
+	DownloadResult,
+	I18nConfig,
+	PluginComment,
+	PluginCommentStatus,
+	SandboxCommentModerateCallback,
+	RedirectCreateInput,
+	RedirectInfo,
+	RedirectListOptions,
+	RedirectUpdateInput,
+	PluginContentItem,
+	SandboxContentCreateCallback,
+	PluginHttpResponseWire,
+	SandboxEmailSendCallback,
+	Storage,
+	TaxonomyAccessWithWrite,
+	VersionedRedirect,
+	VersionedValue,
 } from "emdash";
-import { Kysely } from "kysely";
-import { D1Dialect } from "kysely-d1";
+import type {
+	ContentItem,
+	ContentListOptions,
+	OptionsRepository,
+	PaginatedResult,
+	PluginStorageRepository,
+	SettingField,
+} from "emdash/internal/plugins/host";
+import type { MediaBytes, MediaItem as PluginMediaItem, MediaMetadataPatch } from "emdash/plugin";
+import {
+	createPluginSecretRedactor,
+	type PluginSecretRedactor,
+} from "emdash/plugins/secret-redactor";
 
 import { sandboxHttpFetch } from "./bridge-http.js";
+import type { RedirectBridgeResult, StorageUpdateIfResponse } from "./types.js";
 
+let bridgeRuntimePromise: Promise<typeof import("./bridge-runtime.js")> | undefined;
+
+function loadBridgeRuntime(): Promise<typeof import("./bridge-runtime.js")> {
+	bridgeRuntimePromise ??= import("./bridge-runtime.js");
+	return bridgeRuntimePromise;
+}
+
+/** Regex to validate collection names (prevent SQL injection) */
 const COLLECTION_NAME_REGEX = /^[a-z][a-z0-9_]*$/;
 const MISSING_MEDIA_USAGE_ACTIVATION_TABLE_REGEX = /no such table.*_emdash_media_usage_activation/i;
+const MISSING_TRANSFER_OPERATIONS_TABLE_REGEX = /no such table.*_emdash_transfer_operations/i;
+interface SiteWriteFence {
+	mediaState: string | null;
+	importId: string | null;
+	exportId: string | null;
+}
 
-const FILE_EXT_REGEX = /^\.[a-z0-9]{1,10}$/i;
+const SITE_WRITE_FENCE_SQL = `SELECT
+	(SELECT state FROM _emdash_media_usage_activation WHERE task_key = 'incremental_capture') AS media_state,
+	(SELECT id FROM _emdash_transfer_operations WHERE kind = 'import' AND (state IN ('running', 'verifying') OR (state IN ('failed', 'cancelled') AND mutation_started_at IS NOT NULL)) LIMIT 1) AS import_id,
+	(SELECT id FROM _emdash_transfer_operations WHERE kind = 'export' AND state = 'running' LIMIT 1) AS export_id`;
+const SETTINGS_KEY_PREFIX = "settings:";
 
 const SYSTEM_COLUMNS = new Set([
 	"id",
 	"slug",
 	"status",
 	"author_id",
+	"primary_byline_id",
 	"created_at",
 	"updated_at",
 	"published_at",
@@ -36,10 +94,139 @@ const SYSTEM_COLUMNS = new Set([
 	"translation_group",
 ]);
 
-let emailSendCallback: SandboxEmailSendCallback | null = null;
+/** Regex to validate file extensions (simple alphanumeric, 1-10 chars) */
+const FILE_EXT_REGEX = /^\.[a-z0-9]{1,10}$/i;
+const COMMENT_STATUSES = new Set<string>(["approved", "pending", "spam"]);
+const CONTENT_ACTION_ERROR_CODE_REGEX = /^[A-Z][A-Z0-9_]*$/;
 
+function invalidCommentStatus(value: string, name: string): string | null {
+	return COMMENT_STATUSES.has(value) ? null : `${name} must be one of: approved, pending, spam`;
+}
+
+// The bridge can run in a different isolate than the one that set this callback.
+// emailSend starts EmDash locally when the callback is missing.
+let emailSendCallback: SandboxEmailSendCallback | null = null;
+const CONTENT_CREATE_CALLBACKS_KEY = Symbol.for("emdash:sandbox-content-create-callbacks");
+const TAXONOMY_WRITE_CALLBACKS_KEY = Symbol.for("emdash:sandbox-taxonomy-write-callbacks");
+const CONTENT_ACTION_CALLBACKS_KEY = Symbol.for("emdash:sandbox-content-action-callbacks");
+let cronRescheduleCallback: (() => void) | null = null;
+let cronNowCallback: (() => Date) | null = null;
+let commentModerateCallback: SandboxCommentModerateCallback | null = null;
+const httpFetchCallbacks = new Map<string, typeof fetch>();
+const mediaStorageCallbacks = new Map<string, Pick<Storage, "download">>();
+
+function contentCreateCallbacks(): Map<string, SandboxContentCreateCallback> {
+	const store = globalThis as Record<symbol, unknown>;
+	const existing = store[CONTENT_CREATE_CALLBACKS_KEY];
+	if (existing instanceof Map) {
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- this private Symbol stores only callback maps created below
+		return existing as Map<string, SandboxContentCreateCallback>;
+	}
+	const callbacks = new Map<string, SandboxContentCreateCallback>();
+	store[CONTENT_CREATE_CALLBACKS_KEY] = callbacks;
+	return callbacks;
+}
+
+function taxonomyWriteCallbacks(): Map<string, TaxonomyAccessWithWrite> {
+	const store = globalThis as Record<symbol, unknown>;
+	const existing = store[TAXONOMY_WRITE_CALLBACKS_KEY];
+	if (existing instanceof Map) {
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- this private Symbol stores only callback maps created below
+		return existing as Map<string, TaxonomyAccessWithWrite>;
+	}
+	const callbacks = new Map<string, TaxonomyAccessWithWrite>();
+	store[TAXONOMY_WRITE_CALLBACKS_KEY] = callbacks;
+	return callbacks;
+}
+
+function contentActionCallbacks(): Map<string, ContentActionCallbacks> {
+	const store = globalThis as Record<symbol, unknown>;
+	const existing = store[CONTENT_ACTION_CALLBACKS_KEY];
+	if (existing instanceof Map) {
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- this private Symbol stores only callback maps created below
+		return existing as Map<string, ContentActionCallbacks>;
+	}
+	const callbacks = new Map<string, ContentActionCallbacks>();
+	store[CONTENT_ACTION_CALLBACKS_KEY] = callbacks;
+	return callbacks;
+}
+
+/**
+ * Set the email send callback for all bridge instances.
+ * Called by the runner when the EmailPipeline is available.
+ */
 export function setEmailSendCallback(callback: SandboxEmailSendCallback | null): void {
 	emailSendCallback = callback;
+}
+
+export function setContentCreateCallback(
+	runtimeId: string,
+	callback: SandboxContentCreateCallback | null,
+): void {
+	if (callback) contentCreateCallbacks().set(runtimeId, callback);
+	else contentCreateCallbacks().delete(runtimeId);
+}
+
+export function setContentActionsCallback(
+	runtimeId: string,
+	callback: ContentActionCallbacks | null,
+): void {
+	if (callback) contentActionCallbacks().set(runtimeId, callback);
+	else contentActionCallbacks().delete(runtimeId);
+}
+
+export function beginContentActionCallbacks(
+	runtimeId: string,
+	pluginId: string,
+	invocationId: string,
+	invalidateContentCache?: (tags: string[]) => Promise<void>,
+): void {
+	contentActionCallbacks().get(runtimeId)?.begin?.(pluginId, invocationId, invalidateContentCache);
+}
+
+export function flushContentActionCallbacks(
+	runtimeId: string,
+	pluginId: string,
+	invocationId: string,
+	final: boolean,
+): Promise<void> {
+	return (
+		contentActionCallbacks().get(runtimeId)?.flush(pluginId, invocationId, final) ??
+		Promise.resolve()
+	);
+}
+
+export function setCronRescheduleCallback(callback: (() => void) | null): void {
+	cronRescheduleCallback = callback;
+}
+
+export function setCronNowCallback(callback: (() => Date) | null): void {
+	cronNowCallback = callback;
+}
+
+export function setCommentModerateCallback(callback: SandboxCommentModerateCallback | null): void {
+	commentModerateCallback = callback;
+}
+
+export function setMediaStorageCallback(
+	key: string,
+	storage: Pick<Storage, "download"> | null,
+): void {
+	if (storage) mediaStorageCallbacks.set(key, storage);
+	else mediaStorageCallbacks.delete(key);
+}
+
+export function setTaxonomyWriteCallback(
+	runtimeId: string,
+	callback: TaxonomyAccessWithWrite | null,
+): void {
+	if (callback) taxonomyWriteCallbacks().set(runtimeId, callback);
+	else taxonomyWriteCallbacks().delete(runtimeId);
+}
+
+export function setHttpFetchCallback(key: string, callback: typeof fetch | null): void {
+	if (callback) httpFetchCallbacks.set(key, callback);
+	else httpFetchCallbacks.delete(key);
 }
 
 function serializeValue(value: unknown): unknown {
@@ -49,50 +236,69 @@ function serializeValue(value: unknown): unknown {
 	return value;
 }
 
-function rowToContentItem(
-	collection: string,
-	row: Record<string, unknown>,
-): {
-	id: string;
-	type: string;
-	data: Record<string, unknown>;
-	createdAt: string;
-	updatedAt: string;
-	locale: string;
-} {
+async function forwardContentAction<T>(fn: () => Promise<T>): Promise<T | Record<string, unknown>> {
+	try {
+		return await fn();
+	} catch (error) {
+		if (
+			error instanceof Error &&
+			"code" in error &&
+			typeof error.code === "string" &&
+			CONTENT_ACTION_ERROR_CODE_REGEX.test(error.code)
+		) {
+			return {
+				__emdashContentActionError: true,
+				error: { code: error.code, message: error.message },
+			};
+		}
+		throw error;
+	}
+}
+
+function rowToContentItem(collection: string, row: Record<string, unknown>) {
 	const data: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(row)) {
-		if (!SYSTEM_COLUMNS.has(key)) {
-			if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
-				try {
-					data[key] = JSON.parse(value);
-				} catch {
-					data[key] = value;
-				}
-			} else if (value !== null) {
+		if (SYSTEM_COLUMNS.has(key)) continue;
+		if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
+			try {
+				data[key] = JSON.parse(value);
+			} catch {
 				data[key] = value;
 			}
+		} else if (value !== null) {
+			data[key] = value;
 		}
 	}
-
 	return {
 		id: typeof row.id === "string" ? row.id : String(row.id),
 		type: collection,
+		slug: typeof row.slug === "string" ? row.slug : null,
+		status: typeof row.status === "string" ? row.status : "draft",
 		data,
 		createdAt: typeof row.created_at === "string" ? row.created_at : new Date().toISOString(),
 		updatedAt: typeof row.updated_at === "string" ? row.updated_at : new Date().toISOString(),
 		locale: typeof row.locale === "string" ? row.locale : "en",
+		publishedAt: typeof row.published_at === "string" ? row.published_at : null,
+		scheduledAt: typeof row.scheduled_at === "string" ? row.scheduled_at : null,
+		authorId: columnNullableString(row.author_id),
+		translationGroup: columnNullableString(row.translation_group),
+		liveRevisionId: columnNullableString(row.live_revision_id),
+		draftRevisionId: columnNullableString(row.draft_revision_id),
+		version: typeof row.version === "number" ? row.version : Number(row.version) || 1,
 	};
 }
 
+/** Narrow an unknown D1 column value to a string ("" when it isn't one). */
 function columnString(value: unknown): string {
 	return typeof value === "string" ? value : "";
 }
 
+/** Narrow an unknown, nullable D1 column value to `string | null`. */
 function columnNullableString(value: unknown): string | null {
 	return typeof value === "string" ? value : null;
 }
 
+/** Parse a JSON string column into a string array (`[]` on anything else). */
 function columnStringArray(value: unknown): string[] {
 	if (typeof value !== "string" || !value) return [];
 	try {
@@ -105,10 +311,12 @@ function columnStringArray(value: unknown): string[] {
 	}
 }
 
+/** Type guard for plain JSON objects. */
 function isJsonObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Parse a JSON string column into an object (`null` on anything else). */
 function columnJsonObject(value: unknown): Record<string, unknown> | null {
 	if (typeof value !== "string" || !value) return null;
 	try {
@@ -119,6 +327,10 @@ function columnJsonObject(value: unknown): Record<string, unknown> | null {
 	}
 }
 
+/**
+ * Convert a `taxonomies` row to the term shape exposed over the bridge.
+ * Matches core's TaxonomyTermInfo from plugins/types.ts.
+ */
 function rowToTaxonomyTerm(row: Record<string, unknown>): {
 	id: string;
 	taxonomy: string;
@@ -141,47 +353,207 @@ function rowToTaxonomyTerm(row: Record<string, unknown>): {
 	};
 }
 
+async function redirectBridgeResult<T>(action: () => Promise<T>): Promise<RedirectBridgeResult<T>> {
+	try {
+		return { ok: true, value: await action() };
+	} catch (error) {
+		const { RedirectAccessError } = await loadBridgeRuntime();
+		if (error instanceof RedirectAccessError) {
+			return { ok: false, error: { code: error.code, message: error.message } };
+		}
+		throw error;
+	}
+}
+
+/**
+ * Environment bindings required by PluginBridge
+ */
 export interface PluginBridgeEnv {
 	DB: D1Database;
 	MEDIA?: R2Bucket;
+	EMDASH_ENCRYPTION_KEY?: string;
 }
 
+/**
+ * Props passed to the bridge via ctx.props when creating the loopback binding
+ */
 export interface PluginBridgeProps {
 	pluginId: string;
 	pluginVersion: string;
 	capabilities: string[];
 	allowedHosts: string[];
 	storageCollections: string[];
+	contentCreateRuntimeId?: string;
+	contentActionsRuntimeId?: string;
+	taxonomyWriteRuntimeId?: string;
 	i18nConfig?: I18nConfig | null;
+	siteInfo?: {
+		name: string;
+		url: string;
+		locale: string;
+		trailingSlash?: "always" | "never" | "ignore";
+	};
+	httpFetchKey?: string;
+	mediaStorageKey?: string;
+	/** Per-collection storage config (matches manifest.storage entries) */
 	storageConfig?: Record<
 		string,
 		{ indexes?: Array<string | string[]>; uniqueIndexes?: Array<string | string[]> }
 	>;
+	settingsSchema?: Record<string, SettingField>;
 }
 
+/**
+ * PluginBridge WorkerEntrypoint
+ *
+ * Provides the context API to sandboxed plugins via RPC.
+ * All methods validate capabilities and scope operations to the plugin.
+ *
+ * Usage:
+ * 1. Export this class from your worker entrypoint
+ * 2. Sandboxed plugins get a binding to it via ctx.exports.PluginBridge({...})
+ * 3. Plugins call bridge methods which validate and proxy to the database
+ */
 export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridgeProps> {
-	private async assertMediaUsageActivationWriteAllowed(): Promise<void> {
+	private readonly secretRedactor: PluginSecretRedactor = createPluginSecretRedactor();
+
+	private async db() {
+		const { D1Dialect, Kysely } = await loadBridgeRuntime();
+		return new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+	}
+
+	private requireCapability(capability: string): void {
+		if (!this.ctx.props.capabilities.includes(capability)) {
+			throw new Error(`Missing capability: ${capability}`);
+		}
+	}
+
+	private validateCollection(collection: string): void {
+		if (!COLLECTION_NAME_REGEX.test(collection)) {
+			throw new Error(`Invalid collection name: ${collection}`);
+		}
+	}
+
+	private getMediaStorageCallback(): Pick<Storage, "download"> | null {
+		const key = this.ctx.props.mediaStorageKey;
+		if (!key) return null;
+		return mediaStorageCallbacks.get(key) ?? null;
+	}
+
+	private async contentAccess() {
+		const { createContentAccess } = await loadBridgeRuntime();
+		return createContentAccess(await this.db(), {
+			site: this.ctx.props.siteInfo,
+			revisions: this.ctx.props.capabilities.includes("content:revisions:read"),
+		});
+	}
+
+	private async getOptionsRepo(): Promise<OptionsRepository> {
+		const { D1Dialect, Kysely, OptionsRepository } = await loadBridgeRuntime();
+		return new OptionsRepository(
+			new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) }),
+		);
+	}
+
+	private async getSettingsAccess() {
+		const { createSettingsAccess, resolvePluginEncryptionKeys } = await loadBridgeRuntime();
+		const keys =
+			this.env.EMDASH_ENCRYPTION_KEY === undefined
+				? undefined
+				: await resolvePluginEncryptionKeys({
+						EMDASH_ENCRYPTION_KEY: this.env.EMDASH_ENCRYPTION_KEY,
+					});
+		return createSettingsAccess(
+			await this.getOptionsRepo(),
+			this.ctx.props.pluginId,
+			this.ctx.props.settingsSchema ?? {},
+			keys,
+			this.secretRedactor.add,
+		);
+	}
+
+	private observeSecretSetting(key: string, value: unknown): void {
+		const name = key.slice(SETTINGS_KEY_PREFIX.length);
+		if (this.ctx.props.settingsSchema?.[name]?.type === "secret" && typeof value === "string") {
+			this.secretRedactor.add(name, value);
+		}
+	}
+
+	private async deleteLegacyKV(key: string): Promise<boolean> {
+		const result = await this.env.DB.prepare(
+			"DELETE FROM _plugin_storage WHERE plugin_id = ? AND collection = '__kv' AND id = ?",
+		)
+			.bind(this.ctx.props.pluginId, key)
+			.run();
+		return (result.meta?.changes ?? 0) > 0;
+	}
+
+	private async readSiteWriteFence(): Promise<SiteWriteFence> {
 		try {
+			const row = await this.env.DB.prepare(SITE_WRITE_FENCE_SQL).first<{
+				media_state: string | null;
+				import_id: string | null;
+				export_id: string | null;
+			}>();
+			return {
+				mediaState: row?.media_state ?? null,
+				importId: row?.import_id ?? null,
+				exportId: row?.export_id ?? null,
+			};
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			if (!MISSING_TRANSFER_OPERATIONS_TABLE_REGEX.test(message)) throw error;
 			const activation = await this.env.DB.prepare(
 				"SELECT state FROM _emdash_media_usage_activation WHERE task_key = ? LIMIT 1",
 			)
 				.bind("incremental_capture")
 				.first<{ state: string }>();
-			if (activation?.state === "activating") {
-				throw createSandboxRouteError("MEDIA_USAGE_ACTIVATION_IN_PROGRESS");
-			}
+			return { mediaState: activation?.state ?? null, importId: null, exportId: null };
+		}
+	}
+
+	/**
+	 * The unified site write fence (media usage activation and transfer
+	 * imports), read with one query. Records the write for running exports.
+	 */
+	private async assertSiteWriteAllowed(): Promise<void> {
+		const { createSandboxRouteError, getSandboxRouteErrorDetails } = await loadBridgeRuntime();
+		let fence: SiteWriteFence;
+		try {
+			fence = await this.readSiteWriteFence();
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			if (MISSING_MEDIA_USAGE_ACTIVATION_TABLE_REGEX.test(message)) return;
 			if (getSandboxRouteErrorDetails(error)) throw error;
-			console.error("[media-usage] Failed to check the sandbox write fence:", error);
-			throw createSandboxRouteError("MEDIA_USAGE_ACTIVATION_CHECK_FAILED");
+			console.error("[transfer] Failed to check the sandbox write fence:", error);
+			throw createSandboxRouteError("TRANSFER_FENCE_CHECK_FAILED");
+		}
+		if (fence.importId) throw createSandboxRouteError("TRANSFER_IMPORT_IN_PROGRESS");
+		if (fence.mediaState === "activating") {
+			throw createSandboxRouteError("MEDIA_USAGE_ACTIVATION_IN_PROGRESS");
+		}
+		if (fence.exportId) {
+			try {
+				await this.env.DB.prepare(
+					"UPDATE _emdash_transfer_operations SET write_epoch = write_epoch + 1 WHERE kind = 'export' AND state = 'running'",
+				).run();
+			} catch (error) {
+				console.error("[transfer] Failed to record a write for running exports:", error);
+			}
 		}
 	}
 
-	private getStorageRepo(collection: string): PluginStorageRepository {
+	/**
+	 * Construct a PluginStorageRepository for the requested collection.
+	 * Uses the indexes from the plugin's storage config (if provided) so
+	 * query/count operations support WHERE/ORDER BY/cursor pagination
+	 * matching in-process and workerd sandbox plugins.
+	 */
+	private async getStorageRepo(collection: string): Promise<PluginStorageRepository> {
+		const { D1Dialect, Kysely, PluginStorageRepository } = await loadBridgeRuntime();
 		const { pluginId, storageConfig } = this.ctx.props;
 		const config = storageConfig?.[collection];
+		// Merge unique indexes into the indexes list since both are queryable
 		const allIndexes: Array<string | string[]> = [
 			...(config?.indexes ?? []),
 			...(config?.uniqueIndexes ?? []),
@@ -193,8 +565,22 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		return new PluginStorageRepository(db as never, pluginId, collection, allIndexes);
 	}
 
+	// =========================================================================
+	// KV Operations - scoped to plugin namespace
+	// =========================================================================
+
+	/**
+	 * KV operations use _plugin_storage with a special "__kv" collection.
+	 * This provides consistent storage across sandboxed and non-sandboxed modes.
+	 */
 	async kvGet(key: string): Promise<unknown> {
 		const { pluginId } = this.ctx.props;
+		if (key.startsWith(SETTINGS_KEY_PREFIX)) {
+			const value = await (
+				await this.getSettingsAccess()
+			).get(key.slice(SETTINGS_KEY_PREFIX.length));
+			if (value !== null) return value;
+		}
 		const result = await this.env.DB.prepare(
 			"SELECT data FROM _plugin_storage WHERE plugin_id = ? AND collection = '__kv' AND id = ?",
 		)
@@ -202,23 +588,81 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			.first<{ data: string }>();
 		if (!result) return null;
 		try {
-			return JSON.parse(result.data);
+			const value: unknown = JSON.parse(result.data);
+			if (key.startsWith(SETTINGS_KEY_PREFIX)) this.observeSecretSetting(key, value);
+			return value;
 		} catch {
+			if (key.startsWith(SETTINGS_KEY_PREFIX)) this.observeSecretSetting(key, result.data);
 			return result.data;
 		}
 	}
 
 	async kvSet(key: string, value: unknown): Promise<void> {
 		const { pluginId } = this.ctx.props;
+		if (key.startsWith(SETTINGS_KEY_PREFIX)) {
+			await (await this.getSettingsAccess()).set(key.slice(SETTINGS_KEY_PREFIX.length), value);
+			await this.deleteLegacyKV(key);
+			return;
+		}
 		await this.env.DB.prepare(
-			"INSERT OR REPLACE INTO _plugin_storage (plugin_id, collection, id, data, updated_at) VALUES (?, '__kv', ?, ?, datetime('now'))",
+			"INSERT INTO _plugin_storage (plugin_id, collection, id, data, revision, updated_at) VALUES (?, '__kv', ?, ?, ?, datetime('now')) ON CONFLICT (plugin_id, collection, id) DO UPDATE SET data = excluded.data, revision = excluded.revision, updated_at = excluded.updated_at",
 		)
-			.bind(pluginId, key, JSON.stringify(value))
+			.bind(pluginId, key, JSON.stringify(value), crypto.randomUUID())
 			.run();
+	}
+
+	async kvGetVersioned(key: string): Promise<VersionedValue | null> {
+		if (key.startsWith(SETTINGS_KEY_PREFIX)) {
+			const value = await (
+				await this.getSettingsAccess()
+			).getVersioned(key.slice(SETTINGS_KEY_PREFIX.length));
+			if (value !== null) return value;
+		}
+		const legacy = await (await this.getStorageRepo("__kv")).getVersioned(key);
+		if (legacy && key.startsWith(SETTINGS_KEY_PREFIX)) {
+			this.observeSecretSetting(key, legacy.value);
+		}
+		return legacy;
+	}
+
+	async kvCompareAndSet(
+		key: string,
+		expectedRevision: string | null,
+		value: unknown,
+	): Promise<ConditionalWriteResult> {
+		if (key.startsWith(SETTINGS_KEY_PREFIX)) {
+			const result = await (
+				await this.getSettingsAccess()
+			).compareAndSet(key.slice(SETTINGS_KEY_PREFIX.length), expectedRevision, value);
+			if (result.applied) await this.deleteLegacyKV(key);
+			return result;
+		}
+		return (await this.getStorageRepo("__kv")).compareAndSet(key, expectedRevision, value);
+	}
+
+	async kvCompareAndDelete(
+		key: string,
+		expectedRevision: string,
+	): Promise<ConditionalDeleteResult> {
+		if (key.startsWith(SETTINGS_KEY_PREFIX)) {
+			const result = await (
+				await this.getSettingsAccess()
+			).compareAndDelete(key.slice(SETTINGS_KEY_PREFIX.length), expectedRevision);
+			if (result.applied) await this.deleteLegacyKV(key);
+			return result;
+		}
+		return (await this.getStorageRepo("__kv")).compareAndDelete(key, expectedRevision);
 	}
 
 	async kvDelete(key: string): Promise<boolean> {
 		const { pluginId } = this.ctx.props;
+		if (key.startsWith(SETTINGS_KEY_PREFIX)) {
+			const optionDeleted = await (
+				await this.getSettingsAccess()
+			).delete(key.slice(SETTINGS_KEY_PREFIX.length));
+			const legacyDeleted = await this.deleteLegacyKV(key);
+			return optionDeleted || legacyDeleted;
+		}
 		const result = await this.env.DB.prepare(
 			"DELETE FROM _plugin_storage WHERE plugin_id = ? AND collection = '__kv' AND id = ?",
 		)
@@ -235,11 +679,68 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			.bind(pluginId, prefix + "%")
 			.all<{ id: string; data: string }>();
 
-		return (results.results ?? []).map((row) => ({
-			key: row.id,
-			value: JSON.parse(row.data),
+		const entries = new Map(
+			(results.results ?? []).map((row) => [row.id, JSON.parse(row.data) as unknown]),
+		);
+		const includesSettings =
+			SETTINGS_KEY_PREFIX.startsWith(prefix) || prefix.startsWith(SETTINGS_KEY_PREFIX);
+		if (includesSettings) {
+			const settingPrefix = prefix.startsWith(SETTINGS_KEY_PREFIX)
+				? prefix.slice(SETTINGS_KEY_PREFIX.length)
+				: "";
+			for (const { key, value } of await (await this.getSettingsAccess()).list(settingPrefix)) {
+				const fullKey = `${SETTINGS_KEY_PREFIX}${key}`;
+				if (fullKey.startsWith(prefix)) entries.set(fullKey, value);
+			}
+		}
+		for (const [key, value] of entries) {
+			if (key.startsWith(SETTINGS_KEY_PREFIX)) this.observeSecretSetting(key, value);
+		}
+		return Array.from(entries, ([key, value]) => ({ key, value }));
+	}
+
+	async settingsGet(key: string): Promise<unknown> {
+		return this.kvGet(`${SETTINGS_KEY_PREFIX}${key}`);
+	}
+
+	async settingsSet(key: string, value: unknown): Promise<void> {
+		return this.kvSet(`${SETTINGS_KEY_PREFIX}${key}`, value);
+	}
+
+	async settingsGetVersioned(key: string): Promise<VersionedValue | null> {
+		return this.kvGetVersioned(`${SETTINGS_KEY_PREFIX}${key}`);
+	}
+
+	async settingsCompareAndSet(
+		key: string,
+		expectedRevision: string | null,
+		value: unknown,
+	): Promise<ConditionalWriteResult> {
+		return this.kvCompareAndSet(`${SETTINGS_KEY_PREFIX}${key}`, expectedRevision, value);
+	}
+
+	async settingsCompareAndDelete(
+		key: string,
+		expectedRevision: string,
+	): Promise<ConditionalDeleteResult> {
+		return this.kvCompareAndDelete(`${SETTINGS_KEY_PREFIX}${key}`, expectedRevision);
+	}
+
+	async settingsDelete(key: string): Promise<boolean> {
+		return this.kvDelete(`${SETTINGS_KEY_PREFIX}${key}`);
+	}
+
+	async settingsList(prefix = ""): Promise<Array<{ key: string; value: unknown }>> {
+		const entries = await this.kvList(`${SETTINGS_KEY_PREFIX}${prefix}`);
+		return entries.map(({ key, value }) => ({
+			key: key.slice(SETTINGS_KEY_PREFIX.length),
+			value,
 		}));
 	}
+
+	// =========================================================================
+	// Storage Operations - scoped to plugin + collection validation
+	// =========================================================================
 
 	async storageGet(collection: string, id: string): Promise<unknown> {
 		const { pluginId, storageCollections } = this.ctx.props;
@@ -261,10 +762,68 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			throw new Error(`Storage collection not declared: ${collection}`);
 		}
 		await this.env.DB.prepare(
-			"INSERT OR REPLACE INTO _plugin_storage (plugin_id, collection, id, data, updated_at) VALUES (?, ?, ?, ?, datetime('now'))",
+			"INSERT INTO _plugin_storage (plugin_id, collection, id, data, revision, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now')) ON CONFLICT (plugin_id, collection, id) DO UPDATE SET data = excluded.data, revision = excluded.revision, updated_at = excluded.updated_at",
 		)
-			.bind(pluginId, collection, id, JSON.stringify(data))
+			.bind(pluginId, collection, id, JSON.stringify(data), crypto.randomUUID())
 			.run();
+	}
+
+	async storageGetVersioned(collection: string, id: string): Promise<VersionedValue | null> {
+		if (!this.ctx.props.storageCollections.includes(collection)) {
+			throw new Error(`Storage collection not declared: ${collection}`);
+		}
+		return (await this.getStorageRepo(collection)).getVersioned(id);
+	}
+
+	async storageCompareAndSet(
+		collection: string,
+		id: string,
+		expectedRevision: string | null,
+		data: unknown,
+	): Promise<ConditionalWriteResult> {
+		if (!this.ctx.props.storageCollections.includes(collection)) {
+			throw new Error(`Storage collection not declared: ${collection}`);
+		}
+		return (await this.getStorageRepo(collection)).compareAndSet(id, expectedRevision, data);
+	}
+
+	async storageCompareAndDelete(
+		collection: string,
+		id: string,
+		expectedRevision: string,
+	): Promise<ConditionalDeleteResult> {
+		if (!this.ctx.props.storageCollections.includes(collection)) {
+			throw new Error(`Storage collection not declared: ${collection}`);
+		}
+		return (await this.getStorageRepo(collection)).compareAndDelete(id, expectedRevision);
+	}
+
+	async storageUpdateIf(
+		collection: string,
+		id: string,
+		args: unknown,
+	): Promise<StorageUpdateIfResponse> {
+		if (!this.ctx.props.storageCollections.includes(collection)) {
+			throw new Error(`Storage collection not declared: ${collection}`);
+		}
+		try {
+			return await (await this.getStorageRepo(collection)).updateIf(id, args);
+		} catch (error) {
+			const { StorageSerializationError } = await loadBridgeRuntime();
+			if (!(error instanceof StorageSerializationError)) throw error;
+			return {
+				__emdashStorageError: {
+					name: "StorageSerializationError",
+					code: "STORAGE_SERIALIZATION_FAILURE",
+					retryable: true,
+					...(error.sqlState === "40001" || error.sqlState === "40P01"
+						? { sqlState: error.sqlState }
+						: {}),
+					message:
+						"Storage write must be retried. Restart the transaction before retrying when using an explicit transaction.",
+				},
+			};
+		}
 	}
 
 	async storageDelete(collection: string, id: string): Promise<boolean> {
@@ -297,7 +856,8 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!storageCollections.includes(collection)) {
 			throw new Error(`Storage collection not declared: ${collection}`);
 		}
-		const repo = this.getStorageRepo(collection);
+		// Delegate to PluginStorageRepository for proper WHERE/ORDER BY/cursor support
+		const repo = await this.getStorageRepo(collection);
 		const result = await repo.query({
 			// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- WhereClause is structurally Record<string, unknown>
 			where: opts.where as never,
@@ -317,30 +877,19 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!storageCollections.includes(collection)) {
 			throw new Error(`Storage collection not declared: ${collection}`);
 		}
-		const repo = this.getStorageRepo(collection);
+		const repo = await this.getStorageRepo(collection);
 		// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- WhereClause is structurally Record<string, unknown>
 		return repo.count(where as never);
 	}
 
 	async storageGetMany(collection: string, ids: string[]): Promise<Map<string, unknown>> {
-		const { pluginId, storageCollections } = this.ctx.props;
+		const { storageCollections } = this.ctx.props;
 		if (!storageCollections.includes(collection)) {
 			throw new Error(`Storage collection not declared: ${collection}`);
 		}
 		if (ids.length === 0) return new Map();
 
-		const placeholders = ids.map(() => "?").join(",");
-		const results = await this.env.DB.prepare(
-			`SELECT id, data FROM _plugin_storage WHERE plugin_id = ? AND collection = ? AND id IN (${placeholders})`,
-		)
-			.bind(pluginId, collection, ...ids)
-			.all<{ id: string; data: string }>();
-
-		const map = new Map<string, unknown>();
-		for (const row of results.results ?? []) {
-			map.set(row.id, JSON.parse(row.data));
-		}
-		return map;
+		return (await this.getStorageRepo(collection)).getMany(ids);
 	}
 
 	async storagePutMany(
@@ -355,129 +904,125 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 
 		for (const item of items) {
 			await this.env.DB.prepare(
-				"INSERT OR REPLACE INTO _plugin_storage (plugin_id, collection, id, data, updated_at) VALUES (?, ?, ?, ?, datetime('now'))",
+				"INSERT INTO _plugin_storage (plugin_id, collection, id, data, revision, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now')) ON CONFLICT (plugin_id, collection, id) DO UPDATE SET data = excluded.data, revision = excluded.revision, updated_at = excluded.updated_at",
 			)
-				.bind(pluginId, collection, item.id, JSON.stringify(item.data))
+				.bind(pluginId, collection, item.id, JSON.stringify(item.data), crypto.randomUUID())
 				.run();
 		}
 	}
 
 	async storageDeleteMany(collection: string, ids: string[]): Promise<number> {
-		const { pluginId, storageCollections } = this.ctx.props;
+		const { storageCollections } = this.ctx.props;
 		if (!storageCollections.includes(collection)) {
 			throw new Error(`Storage collection not declared: ${collection}`);
 		}
 		if (ids.length === 0) return 0;
 
-		let deleted = 0;
-		for (const id of ids) {
-			const result = await this.env.DB.prepare(
-				"DELETE FROM _plugin_storage WHERE plugin_id = ? AND collection = ? AND id = ?",
-			)
-				.bind(pluginId, collection, id)
-				.run();
-			deleted += result.meta?.changes ?? 0;
-		}
-		return deleted;
+		return (await this.getStorageRepo(collection)).deleteMany(ids);
 	}
 
-	async contentGet(
-		collection: string,
-		id: string,
-	): Promise<{
-		id: string;
-		type: string;
-		data: Record<string, unknown>;
-		createdAt: string;
-		updatedAt: string;
-		locale: string;
-	} | null> {
+	// =========================================================================
+	// Content Operations - capability-gated
+	// =========================================================================
+
+	async contentGet(collection: string, id: string): Promise<ContentItem | null> {
 		const { capabilities } = this.ctx.props;
 		if (!capabilities.includes("content:read")) {
 			throw new Error("Missing capability: content:read");
 		}
+		// Validate collection name to prevent SQL injection
 		if (!COLLECTION_NAME_REGEX.test(collection)) {
 			throw new Error(`Invalid collection name: ${collection}`);
 		}
+		const { createContentAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
 		try {
-			const result = await this.env.DB.prepare(
+			return await createContentAccess(db, {
+				site: this.ctx.props.siteInfo,
+				revisions: capabilities.includes("content:revisions:read"),
+			}).get(collection, id);
+		} catch {
+			const row = await this.env.DB.prepare(
 				`SELECT * FROM ec_${collection} WHERE id = ? AND deleted_at IS NULL`,
 			)
 				.bind(id)
 				.first();
-			if (!result) return null;
-			return rowToContentItem(collection, result);
-		} catch {
-			return null;
+			return row ? rowToContentItem(collection, row) : null;
 		}
 	}
 
 	async contentList(
 		collection: string,
-		opts: { limit?: number; cursor?: string } = {},
-	): Promise<{
-		items: Array<{
-			id: string;
-			type: string;
-			data: Record<string, unknown>;
-			createdAt: string;
-			updatedAt: string;
-			locale: string;
-		}>;
-		cursor?: string;
-		hasMore: boolean;
-	}> {
+		opts: ContentListOptions = {},
+	): Promise<PaginatedResult<ContentItem>> {
 		const { capabilities } = this.ctx.props;
 		if (!capabilities.includes("content:read")) {
 			throw new Error("Missing capability: content:read");
 		}
+		// Validate collection name to prevent SQL injection
 		if (!COLLECTION_NAME_REGEX.test(collection)) {
 			throw new Error(`Invalid collection name: ${collection}`);
 		}
-		const limit = Math.min(opts.limit ?? 50, 100);
-		try {
-			let sql = `SELECT * FROM ec_${collection} WHERE deleted_at IS NULL`;
-			const params: unknown[] = [];
+		const { createContentAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return createContentAccess(db, {
+			site: this.ctx.props.siteInfo,
+			revisions: capabilities.includes("content:revisions:read"),
+		}).list(collection, opts);
+	}
 
-			if (opts.cursor) {
-				sql += " AND id < ?";
-				params.push(opts.cursor);
-			}
+	async contentTranslations(collection: string, id: string) {
+		this.requireCapability("content:read");
+		this.validateCollection(collection);
+		return (await this.contentAccess()).getTranslations!(collection, id);
+	}
 
-			sql += " ORDER BY id DESC LIMIT ?";
-			params.push(limit + 1);
+	async contentPublicUrl(collection: string, id: string) {
+		this.requireCapability("content:read");
+		this.validateCollection(collection);
+		return (await this.contentAccess()).getPublicUrl!(collection, id);
+	}
 
-			const results = await this.env.DB.prepare(sql)
-				.bind(...params)
-				.all();
+	async contentListRevisions(collection: string, id: string, options?: { limit?: number }) {
+		this.requireCapability("content:revisions:read");
+		this.validateCollection(collection);
+		return (await this.contentAccess()).listRevisions!(collection, id, options);
+	}
 
-			const rows = results.results ?? [];
-			const pageRows = rows.slice(0, limit);
-			const items = pageRows.map((row) => rowToContentItem(collection, row));
-			const hasMore = rows.length > limit;
+	async contentGetRevision(collection: string, id: string, revisionId: string) {
+		this.requireCapability("content:revisions:read");
+		this.validateCollection(collection);
+		return (await this.contentAccess()).getRevision!(collection, id, revisionId);
+	}
 
-			return {
-				items,
-				cursor: hasMore && items.length > 0 ? items.at(-1)!.id : undefined,
-				hasMore,
-			};
-		} catch {
-			return { items: [], hasMore: false };
-		}
+	async schemaListCollections() {
+		this.requireCapability("schema:read");
+		const { createSchemaAccess } = await loadBridgeRuntime();
+		return createSchemaAccess(await this.db()).listCollections();
+	}
+
+	async schemaGetCollection(slug: string) {
+		this.requireCapability("schema:read");
+		this.validateCollection(slug);
+		const { createSchemaAccess } = await loadBridgeRuntime();
+		return createSchemaAccess(await this.db()).getCollection(slug);
 	}
 
 	async contentCreate(
 		collection: string,
 		data: Record<string, unknown>,
 		options?: ContentCreateOptions,
-	): Promise<{
-		id: string;
-		type: string;
-		data: Record<string, unknown>;
-		createdAt: string;
-		updatedAt: string;
-		locale: string;
-	}> {
+		originHookInput?: string,
+	): Promise<
+		| PluginContentItem
+		| {
+				__emdashContentCreateError: true;
+				error: {
+					code: "CONFLICT" | "NOT_FOUND" | "SAVE_REJECTED" | "VALIDATION_ERROR";
+					message: string;
+				};
+		  }
+	> {
 		const { capabilities } = this.ctx.props;
 		if (!capabilities.includes("content:write")) {
 			throw new Error("Missing capability: content:write");
@@ -485,13 +1030,56 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!COLLECTION_NAME_REGEX.test(collection)) {
 			throw new Error(`Invalid collection name: ${collection}`);
 		}
-		const locale = resolveContentCreateLocale(options?.locale, this.ctx.props.i18nConfig ?? null);
-		await this.assertMediaUsageActivationWriteAllowed();
-
+		const { resolveContentCreateLocale, ulid } = await loadBridgeRuntime();
+		let locale: string;
+		try {
+			locale = resolveContentCreateLocale(options?.locale, this.ctx.props.i18nConfig ?? null);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Invalid locale";
+			return {
+				__emdashContentCreateError: true,
+				error: { code: "VALIDATION_ERROR", message },
+			};
+		}
+		await this.assertSiteWriteAllowed();
+		const runtimeContentCreate = this.ctx.props.contentCreateRuntimeId
+			? contentCreateCallbacks().get(this.ctx.props.contentCreateRuntimeId)
+			: undefined;
+		if (runtimeContentCreate) {
+			const originHook =
+				originHookInput === "content:beforeSave" || originHookInput === "content:afterSave"
+					? originHookInput
+					: undefined;
+			try {
+				return await runtimeContentCreate(this.ctx.props.pluginId, collection, data, {
+					locale,
+					translationOf: options?.translationOf,
+					originHook,
+					sandboxOrigin: true,
+				});
+			} catch (error) {
+				const code =
+					typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
+				if (
+					code === "CONFLICT" ||
+					code === "NOT_FOUND" ||
+					code === "SAVE_REJECTED" ||
+					code === "VALIDATION_ERROR"
+				) {
+					return {
+						__emdashContentCreateError: true,
+						error: {
+							code,
+							message: error instanceof Error ? error.message : "Content create failed",
+						},
+					};
+				}
+				throw error;
+			}
+		}
 		const id = ulid();
 		const now = new Date().toISOString();
-
-		const columns: string[] = [
+		const columns = [
 			'"id"',
 			'"slug"',
 			'"status"',
@@ -506,54 +1094,45 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			id,
 			typeof data.slug === "string" ? data.slug : null,
 			typeof data.status === "string" ? data.status : "draft",
-			typeof data.author_id === "string" ? data.author_id : null,
+			null,
 			now,
 			now,
 			1,
 			locale,
 			id,
 		];
-
 		for (const [key, value] of Object.entries(data)) {
 			if (!SYSTEM_COLUMNS.has(key) && COLLECTION_NAME_REGEX.test(key)) {
 				columns.push(`"${key}"`);
 				values.push(serializeValue(value));
 			}
 		}
-
 		const placeholders = columns.map(() => "?").join(", ");
-		const columnList = columns.join(", ");
-
 		await this.env.DB.prepare(
-			`INSERT INTO ec_${collection} (${columnList}) VALUES (${placeholders})`,
+			`INSERT INTO ec_${collection} (${columns.join(", ")}) VALUES (${placeholders})`,
 		)
 			.bind(...values)
 			.run();
-
 		const created = await this.env.DB.prepare(
 			`SELECT * FROM ec_${collection} WHERE id = ? AND deleted_at IS NULL`,
 		)
 			.bind(id)
 			.first();
-
-		if (!created) {
-			return { id, type: collection, data: {}, createdAt: now, updatedAt: now, locale };
-		}
-		return rowToContentItem(collection, created);
+		return created
+			? rowToContentItem(collection, created)
+			: rowToContentItem(collection, {
+					id,
+					locale,
+					created_at: now,
+					updated_at: now,
+				});
 	}
 
 	async contentUpdate(
 		collection: string,
 		id: string,
 		data: Record<string, unknown>,
-	): Promise<{
-		id: string;
-		type: string;
-		data: Record<string, unknown>;
-		createdAt: string;
-		updatedAt: string;
-		locale: string;
-	}> {
+	): Promise<ReturnType<typeof rowToContentItem>> {
 		const { capabilities } = this.ctx.props;
 		if (!capabilities.includes("content:write")) {
 			throw new Error("Missing capability: content:write");
@@ -561,23 +1140,27 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!COLLECTION_NAME_REGEX.test(collection)) {
 			throw new Error(`Invalid collection name: ${collection}`);
 		}
-		await this.assertMediaUsageActivationWriteAllowed();
+		const { ContentRepository, D1Dialect, Kysely } = await loadBridgeRuntime();
 		const db = new Kysely<Database>({
 			dialect: new D1Dialect({ database: this.env.DB }),
 		});
+		await this.assertSiteWriteAllowed();
 		const updated = await new ContentRepository(db).updateDraftAware(collection, id, {
 			data,
 			status: typeof data.status === "string" ? data.status : undefined,
 			slug: data.slug === undefined ? undefined : typeof data.slug === "string" ? data.slug : null,
 		});
-		return {
+		return rowToContentItem(collection, {
+			...updated.data,
 			id: updated.id,
-			type: updated.type,
-			data: updated.data,
-			createdAt: updated.createdAt,
-			updatedAt: updated.updatedAt,
-			locale: updated.locale ?? "en",
-		};
+			slug: updated.slug,
+			status: updated.status,
+			created_at: updated.createdAt,
+			updated_at: updated.updatedAt,
+			published_at: updated.publishedAt,
+			scheduled_at: updated.scheduledAt,
+			locale: updated.locale,
+		});
 	}
 
 	async contentDelete(collection: string, id: string): Promise<boolean> {
@@ -588,8 +1171,7 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!COLLECTION_NAME_REGEX.test(collection)) {
 			throw new Error(`Invalid collection name: ${collection}`);
 		}
-		await this.assertMediaUsageActivationWriteAllowed();
-
+		await this.assertSiteWriteAllowed();
 		const now = new Date().toISOString();
 		const result = await this.env.DB.prepare(
 			`UPDATE ec_${collection} SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL`,
@@ -598,6 +1180,188 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			.run();
 		return (result.meta?.changes ?? 0) > 0;
 	}
+
+	async commentGet(id: string): Promise<PluginComment | null> {
+		if (!this.ctx.props.capabilities.includes("comments:read")) {
+			throw new Error("Missing capability: comments:read");
+		}
+		const { createCommentAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return createCommentAccess(db).get(id);
+	}
+
+	async commentList(opts: CommentListOptions = {}): Promise<PaginatedResult<PluginComment>> {
+		if (!this.ctx.props.capabilities.includes("comments:read")) {
+			throw new Error("Missing capability: comments:read");
+		}
+		const { createCommentAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return createCommentAccess(db).list(opts);
+	}
+
+	async commentCount(opts: CommentCountOptions = {}): Promise<number> {
+		if (!this.ctx.props.capabilities.includes("comments:read")) {
+			throw new Error("Missing capability: comments:read");
+		}
+		const { createCommentAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return createCommentAccess(db).count(opts);
+	}
+
+	async commentSetStatus(
+		id: string,
+		status: PluginCommentStatus,
+		expectedStatus: PluginCommentStatus,
+	): Promise<
+		| PluginComment
+		| {
+				__emdashCommentError: {
+					code:
+						| "COMMENT_STATUS_CONFLICT"
+						| "COMMENT_MODERATION_IN_PROGRESS"
+						| "COMMENT_STATUS_INVALID";
+					message: string;
+					currentStatus?: string;
+				};
+		  }
+	> {
+		if (!this.ctx.props.capabilities.includes("comments:moderate")) {
+			throw new Error("Missing capability: comments:moderate");
+		}
+		const invalid =
+			invalidCommentStatus(status, "status") ??
+			invalidCommentStatus(expectedStatus, "expectedStatus");
+		if (invalid) {
+			return {
+				__emdashCommentError: {
+					code: "COMMENT_STATUS_INVALID",
+					message: invalid,
+				},
+			};
+		}
+		if (!commentModerateCallback) throw new Error("Comment moderation is unavailable");
+		try {
+			return await commentModerateCallback(this.ctx.props.pluginId, id, status, expectedStatus);
+		} catch (error) {
+			if (typeof error === "object" && error !== null && "code" in error) {
+				const code = error.code;
+				const currentStatus = "currentStatus" in error ? error.currentStatus : undefined;
+				if (
+					(code === "COMMENT_STATUS_CONFLICT" && typeof currentStatus === "string") ||
+					code === "COMMENT_MODERATION_IN_PROGRESS"
+				) {
+					return {
+						__emdashCommentError: {
+							code,
+							message: error instanceof Error ? error.message : "Comment moderation failed",
+							...(typeof currentStatus === "string" ? { currentStatus } : {}),
+						},
+					};
+				}
+			}
+			throw error;
+		}
+	}
+
+	private requireContentActions(capability: "content:publish" | "content:restore") {
+		if (!this.ctx.props.capabilities.includes(capability)) {
+			throw new Error(`Missing capability: ${capability}`);
+		}
+		const runtimeId = this.ctx.props.contentActionsRuntimeId;
+		const callbacks = runtimeId ? contentActionCallbacks().get(runtimeId) : undefined;
+		if (!callbacks) throw new Error("Content actions are not configured");
+		return callbacks;
+	}
+
+	contentGetVersioned(collection: string, id: string) {
+		return forwardContentAction(() =>
+			this.requireContentActions("content:publish").getVersioned(
+				this.ctx.props.pluginId,
+				collection,
+				id,
+			),
+		);
+	}
+
+	contentPublish(collection: string, id: string, revision: string, invocationId?: string) {
+		return forwardContentAction(() =>
+			this.requireContentActions("content:publish").publish(
+				this.ctx.props.pluginId,
+				collection,
+				id,
+				{ _rev: revision },
+				invocationId,
+			),
+		);
+	}
+
+	contentUnpublish(collection: string, id: string, revision: string, invocationId?: string) {
+		return forwardContentAction(() =>
+			this.requireContentActions("content:publish").unpublish(
+				this.ctx.props.pluginId,
+				collection,
+				id,
+				{ _rev: revision },
+				invocationId,
+			),
+		);
+	}
+
+	contentSchedule(
+		collection: string,
+		id: string,
+		scheduledAt: string,
+		revision: string,
+		invocationId?: string,
+	) {
+		return forwardContentAction(() =>
+			this.requireContentActions("content:publish").schedule(
+				this.ctx.props.pluginId,
+				collection,
+				id,
+				{ scheduledAt, _rev: revision },
+				invocationId,
+			),
+		);
+	}
+
+	contentUnschedule(collection: string, id: string, revision: string, invocationId?: string) {
+		return forwardContentAction(() =>
+			this.requireContentActions("content:publish").unschedule(
+				this.ctx.props.pluginId,
+				collection,
+				id,
+				{ _rev: revision },
+				invocationId,
+			),
+		);
+	}
+
+	contentGetTrashedVersioned(collection: string, id: string) {
+		return forwardContentAction(() =>
+			this.requireContentActions("content:restore").getTrashedVersioned(
+				this.ctx.props.pluginId,
+				collection,
+				id,
+			),
+		);
+	}
+
+	contentRestore(collection: string, id: string, revision: string, invocationId?: string) {
+		return forwardContentAction(() =>
+			this.requireContentActions("content:restore").restore(
+				this.ctx.props.pluginId,
+				collection,
+				id,
+				{ _rev: revision },
+				invocationId,
+			),
+		);
+	}
+
+	// =========================================================================
+	// Taxonomy Operations - capability-gated
+	// =========================================================================
 
 	async taxonomyList(opts: { locale?: string } = {}): Promise<
 		Array<{
@@ -658,6 +1422,8 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			sql += " AND locale = ?";
 			params.push(opts.locale);
 		}
+		// Manual order first, then label with `id ASC` as a stable tiebreaker for
+		// terms sharing both — matching core's TaxonomyRepository.findByName.
 		sql += " ORDER BY sort_order ASC, label ASC, id ASC";
 		const results = await this.env.DB.prepare(sql)
 			.bind(...params)
@@ -685,6 +1451,8 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!capabilities.includes("taxonomies:read")) {
 			throw new Error("Missing capability: taxonomies:read");
 		}
+		// The pivot stores the term's translation_group in taxonomy_id, so the
+		// join resolves an assignment into each locale's term row.
 		let sql =
 			"SELECT taxonomies.* FROM content_taxonomies " +
 			"JOIN taxonomies ON taxonomies.translation_group = content_taxonomies.taxonomy_id " +
@@ -705,100 +1473,214 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		return (results.results ?? []).map(rowToTaxonomyTerm);
 	}
 
-	async mediaGet(id: string): Promise<{
-		id: string;
-		filename: string;
-		mimeType: string;
-		size: number | null;
-		url: string;
-		createdAt: string;
-	} | null> {
+	// =========================================================================
+	// Byline Operations - capability-gated
+	// =========================================================================
+
+	private async bylineAccess() {
+		this.requireCapability("bylines:read");
+		const { createBylineAccess } = await loadBridgeRuntime();
+		return createBylineAccess(await this.db());
+	}
+
+	async bylineGet(id: string) {
+		return (await this.bylineAccess()).get(id);
+	}
+
+	async bylineList(opts: { locale?: string; limit?: number; cursor?: string } = {}) {
+		return (await this.bylineAccess()).list(opts);
+	}
+
+	async bylineEntriesBylines(collection: string, entryIds: string[]) {
+		const access = await this.bylineAccess();
+		this.validateCollection(collection);
+		if (!Array.isArray(entryIds) || !entryIds.every((id) => typeof id === "string")) {
+			throw new Error("entryIds must be an array of strings");
+		}
+		return access.getEntriesBylines(collection, entryIds);
+	}
+
+	async taxonomyCreateTerm(
+		taxonomy: string,
+		input: Parameters<TaxonomyAccessWithWrite["createTerm"]>[1],
+	) {
+		return this.getTaxonomyWriteAccess().createTerm(taxonomy, input);
+	}
+
+	async taxonomyAddEntryTerms(
+		collection: string,
+		entryId: string,
+		taxonomy: string,
+		termIds: string[],
+	) {
+		return this.getTaxonomyWriteAccess().addEntryTerms(collection, entryId, taxonomy, termIds);
+	}
+
+	async taxonomyRemoveEntryTerms(
+		collection: string,
+		entryId: string,
+		taxonomy: string,
+		termIds: string[],
+	) {
+		return this.getTaxonomyWriteAccess().removeEntryTerms(collection, entryId, taxonomy, termIds);
+	}
+
+	private getTaxonomyWriteAccess(): TaxonomyAccessWithWrite {
+		if (!this.ctx.props.capabilities.includes("taxonomies:write")) {
+			throw new Error("Missing capability: taxonomies:write");
+		}
+		const runtimeId = this.ctx.props.taxonomyWriteRuntimeId;
+		const access = runtimeId ? taxonomyWriteCallbacks().get(runtimeId) : undefined;
+		if (!access) throw new Error("Taxonomy mutations are not available");
+		return access;
+	}
+
+	// =========================================================================
+	// Redirect Operations - runtime-owned, capability-gated
+	// =========================================================================
+
+	async redirectList(
+		options: RedirectListOptions = {},
+	): Promise<RedirectBridgeResult<PaginatedResult<RedirectInfo>>> {
+		const { capabilities } = this.ctx.props;
+		if (!capabilities.includes("redirects:read")) {
+			throw new Error("Missing capability: redirects:read");
+		}
+		const { createRedirectAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return redirectBridgeResult(() => createRedirectAccess(db).list(options));
+	}
+
+	async redirectGet(id: string): Promise<RedirectBridgeResult<VersionedRedirect | null>> {
+		const { capabilities } = this.ctx.props;
+		if (!capabilities.includes("redirects:read")) {
+			throw new Error("Missing capability: redirects:read");
+		}
+		const { createRedirectAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return redirectBridgeResult(() => createRedirectAccess(db).get(id));
+	}
+
+	async redirectCreate(
+		input: RedirectCreateInput,
+	): Promise<RedirectBridgeResult<VersionedRedirect>> {
+		const { capabilities } = this.ctx.props;
+		if (!capabilities.includes("redirects:write")) {
+			throw new Error("Missing capability: redirects:write");
+		}
+		const { createRedirectAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return redirectBridgeResult(() => createRedirectAccess(db, true).create(input));
+	}
+
+	async redirectUpdate(
+		id: string,
+		input: RedirectUpdateInput & { _rev: string },
+	): Promise<RedirectBridgeResult<VersionedRedirect>> {
+		const { capabilities } = this.ctx.props;
+		if (!capabilities.includes("redirects:write")) {
+			throw new Error("Missing capability: redirects:write");
+		}
+		const { createRedirectAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return redirectBridgeResult(() => createRedirectAccess(db, true).update(id, input));
+	}
+
+	async redirectDelete(id: string, revision: string): Promise<RedirectBridgeResult<boolean>> {
+		const { capabilities } = this.ctx.props;
+		if (!capabilities.includes("redirects:write")) {
+			throw new Error("Missing capability: redirects:write");
+		}
+		const { createRedirectAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return redirectBridgeResult(() =>
+			createRedirectAccess(db, true).delete(id, { _rev: revision }),
+		);
+	}
+
+	// =========================================================================
+	// Media Operations - capability-gated
+	// =========================================================================
+
+	async mediaGet(id: string): Promise<PluginMediaItem | null> {
 		const { capabilities } = this.ctx.props;
 		if (!capabilities.includes("media:read")) {
 			throw new Error("Missing capability: media:read");
 		}
-		const result = await this.env.DB.prepare("SELECT * FROM media WHERE id = ?").bind(id).first<{
-			id: string;
-			filename: string;
-			mime_type: string;
-			size: number | null;
-			storage_key: string;
-			created_at: string;
-		}>();
-		if (!result) return null;
-		return {
-			id: result.id,
-			filename: result.filename,
-			mimeType: result.mime_type,
-			size: result.size,
-			url: `/_emdash/api/media/file/${result.storage_key}`,
-			createdAt: result.created_at,
-		};
+		const { createMediaAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return createMediaAccess(db).get(id);
 	}
 
-	async mediaList(opts: { limit?: number; cursor?: string; mimeType?: string } = {}): Promise<{
-		items: Array<{
-			id: string;
-			filename: string;
-			mimeType: string;
-			size: number | null;
-			url: string;
-			createdAt: string;
-		}>;
-		cursor?: string;
-		hasMore: boolean;
-	}> {
+	async mediaList(
+		opts: { limit?: number; cursor?: string; mimeType?: string } = {},
+	): Promise<{ items: PluginMediaItem[]; cursor?: string; hasMore: boolean }> {
 		const { capabilities } = this.ctx.props;
 		if (!capabilities.includes("media:read")) {
 			throw new Error("Missing capability: media:read");
 		}
-		const limit = Math.min(opts.limit ?? 50, 100);
-		let sql = "SELECT * FROM media WHERE status = 'ready'";
-		const params: unknown[] = [];
-
-		if (opts.mimeType) {
-			sql += " AND mime_type LIKE ?";
-			params.push(opts.mimeType + "%");
-		}
-
-		if (opts.cursor) {
-			sql += " AND id < ?";
-			params.push(opts.cursor);
-		}
-
-		sql += " ORDER BY id DESC LIMIT ?";
-		params.push(limit + 1);
-
-		const results = await this.env.DB.prepare(sql)
-			.bind(...params)
-			.all<{
-				id: string;
-				filename: string;
-				mime_type: string;
-				size: number | null;
-				storage_key: string;
-				created_at: string;
-			}>();
-
-		const rows = results.results ?? [];
-		const pageRows = rows.slice(0, limit);
-		const items = pageRows.map((row) => ({
-			id: row.id,
-			filename: row.filename,
-			mimeType: row.mime_type,
-			size: row.size,
-			url: `/_emdash/api/media/file/${row.storage_key}`,
-			createdAt: row.created_at,
-		}));
-		const hasMore = rows.length > limit;
-
-		return {
-			items,
-			cursor: hasMore && items.length > 0 ? items.at(-1)!.id : undefined,
-			hasMore,
-		};
+		const { createMediaAccess, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return createMediaAccess(db).list(opts);
 	}
 
+	async mediaReadBytes(id: string, maxBytes?: number): Promise<MediaBytes> {
+		const { capabilities } = this.ctx.props;
+		if (!capabilities.includes("media:bytes:read")) {
+			throw new Error("Missing capability: media:bytes:read");
+		}
+		if (maxBytes !== undefined && typeof maxBytes !== "number") {
+			throw new TypeError("media/readBytes: maxBytes must be a number");
+		}
+		// Worker Loader evaluates the bridge in a fresh isolate/context, so
+		// module-level callbacks registered by the runner are not always
+		// available. Read bytes directly from the R2 binding, matching
+		// mediaUpload and mediaDelete.
+		const bucket = this.env.MEDIA;
+		const storage: Pick<Storage, "download"> | undefined = bucket
+			? {
+					download: async (key: string): Promise<DownloadResult> => {
+						const object = await bucket.get(key);
+						if (!object || !object.body) {
+							throw new Error(`File not found: ${key}`);
+						}
+						return {
+							// @ts-expect-error -- R2Object.body is typed as ReadableStream<any> but the runtime value is ReadableStream<Uint8Array>
+							body: object.body,
+							contentType: object.httpMetadata?.contentType || "application/octet-stream",
+							size: object.size ?? 0,
+						};
+					},
+				}
+			: (this.getMediaStorageCallback() ?? undefined);
+		if (!storage) throw new Error("Media storage is not configured");
+		const { D1Dialect, Kysely, readPluginMediaBytes } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return readPluginMediaBytes(db, storage, id, { maxBytes });
+	}
+
+	async mediaUpdateMetadata(id: string, patch: unknown): Promise<PluginMediaItem> {
+		const { capabilities } = this.ctx.props;
+		if (!capabilities.includes("media:metadata:write")) {
+			throw new Error("Missing capability: media:metadata:write");
+		}
+		const { D1Dialect, Kysely, parsePluginMediaMetadataPatch, updatePluginMediaMetadata } =
+			await loadBridgeRuntime();
+		const parsed: MediaMetadataPatch = parsePluginMediaMetadataPatch(patch);
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return updatePluginMediaMetadata(db, id, parsed);
+	}
+
+	/**
+	 * Create a pending media record and write bytes directly to R2.
+	 *
+	 * Unlike the admin UI flow (presigned URL → client PUT → confirm), sandboxed
+	 * plugins are network-isolated and can't make external requests. The bridge
+	 * accepts the file bytes directly and writes them to storage.
+	 *
+	 * Returns the media ID, storage key, and confirm URL. The plugin should
+	 * call the confirm endpoint after this to finalize the record.
+	 */
 	async mediaUpload(
 		filename: string,
 		contentType: string,
@@ -812,7 +1694,9 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!this.env.MEDIA) {
 			throw new Error("Media storage (R2) not configured. Add MEDIA binding to wrangler config.");
 		}
+		const { ulid } = await loadBridgeRuntime();
 
+		// Validate MIME type — only allow image, video, audio, and PDF
 		const ALLOWED_MIME_PREFIXES = ["image/", "video/", "audio/", "application/pdf"];
 		if (!ALLOWED_MIME_PREFIXES.some((prefix) => contentType.startsWith(prefix))) {
 			throw new Error(
@@ -821,28 +1705,35 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		}
 
 		const mediaId = ulid();
+		// Derive extension from basename only, validate it's a simple extension
 		const basename = filename.includes("/")
 			? filename.slice(filename.lastIndexOf("/") + 1)
 			: filename;
 		const rawExt = basename.includes(".") ? basename.slice(basename.lastIndexOf(".")) : "";
 		const ext = FILE_EXT_REGEX.test(rawExt) ? rawExt : "";
+		// Flat storage key matching core convention: ${ulid}${ext}
 		const storageKey = `${mediaId}${ext}`;
 		const now = new Date().toISOString();
 
+		// Write bytes to R2 first, then create DB record.
+		// If DB insert fails, clean up the R2 object to prevent orphans.
 		await this.env.MEDIA.put(storageKey, bytes, {
 			httpMetadata: { contentType },
 		});
 
 		try {
+			// Create confirmed media record with ISO timestamp (matching core)
 			await this.env.DB.prepare(
 				"INSERT INTO media (id, filename, mime_type, size, storage_key, status, created_at) VALUES (?, ?, ?, ?, ?, 'ready', ?)",
 			)
 				.bind(mediaId, filename, contentType, bytes.byteLength, storageKey, now)
 				.run();
 		} catch (error) {
+			// Clean up R2 object on DB failure to prevent orphans
 			try {
 				await this.env.MEDIA.delete(storageKey);
 			} catch {
+				// Best-effort cleanup — log and continue
 				console.warn(`[plugin-bridge] Failed to clean up orphaned R2 object: ${storageKey}`);
 			}
 			throw error;
@@ -861,18 +1752,22 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			throw new Error("Missing capability: media:write");
 		}
 
+		// Look up the storage key before deleting
 		const media = await this.env.DB.prepare("SELECT storage_key FROM media WHERE id = ?")
 			.bind(id)
 			.first<{ storage_key: string }>();
 
 		if (!media) return false;
 
+		// Delete the DB row
 		const result = await this.env.DB.prepare("DELETE FROM media WHERE id = ?").bind(id).run();
 
+		// Delete from R2 if the binding is available
 		if (this.env.MEDIA && media.storage_key) {
 			try {
 				await this.env.MEDIA.delete(media.storage_key);
 			} catch {
+				// Log but don't fail - the DB row is already deleted
 				console.warn(`[plugin-bridge] Failed to delete R2 object: ${media.storage_key}`);
 			}
 		}
@@ -880,17 +1775,22 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		return (result.meta?.changes ?? 0) > 0;
 	}
 
-	async httpFetch(
-		url: string,
-		init?: RequestInit,
-	): Promise<{
-		status: number;
-		headers: Record<string, string>;
-		text: string;
-	}> {
-		const { capabilities, allowedHosts } = this.ctx.props;
-		return sandboxHttpFetch(url, init, { capabilities, allowedHosts });
+	// =========================================================================
+	// Network Operations - capability-gated + host validation
+	// =========================================================================
+
+	async httpFetch(url: string, init?: RequestInit): Promise<PluginHttpResponseWire> {
+		const { capabilities, allowedHosts, httpFetchKey } = this.ctx.props;
+		const fetchImpl = httpFetchKey ? httpFetchCallbacks.get(httpFetchKey) : undefined;
+		if (httpFetchKey && !fetchImpl) {
+			throw new Error("Plugin HTTP transport is unavailable");
+		}
+		return sandboxHttpFetch(url, init, { capabilities, allowedHosts, fetchImpl });
 	}
+
+	// =========================================================================
+	// User Operations - capability-gated (users:read)
+	// =========================================================================
 
 	async userGet(id: string): Promise<{
 		id: string;
@@ -1019,8 +1919,14 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		};
 	}
 
+	// =========================================================================
+	// Email Operations - capability-gated
+	// =========================================================================
+
 	async emailSend(message: {
 		to: string;
+		cc?: string[];
+		replyTo?: string;
 		subject: string;
 		text: string;
 		html?: string;
@@ -1029,14 +1935,58 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!capabilities.includes("email:send")) {
 			throw new Error("Missing capability: email:send");
 		}
-		if (!emailSendCallback) {
-			throw new Error("Email is not configured. No email provider is available.");
+		if (emailSendCallback) {
+			await emailSendCallback(message, pluginId);
+			return;
 		}
-		await emailSendCallback(message, pluginId);
+
+		const { withEmDashRuntime } = await import("emdash/middleware");
+		await withEmDashRuntime(async () => {
+			if (!emailSendCallback) {
+				throw new Error("Email is not configured. No email provider is available.");
+			}
+			await emailSendCallback(message, pluginId);
+		});
 	}
+
+	async cronSchedule(
+		name: string,
+		opts: { schedule: string; data?: Record<string, unknown> },
+	): Promise<void> {
+		const { CronAccessImpl, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		await new CronAccessImpl(
+			db,
+			this.ctx.props.pluginId,
+			() => cronRescheduleCallback?.(),
+			cronNowCallback ?? undefined,
+		).schedule(name, opts);
+	}
+
+	async cronCancel(name: string): Promise<void> {
+		const { CronAccessImpl, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		await new CronAccessImpl(db, this.ctx.props.pluginId, () => cronRescheduleCallback?.()).cancel(
+			name,
+		);
+	}
+
+	async cronList(): Promise<CronTaskInfo[]> {
+		const { CronAccessImpl, D1Dialect, Kysely } = await loadBridgeRuntime();
+		const db = new Kysely<Database>({ dialect: new D1Dialect({ database: this.env.DB }) });
+		return new CronAccessImpl(db, this.ctx.props.pluginId, () => cronRescheduleCallback?.()).list();
+	}
+
+	// =========================================================================
+	// Logging
+	// =========================================================================
 
 	log(level: "debug" | "info" | "warn" | "error", msg: string, data?: unknown): void {
 		const { pluginId } = this.ctx.props;
-		console[level](`[plugin:${pluginId}]`, msg, data ?? "");
+		console[level](
+			`[plugin:${pluginId}]`,
+			this.secretRedactor.redact(msg),
+			this.secretRedactor.redact(data ?? ""),
+		);
 	}
 }

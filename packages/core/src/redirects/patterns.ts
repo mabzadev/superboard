@@ -1,20 +1,43 @@
+/**
+ * URL pattern matching for redirects.
+ *
+ * Uses Astro's route syntax: [param] for named segments, [...rest] for catch-all.
+ * Compiles patterns to safe regexes -- no user-supplied regex, no ReDoS risk.
+ *
+ * @example
+ * ```ts
+ * const compiled = compilePattern("/old-blog/[...path]");
+ * const match = matchPattern(compiled, "/old-blog/2024/01/post");
+ * // match = { path: "2024/01/post" }
+ *
+ * interpolateDestination("/blog/[...path]", match);
+ * // "/blog/2024/01/post"
+ * ```
+ */
+
+/** Matches [paramName] placeholders */
 const PARAM_PATTERN = /\[(\w+)\]/g;
 
+/** Matches [...splatName] placeholders */
 const SPLAT_PATTERN = /\[\.\.\.(\w+)\]/g;
 
+/** Combined pattern for validation: matches both [param] and [...splat] */
 const ANY_PLACEHOLDER = /\[(?:\.\.\.)?(\w+)\]/g;
 
+/** Nested brackets check: [foo[ */
 const NESTED_BRACKETS = /\[[^\]]*\[/;
 
+/** Empty brackets: [] */
 const EMPTY_BRACKETS = /\[\]/;
 
+/** Count open brackets */
 const OPEN_BRACKET = /\[/g;
 
+/** Count close brackets */
 const CLOSE_BRACKET = /\]/g;
 
-const CAPTURE_GROUP_SPLIT = /(\([^)]+\))/;
-
-const REGEX_SPECIAL_CHARS = /[.*+?^${}|\\]/g;
+/** Escape regex-special characters in literal parts */
+const REGEX_SPECIAL_CHARS = /[.*+?^${}()|[\]\\]/g;
 
 export interface CompiledPattern {
 	regex: RegExp;
@@ -22,29 +45,41 @@ export interface CompiledPattern {
 	source: string;
 }
 
+/**
+ * Returns true if a source string contains [param] or [...splat] placeholders.
+ */
 export function isPattern(source: string): boolean {
+	// Use match() instead of test() to avoid lastIndex issues with the global regex
 	return source.match(ANY_PLACEHOLDER) !== null;
 }
 
+/**
+ * Validate that a pattern string is well-formed.
+ * Returns null if valid, or an error message if invalid.
+ */
 export function validatePattern(source: string): string | null {
 	if (!source.startsWith("/")) {
 		return "Pattern must start with /";
 	}
 
+	// Check for nested brackets
 	if (NESTED_BRACKETS.test(source)) {
 		return "Nested brackets are not allowed";
 	}
 
+	// Check for empty brackets
 	if (EMPTY_BRACKETS.test(source)) {
 		return "Empty brackets are not allowed";
 	}
 
+	// Check for unmatched brackets
 	const openCount = (source.match(OPEN_BRACKET) ?? []).length;
 	const closeCount = (source.match(CLOSE_BRACKET) ?? []).length;
 	if (openCount !== closeCount) {
 		return "Unmatched brackets";
 	}
 
+	// Check that [...splat] is only in the last segment
 	const segments = source.split("/").filter(Boolean);
 	for (let i = 0; i < segments.length; i++) {
 		const segment = segments[i];
@@ -55,6 +90,7 @@ export function validatePattern(source: string): string | null {
 		SPLAT_PATTERN.lastIndex = 0;
 	}
 
+	// Check that a segment is either all literal or a single placeholder
 	for (const segment of segments) {
 		const placeholders = segment.match(ANY_PLACEHOLDER);
 		if (placeholders && placeholders.length > 1) {
@@ -65,6 +101,7 @@ export function validatePattern(source: string): string | null {
 		}
 	}
 
+	// Check for duplicate param names
 	const names: string[] = [];
 	for (const m of source.matchAll(ANY_PLACEHOLDER)) {
 		const name = m[1];
@@ -77,6 +114,10 @@ export function validatePattern(source: string): string | null {
 	return null;
 }
 
+/**
+ * Validate that all placeholders in a destination exist in the source.
+ * Returns null if valid, or an error message if invalid.
+ */
 export function validateDestinationParams(source: string, destination: string): string | null {
 	const sourceNames = new Set<string>();
 	for (const m of source.matchAll(ANY_PLACEHOLDER)) {
@@ -93,44 +134,70 @@ export function validateDestinationParams(source: string, destination: string): 
 	return null;
 }
 
+/**
+ * Compile a URL pattern into a regex for matching.
+ *
+ * - `[param]` matches a single path segment (`[^/]+`)
+ * - `[...rest]` matches one or more remaining segments (`.+`)
+ */
 export function compilePattern(source: string): CompiledPattern {
 	const paramNames: string[] = [];
+	let regexStr = "";
+	let literalStart = 0;
 
-	let regexStr = source.replace(SPLAT_PATTERN, (_match, name: string) => {
-		paramNames.push(name);
-		return "(.+)";
-	});
-
-	regexStr = regexStr.replace(PARAM_PATTERN, (_match, name: string) => {
-		paramNames.push(name);
-		return "([^/]+)";
-	});
-
-	const parts = regexStr.split(CAPTURE_GROUP_SPLIT);
-	const escaped = parts
-		.map((part, i) => {
-			if (i % 2 === 1) return part;
-			return part.replace(REGEX_SPECIAL_CHARS, "\\$&");
-		})
-		.join("");
+	for (const match of source.matchAll(ANY_PLACEHOLDER)) {
+		regexStr += source.slice(literalStart, match.index).replace(REGEX_SPECIAL_CHARS, "\\$&");
+		paramNames.push(match[1]);
+		regexStr += match[0].startsWith("[...") ? "(.+)" : "([^/]+)";
+		literalStart = match.index + match[0].length;
+	}
+	regexStr += source.slice(literalStart).replace(REGEX_SPECIAL_CHARS, "\\$&");
 
 	return {
-		regex: new RegExp(`^${escaped}$`),
+		regex: new RegExp(`^${regexStr}$`),
 		paramNames,
 		source,
 	};
 }
 
+function toggledTrailingSlash(path: string): string | null {
+	if (path.length <= 1) return null;
+	return path.endsWith("/") ? path.slice(0, -1) : `${path}/`;
+}
+
+/**
+ * Match a path against a compiled pattern.
+ * Returns captured params or null if no match.
+ *
+ * Trailing slashes are ignored so `/category/arts/feed` and
+ * `/category/arts/feed/` match the same rule, consistent with exact and
+ * catch-all redirects.
+ */
 export function matchPattern(
 	compiled: CompiledPattern,
 	path: string,
 ): Record<string, string> | null {
 	const match = path.match(compiled.regex);
-	if (!match) return null;
+	if (match) {
+		const params: Record<string, string> = {};
+		for (let i = 0; i < compiled.paramNames.length; i++) {
+			const value = match[i + 1];
+			if (value !== undefined) {
+				params[compiled.paramNames[i]] = value;
+			}
+		}
+		return params;
+	}
+
+	const alt = toggledTrailingSlash(path);
+	if (!alt) return null;
+
+	const altMatch = alt.match(compiled.regex);
+	if (!altMatch) return null;
 
 	const params: Record<string, string> = {};
 	for (let i = 0; i < compiled.paramNames.length; i++) {
-		const value = match[i + 1];
+		const value = altMatch[i + 1];
 		if (value !== undefined) {
 			params[compiled.paramNames[i]] = value;
 		}
@@ -138,14 +205,23 @@ export function matchPattern(
 	return params;
 }
 
+/**
+ * Interpolate captured params into a destination pattern.
+ *
+ * @example
+ * interpolateDestination("/blog/[...path]", { path: "2024/01/post" })
+ * // "/blog/2024/01/post"
+ */
 export function interpolateDestination(
 	destination: string,
 	params: Record<string, string>,
 ): string {
+	// Replace [...splat] first
 	let result = destination.replace(SPLAT_PATTERN, (_match, name: string) => {
 		return params[name] ?? "";
 	});
 
+	// Then [param]
 	result = result.replace(PARAM_PATTERN, (_match, name: string) => {
 		return params[name] ?? "";
 	});

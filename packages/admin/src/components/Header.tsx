@@ -12,9 +12,13 @@ import { ThemeToggle } from "./ThemeToggle";
 export type { CurrentUser } from "../lib/api/current-user";
 
 async function handleLogout() {
+	// Clear the public-site toolbar-bootstrap flag (see Shell.tsx).
 	try {
 		localStorage.removeItem("emdash-editor");
-	} catch {}
+		localStorage.removeItem("emdash-toolbar-labels");
+	} catch {
+		// ignore — flag is best-effort
+	}
 	const res = await apiFetch("/_emdash/api/auth/logout?redirect=/_emdash/admin/login", {
 		method: "POST",
 		credentials: "same-origin",
@@ -26,28 +30,40 @@ async function handleLogout() {
 	}
 }
 
+/**
+ * Admin header with mobile menu toggle and user actions.
+ * Uses useSidebar() hook from kumo Sidebar.Provider context.
+ */
 export function Header() {
 	const { t } = useLingui();
 	const [userMenuOpen, setUserMenuOpen] = React.useState(false);
 
 	const { data: user } = useCurrentUser();
 
+	// Get display name and initials
 	const displayName = user?.name || user?.email || t`User`;
 	const initialsSource = user?.name || user?.email || "U";
 	const initials = (initialsSource[0] ?? "U").toUpperCase();
 
 	return (
+		// h-[58px] is mirrored by ADMIN_HEADER_HEIGHT_PX in ContentEditor.tsx
+		// (the settings sheet offsets its body by it) — change both together.
 		<header className="sticky top-0 z-10 flex h-[58px] items-center justify-end border-b bg-kumo-elevated px-4">
+			{/* The desktop trigger lives in the sidebar footer; mobile keeps it here so the closed sheet can reopen. */}
 			<Sidebar.Trigger className="me-auto cursor-pointer md:hidden rtl:rotate-180" />
 
+			{/* Right side actions */}
 			<div className="flex items-center gap-2">
+				{/* View site link */}
 				<LinkButton variant="ghost" size="sm" href="/" external>
 					<ArrowSquareOut className="h-4 w-4 me-1" />
 					{t`View Site`}
 				</LinkButton>
 
+				{/* Theme toggle */}
 				<ThemeToggle />
 
+				{/* User menu */}
 				<Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
 					<Popover.Trigger asChild>
 						<Button variant="ghost" size="sm" className="gap-2">
@@ -63,9 +79,12 @@ export function Header() {
 					</Popover.Trigger>
 
 					<Popover.Content className="w-56 p-2" align="end">
+						{/* User info */}
 						<div className="px-3 py-2 border-b mb-1">
 							<div className="font-medium truncate">{user?.name || t`User`}</div>
-							<div className="text-xs text-kumo-subtle truncate">{user?.email}</div>
+							<div className="text-xs text-kumo-subtle truncate">
+								<bdi dir="ltr">{user?.email}</bdi>
+							</div>
 						</div>
 						<div className="grid gap-1">
 							<Link

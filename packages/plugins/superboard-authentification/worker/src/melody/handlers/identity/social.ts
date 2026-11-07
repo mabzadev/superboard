@@ -100,64 +100,6 @@ export const postAuthorizeGoogle = async (c: Context<typeConfig.Context>) => {
     c,
     googleUser,
     bodyDto.locale,
-    bodyDto.org,
-  )
-
-  const {
-    authCode, authCodeBody,
-  } = await prepareSocialAuthCode(
-    c,
-    bodyDto,
-    app,
-    user,
-  )
-
-  return c.json(await identityService.processPostAuthorize(
-    c,
-    identityService.AuthorizeStep.Social,
-    authCode,
-    authCodeBody,
-  ))
-}
-
-export const postAuthorizeFacebook = async (c: Context<typeConfig.Context>) => {
-  const reqBody = await c.req.json()
-
-  const bodyDto = new identityDto.PostAuthorizeSocialSignInDto({
-    ...reqBody,
-    scopes: reqBody.scope ? reqBody.scope.split(' ') : [],
-  })
-  await validateUtil.dto(bodyDto)
-
-  const app = await appService.verifySPAClientRequest(
-    c,
-    bodyDto.clientId,
-    bodyDto.redirectUri,
-  )
-
-  const {
-    FACEBOOK_AUTH_CLIENT_ID: facebookClientId, FACEBOOK_AUTH_CLIENT_SECRET: facebookClientSecret,
-  } = env(c)
-
-  const facebookUser = await jwtService.verifyFacebookCredential(
-    facebookClientId,
-    facebookClientSecret,
-    bodyDto.credential,
-  )
-  if (!facebookUser) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Warn,
-      messageConfig.RequestError.NoFacebookUser,
-    )
-    throw new errorConfig.NotFound(messageConfig.RequestError.NoUser)
-  }
-
-  const user = await userService.processFacebookAccount(
-    c,
-    facebookUser,
-    bodyDto.locale,
-    bodyDto.org,
   )
 
   const {
@@ -232,91 +174,6 @@ export const getAuthorizeGithub = async (c: Context<typeConfig.Context>) => {
     c,
     githubUser,
     bodyDto.locale,
-    bodyDto.org,
-  )
-
-  const {
-    authCode, authCodeBody,
-  } = await prepareSocialAuthCode(
-    c,
-    bodyDto,
-    app,
-    user,
-  )
-
-  const detail = await identityService.processPostAuthorize(
-    c,
-    identityService.AuthorizeStep.Social,
-    authCode,
-    authCodeBody,
-  )
-
-  const qs = `?state=${detail.state}&code=${detail.code}&locale=${bodyDto.locale}`
-  const url = detail.nextPage === routeConfig.View.Consent
-    ? `${routeConfig.IdentityRoute.ProcessView}${qs}&redirect_uri=${detail.redirectUri}&step=consent`
-    : `${detail.redirectUri}${qs}`
-  return c.redirect(url)
-}
-
-export const getAuthorizeDiscord = async (c: Context<typeConfig.Context>) => {
-  const code = c.req.query('code')
-  const state = c.req.query('state') ?? ''
-
-  if (!code || !state) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Warn,
-      messageConfig.RequestError.InvalidDiscordAuthorizeRequest,
-    )
-    throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidDiscordAuthorizeRequest)
-  }
-
-  const originRequest = parseSocialAuthorizeState(
-    c,
-    state,
-    messageConfig.RequestError.InvalidDiscordAuthorizeRequest,
-  )
-  const bodyDto = new identityDto.PostAuthorizeSocialSignInDto({
-    ...originRequest,
-    credential: code,
-  })
-  await validateUtil.dto(bodyDto)
-
-  const app = await appService.verifySPAClientRequest(
-    c,
-    bodyDto.clientId,
-    bodyDto.redirectUri,
-  )
-
-  const {
-    DISCORD_AUTH_CLIENT_ID: discordClientId,
-    DISCORD_AUTH_CLIENT_SECRET: discordClientSecret,
-    AUTH_SERVER_URL: serverUrl,
-  } = env(c)
-
-  const discordRedirectUri = `${serverUrl}${routeConfig.IdentityRoute.AuthorizeDiscord}`
-
-  const discordUser = await jwtService.verifyDiscordCredential(
-    discordClientId,
-    discordClientSecret,
-    discordRedirectUri,
-    bodyDto.credential,
-  )
-
-  if (!discordUser) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Warn,
-      messageConfig.RequestError.NoDiscordUser,
-    )
-    throw new errorConfig.NotFound(messageConfig.RequestError.NoDiscordUser)
-  }
-
-  const user = await userService.processDiscordAccount(
-    c,
-    discordUser,
-    bodyDto.locale,
-    bodyDto.org,
   )
 
   const {
@@ -399,7 +256,6 @@ export const postAuthorizeApple = async (c: Context<typeConfig.Context>) => {
     c,
     appleUser,
     bodyDto.locale,
-    bodyDto.org,
   )
 
   const {
@@ -557,7 +413,6 @@ export const getAuthorizeOidc = async (c: Context<typeConfig.Context>) => {
     oidcUser,
     provider,
     bodyDto.locale,
-    bodyDto.org,
   )
 
   const {

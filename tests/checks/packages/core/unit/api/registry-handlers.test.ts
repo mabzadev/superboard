@@ -1,4 +1,18 @@
-import BetterSqlite3 from "better-sqlite3";
+/**
+ * Registry handler tests (subset)
+ *
+ * Covers:
+ * - Uninstall (handleRegistryUninstall) — happy + sad paths.
+ * - Update (handleRegistryUpdate) — early error paths (config, state).
+ *
+ * Update happy-path and update-check coverage need a mocked DiscoveryClient
+ * plus a controlled `fetch`; tracked separately. The handler's identity
+ * check + diff flow mirrors `handleMarketplaceUpdate`, which has full
+ * coverage in `marketplace-handlers.test.ts`.
+ *
+ * Uses a real in-memory SQLite database and a mock `Storage`.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -8,6 +22,7 @@ import {
 } from "../../../../../../packages/core/src/api/handlers/registry.js";
 import { runMigrations } from "../../../../../../packages/core/src/database/migrations/runner.js";
 import type { Database as DbSchema } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as BetterSqlite3 } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import type { SandboxRunner } from "../../../../../../packages/core/src/plugins/sandbox/types.js";
 import { PluginStateRepository } from "../../../../../../packages/core/src/plugins/state.js";
 import type {
@@ -17,6 +32,8 @@ import type {
 	Storage,
 	UploadResult,
 } from "../../../../../../packages/core/src/storage/types.js";
+
+// ── Mock storage ─────────────────────────────────────────────────
 
 function createMockStorage(): Storage {
 	const store = new Map<string, { body: Uint8Array; contentType: string }>();
@@ -62,6 +79,7 @@ function createMockStorage(): Storage {
 		async getSignedUploadUrl(): Promise<SignedUploadUrl> {
 			throw new Error("not implemented");
 		},
+		// Expose for assertions.
 		__store: store,
 	} as unknown as Storage;
 }
@@ -69,6 +87,8 @@ function createMockStorage(): Storage {
 function snapshotKeys(storage: Storage): string[] {
 	return [...((storage as unknown as { __store: Map<string, unknown> }).__store.keys() ?? [])];
 }
+
+// ── Suite ────────────────────────────────────────────────────────
 
 describe("Registry handlers", () => {
 	let db: Kysely<DbSchema>;
@@ -103,6 +123,7 @@ describe("Registry handlers", () => {
 			expect(result.success).toBe(false);
 			expect(result.error?.code).toBe("NOT_FOUND");
 
+			// State row must be untouched.
 			const state = await repo.get("acme-seo");
 			expect(state).not.toBeNull();
 			expect(state?.source).toBe("marketplace");
@@ -154,11 +175,30 @@ describe("Registry handlers", () => {
 				})
 				.execute();
 
+			const encoder = new TextEncoder();
+			await storage.upload({
+				key: "registry/r_bbbbbbbbbbbbbbbb/0.1.0/manifest.json",
+				body: encoder.encode("{}"),
+				contentType: "application/json",
+			});
+			let cleanupSawState = false;
 			const result = await handleRegistryUninstall(db, storage, "r_bbbbbbbbbbbbbbbb", {
 				deleteData: true,
+				beforeDelete: async () => {
+					cleanupSawState =
+						(
+							await db
+								.selectFrom("_plugin_storage")
+								.select("id")
+								.where("plugin_id", "=", "r_bbbbbbbbbbbbbbbb")
+								.executeTakeFirst()
+						)?.id === "k" &&
+						(await storage.exists("registry/r_bbbbbbbbbbbbbbbb/0.1.0/manifest.json"));
+				},
 			});
 			expect(result.success).toBe(true);
 			expect(result.data?.dataDeleted).toBe(true);
+			expect(cleanupSawState).toBe(true);
 
 			const rows = await db
 				.selectFrom("_plugin_storage")
@@ -185,6 +225,8 @@ describe("Registry handlers", () => {
 	describe("handleRegistryUpdate", () => {
 		const stubSandbox: SandboxRunner = {
 			isAvailable: () => true,
+			// Update never invokes these in the error-path tests below; cast to
+			// satisfy the surface without implementing the full runner.
 		} as unknown as SandboxRunner;
 		const config = { aggregatorUrl: "https://aggregator.test" };
 
@@ -242,6 +284,8 @@ describe("Registry handlers", () => {
 			const repo = new PluginStateRepository(db);
 			await repo.upsert("r_eeeeeeeeeeeeeeee", "1.0.0", "active", {
 				source: "registry",
+				// Intentionally omit registryPublisherDid + registrySlug to
+				// simulate a corrupted state row.
 			});
 			const result = await handleRegistryUpdate(
 				db,

@@ -201,6 +201,14 @@ Les sources amont épinglées et les bundles Yarn ne sont pas réécrits pour
 satisfaire les règles étendues. Le lanceur historique conserve sa couverture
 du runtime SDK Flows importé.
 
+Les fichiers présents dans la version d'EmDash épinglée par
+`scripts/config/emdash-integration.json`, y compris ceux que SuperBoard
+modifie, restent soumis aux règles d'EmDash appliquées par le lanceur
+historique. Les contrôles étendus, Knip et les analyseurs natifs ne les
+inspectent pas. Les contrôles des chemins, des configurations et des
+migrations couvrent tous les fichiers ; une migration publiée ne peut changer
+que pour reprendre le contenu de la version épinglée.
+
 `lints/baseline.json` enregistre les diagnostics existants au moment de
 l'activation, par fichier, règle et empreinte de la ligne concernée. Un
 diagnostic supplémentaire, déplacé dans un autre fichier ou portant sur une
@@ -229,6 +237,17 @@ les migrations et la dette ; localement, sa valeur par défaut est `HEAD`.
 Un outil natif manquant produit un échec explicite. Les règles statiques sur
 les requêtes, les autorisations et le navigateur ne remplacent pas les parcours
 réels, les tests de permissions et la vérification de la version déployée.
+
+Lorsque la variable de dépôt `SUPERBOARD_SELF_HOSTED_RUNNERS` vaut `true`, les
+pushs sur `dev` et `main` et les lancements manuels exécutent tous les jobs de
+qualité, de régression des plugins et de menus du front sur les runners
+auto-hébergés étiquetés `superboard`, sauf l'analyse Swift, qui exige macOS.
+Sinon, et toujours pour les pull requests, qui peuvent venir de forks de ce
+dépôt public, ils s'exécutent sur les runners GitHub. Sur le serveur, les runners tournent sous le
+compte `superboard-ci` (services `github-runner-superboard@1` et `@2`), dans
+la tranche systemd `superboard-ci.slice` limitée à 8 cœurs et 12 Go. Java 17
+et ShellCheck sont installés par le système et le SDK Android se trouve dans
+`/opt/android-sdk`.
 
 ## Ajouter un test ou un contrôle
 

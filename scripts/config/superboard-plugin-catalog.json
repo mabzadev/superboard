@@ -1488,8 +1488,8 @@
             "renderer_id": "superboard-core.renderer.settings_admin_surface",
             "plugin_id": "superboard-core",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1517,8 +1517,8 @@
             "renderer_id": "superboard-core.renderer.audit_admin_surface",
             "plugin_id": "superboard-core",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1546,8 +1546,8 @@
             "renderer_id": "superboard-core.renderer.gateway_admin_surface",
             "plugin_id": "superboard-core",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1575,8 +1575,8 @@
             "renderer_id": "superboard-core.renderer.observability_admin_surface",
             "plugin_id": "superboard-core",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1604,8 +1604,8 @@
             "renderer_id": "superboard-core.renderer.mcp_admin_surface",
             "plugin_id": "superboard-core",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2014,33 +2014,33 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:eee37ea1af05435ee5c29e1d88d855519f5ef26150f3447177bba41de98d2d9d"
+        "artifact_checksum": "sha256:b2d5559b61dccf14638c6a1fbc54548fae01ee27c44a2a33a100200a39d6c5e9"
       },
       "component_artifacts": [
         {
           "id": "superboard-settings",
           "version": "1.0.0",
-          "checksum": "sha256:4ac205db9cdfd3afa1702a159ce95170a92e6e2a64552d90541ba0187205aa92"
+          "checksum": "sha256:b766f841a2a60f9d1345f9c9b3debe79c7cd62a3422a227bef1d43db690fe540"
         },
         {
           "id": "superboard-audit",
           "version": "1.0.0",
-          "checksum": "sha256:c3a68ef9022be8f50f162805131e6099827aad93d68bb3d302672a4d37d1e149"
+          "checksum": "sha256:2942552be1c9742705cf4c549f27e5047ef8b19f1ea3950d098d1c024471347b"
         },
         {
           "id": "superboard-gateway",
           "version": "1.0.0",
-          "checksum": "sha256:60cfdb5160ed115aa0048b969c3e0aa15cc515eb532977cb45b7ec5cb66a6854"
+          "checksum": "sha256:8961c991f51ec5f7927bf06e71fccfc86a474af1f64ebdd4b18202a8c9255de0"
         },
         {
           "id": "superboard-observability",
           "version": "1.0.0",
-          "checksum": "sha256:d13dc5b6ee394eb63e9d5c4efc849f2f9d6728dac50caf921e7414f4bc7a02ca"
+          "checksum": "sha256:392c13e2d66385fbf9393662a2d0e2f0ecb4f4c755cb6dea9ec580ff88b6ab66"
         },
         {
           "id": "superboard-mcp",
           "version": "1.0.0",
-          "checksum": "sha256:665bc94575be169365530dff89f7abffa507f0519fbb2e4c8203b3d37aba9261"
+          "checksum": "sha256:6dbf09066a84469d94c79e0437e75cd41c534e546b34d00c5e7f9af89aa80598"
         }
       ],
       "worker_descriptors": [
@@ -3495,8 +3495,8 @@
             "renderer_id": "superboard-settings.renderer.admin_surface",
             "plugin_id": "superboard-settings",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3524,8 +3524,8 @@
             "renderer_id": "superboard-audit.renderer.admin_surface",
             "plugin_id": "superboard-audit",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3553,8 +3553,8 @@
             "renderer_id": "superboard-gateway.renderer.admin_surface",
             "plugin_id": "superboard-gateway",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3582,8 +3582,8 @@
             "renderer_id": "superboard-observability.renderer.admin_surface",
             "plugin_id": "superboard-observability",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3611,8 +3611,8 @@
             "renderer_id": "superboard-mcp.renderer.admin_surface",
             "plugin_id": "superboard-mcp",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4021,7 +4021,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:1de2b0fb329d17b215782c4e74524fb4c1335b4af37f9b6930db1d111cdf6cec"
+        "artifact_checksum": "sha256:3fe7b9f947d8af408d32b2616ef7cf03496becd71fdbaf922e12817c1b348b46"
       }
     },
     {
@@ -4656,8 +4656,8 @@
             "renderer_id": "superboard-authentification.renderer.user_login_form",
             "plugin_id": "superboard-authentification",
             "plugin_version": "1.4.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4683,8 +4683,8 @@
             "renderer_id": "superboard-authentification.renderer.user_profile_card",
             "plugin_id": "superboard-authentification",
             "plugin_version": "1.4.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4710,8 +4710,8 @@
             "renderer_id": "superboard-authentification.renderer.user_admin_surface",
             "plugin_id": "superboard-authentification",
             "plugin_version": "1.4.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4840,13 +4840,13 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:1226049dc9f3e9202ef6e645b65f9fa0b9a109ef2da3ea83239f85a2f59560fa"
+        "artifact_checksum": "sha256:22ca4a00ff1fc160021b1440ac9f5a163d73acfa37749150ab86d965dcef3941"
       },
       "component_artifacts": [
         {
           "id": "superboard-user",
           "version": "1.4.0",
-          "checksum": "sha256:c6dbbf70b3899245b2f3132901f6d4b01fba8464164068706649804b06289906"
+          "checksum": "sha256:ee2289125e6158227f17bb350b26ad0516d9c5aabd47b6866ff3e381f896d81c"
         }
       ],
       "worker_descriptors": [],
@@ -5441,8 +5441,8 @@
             "renderer_id": "superboard-user.renderer.login_form",
             "plugin_id": "superboard-user",
             "plugin_version": "1.4.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5468,8 +5468,8 @@
             "renderer_id": "superboard-user.renderer.profile_card",
             "plugin_id": "superboard-user",
             "plugin_version": "1.4.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5495,8 +5495,8 @@
             "renderer_id": "superboard-user.renderer.admin_surface",
             "plugin_id": "superboard-user",
             "plugin_version": "1.4.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5625,7 +5625,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:b32bce7d988e864d0cd0eaca5d1289c7cfc003a5164b68339347f0ce9a4a3650"
+        "artifact_checksum": "sha256:a258f3c66f819e8ec38b28deb3e8578b9d443721e985c65528627c961fba408f"
       }
     },
     {
@@ -6221,8 +6221,8 @@
             "renderer_id": "superboard-data.renderer.content_admin_surface",
             "plugin_id": "superboard-data",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6250,8 +6250,8 @@
             "renderer_id": "superboard-data.renderer.files_admin_surface",
             "plugin_id": "superboard-data",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6438,18 +6438,18 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:9f1d7962e3ce724225fd4b6d003417e898302e6c29720707622071b372311a60"
+        "artifact_checksum": "sha256:0c097a82cdea657da39eec36b914ac13dc26757593317009f9f9d8fa59d2739f"
       },
       "component_artifacts": [
         {
           "id": "superboard-content",
           "version": "1.0.0",
-          "checksum": "sha256:8962b912507ba877b56e4cb6b7a268b5297eb8fcdc48337a89ba5c003e536bb6"
+          "checksum": "sha256:3a96925f2b52709c2d70d2cdc727318c1e78880ab7a3ff75e1ce391741a1f6c6"
         },
         {
           "id": "superboard-files",
           "version": "1.0.0",
-          "checksum": "sha256:bdfeb5d3481ad899dd2a0b6c91a4941935d2c85e85ef2573d0717bf7bcb33935"
+          "checksum": "sha256:5de78ec74700cc1d5c282336e514f5c2f481db037a05a0cd4bbbf78ef98e53c5"
         }
       ],
       "worker_descriptors": [
@@ -7023,8 +7023,8 @@
             "renderer_id": "superboard-content.renderer.admin_surface",
             "plugin_id": "superboard-content",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7052,8 +7052,8 @@
             "renderer_id": "superboard-files.renderer.admin_surface",
             "plugin_id": "superboard-files",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7240,7 +7240,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:e3f939b6725be6aa637ea465e96ce66177e39dc5ffc64545cf7bc99d5fff413f"
+        "artifact_checksum": "sha256:7c28657b3d7cdbda1255ab3669eb3452718ace5431b815007d411cae7f87c86b"
       }
     },
     {
@@ -7912,8 +7912,8 @@
             "renderer_id": "superboard-monetization.renderer.products_admin_surface",
             "plugin_id": "superboard-monetization",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7941,8 +7941,8 @@
             "renderer_id": "superboard-monetization.renderer.billing_admin_surface",
             "plugin_id": "superboard-monetization",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8321,18 +8321,18 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:6f026e21171c12894ab206e3e3e2bb5a898234636ede267b406e066ae86e1c23"
+        "artifact_checksum": "sha256:303452ccf236810a4c60f64a4c81d36860d0310a27749bac050212a4ac3ea252"
       },
       "component_artifacts": [
         {
           "id": "superboard-products",
           "version": "1.0.0",
-          "checksum": "sha256:0d4fe5bd8c355da3c4f034f21b5cd16ff643d6b0bb507991006b35da6fd6d475"
+          "checksum": "sha256:37bd69e2cfeba96992f539140e712e1febc097dd3daed80d66b1f7d5ace6d4fc"
         },
         {
           "id": "superboard-billing",
           "version": "1.0.0",
-          "checksum": "sha256:e254e012e2d848929e69fd7b663d25fe9c1cb5c5dc3281b001452704a776d15d"
+          "checksum": "sha256:07ce82a806bc2bf26bde3edca2744a71e3a70ca8927564ab9e5e79f440fe9ef7"
         }
       ],
       "worker_descriptors": [
@@ -8964,8 +8964,8 @@
             "renderer_id": "superboard-products.renderer.admin_surface",
             "plugin_id": "superboard-products",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8993,8 +8993,8 @@
             "renderer_id": "superboard-billing.renderer.admin_surface",
             "plugin_id": "superboard-billing",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9373,7 +9373,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:0295a9a58808967ed17a24002064471c281da08ae1326e03948f08ee7c7c19a5"
+        "artifact_checksum": "sha256:d36c19069385b4c10f1cfd77d3d69752d5a0859ff492c1aedf97433fa656b85a"
       }
     },
     {
@@ -10140,8 +10140,8 @@
             "renderer_id": "superboard-communication.renderer.marketing_admin_surface",
             "plugin_id": "superboard-communication",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10169,8 +10169,8 @@
             "renderer_id": "superboard-communication.renderer.email_admin_surface",
             "plugin_id": "superboard-communication",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10585,18 +10585,18 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c703b192f9549cd348e409921effdf965ef35aa51e3fa996aa5e786b4be7e7b6"
+        "artifact_checksum": "sha256:a25055dec89a3bc888cdddb15bf55abdd2104c8557f1bee2b474c66640e7935d"
       },
       "component_artifacts": [
         {
           "id": "superboard-marketing",
           "version": "1.0.0",
-          "checksum": "sha256:535c1b1aaad0bef38994340dd0cf03dabff62725010f91b51b7e830aa1c60f4c"
+          "checksum": "sha256:b897e873d76345cc7e6ae0603e14e538c8db95e62300a3c149c1c1917f74eb5e"
         },
         {
           "id": "superboard-email",
           "version": "1.0.0",
-          "checksum": "sha256:214927d81b2e7df5e5c98e64755ee6b9b5742919cbd24a11813910fcd41cacf0"
+          "checksum": "sha256:a881da27a27ded3c000813ab62d693905216e3173e88134ecf649ad8f5c28309"
         }
       ],
       "worker_descriptors": [
@@ -10635,7 +10635,7 @@
           "callback_verification": "not_applicable",
           "deployment_status": "ready",
           "evidence": "tests/checks/plugins/superboard-communication/email/unit/index.test.ts",
-          "evidence_sha256": "sha256:91154ea4efdcd1f96b16edf525058b67f5a1004d52e97629ad497ae6d7a6c699",
+          "evidence_sha256": "sha256:fb24e6351038bcb0a3f45c161dff27ec2ca70bd74e8da2f5c55bf08fa60c6978",
           "store_ids": [
             "superboard-email.store.deliveries",
             "superboard-email.store.provider_events"
@@ -10644,7 +10644,7 @@
             "superboard-email.repository.deliveries",
             "superboard-email.repository.provider_events"
           ],
-          "checksum": "sha256:d2ca7857e6b63d99824415cf3b6c5ef2e057f0c7b5522fe38799c02bfd33e971"
+          "checksum": "sha256:a9c11b1443b769205a974e6454b527e6d3e869a9f69ed12dee46a11cffd8d111"
         }
       ],
       "manifest": {
@@ -11344,8 +11344,8 @@
             "renderer_id": "superboard-marketing.renderer.admin_surface",
             "plugin_id": "superboard-marketing",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -11373,8 +11373,8 @@
             "renderer_id": "superboard-email.renderer.admin_surface",
             "plugin_id": "superboard-email",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -11789,7 +11789,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:2e1d71de1571030dfe332d42334600859b694bff7c95f1215be9d6ff903ddfd4"
+        "artifact_checksum": "sha256:537bf187fbece7edd30a5a943443a4aee4f791729d0306c7a8c26a11104af2ca"
       }
     },
     {
@@ -12202,13 +12202,14 @@
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0001_dynamic_links.sql",
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0002_dynamic_links_domain.sql",
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0003_campaign_analytics.sql",
-              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0004_link_metadata_and_defaults.sql"
+              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0004_link_metadata_and_defaults.sql",
+              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0005_domain_dns_proof.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:f1e7fd1b53cfdfe6d303ced68a3a9ca9cced760dfbafa61f1e67a66f5d4943a0"
+            "checksum": "sha256:b90c3f9285a704218f9fe022322d25852e0b02fc614662d6c4b97a19c7ca539e"
           },
           {
             "store_id": "superboard-acquisition.store.dynamic_links_links",
@@ -12226,13 +12227,14 @@
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0001_dynamic_links.sql",
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0002_dynamic_links_domain.sql",
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0003_campaign_analytics.sql",
-              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0004_link_metadata_and_defaults.sql"
+              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0004_link_metadata_and_defaults.sql",
+              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0005_domain_dns_proof.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:4231cf7e56f11195ae6977c3e974adeab31d7d18f2c780414c2f0a7a1e691bd3"
+            "checksum": "sha256:91622d6b486da06edf8f5332d9b8b8cebdfeafae921a7b40844503c09bddbc23"
           }
         ],
         "schemas": [
@@ -12978,8 +12980,8 @@
             "renderer_id": "superboard-acquisition.renderer.paywalls_admin_surface",
             "plugin_id": "superboard-acquisition",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -13007,8 +13009,8 @@
             "renderer_id": "superboard-acquisition.renderer.onboardings_admin_surface",
             "plugin_id": "superboard-acquisition",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -13036,8 +13038,8 @@
             "renderer_id": "superboard-acquisition.renderer.flows_admin_surface",
             "plugin_id": "superboard-acquisition",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -13065,8 +13067,8 @@
             "renderer_id": "superboard-acquisition.renderer.dynamic_links_admin_surface",
             "plugin_id": "superboard-acquisition",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -13815,28 +13817,28 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:e6f4950cd020c03aedc84c7b9a9b875f53296c9b169525aa3b3185e61a0d3dff"
+        "artifact_checksum": "sha256:9598bf711518f1aaa5d54c2cb5c5be867f1ea58eb5a16a8ecfae91e1df855f5f"
       },
       "component_artifacts": [
         {
           "id": "superboard-paywalls",
           "version": "1.0.0",
-          "checksum": "sha256:54f9084309a4be7c7516b806767f6e76f179db4edf65c8c336ac54923b4434b5"
+          "checksum": "sha256:653dd9605959a9a99e99d55b91e3280f9d8c1592e670d10886200c522f626db8"
         },
         {
           "id": "superboard-onboardings",
           "version": "1.0.0",
-          "checksum": "sha256:c6ce200fc69196aa9daac8b6133be76960ec19b904917ae0258d052c2bcb0a64"
+          "checksum": "sha256:28d833403c5f9e26b63c302a512b7338f1037a7e78bf0771d38fc86d535992b8"
         },
         {
           "id": "superboard-flows",
           "version": "1.0.0",
-          "checksum": "sha256:a39a920a8d0910f3a9a9d3f4d7cdbfa9c4897f9449fb43c2242afb9b878fc473"
+          "checksum": "sha256:f4a3248f1e27e37d6ba91ede55c6f269824dd95fab9b695373d30de26317a6a5"
         },
         {
           "id": "superboard-dynamic-links",
           "version": "1.0.0",
-          "checksum": "sha256:5bec7b3d33e8b2b2f81b065b1f47c2b66509f73d07d0f5017de21e3d5775b287"
+          "checksum": "sha256:3583095899dc8c7ef2a7c67042e89d1cb81793a05821d4ede5f903d631e22856"
         }
       ],
       "worker_descriptors": [
@@ -14221,13 +14223,14 @@
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0001_dynamic_links.sql",
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0002_dynamic_links_domain.sql",
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0003_campaign_analytics.sql",
-              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0004_link_metadata_and_defaults.sql"
+              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0004_link_metadata_and_defaults.sql",
+              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0005_domain_dns_proof.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:8c3b063712ab6fef2e31ab1e253f3a3eb96613b94352a0a9d781a4534dbccecd"
+            "checksum": "sha256:bb5046bdbe09f096a7a8f043c82df51cd5e909489f01640807644939714844dd"
           },
           {
             "store_id": "superboard-dynamic-links.store.links",
@@ -14245,13 +14248,14 @@
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0001_dynamic_links.sql",
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0002_dynamic_links_domain.sql",
               "packages/plugins/superboard-acquisition/dynamic-links/migrations/0003_campaign_analytics.sql",
-              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0004_link_metadata_and_defaults.sql"
+              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0004_link_metadata_and_defaults.sql",
+              "packages/plugins/superboard-acquisition/dynamic-links/migrations/0005_domain_dns_proof.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:577a468caa50fea2bbb1e02cee99b9b50b3260f51cfcb1eda3962cebf60998f7"
+            "checksum": "sha256:c02ca008e2405e14a35103c3c0d1a4d81e830c565346e00a36f25639b3f5b236"
           }
         ],
         "schemas": [
@@ -14997,8 +15001,8 @@
             "renderer_id": "superboard-paywalls.renderer.admin_surface",
             "plugin_id": "superboard-paywalls",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -15026,8 +15030,8 @@
             "renderer_id": "superboard-onboardings.renderer.admin_surface",
             "plugin_id": "superboard-onboardings",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -15055,8 +15059,8 @@
             "renderer_id": "superboard-flows.renderer.admin_surface",
             "plugin_id": "superboard-flows",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -15084,8 +15088,8 @@
             "renderer_id": "superboard-dynamic-links.renderer.admin_surface",
             "plugin_id": "superboard-dynamic-links",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -15834,7 +15838,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:34539d6a7418a8b20312ec5ed84c9c38affd8d5b26f85ab0392d12116081f8e7"
+        "artifact_checksum": "sha256:94f841500a131829161e1220e07fe25c5e3b40efec25d000869d31162712ea5a"
       }
     },
     {
@@ -16314,8 +16318,8 @@
             "renderer_id": "superboard-support.renderer.support_admin_surface",
             "plugin_id": "superboard-support",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -16642,13 +16646,13 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:2d3dc33105c252878dc13ca5e87f12764aa9b9706aeac4ecff8cbd097f7ebd9f"
+        "artifact_checksum": "sha256:5d94b97e2b60416125fbb3a14bf8fdc486d48d8b7db2f50bf836e43f861e8c0b"
       },
       "component_artifacts": [
         {
           "id": "superboard-support",
           "version": "1.0.0",
-          "checksum": "sha256:3c2dcb3019e868982ffc3aae06dced1b0bcd5832cb9c402af0560bf7a357051c"
+          "checksum": "sha256:4027fddb9ee5b073fa2a58e3a3f87ec3d92b41f353ecfdf4575c1702dc1cb80d"
         }
       ],
       "worker_descriptors": [
@@ -17106,8 +17110,8 @@
             "renderer_id": "superboard-support.renderer.admin_surface",
             "plugin_id": "superboard-support",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -17434,7 +17438,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:5aa43eb546920f8f59178a1301bf8e9b2c3ce68eb62b5b87ef9bcaf84c7cc818"
+        "artifact_checksum": "sha256:b005fde003ab1e11830c963f528717dc9188c031b8a7c90a852495a802bd3f81"
       }
     },
     {
@@ -17777,8 +17781,8 @@
             "renderer_id": "superboard-analytics.renderer.analytics_admin_surface",
             "plugin_id": "superboard-analytics",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -18147,13 +18151,13 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:71af51094e5d074b2c2a095d35c4739b26d8eaefc1483a236628fb3910aacf5b"
+        "artifact_checksum": "sha256:45354b513d9f936ffeb2f6266aeb928876495fba6b3eab35ded532ae580d4153"
       },
       "component_artifacts": [
         {
           "id": "superboard-analytics",
           "version": "1.0.0",
-          "checksum": "sha256:546279bdbbb7cd576cd9eae8125c1d880262069c722251edd454bd06c877fd7c"
+          "checksum": "sha256:17e8f9a6dc4ed7495e9c1fa222cae9de79b0b51921143dcfd0fe1d6835f3b8c4"
         }
       ],
       "worker_descriptors": [
@@ -18168,7 +18172,7 @@
           "callback_verification": "not_applicable",
           "deployment_status": "ready",
           "evidence": "tests/checks/plugins/superboard-analytics/worker/runtime/analytics.runtime.test.ts",
-          "evidence_sha256": "sha256:e879b8a213b3b988bee5de0f9473f4daaab49aff84e3f55ccbee53d3f34f03ec",
+          "evidence_sha256": "sha256:9942e85a57939984e42c3be0c83d3145ce21662bcfaaf46c47231c1c13adeebc",
           "store_ids": [
             "superboard-analytics.store.aggregates",
             "superboard-analytics.store.events"
@@ -18177,7 +18181,7 @@
             "superboard-analytics.repository.aggregates",
             "superboard-analytics.repository.events"
           ],
-          "checksum": "sha256:113c626c0d38b18aa12df1fedb74a0aee6115295667d680bab8e8bf5e99556d3"
+          "checksum": "sha256:30e4636e46035c51c6971802660d389538957d393e2354f4d0889f8a112a2aa9"
         }
       ],
       "manifest": {
@@ -18471,8 +18475,8 @@
             "renderer_id": "superboard-analytics.renderer.admin_surface",
             "plugin_id": "superboard-analytics",
             "plugin_version": "1.0.0",
-            "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
-            "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
+            "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
+            "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -18841,7 +18845,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:e219be74807600fe3101f72c56721ba83cb451f0a0141247e314a15a666345a0"
+        "artifact_checksum": "sha256:d34b330979f36e881e4a270324b4e50da46eacb6410bf8359fd322c8a099976f"
       }
     }
   ]

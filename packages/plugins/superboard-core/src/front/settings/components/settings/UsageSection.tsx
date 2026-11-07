@@ -13,6 +13,7 @@ import {
 } from "@superboard/front-ui/lib/Notifications.js";
 import SessionStorage from "@superboard/front-ui/lib/SessionStorage.js";
 import dynamic from "@superboard/front-ui/next-dynamic";
+import { SettingsActions, SettingsRow, SettingsSection } from "@superboard/front-ui/settings-form";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Skeleton } from "@superboard/front-ui/ui/skeleton.js";
 import { useEffect, useMemo, useState } from "react";
@@ -99,21 +100,19 @@ export default function UsageSection() {
 	};
 
 	return (
-		<div className="py-4">
-			<div className="mb-5 flex items-center gap-3">
-				<div className="flex flex-1 flex-col gap-0.5">
-					<h2 className="text-sm font-semibold">{t("usage.title")}</h2>
-					<span className="text-xs text-muted-foreground">{t("usage.description")}</span>
-				</div>
-				<div className="flex shrink-0 items-center gap-2">
+		<div className="flex max-w-3xl flex-col gap-4 py-4">
+			<SettingsSection title={t("usage.title")} description={t("usage.description")}>
+				<SettingsRow>
 					<DateRangePicker date={dateRange} setDate={handleDateChange} presets={dateRangePresets} />
-					<Button variant="outline" size="sm" onClick={() => void handleExport()}>
-						<Download className="h-3.5 w-3.5" />
-						{t("usage.export")}
-					</Button>
-				</div>
-			</div>
-			<SettingsActiveUsersChart data={eventsPaymentQuery.data ?? null} />
+					<SettingsActiveUsersChart data={eventsPaymentQuery.data ?? null} />
+				</SettingsRow>
+			</SettingsSection>
+			<SettingsActions>
+				<Button variant="outline" size="sm" onClick={() => void handleExport()}>
+					<Download className="size-3.5" />
+					{t("usage.export")}
+				</Button>
+			</SettingsActions>
 		</div>
 	);
 }

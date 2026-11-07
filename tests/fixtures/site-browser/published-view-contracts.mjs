@@ -57,8 +57,6 @@ export const publishedViewContracts = {
 	},
 	"/auth/roles": control("columnheader", "Note", "Remarque", /roles/),
 	"/auth/scopes": control("columnheader", "Client Type", "Type de client", /scopes/),
-	"/auth/orgs": control("columnheader", "Slug", "Identifiant", /orgs/),
-	"/auth/saml": text("SAML", "SAML", /saml\/idps/),
 	"/auth/logs": control("columnheader", "Receiver", "Destinataire", /logs\/sign-in/),
 	"/auth/user-attributes": control(
 		"columnheader",
@@ -86,7 +84,7 @@ export const publishedViewContracts = {
 		/entitlements/,
 	),
 	"/monetization/settings": control(
-		"checkbox",
+		"switch",
 		"Enable purchases",
 		"Activer les achats",
 		/\/api\/v1\/billing\/[^/?]+$/u,

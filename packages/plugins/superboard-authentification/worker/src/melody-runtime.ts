@@ -12,8 +12,6 @@ type MelodyAuthSecrets = {
   jwtPrivateKeyPem: string;
   jwtPublicKeyPem: string;
   sessionSecret: string;
-  samlPrivateKeyPem?: string;
-  samlCertificatePem?: string;
 }
 
 type StoredValue = {
@@ -33,12 +31,6 @@ export function melodyBindings (
     [BaseKVKey.JwtPrivateSecret, secrets.jwtPrivateKeyPem],
     [BaseKVKey.JwtPublicSecret, secrets.jwtPublicKeyPem],
     [BaseKVKey.SessionSecret, secrets.sessionSecret],
-    ...(secrets.samlPrivateKeyPem
-      ? [[BaseKVKey.SamlSpKey, secrets.samlPrivateKeyPem] as const]
-      : []),
-    ...(secrets.samlCertificatePem
-      ? [[BaseKVKey.SamlSpCert, secrets.samlCertificatePem] as const]
-      : []),
   ])
 
   return {
@@ -86,8 +78,6 @@ function parseSecrets (raw: string): MelodyAuthSecrets {
     jwtPrivateKeyPem,
     jwtPublicKeyPem,
     sessionSecret,
-    samlPrivateKeyPem: optionalPem(payload.samlPrivateKeyPem),
-    samlCertificatePem: optionalCertificate(payload.samlCertificatePem),
   }
 }
 
@@ -100,8 +90,6 @@ function parseCompactSecrets (payload: Record<string, unknown>): MelodyAuthSecre
     jwtPrivateKeyPem: pemFromBody(payload.jp, 'PRIVATE KEY'),
     jwtPublicKeyPem: pemFromBody(payload.ju, 'PUBLIC KEY'),
     sessionSecret,
-    samlPrivateKeyPem: pemFromBody(payload.sp, 'PRIVATE KEY'),
-    samlCertificatePem: pemFromBody(payload.sc, 'CERTIFICATE'),
   }
 }
 
@@ -136,26 +124,10 @@ function requiredPem (value: unknown, label: string): string {
   return value
 }
 
-function optionalPem (value: unknown): string | undefined {
-  if (value == null || value === '') return undefined
-  return requiredPem(
-    value,
-    'PRIVATE KEY',
-  )
-}
-
-function optionalCertificate (value: unknown): string | undefined {
-  if (value == null || value === '') return undefined
-  return requiredPem(
-    value,
-    'CERTIFICATE',
-  )
-}
-
 /**
  * A KVNamespace-compatible facade backed by D1. Melody uses KV for security
  * state; D1 avoids cross-colo propagation races for single-use codes, refresh
- * rotation, MFA attempt counters and SAML replay protection.
+ * rotation and MFA attempt counters.
  */
 function createD1StrongKv (
   db: D1Database,

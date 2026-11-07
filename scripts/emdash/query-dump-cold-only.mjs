@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+/**
+ * Identify queries that fire on cold but not warm in the d1 target —
+ * the cold-isolate startup tax.
+ */
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,7 +25,7 @@ const routeOrder = [
 	"search",
 ];
 
-const coldOnlyAcc = new Map();
+const coldOnlyAcc = new Map(); // sql -> count
 
 for (const r of routeOrder) {
 	const coldFile = resolve(dir, `${r}.cold.json`);

@@ -1,3 +1,11 @@
+/**
+ * Coverage for the programmatic `updatePackage` API.
+ *
+ * Runs against the in-memory `MockPds` rather than a real PDS so the
+ * publish/update boundary is exercised against the same atproto contract
+ * the publish tests use.
+ */
+
 import { PublishingClient } from "@emdash-cms/registry-client";
 import type { Did } from "@emdash-cms/registry-client";
 import { NSID } from "@emdash-cms/registry-lexicons";
@@ -139,6 +147,10 @@ describe("updatePackage", () => {
 		});
 
 		it("preserves an optional field that the manifest omits (no silent deletion)", async () => {
+			// Mirrors publish semantics: a missing-from-manifest key isn't a
+			// request to delete. Without this, accidentally removing the
+			// `description` line in emdash-plugin.jsonc would silently wipe
+			// a value the publisher put on the record.
 			const pds = new MockPds({ did: TEST_DID });
 			seedProfile(pds, { description: "old description" });
 
@@ -182,10 +194,14 @@ describe("updatePackage", () => {
 			expect(body.collection).toBe(NSID.packageProfile);
 			expect(body.rkey).toBe(SLUG);
 			expect(body.validate).toBe(false);
+			// Optimistic concurrency: the write carries the CID we read,
+			// so a concurrent edit between read and write surfaces as
+			// STALE_RECORD instead of silently winning.
 			expect(typeof body.swapRecord).toBe("string");
 			expect(body.swapRecord).not.toBe("");
 			expect(body.record.license).toBe("Apache-2.0");
 			expect(body.record.lastUpdated).toBe(FIXED_NOW.toISOString());
+			// Identity fields preserved verbatim.
 			expect(body.record.$type).toBe(NSID.packageProfile);
 			expect(body.record.id).toBe(`at://${TEST_DID}/${NSID.packageProfile}/${SLUG}`);
 			expect(body.record.slug).toBe(SLUG);
@@ -247,6 +263,10 @@ describe("updatePackage", () => {
 
 		it("throws POSSIBLE_RENAME listing every other package when the slug is missing", async () => {
 			const pds = new MockPds({ did: TEST_DID });
+			// Publisher already has THREE packages under other slugs. The
+			// diagnostic should list all of them — a publisher with multiple
+			// plugins shouldn't see a misleading "you might have renamed X"
+			// pointer at an unrelated package.
 			for (const slug of ["alpha", "beta", "gamma"]) {
 				pds.seedRecord(NSID.packageProfile, slug, {
 					$type: NSID.packageProfile,
@@ -284,6 +304,10 @@ describe("updatePackage", () => {
 		});
 
 		it("rethrows auth failures from the sibling scan instead of degrading to PACKAGE_NOT_FOUND", async () => {
+			// Mock a PDS that returns AuthRequired on listRecords. The
+			// rename-detection path should surface the real cause so the
+			// user is prompted to re-login rather than seeing a confusing
+			// PACKAGE_NOT_FOUND that didn't actually check.
 			const pds = new MockPds({ did: TEST_DID });
 			const wrappedHandle = pds.handle.bind(pds);
 			pds.handle = async (pathname, init) => {
@@ -308,6 +332,9 @@ describe("updatePackage", () => {
 		it("throws STALE_RECORD when the record changes between read and write", async () => {
 			const pds = new MockPds({ did: TEST_DID });
 			seedProfile(pds);
+			// Intercept putRecord to simulate a concurrent edit having
+			// changed the record's CID. A real PDS returns InvalidSwap in
+			// this case.
 			const wrappedHandle = pds.handle.bind(pds);
 			pds.handle = async (pathname, init) => {
 				if (pathname.includes("putRecord")) {
@@ -352,6 +379,7 @@ describe("updatePackage", () => {
 				code: "INVALID_INPUT",
 			});
 
+			// Fails before any network access — no read, no write.
 			expect(pds.callsTo("com.atproto.repo.putRecord")).toHaveLength(0);
 			expect(pds.callsTo("com.atproto.repo.getRecord")).toHaveLength(0);
 		});
@@ -388,11 +416,14 @@ describe("updatePackage", () => {
 				code: "PACKAGE_INVALID",
 			});
 
+			// And nothing was written.
 			expect(pds.callsTo("com.atproto.repo.putRecord")).toHaveLength(0);
 		});
 
 		it("throws SLUG_MISMATCH when the existing record's slug disagrees with the manifest's", async () => {
 			const pds = new MockPds({ did: TEST_DID });
+			// Seed at the manifest's rkey but with a different slug field. A
+			// real aggregator would reject this; we refuse to make it worse.
 			seedProfile(pds, { slug: "different-slug" });
 
 			let caught: unknown;

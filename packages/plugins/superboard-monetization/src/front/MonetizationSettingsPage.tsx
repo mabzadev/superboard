@@ -1,14 +1,22 @@
 import { usePluginEnabled } from "@superboard/front-ui/context";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
+import { Button, LinkButton, SwitchField } from "@superboard/front-ui/kumo";
 import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
 import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
+import {
+	AutosaveIndicator,
+	SettingsActions,
+	SettingsDependents,
+	SettingsRow,
+	SettingsSection,
+	useSettingsAutosave,
+	type AutosaveStatus,
+} from "@superboard/front-ui/settings-form";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
-import { Button } from "@superboard/front-ui/ui/button.js";
-import { Checkbox } from "@superboard/front-ui/ui/checkbox.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
 import { RadioGroup, RadioGroupItem } from "@superboard/front-ui/ui/radio-group.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import {
 	getBillingOverview,
@@ -16,9 +24,9 @@ import {
 	updateBillingSettings,
 	type BillingOverview,
 } from "./billing/api/billing/billingService.js";
-import DisplayCurrencySetting from "./DisplayCurrencySetting.js";
+import DisplayCurrencySetting, { useDisplayCurrency } from "./DisplayCurrencySetting.js";
 import { useMonetizationI18n } from "./i18n.js";
-import StripeSettings from "./StripeSettings.js";
+import StripeSettings, { StripeAdvancedSettings, useStripeConnection } from "./StripeSettings.js";
 
 const restoreBehaviors = [
 	{
@@ -38,7 +46,20 @@ const restoreBehaviors = [
 	},
 ] as const;
 
+const storePlatforms = [
+	["ios", "Apple App Store"],
+	["android", "Google Play Billing"],
+] as const;
+
 type RestoreBehavior = (typeof restoreBehaviors)[number]["value"];
+type StorePlatform = (typeof storePlatforms)[number][0];
+type BillingSettingsValues = NonNullable<BillingOverview["settings"]>;
+
+interface PurchaseSettings {
+	enabled: boolean;
+	restoreBehavior: RestoreBehavior;
+	sandboxBehavior: RestoreBehavior | null;
+}
 
 function storedRestoreBehavior(value: string | undefined): RestoreBehavior {
 	return restoreBehaviors.find((behavior) => behavior.value === value)?.value ?? "transfer";
@@ -46,6 +67,20 @@ function storedRestoreBehavior(value: string | undefined): RestoreBehavior {
 
 function storedSandboxBehavior(value: string | null | undefined): RestoreBehavior | null {
 	return restoreBehaviors.find((behavior) => behavior.value === value)?.value ?? null;
+}
+
+function purchaseSettings(settings: BillingSettingsValues): PurchaseSettings {
+	return {
+		enabled: settings.purchases_enabled === 1,
+		restoreBehavior: storedRestoreBehavior(settings.restore_behavior),
+		sandboxBehavior: storedSandboxBehavior(settings.sandbox_restore_behavior),
+	};
+}
+
+const statusPriority: readonly AutosaveStatus[] = ["error", "saving", "pending", "saved"];
+
+function combinedStatus(...statuses: AutosaveStatus[]): AutosaveStatus {
+	return statusPriority.find((status) => statuses.includes(status)) ?? "idle";
 }
 
 export default function MonetizationSettingsPage() {
@@ -98,273 +133,303 @@ export default function MonetizationSettingsPage() {
 
 function BillingSettings({ projectId, tab }: { projectId: string; tab: string }) {
 	const operatorAccountPage = usePluginEnabled("superboard-user");
-	const { t, locale } = useMonetizationI18n();
+	const { t } = useMonetizationI18n();
 	const [overview, setOverview] = useState<BillingOverview | null>(null);
-	const [enabled, setEnabled] = useState(false);
-	const [restoreBehavior, setRestoreBehavior] = useState<RestoreBehavior>("transfer");
-	const [sandboxBehavior, setSandboxBehavior] = useState<RestoreBehavior | null>(null);
-	const [error, setError] = useState<"load" | "save" | null>(null);
-	const [busy, setBusy] = useState(false);
-	const [saved, setSaved] = useState(false);
+	const [purchases, setPurchases] = useState<PurchaseSettings | null>(null);
+	const [loadFailed, setLoadFailed] = useState(false);
 	const [attempt, setAttempt] = useState(0);
-	const [connectionResult, setConnectionResult] = useState<string | null>(null);
+	const currency = useDisplayCurrency(projectId, !operatorAccountPage);
+	const stripe = useStripeConnection(projectId);
 	useEffect(() => {
 		let active = true;
 		void getBillingOverview(projectId)
 			.then((data) => {
 				if (!active) return;
 				if (!data.settings) throw new Error("BILLING_SETTINGS_MISSING");
-				setError(null);
+				setLoadFailed(false);
 				setOverview(data);
-				setEnabled(data.settings.purchases_enabled === 1);
-				setRestoreBehavior(storedRestoreBehavior(data.settings.restore_behavior));
-				setSandboxBehavior(storedSandboxBehavior(data.settings.sandbox_restore_behavior));
+				setPurchases(purchaseSettings(data.settings));
 			})
 			.catch(() => {
-				if (active) setError("load");
+				if (active) setLoadFailed(true);
 			});
 		return () => {
 			active = false;
 		};
 	}, [projectId, attempt]);
-	const dirty =
-		overview?.settings &&
-		(enabled !== (overview.settings.purchases_enabled === 1) ||
-			restoreBehavior !== storedRestoreBehavior(overview.settings.restore_behavior) ||
-			sandboxBehavior !== storedSandboxBehavior(overview.settings.sandbox_restore_behavior));
-	const save = async () => {
-		setBusy(true);
-		setError(null);
-		setSaved(false);
-		const storedSandbox = storedSandboxBehavior(overview?.settings?.sandbox_restore_behavior);
-		try {
+	const purchaseAutosave = useSettingsAutosave({
+		resourceKey: purchases ? "loaded" : "loading",
+		value: purchases,
+		enabled: purchases !== null,
+		save: async (next) => {
+			if (!next) return;
+			const storedSandbox = storedSandboxBehavior(overview?.settings?.sandbox_restore_behavior);
 			await updateBillingSettings(projectId, {
-				purchases_enabled: enabled,
-				restore_behavior: restoreBehavior,
-				...(sandboxBehavior !== null || storedSandbox !== null
-					? { sandbox_restore_behavior: sandboxBehavior }
+				purchases_enabled: next.enabled,
+				restore_behavior: next.restoreBehavior,
+				...(next.sandboxBehavior !== null || storedSandbox !== null
+					? { sandbox_restore_behavior: next.sandboxBehavior }
 					: {}),
 			});
 			const persisted = await getBillingOverview(projectId);
+			const stored = persisted.settings && purchaseSettings(persisted.settings);
 			if (
-				!persisted.settings ||
-				(persisted.settings.purchases_enabled === 1) !== enabled ||
-				storedRestoreBehavior(persisted.settings.restore_behavior) !== restoreBehavior ||
-				storedSandboxBehavior(persisted.settings.sandbox_restore_behavior) !== sandboxBehavior
+				!stored ||
+				stored.enabled !== next.enabled ||
+				stored.restoreBehavior !== next.restoreBehavior ||
+				stored.sandboxBehavior !== next.sandboxBehavior
 			)
 				throw new Error("BILLING_SETTINGS_NOT_PERSISTED");
 			setOverview(persisted);
-			setSaved(true);
-		} catch {
-			setError("save");
-		} finally {
-			setBusy(false);
-		}
-	};
-	const unavailable =
-		error === "load" ? (
-			<div role="alert">
-				<p>{t("Could not load billing settings.")}</p>
+		},
+	});
+	const unavailable = loadFailed ? (
+		<div role="alert" className="space-y-3">
+			<p className="text-sm text-kumo-danger">{t("Could not load billing settings.")}</p>
+			<SettingsActions>
 				<Button
 					type="button"
 					onClick={() => {
-						setError(null);
+						setLoadFailed(false);
 						setAttempt((value) => value + 1);
 					}}
 				>
 					{t("Retry")}
 				</Button>
-			</div>
-		) : (
-			<p role="status">{t("Loading settings…")}</p>
-		);
+			</SettingsActions>
+		</div>
+	) : (
+		<p role="status" className="text-sm text-kumo-subtle">
+			{t("Loading settings…")}
+		</p>
+	);
+	const change = (patch: Partial<PurchaseSettings>) => {
+		setPurchases((previous) => previous && { ...previous, ...patch });
+	};
 	return (
 		<>
-			<TabsContent value="general">
-				{!overview ? (
-					unavailable
+			<TabsContent value="general" className="flex w-full flex-col gap-8">
+				{purchases ? (
+					<PurchaseSection value={purchases} onChange={change} />
 				) : (
-					<form
-						className="space-y-5"
-						onSubmit={(event) => {
-							event.preventDefault();
-							save().catch(() => {
-								setError("save");
-							});
-						}}
+					<SettingsSection
+						title={t("Purchases")}
+						description={t("Let your apps sell products and restore purchases.")}
 					>
-						<fieldset disabled={busy} className="space-y-4">
-							<legend className="sr-only">{t("General")}</legend>
-							<label className="flex items-center gap-2">
-								<Checkbox
-									checked={enabled}
-									onCheckedChange={(value) => {
-										setEnabled(value === true);
-										setSaved(false);
-									}}
-								/>
-								{t("Enable purchases")}
-							</label>
-							<div className="space-y-3">
-								<h2 id="restore-behavior-title" className="text-sm font-medium">
+						<SettingsRow>{unavailable}</SettingsRow>
+					</SettingsSection>
+				)}
+				{!operatorAccountPage && <DisplayCurrencySetting currency={currency} />}
+				<AutosaveIndicator
+					status={combinedStatus(purchaseAutosave.status, currency.status)}
+					onRetry={() => {
+						if (purchaseAutosave.status === "error") purchaseAutosave.retry();
+						if (currency.status === "error") currency.retry();
+					}}
+				/>
+			</TabsContent>
+			<TabsContent
+				className="flex w-full flex-col gap-8"
+				value="gateways"
+				forceMount
+				hidden={tab !== "gateways"}
+			>
+				<StripeSettings projectId={projectId} stripe={stripe} />
+				<StoreGateways projectId={projectId} overview={overview} fallback={unavailable} />
+				<StripeAdvancedSettings stripe={stripe} />
+				<AutosaveIndicator status={stripe.status} onRetry={stripe.retry} />
+			</TabsContent>
+		</>
+	);
+}
+
+function PurchaseSection({
+	value,
+	onChange,
+}: {
+	value: PurchaseSettings;
+	onChange(patch: Partial<PurchaseSettings>): void;
+}) {
+	const { t } = useMonetizationI18n();
+	return (
+		<SettingsSection
+			title={t("Purchases")}
+			description={t("Let your apps sell products and restore purchases.")}
+		>
+			<SettingsRow>
+				<SwitchField
+					label={t("Enable purchases")}
+					description={t(
+						"While purchases are off, the SDK rejects purchase requests from every app in this project.",
+					)}
+					checked={value.enabled}
+					onCheckedChange={(enabled) => {
+						onChange({ enabled });
+					}}
+				/>
+				{value.enabled && (
+					<SettingsDependents className="space-y-4">
+						<div className="space-y-3">
+							<div className="space-y-1">
+								<h3 id="restore-behavior-title" className="text-sm font-medium">
 									{t("Restore behavior")}
-								</h2>
-								<p className="text-sm text-muted-foreground">
+								</h3>
+								<p className="text-xs text-kumo-subtle">
 									{t(
 										"Applies to every app in this project when another App User ID restores or buys with a receipt that is already in use.",
 									)}
 								</p>
-								<RadioGroup
-									aria-labelledby="restore-behavior-title"
-									value={restoreBehavior}
-									onValueChange={(value) => {
-										setRestoreBehavior(storedRestoreBehavior(value));
-										setSaved(false);
+							</div>
+							<RadioGroup
+								aria-labelledby="restore-behavior-title"
+								value={value.restoreBehavior}
+								onValueChange={(next) => {
+									onChange({ restoreBehavior: storedRestoreBehavior(next) });
+								}}
+							>
+								{restoreBehaviors.map((behavior) => (
+									<div key={behavior.value} className="flex items-start gap-3">
+										<RadioGroupItem
+											id={`restore-behavior-${behavior.value}`}
+											value={behavior.value}
+											aria-describedby={`restore-behavior-${behavior.value}-help`}
+											className="mt-0.5"
+										/>
+										<div className="space-y-1">
+											<Label htmlFor={`restore-behavior-${behavior.value}`}>
+												{t(behavior.label)}
+											</Label>
+											<p
+												id={`restore-behavior-${behavior.value}-help`}
+												className="text-xs text-kumo-subtle"
+											>
+												{t(behavior.help)}
+											</p>
+										</div>
+									</div>
+								))}
+							</RadioGroup>
+						</div>
+						<SwitchField
+							label={t("Use a different restore behavior for sandbox")}
+							checked={value.sandboxBehavior !== null}
+							onCheckedChange={(different) => {
+								onChange({ sandboxBehavior: different ? value.restoreBehavior : null });
+							}}
+						/>
+						{value.sandboxBehavior !== null && (
+							<SettingsDependents>
+								<div className="space-y-2">
+									<label htmlFor="sandbox-restore-behavior" className="block text-sm font-medium">
+										{t("Sandbox restore behavior")}
+									</label>
+									<select
+										id="sandbox-restore-behavior"
+										aria-describedby="sandbox-restore-behavior-help"
+										className="h-9 w-full rounded-md border border-kumo-line bg-kumo-base px-3 text-sm"
+										value={value.sandboxBehavior}
+										onChange={(event) => {
+											onChange({ sandboxBehavior: storedRestoreBehavior(event.target.value) });
+										}}
+									>
+										{restoreBehaviors.map((behavior) => (
+											<option key={behavior.value} value={behavior.value}>
+												{t(behavior.label)}
+											</option>
+										))}
+									</select>
+									<p id="sandbox-restore-behavior-help" className="text-xs text-kumo-subtle">
+										{t(
+											"Applies to sandbox purchases instead of the behavior above, to test another behavior without changing production.",
+										)}
+									</p>
+								</div>
+							</SettingsDependents>
+						)}
+					</SettingsDependents>
+				)}
+			</SettingsRow>
+		</SettingsSection>
+	);
+}
+
+function StoreGateways({
+	projectId,
+	overview,
+	fallback,
+}: {
+	projectId: string;
+	overview: BillingOverview | null;
+	fallback: ReactNode;
+}) {
+	const { t, locale } = useMonetizationI18n();
+	const [testing, setTesting] = useState<StorePlatform | null>(null);
+	const [result, setResult] = useState<{ platform: StorePlatform; message: string } | null>(null);
+	return (
+		<SettingsSection
+			title={t("Connected Gateways")}
+			description={t(
+				"Configure store credentials in the iOS or Android application settings, then test the connection here.",
+			)}
+		>
+			{!overview ? (
+				<SettingsRow>{fallback}</SettingsRow>
+			) : (
+				storePlatforms.map(([platform, label]) => {
+					const credential = overview.credentials?.[platform];
+					return (
+						<SettingsRow key={platform}>
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<p className="text-sm font-medium">{t(label)}</p>
+								<Badge variant={credential?.configured ? "success" : "default"}>
+									{t(
+										credential
+											? credential.configured
+												? "Configured"
+												: "Not configured"
+											: "Unknown",
+									)}
+								</Badge>
+							</div>
+							{result?.platform === platform && (
+								<p role="status" className="text-sm">
+									{result.message}
+								</p>
+							)}
+							<SettingsActions>
+								<LinkButton href={`/app/${platform}-setup?lang=${locale}`}>
+									{t("Configure store")}
+								</LinkButton>
+								<Button
+									type="button"
+									disabled={testing !== null || credential?.configured === false}
+									onClick={() => {
+										setTesting(platform);
+										setResult(null);
+										testBillingCredentials(projectId, platform)
+											.then(() => {
+												setResult({ platform, message: t("Store connection verified.") });
+											})
+											.catch(() => {
+												setResult({
+													platform,
+													message: t(
+														"Store connection failed. Check the application credentials and try again.",
+													),
+												});
+											})
+											.finally(() => {
+												setTesting(null);
+											});
 									}}
 								>
-									{restoreBehaviors.map((behavior) => (
-										<div key={behavior.value} className="flex items-start gap-3">
-											<RadioGroupItem
-												id={`restore-behavior-${behavior.value}`}
-												value={behavior.value}
-												aria-describedby={`restore-behavior-${behavior.value}-help`}
-												className="mt-0.5"
-											/>
-											<div className="space-y-1">
-												<Label htmlFor={`restore-behavior-${behavior.value}`}>
-													{t(behavior.label)}
-												</Label>
-												<p
-													id={`restore-behavior-${behavior.value}-help`}
-													className="text-sm text-muted-foreground"
-												>
-													{t(behavior.help)}
-												</p>
-											</div>
-										</div>
-									))}
-								</RadioGroup>
-								<label className="flex items-center gap-2">
-									<Checkbox
-										checked={sandboxBehavior !== null}
-										onCheckedChange={(value) => {
-											setSandboxBehavior(value === true ? restoreBehavior : null);
-											setSaved(false);
-										}}
-									/>
-									{t("Use a different restore behavior for sandbox")}
-								</label>
-								{sandboxBehavior !== null && (
-									<div className="space-y-2 ps-6">
-										<Label htmlFor="sandbox-restore-behavior">
-											{t("Sandbox restore behavior")}
-										</Label>
-										<select
-											id="sandbox-restore-behavior"
-											aria-describedby="sandbox-restore-behavior-help"
-											className="h-9 w-full max-w-md rounded-md border bg-background px-3 text-sm"
-											value={sandboxBehavior}
-											onChange={(event) => {
-												setSandboxBehavior(storedRestoreBehavior(event.target.value));
-												setSaved(false);
-											}}
-										>
-											{restoreBehaviors.map((behavior) => (
-												<option key={behavior.value} value={behavior.value}>
-													{t(behavior.label)}
-												</option>
-											))}
-										</select>
-										<p id="sandbox-restore-behavior-help" className="text-sm text-muted-foreground">
-											{t(
-												"Applies to sandbox purchases instead of the behavior above, to test another behavior without changing production.",
-											)}
-										</p>
-									</div>
-								)}
-							</div>
-						</fieldset>
-						{error === "save" && <p role="alert">{t("Could not save billing settings.")}</p>}
-						{saved && <p role="status">{t("Settings saved.")}</p>}
-						<Button type="submit" disabled={!dirty || busy}>
-							{t(busy ? "Saving…" : "Save settings")}
-						</Button>
-					</form>
-				)}
-				{!operatorAccountPage && <DisplayCurrencySetting key={projectId} projectId={projectId} />}
-			</TabsContent>
-			<TabsContent className="space-y-5" value="gateways" forceMount hidden={tab !== "gateways"}>
-				<StripeSettings key={projectId} projectId={projectId} />
-				{!overview ? (
-					unavailable
-				) : (
-					<div className="space-y-4">
-						<h2>{t("Connected Gateways")}</h2>
-						<p>
-							{t(
-								"Configure store credentials in the iOS or Android application settings, then test the connection here.",
-							)}
-						</p>
-						{connectionResult && <p role="status">{connectionResult}</p>}
-						{(
-							[
-								["ios", "Apple App Store"],
-								["android", "Google Play Billing"],
-							] as const
-						).map(([platform, label]) => {
-							const credential = overview.credentials?.[platform];
-							return (
-								<div
-									key={platform}
-									className="flex flex-col gap-3 rounded border p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
-								>
-									<div className="flex flex-wrap items-center gap-2">
-										<span className="font-medium">{t(label)}</span>
-										<Badge variant="secondary">
-											{t(
-												credential
-													? credential.configured
-														? "Configured"
-														: "Not configured"
-													: "Unknown",
-											)}
-										</Badge>
-									</div>
-									<div className="flex flex-wrap items-center gap-2">
-										<Button asChild variant="outline">
-											<a href={`/app/${platform}-setup?lang=${locale}`}>{t("Configure store")}</a>
-										</Button>
-										<Button
-											type="button"
-											disabled={busy}
-											onClick={() => {
-												setBusy(true);
-												setConnectionResult(null);
-												testBillingCredentials(projectId, platform)
-													.then(() => {
-														setConnectionResult(t("Store connection verified."));
-													})
-													.catch(() => {
-														setConnectionResult(
-															t(
-																"Store connection failed. Check the application credentials and try again.",
-															),
-														);
-													})
-													.finally(() => {
-														setBusy(false);
-													});
-											}}
-										>
-											{t("Test connection")}
-										</Button>
-									</div>
-								</div>
-							);
-						})}
-					</div>
-				)}
-			</TabsContent>
-		</>
+									{t("Test connection")}
+								</Button>
+							</SettingsActions>
+						</SettingsRow>
+					);
+				})
+			)}
+		</SettingsSection>
 	);
 }

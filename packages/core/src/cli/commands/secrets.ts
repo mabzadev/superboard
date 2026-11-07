@@ -1,3 +1,21 @@
+/**
+ * Secrets CLI commands
+ *
+ * Pure (no-DB) commands for working with EmDash secrets:
+ *
+ * - `emdash secrets generate` — emits a fresh `EMDASH_ENCRYPTION_KEY`.
+ *   Optionally writes it to a local-secrets file (`.env`).
+ * - `emdash secrets fingerprint <key>` — prints the kid for a key,
+ *   useful in CI for verifying what's been deployed without exposing
+ *   the raw value.
+ *
+ * DB-touching commands (`status`, `migrate`, `rotate`) live elsewhere:
+ * the CLI process can't open the production D1/Postgres binding from
+ * the operator's machine, so those operations ship as admin HTTP
+ * endpoints in a later PR. A thin `--site <url>` wrapper for those
+ * endpoints can land alongside.
+ */
+
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -8,9 +26,27 @@ import pc from "picocolors";
 import { EmDashSecretsError, fingerprintKey, generateEncryptionKey } from "../../config/secrets.js";
 
 const KEY_VAR_NAME = "EMDASH_ENCRYPTION_KEY";
+/** Matches a populated entry — `KEY=<at least one char>`. */
 const POPULATED_KEY_LINE_PATTERN = /^EMDASH_ENCRYPTION_KEY=.+$/m;
+/**
+ * Matches any line starting `KEY=` including `KEY=` with empty value.
+ * Used for in-place replacement when the entry exists but has no value.
+ */
 const ANY_KEY_LINE_PATTERN = /^EMDASH_ENCRYPTION_KEY=.*$/m;
 
+/**
+ * Append (or replace) `EMDASH_ENCRYPTION_KEY` in a dotenv-style file.
+ *
+ * Idempotent: if the entry exists with a populated value, leaves it alone
+ * (returns `"skipped"`) unless `force` is set. An entry with an empty
+ * value (`EMDASH_ENCRYPTION_KEY=`) is treated as "not set" and gets
+ * replaced — placeholder lines aren't a reason to refuse.
+ *
+ * Always ends the resulting file with a trailing newline. Doesn't touch
+ * other variables.
+ *
+ * Exported for tests.
+ */
 export function writeEncryptionKeyToFile(
 	targetPath: string,
 	value: string,
@@ -27,9 +63,13 @@ export function writeEncryptionKeyToFile(
 	const newLine = `${KEY_VAR_NAME}=${value}`;
 	let next: string;
 	if (ANY_KEY_LINE_PATTERN.test(existing)) {
+		// In-place replace handles both populated-and-forced and empty-value
+		// cases. Then ensure trailing newline.
 		next = existing.replace(ANY_KEY_LINE_PATTERN, newLine);
 		if (!next.endsWith("\n")) next += "\n";
 	} else {
+		// Append. Insert a separating newline only if the file has content
+		// not already ending in one.
 		const sep = existing.length === 0 ? "" : existing.endsWith("\n") ? "" : "\n";
 		next = `${existing}${sep}${newLine}\n`;
 	}
@@ -63,6 +103,10 @@ const generateCommand = defineCommand({
 			const targetPath = resolve(process.cwd(), args.write);
 			const result = writeEncryptionKeyToFile(targetPath, value, args.force);
 			if (result === "skipped") {
+				// Idempotent no-op: entry already populated. Exit 0 so chained
+				// scripts (`emdash secrets generate --write && pnpm dev`) don't
+				// break. Pass --force to replace, with full awareness that
+				// existing encrypted secrets become unreadable.
 				consola.info(
 					`${KEY_VAR_NAME} already set in ${pc.cyan(args.write)}; leaving it alone. ` +
 						`Pass ${pc.bold("--force")} to replace it.`,
@@ -81,6 +125,9 @@ const generateCommand = defineCommand({
 			return;
 		}
 
+		// Print the key to stdout (one line, no decoration) so it can be
+		// piped into env files or secret-management tools without scraping.
+		// Explanatory text goes to stderr so it doesn't pollute the pipe.
 		process.stdout.write(`${value}\n`);
 		const guidance = [
 			"",
@@ -112,6 +159,8 @@ const fingerprintCommand = defineCommand({
 	async run({ args }) {
 		try {
 			const kid = await fingerprintKey(args.key);
+			// Newline-only on stdout so it pipes cleanly into env/CI logs
+			// without leaking the raw key.
 			process.stdout.write(`${kid}\n`);
 		} catch (error) {
 			consola.error(

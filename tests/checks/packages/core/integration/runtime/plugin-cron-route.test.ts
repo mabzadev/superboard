@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import Database from "better-sqlite3";
 import { SqliteDialect } from "kysely";
 import { describe, expect, it } from "vitest";
 
 import { createPublicPluginApiRouteHandler } from "../../../../../../packages/core/src/astro/public-plugin-api-routes.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import {
 	EmDashRuntime,
 	type RuntimeDependencies,

@@ -1,5 +1,16 @@
+/**
+ * JSON-LD structured data builders
+ *
+ * Moved from template SEO.astro components into core so all JSON-LD
+ * is serialized via safeJsonLdSerialize() and never hand-rolled in templates.
+ */
+
 import type { PublicPageContext } from "../plugins/types.js";
 
+/**
+ * Remove null/undefined values from a JSON-LD object recursively.
+ * JSON-LD validators prefer absent keys over null values.
+ */
 export function cleanJsonLd(obj: Record<string, unknown>): Record<string, unknown> {
 	const cleaned: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(obj)) {
@@ -15,6 +26,15 @@ export function cleanJsonLd(obj: Record<string, unknown>): Record<string, unknow
 	return cleaned;
 }
 
+/**
+ * Build a BlogPosting JSON-LD graph from page context.
+ * Used for article-type content pages.
+ *
+ * @param page - Page context for the current request.
+ * @param defaultOgImage - Optional site-wide fallback image URL, used when
+ *   the page has no own OG image. Matches the fallback applied to `og:image`
+ *   in `generateBaseSeoContributions`.
+ */
 export function buildBlogPostingJsonLd(
 	page: PublicPageContext,
 	defaultOgImage?: string | null,
@@ -57,10 +77,15 @@ export function buildBlogPostingJsonLd(
 	});
 }
 
+/**
+ * Build a WebSite JSON-LD graph from page context.
+ * Used for non-article pages (homepage, listing pages, etc.)
+ */
 export function buildWebSiteJsonLd(page: PublicPageContext): Record<string, unknown> | null {
 	const siteName = page.siteName;
 	if (!siteName) return null;
 
+	// Use configured public origin, falling back to page URL origin
 	let siteUrl: string;
 	if (page.siteUrl) {
 		siteUrl = page.siteUrl;

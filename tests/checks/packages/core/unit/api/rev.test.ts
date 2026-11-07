@@ -1,3 +1,7 @@
+/**
+ * Unit tests for _rev token generation and validation.
+ */
+
 import { describe, it, expect } from "vitest";
 
 import { encodeRev, decodeRev, validateRev } from "../../../../../../packages/core/src/api/rev.js";
@@ -28,6 +32,7 @@ describe("encodeRev", () => {
 		const rev = encodeRev(item);
 
 		expect(rev).toBeTruthy();
+		// Should be valid base64
 		expect(() => atob(rev)).not.toThrow();
 	});
 
@@ -101,7 +106,7 @@ describe("validateRev", () => {
 
 	it("returns invalid when version mismatches", () => {
 		const item = makeItem({ version: 3, updatedAt: "2026-01-15T12:30:00.000Z" });
-		const staleRev = btoa("2:2026-01-15T12:30:00.000Z");
+		const staleRev = btoa("2:2026-01-15T12:30:00.000Z"); // Version 2, but item is at 3
 
 		const result = validateRev(staleRev, item);
 		expect(result.valid).toBe(false);
@@ -112,7 +117,7 @@ describe("validateRev", () => {
 
 	it("returns invalid when updatedAt mismatches", () => {
 		const item = makeItem({ version: 3, updatedAt: "2026-01-15T12:30:00.000Z" });
-		const staleRev = btoa("3:2026-01-14T00:00:00.000Z");
+		const staleRev = btoa("3:2026-01-14T00:00:00.000Z"); // Right version, wrong timestamp
 
 		const result = validateRev(staleRev, item);
 		expect(result.valid).toBe(false);

@@ -1,3 +1,9 @@
+/**
+ * Turnstile verification helper.
+ *
+ * Verifies a Turnstile token server-side via the Cloudflare API.
+ */
+
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 export interface TurnstileResult {
@@ -5,6 +11,14 @@ export interface TurnstileResult {
 	errorCodes: string[];
 }
 
+/**
+ * Verify a Turnstile response token.
+ *
+ * @param token - The `cf-turnstile-response` token from the client
+ * @param secretKey - The Turnstile secret key
+ * @param httpFetch - The capability-gated fetch function from ctx.http
+ * @param remoteIp - Optional client IP for additional verification
+ */
 export async function verifyTurnstile(
 	token: string,
 	secretKey: string,

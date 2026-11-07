@@ -18,6 +18,7 @@ describe("api tokens", () => {
 		db = await setupTestDatabase();
 		userId = ulid();
 		const now = new Date().toISOString();
+		// Tokens reference users (FK), so create one first.
 		await db
 			.insertInto("users")
 			.values({
@@ -54,6 +55,8 @@ describe("api tokens", () => {
 	});
 
 	it("re-issuing the dev-bypass token leaves exactly one row (idempotent by name)", async () => {
+		// The dev-bypass `?token=1` path drops the prior token before minting a
+		// fresh one. Running it twice (e.g. across a reset) must not accumulate.
 		for (let i = 0; i < 2; i++) {
 			await deleteApiTokensByName(db, userId, "dev-bypass-token");
 			const res = await handleApiTokenCreate(db, userId, {

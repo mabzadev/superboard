@@ -77,9 +77,7 @@ export function WorkerDeploymentGroups<T extends { id: string; workerName?: stri
 							· {i18n._("modules")}: {services.length}
 						</span>
 					</summary>
-					<div className="mt-4 grid gap-3 lg:grid-cols-2">
-						{services.map((service) => children(service))}
-					</div>
+					<div className="mt-4 grid gap-3">{services.map((service) => children(service))}</div>
 				</details>
 			))}
 		</div>

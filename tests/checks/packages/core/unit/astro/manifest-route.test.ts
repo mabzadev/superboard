@@ -1,27 +1,54 @@
+/**
+ * Manifest route admin branding.
+ *
+ * The admin branding (logo, siteName, favicon) configured via the EmDash
+ * integration must be reflected in `/_emdash/api/manifest` so the React SPA
+ * can render the custom logo and site name. The route reads the branding
+ * from the per-request config on `locals.emdash.config.admin` (the same
+ * source `admin.astro` uses), not from a build-time global.
+ *
+ * Regression test for issue #835.
+ */
+
 import type { APIContext } from "astro";
 import { describe, expect, it } from "vitest";
 
 import { GET as getManifest } from "../../../../../../packages/core/src/astro/routes/api/manifest.js";
+import { OptionsRepository } from "../../../../../../packages/core/src/database/repositories/options.js";
+import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
 interface ManifestEnvelope {
 	data: {
-		admin?: { logo?: string; siteName?: string; favicon?: string };
+		admin?: {
+			logo?: string;
+			siteName?: string;
+			footerLabel?: string | false;
+			favicon?: string;
+		};
 		authMode: string;
+		providerManagedName?: boolean;
 		signupEnabled?: boolean;
 		collections?: Record<string, unknown>;
 		plugins?: Record<string, unknown>;
 		taxonomies?: unknown[];
 		version?: string;
+		timezone?: string;
 	};
 }
 
 function makeContext(
-	adminBranding?: { logo?: string; siteName?: string; favicon?: string },
+	adminBranding?: {
+		logo?: string;
+		siteName?: string;
+		footerLabel?: string | false;
+		favicon?: string;
+	},
 	manifest?: unknown,
 ): Parameters<typeof getManifest>[0] {
 	const locals = {
 		emdash: adminBranding
 			? {
+					// db is intentionally undefined so the signup-enabled query is skipped.
 					config: { admin: adminBranding },
 					getManifest: async () => manifest ?? null,
 				}
@@ -36,6 +63,7 @@ describe("manifest route admin branding", () => {
 		const branding = {
 			logo: "/logo.png",
 			siteName: "My Site",
+			footerLabel: false,
 			favicon: "/favicon.ico",
 		};
 
@@ -65,5 +93,73 @@ describe("manifest route admin branding", () => {
 		const response = await getManifest(ctx);
 		const body = (await response.json()) as ManifestEnvelope;
 		expect(body.data.admin).toEqual(branding);
+	});
+
+	it("includes the configured site timezone for datetime controls", async () => {
+		const db = await setupTestDatabase();
+		try {
+			await new OptionsRepository(db).set("site:timezone", "Asia/Tokyo");
+			const context = {
+				locals: {
+					emdash: {
+						db,
+						config: { admin: { siteName: "Configured name" } },
+						getManifest: async () => ({
+							version: "test",
+							hash: "test",
+							collections: {},
+							plugins: {},
+							taxonomies: [],
+						}),
+					},
+				},
+			} as unknown as APIContext;
+
+			const response = await getManifest(context);
+			const body = (await response.json()) as ManifestEnvelope;
+			expect(body.data.timezone).toBe("Asia/Tokyo");
+		} finally {
+			await teardownTestDatabase(db);
+		}
+	});
+});
+
+describe("manifest route provider-managed names", () => {
+	async function providerManagedName(auth?: Record<string, unknown>) {
+		const context = {
+			locals: {
+				emdash: {
+					config: auth ? { auth } : {},
+					getManifest: async () => ({
+						version: "test",
+						hash: "test",
+						collections: {},
+						plugins: {},
+						taxonomies: [],
+					}),
+				},
+			},
+		} as unknown as APIContext;
+		const body = (await (await getManifest(context)).json()) as ManifestEnvelope;
+		return body.data.providerManagedName;
+	}
+
+	const access = {
+		type: "cloudflare-access",
+		entrypoint: "@emdash-cms/cloudflare/auth",
+	};
+
+	it("reports names as provider-managed for external auth by default", async () => {
+		expect(await providerManagedName({ ...access, config: { teamDomain: "t" } })).toBe(true);
+	});
+
+	it("reports names as editable when external auth sets syncName to false", async () => {
+		expect(
+			await providerManagedName({ ...access, config: { teamDomain: "t", syncName: false } }),
+		).toBe(false);
+	});
+
+	it("reports names as editable with passkey auth", async () => {
+		expect(await providerManagedName()).toBe(false);
 	});
 });

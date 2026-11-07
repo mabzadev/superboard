@@ -2,6 +2,7 @@ export const CONTENT_SETTINGS_LAYOUT_VERSION = 1 as const;
 
 export const DEFAULT_CONTENT_SETTINGS_SECTION_ORDER = [
 	"publish",
+	"url-language",
 	"ownership",
 	"bylines",
 	"translations",
@@ -22,6 +23,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;
 }
 
+/** Parse a browser preference without allowing malformed state to break the editor. */
 export function parseContentSettingsLayout(raw: string | null): ContentSettingsLayout | null {
 	if (!raw) return null;
 
@@ -44,6 +46,10 @@ export function parseContentSettingsLayout(raw: string | null): ContentSettingsL
 	}
 }
 
+/**
+ * Reconcile saved order with the sections available in the current editor.
+ * Duplicate and unavailable ids disappear, while newly registered sections append.
+ */
 export function resolveContentSettingsLayout(
 	stored: ContentSettingsLayout | null,
 	availableSectionIds: readonly ContentSettingsSectionId[] = DEFAULT_CONTENT_SETTINGS_SECTION_ORDER,

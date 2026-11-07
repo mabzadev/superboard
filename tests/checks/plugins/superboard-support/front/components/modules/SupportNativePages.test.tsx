@@ -190,10 +190,7 @@ describe("native Support Grow pages", () => {
 		const { container } = render(<SupportSettingsPage />);
 
 		expect(await screen.findByDisplayValue("Reference application Care")).toBeInTheDocument();
-		expect(screen.getByLabelText("Feature flags")).not.toBeVisible();
-		await user.click(screen.getByText("Advanced settings"));
-		expect(screen.getByLabelText("Feature flags")).toBeVisible();
-		await user.click(screen.getByRole("tab", { name: "Operations" }));
+		await user.click(screen.getByRole("tab", { name: "Advanced" }));
 		await waitFor(() => expect(screen.getByText("Queued jobs")).toBeInTheDocument());
 		expect(screen.getAllByText("2").length).toBeGreaterThan(0);
 		expect(container.textContent).not.toMatch(/coming soon|migration|legacy/i);
@@ -270,7 +267,10 @@ describe("native Support Grow pages", () => {
 		expect(sections.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
 			"Inboxes",
 			"Channels",
+			"Contacts",
+			"Notifications",
 			"Automations",
+			"Assistant tasks",
 			"Proactive Support",
 			"Reports",
 		]);
@@ -323,7 +323,7 @@ describe("native Support Grow pages", () => {
 		},
 	);
 
-	it("exposes native notification preferences and read-all controls", async () => {
+	it("lists recent notifications in the Inbox and marks them all as read", async () => {
 		services.listNotifications.mockResolvedValue({
 			data: [
 				{
@@ -337,12 +337,11 @@ describe("native Support Grow pages", () => {
 			],
 		});
 		services.readAllNotifications.mockResolvedValue({ data: { updated: 1 } });
+		window.history.replaceState(null, "", "/support/inbox?section=notifications");
 		const user = userEvent.setup();
-		render(<SupportSettingsPage />);
+		render(<SupportInboxWorkspace />);
 
-		await user.click(screen.getByRole("tab", { name: "Notifications" }));
 		expect(await screen.findByText("Conversation assigned")).toBeInTheDocument();
-		expect(screen.getByLabelText("Mobile push")).toBeChecked();
 		await user.click(screen.getByRole("button", { name: /read all/i }));
 		await waitFor(() => expect(services.readAllNotifications).toHaveBeenCalledWith("project-1"));
 	});

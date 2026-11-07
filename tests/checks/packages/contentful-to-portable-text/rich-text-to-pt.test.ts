@@ -1,3 +1,8 @@
+/**
+ * Tests for the Contentful Rich Text → Portable Text converter.
+ * One test per acceptance criterion from the PR plan.
+ */
+
 import type { Document } from "@contentful/rich-text-types";
 import type { PortableTextSpan, PortableTextMarkDefinition } from "@portabletext/types";
 import { describe, it, expect, vi } from "vitest";
@@ -8,6 +13,10 @@ import {
 } from "../../../../packages/contentful-to-portable-text/src/index.js";
 import type { ContentfulIncludes } from "../../../../packages/contentful-to-portable-text/src/index.js";
 import fixture from "../../../fixtures/packages/contentful-to-portable-text/test/contentful-blogpost.json";
+
+// ── Test helpers ────────────────────────────────────────────────────────────
+// Test helpers use `any` for fixture construction — we're testing runtime
+// behavior of the converter, not type-safety of the test inputs.
 
 function buildFixtureIncludes(): ContentfulIncludes {
 	return buildIncludes({
@@ -40,8 +49,11 @@ function paragraph(...children: any[]): any {
 	return { nodeType: "paragraph", content: children, data: {} };
 }
 
-const post0 = fixture.items[0]!;
-const post1 = fixture.items[1]!;
+// Get the two blog posts from the fixture
+const post0 = fixture.items[0]!; // Deep Dive
+const post1 = fixture.items[1]!; // Lessons
+
+// ── Standard blocks ─────────────────────────────────────────────────────────
 
 describe("Standard blocks", () => {
 	it("paragraph → block with style normal", () => {
@@ -88,6 +100,7 @@ describe("Standard blocks", () => {
 		const doc = post0.fields.content as unknown as Document;
 		const blocks = richTextToPortableText(doc, includes);
 
+		// Find bullet list items
 		const bullets = blocks.filter((b) => b.listItem === "bullet");
 		expect(bullets.length).toBeGreaterThanOrEqual(3);
 
@@ -99,6 +112,7 @@ describe("Standard blocks", () => {
 			});
 		}
 
+		// Verify texts
 		const bulletTexts = bullets.map(
 			(b) => ((b.children as PortableTextSpan[])[0] as PortableTextSpan).text,
 		);
@@ -317,6 +331,8 @@ describe("Standard blocks", () => {
 	});
 });
 
+// ── Inline marks ────────────────────────────────────────────────────────────
+
 describe("Inline marks", () => {
 	it("bold → marks: ['strong']", () => {
 		const doc = makeDoc(paragraph(text("bold text", [{ type: "bold" }])));
@@ -374,19 +390,24 @@ describe("Inline marks", () => {
 		const doc = post0.fields.content as unknown as Document;
 		const blocks = richTextToPortableText(doc, includes);
 
+		// Second block is the paragraph with "Building a migration pipeline..."
 		const para = blocks[1]!;
 		expect(para._type).toBe("block");
 		const children = para.children as PortableTextSpan[];
 
+		// "every content format" has italic + bold
 		const boldItalic = children.find((c) => c.text === "every content format");
 		expect(boldItalic).toBeDefined();
 		expect(boldItalic!.marks).toEqual(expect.arrayContaining(["em", "strong"]));
 
+		// "code snippets" has italic + code
 		const codeItalic = children.find((c) => c.text === "code snippets");
 		expect(codeItalic).toBeDefined();
 		expect(codeItalic!.marks).toEqual(expect.arrayContaining(["em", "code"]));
 	});
 });
+
+// ── Hyperlinks ──────────────────────────────────────────────────────────────
 
 describe("Hyperlinks", () => {
 	it("hyperlink with external URL → markDef with blank: true", () => {
@@ -394,6 +415,7 @@ describe("Hyperlinks", () => {
 		const doc = post0.fields.content as unknown as Document;
 		const blocks = richTextToPortableText(doc, includes);
 
+		// Find the paragraph with the "Workers documentation" hyperlink
 		const linkBlock = blocks.find((b) => {
 			const children = b.children as PortableTextSpan[] | undefined;
 			return children?.some((c) => c.text === "Workers documentation");
@@ -610,6 +632,8 @@ describe("Hyperlinks", () => {
 	});
 });
 
+// ── Embedded entries ────────────────────────────────────────────────────────
+
 describe("Embedded entries", () => {
 	it("blogCodeBlock → codeBlock with code and language", () => {
 		const includes = emptyIncludes();
@@ -682,6 +706,7 @@ describe("Embedded entries", () => {
 
 		const htmlBlock = blocks.find((b) => b._type === "htmlBlock");
 		expect(htmlBlock).toBeDefined();
+		// The fixture's blogEmbeddedHtml has actual HTML with tags and attributes
 		expect((htmlBlock as any).html as string).toContain("<div");
 		expect((htmlBlock as any).html as string).toContain("style=");
 		expect((htmlBlock as any).html as string).toContain("<strong>");
@@ -848,15 +873,19 @@ describe("Embedded entries", () => {
 	});
 });
 
+// ── Embedded assets (legacy) ────────────────────────────────────────────────
+
 describe("Embedded assets (legacy)", () => {
 	it("embedded-asset-block → imageBlock with src, alt, width, height", () => {
 		const includes = buildFixtureIncludes();
 		const doc = post1.fields.content as unknown as Document;
 		const blocks = richTextToPortableText(doc, includes);
 
+		// Post 1 has an embedded-asset-block referencing asset-1
 		const imageBlocks = blocks.filter((b) => b._type === "image");
 		expect(imageBlocks.length).toBeGreaterThanOrEqual(1);
 
+		// The legacy embedded asset image should have the architecture-diagram asset
 		const legacyImage = imageBlocks.find((b) => {
 			const asset = (b as any).asset as { src: string };
 			return asset.src.includes("architecture-diagram");
@@ -910,6 +939,8 @@ describe("Embedded assets (legacy)", () => {
 	});
 });
 
+// ── Integration ─────────────────────────────────────────────────────────────
+
 describe("Integration", () => {
 	it("full document (post 0) with all block types → valid PT array, no crashes", () => {
 		const includes = buildFixtureIncludes();
@@ -920,9 +951,11 @@ describe("Integration", () => {
 		expect(blocks.every((b) => b._type !== undefined)).toBe(true);
 		expect(blocks.every((b) => b._key !== undefined)).toBe(true);
 
+		// Should contain headings, paragraphs, lists, blockquotes, embedded entries
 		const types = new Set(blocks.map((b) => b._type));
 		expect(types.has("block")).toBe(true);
 
+		// Should have embedded code and html blocks
 		const allTypes = blocks.map((b) => b._type);
 		expect(allTypes).toContain("code");
 		expect(allTypes).toContain("htmlBlock");
@@ -961,6 +994,8 @@ describe("Integration", () => {
 		expect(blocks1.map((b) => b._key)).toEqual(blocks2.map((b) => b._key));
 	});
 });
+
+// ── Edge cases and regression tests ─────────────────────────────────────────
 
 describe("Edge cases", () => {
 	it("blockquote containing a list preserves the list", () => {

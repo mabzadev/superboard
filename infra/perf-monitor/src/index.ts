@@ -1,3 +1,19 @@
+/**
+ * Perf monitor coordinator Worker.
+ *
+ * Triggers:
+ * - Queue consumer: fires on every `build.succeeded` event from Cloudflare's event
+ *   subscriptions. We filter for the demo Worker and run measurements tagged with
+ *   the deploy's commit SHA. This is the primary deploy-attribution path.
+ * - Cron (every 30 min): ambient baseline. Runs untagged; fills gaps between deploys
+ *   and catches drift the queue might miss (subscription downtime, DLQ, etc).
+ * - POST /api/trigger: ad-hoc manual measurement, tagged `source=manual`.
+ *   Expected to be protected by a Cloudflare Access policy at the edge.
+ *
+ * HTTP endpoints other than /api/trigger are read-only: JSON API at /api/* and
+ * the static dashboard at /.
+ */
+
 import { handleApi } from "./api.js";
 import type { PerfQueueMessage } from "./events.js";
 import { isBuildSucceeded } from "./events.js";
@@ -6,17 +22,26 @@ import { runMeasurements } from "./measure.js";
 import { TRIGGER_WORKER_NAME } from "./routes.js";
 import { insertResults } from "./store.js";
 
+/**
+ * Handle a single build-succeeded event: filter for the demo Worker, resolve
+ * the PR number via GitHub, run measurements, persist. Errors are swallowed
+ * so one bad message doesn't poison the batch.
+ */
 async function handleBuildSucceeded(
 	env: Env,
 	event: Extract<PerfQueueMessage, { type: "cf.workersBuilds.worker.build.succeeded" }>,
 ): Promise<void> {
 	const workerName = event.source.workerName;
 	if (workerName !== TRIGGER_WORKER_NAME) {
+		// Not our trigger worker -- ignore. Both demos build from the same
+		// commit, so one event covers both sites; measuring on every known
+		// worker's event would double our load without adding signal.
 		return;
 	}
 
 	const meta = event.payload.buildTriggerMetadata;
 	if (meta.branch !== "main") {
+		// Only measure main-branch deploys.
 		return;
 	}
 
@@ -48,6 +73,7 @@ export default {
 		const apiResponse = await handleApi(request, url, env);
 		if (apiResponse) return apiResponse;
 
+		// Anything else falls through to Workers Assets for the dashboard.
 		return new Response("Not found", { status: 404 });
 	},
 
@@ -69,10 +95,15 @@ export default {
 	},
 
 	async queue(batch: MessageBatch<PerfQueueMessage>, env: Env): Promise<void> {
+		// Messages are processed sequentially to avoid hammering the demo with
+		// parallel measurement runs (each one issues N requests per region).
+		// A batch of deploy events for different Workers is rare but possible.
 		for (const message of batch.messages) {
 			try {
 				const event = message.body;
 				if (!isBuildSucceeded(event)) {
+					// Event type we don't care about (build.started, build.failed, etc).
+					// Ack silently.
 					message.ack();
 					continue;
 				}
@@ -80,6 +111,7 @@ export default {
 				message.ack();
 			} catch (err) {
 				console.error("Failed to process queue message:", err);
+				// Retry -- exhausted retries send to the DLQ configured in wrangler.jsonc.
 				message.retry();
 			}
 		}

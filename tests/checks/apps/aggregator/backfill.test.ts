@@ -1,3 +1,20 @@
+/**
+ * Backfill worker tests.
+ *
+ * The worker is plain `fetch` + queue producers; tests stub both. The DID
+ * resolver is also stubbed (in-memory cache + a simple stub upstream) so the
+ * tests don't depend on the workers test pool or live PLC.
+ *
+ * Architecture under test (post-restructure):
+ *   - `enqueueBackfillJobs`: synchronous fan-out of (DID × WANTED_COLLECTIONS)
+ *     pairs onto BACKFILL_QUEUE, batched at QUEUE_SEND_BATCH_CAP.
+ *   - `processBackfillJob`: per-pair worker. Resolve PDS, paginate
+ *     `com.atproto.repo.listRecords`, batch-enqueue records onto RECORDS_QUEUE.
+ *   - `processBackfillBatch`: queue consumer that calls `processBackfillJob`
+ *     and translates throws to `message.retry()`.
+ *   - `discoverDids`: relay enumeration via `com.atproto.sync.listReposByCollection`.
+ */
+
 import { P256PrivateKeyExportable } from "@atcute/crypto";
 import type { DidDocument } from "@atcute/identity";
 import type { Did } from "@atcute/lexicons/syntax";
@@ -128,6 +145,11 @@ interface MockListRecord {
 	value: Record<string, unknown>;
 }
 
+/**
+ * Build a fetch stub that returns canned `listRecords` responses keyed by
+ * collection. Records arrive as a single page; pagination is exercised in a
+ * dedicated test by passing pages of records explicitly.
+ */
 function makeFetch(
 	recordsByCollection: Record<string, MockListRecord[]>,
 	overrides?: { status?: Record<string, number> },
@@ -189,7 +211,11 @@ describe("processBackfillJob", () => {
 			rkey: "demo",
 			operation: "create",
 			cid: "bafyc1",
+			source: "backfill",
 		});
+		// jetstreamRecord intentionally not set on backfill jobs — the
+		// consumer's DLQ payload field would otherwise mislabel
+		// `listRecords` data as Jetstream-supplied data.
 		expect(queue.sent[0]?.jetstreamRecord).toBeUndefined();
 	});
 
@@ -290,7 +316,9 @@ describe("processBackfillJob", () => {
 		const fetchImpl = makeFetch({
 			[collection]: [
 				{ uri: `at://${DID_A}/${collection}/legit`, cid: "c1", value: {} },
+				// Buggy PDS: returns a record under the wrong collection.
 				{ uri: `at://${DID_A}/wrong.collection/x`, cid: "c2", value: {} },
+				// Buggy URI shape (missing rkey).
 				{ uri: `at://${DID_A}/${collection}/`, cid: "c3", value: {} },
 			],
 		});
@@ -309,6 +337,9 @@ describe("processBackfillJob", () => {
 		const resolver = buildResolver();
 		const collection = WANTED_COLLECTIONS[0];
 		if (!collection) throw new Error("test assumes ≥1 collection");
+		// Buggy/malicious PDS: returns a record under a *different* repo's DID.
+		// Even if everything else parses, that record's signature would be
+		// from the wrong key — enqueueing it would just churn dead-letters.
 		const fetchImpl = makeFetch({
 			[collection]: [
 				{ uri: `at://${DID_A}/${collection}/legit`, cid: "c1", value: {} },
@@ -397,6 +428,8 @@ describe("processBackfillJob: defenses against malicious / buggy PDS", () => {
 		const resolver = buildResolver();
 		const collection = WANTED_COLLECTIONS[0];
 		if (!collection) throw new Error("test assumes ≥1 collection");
+		// Hostile PDS: returns a different non-empty cursor every call so the
+		// cursor-equality check doesn't fire — only the page cap stops us.
 		let counter = 0;
 		const fetchImpl: typeof fetch = async () => {
 			counter += 1;
@@ -409,6 +442,7 @@ describe("processBackfillJob: defenses against malicious / buggy PDS", () => {
 		await expect(
 			processBackfillJob({ did: DID_A, collection }, { resolver, queue, fetch: fetchImpl }),
 		).rejects.toThrow(/exceeded/);
+		// Loop ran at most MAX_PAGES_PER_COLLECTION times.
 		expect(counter).toBeLessThanOrEqual(1001);
 	});
 
@@ -417,6 +451,7 @@ describe("processBackfillJob: defenses against malicious / buggy PDS", () => {
 		const resolver = buildResolver();
 		const collection = WANTED_COLLECTIONS[0];
 		if (!collection) throw new Error("test assumes ≥1 collection");
+		// Buggy PDS: echoes the cursor we sent.
 		let calls = 0;
 		const fetchImpl: typeof fetch = async () => {
 			calls += 1;
@@ -429,7 +464,7 @@ describe("processBackfillJob: defenses against malicious / buggy PDS", () => {
 		await expect(
 			processBackfillJob({ did: DID_A, collection }, { resolver, queue, fetch: fetchImpl }),
 		).rejects.toThrow(/identical cursor/);
-		expect(calls).toBe(2);
+		expect(calls).toBe(2); // first page, then second page caught the dupe
 	});
 
 	it("treats 404 mid-pagination as a partial failure (throws)", async () => {
@@ -558,6 +593,7 @@ describe("enqueueBackfillJobs", () => {
 		expect(enqueued).toBe(expected);
 		expect(queue.sent).toHaveLength(expected);
 
+		// Cartesian shape: every DID appears with every collection exactly once.
 		for (const did of [DID_A, DID_B]) {
 			for (const collection of WANTED_COLLECTIONS) {
 				expect(queue.sent.filter((j) => j.did === did && j.collection === collection)).toHaveLength(
@@ -569,6 +605,9 @@ describe("enqueueBackfillJobs", () => {
 
 	it("batches sendBatch calls at QUEUE_SEND_BATCH_CAP", async () => {
 		const queue = new CapturingBackfillQueue();
+		// Pick enough DIDs that the total job count exceeds the cap. With
+		// QUEUE_SEND_BATCH_CAP = 100 and 4 collections, 30 DIDs → 120 jobs
+		// → batches of [100, 20].
 		const dids = Array.from(
 			{ length: 30 },
 			(_, i) => `did:plc:bulk${i.toString().padStart(20, "0")}`,
@@ -641,6 +680,7 @@ describe("processBackfillBatch (consumer)", () => {
 		const collection = WANTED_COLLECTIONS[0];
 		const collection2 = WANTED_COLLECTIONS[1];
 		if (!collection || !collection2) throw new Error("test assumes ≥2 collections");
+		// First collection 503s; second succeeds with one record.
 		const fetchImpl: typeof fetch = async (input) => {
 			const url =
 				typeof input === "string"
@@ -801,12 +841,17 @@ describe("discoverDids: listReposByCollection enumeration", () => {
 
 		const dids = await discoverDids(RELAY, { fetch: fetchImpl, timeoutMs: 25 });
 
+		// Every collection's discovery throws "timed out"; the function returns
+		// an empty set rather than propagating the error.
 		expect(dids).toEqual([]);
 	});
 
 	it("stops enumerating once MAX_DISCOVERED_DIDS is hit (defense vs runaway relay)", async () => {
 		const c0 = WANTED_COLLECTIONS[0];
 		if (!c0) throw new Error("test assumes ≥1 collection");
+		// Relay returns MAX_DISCOVERED_DIDS+50 repos in one page for the first
+		// collection. discoverDids should add exactly MAX_DISCOVERED_DIDS DIDs
+		// then stop without paging further or hitting the next collection.
 		let pdsCalls = 0;
 		const fetchImpl: typeof fetch = async (input) => {
 			const url =
@@ -818,6 +863,7 @@ describe("discoverDids: listReposByCollection enumeration", () => {
 			pdsCalls += 1;
 			const collection = url.searchParams.get("collection");
 			if (collection !== c0) {
+				// Should never be reached if the cap fires.
 				return new Response(JSON.stringify({ repos: [{ did: "did:plc:later" }] }), {
 					status: 200,
 					headers: { "content-type": "application/json" },
@@ -836,6 +882,8 @@ describe("discoverDids: listReposByCollection enumeration", () => {
 
 		expect(dids).toHaveLength(MAX_DISCOVERED_DIDS);
 		expect(dids).not.toContain("did:plc:later");
+		// Only the first collection was queried; the cap fired before reaching
+		// any subsequent collection.
 		expect(pdsCalls).toBe(1);
 	});
 });
@@ -920,6 +968,8 @@ describe("backfill admin route: auth + input validation", () => {
 	});
 
 	it("returns 400 on dids list larger than the cap", async () => {
+		// Cap is currently 100 (lowered from 1000 because the queue-fan-out
+		// path amplifies a leaked-token attack). 101 DIDs → over cap.
 		const dids = Array.from(
 			{ length: 101 },
 			(_, i) => `did:plc:test${i.toString().padStart(20, "0")}`,
@@ -962,6 +1012,10 @@ describe("backfill admin route: auth + input validation", () => {
 	});
 
 	it("dedupes duplicate DIDs in input", async () => {
+		// We can't assert the dedup directly through SELF without race-y waits,
+		// but the route accepts the body and returns 202 — the dedup is exercised
+		// in parseBackfillBody, which is unit-tested via the 'invalid DID' path
+		// (a duplicate doesn't surface as an error). Smoke test only.
 		const res = await SELF.fetch("https://test/_admin/backfill", {
 			method: "POST",
 			headers: {

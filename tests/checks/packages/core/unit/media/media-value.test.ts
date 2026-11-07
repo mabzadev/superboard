@@ -8,6 +8,20 @@ import type {
 } from "../../../../../../packages/core/src/media/types.js";
 
 describe("mediaItemToValue", () => {
+	it.each(["Credit", ""])(
+		"synchronizes legacy caption metadata when selecting caption %j",
+		(caption) => {
+			const value = mediaItemToValue("local", {
+				id: "01ABC",
+				filename: "photo.jpg",
+				mimeType: "image/jpeg",
+				caption,
+				meta: { caption: "Library credit", storageKey: "01ABC.jpg" },
+			});
+			expect(value).toMatchObject({ caption, meta: { caption, storageKey: "01ABC.jpg" } });
+		},
+	);
+
 	it("copies blurhash and dominantColor onto the MediaValue", () => {
 		const item: MediaProviderItem = {
 			id: "01ABC",
@@ -15,6 +29,7 @@ describe("mediaItemToValue", () => {
 			mimeType: "image/jpeg",
 			width: 1200,
 			height: 800,
+			caption: "Photo credit",
 			blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
 			dominantColor: "#aabbcc",
 		};
@@ -26,6 +41,7 @@ describe("mediaItemToValue", () => {
 			id: "01ABC",
 			width: 1200,
 			height: 800,
+			caption: "Photo credit",
 			blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
 			dominantColor: "#aabbcc",
 		});
@@ -33,6 +49,8 @@ describe("mediaItemToValue", () => {
 });
 
 describe("local provider getEmbed", () => {
+	// getEmbed never touches the database, so a stub db is enough to construct
+	// the provider.
 	const provider = createMediaProvider({ db: {} as never });
 
 	it("surfaces top-level blurhash and dominantColor on the image embed", () => {

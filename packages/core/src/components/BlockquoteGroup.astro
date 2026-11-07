@@ -1,4 +1,14 @@
 ---
+/**
+ * Renders a run of consecutive `style: "blockquote"` Portable Text blocks
+ * as ONE `<blockquote>` with a paragraph per block.
+ *
+ * Portable Text is flat, so a multi-paragraph quote is stored as
+ * consecutive blockquote-styled blocks; rendering each as its own
+ * `<blockquote>` split single quotes into disconnected fragments (#1884).
+ * The grouping itself happens in `portable-text-blockquote-group.ts`,
+ * applied by the `PortableText` wrapper.
+ */
 import { PortableText } from "astro-portabletext";
 
 import type { BlockquoteGroupNode } from "./portable-text-blockquote-group.js";
@@ -11,6 +21,8 @@ export interface Props {
 
 const { node } = Astro.props;
 
+// Restyle the quoted blocks as "normal" so each renders as a <p> inside
+// the shared <blockquote> (and doesn't re-trigger blockquote handling).
 const paragraphs = (node?.blocks ?? []).map((block) => ({ ...block, style: "normal" }));
 ---
 

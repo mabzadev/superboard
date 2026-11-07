@@ -1,6 +1,15 @@
+/**
+ * The admin terms-list endpoint aggregates visible counts only when asked.
+ *
+ * The content editor's taxonomy sidebar lists terms to pick from and never
+ * renders a count, but it shares an endpoint with the Taxonomies settings page,
+ * which does. Every editor open therefore paid one `content_taxonomies × ec_*`
+ * aggregate per applicable taxonomy. Assertions are on the SQL actually
+ * executed — the response shape alone can't tell whether the work was done.
+ */
+
 import { Role, type RoleLevel } from "@emdash-cms/auth";
 import type { APIContext } from "astro";
-import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -10,10 +19,13 @@ import { runMigrations } from "../../../../../../packages/core/src/database/migr
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
 import { TaxonomyRepository } from "../../../../../../packages/core/src/database/repositories/taxonomy.js";
 import type { Database as DatabaseSchema } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 
+/** SQL of every query executed against the test database. */
 let queries: string[] = [];
 
+/** `per_collection` is the visible-count aggregate's subquery alias. */
 function countAggregateQueries(): string[] {
 	return queries.filter((q) => q.includes("per_collection"));
 }
@@ -53,13 +65,15 @@ describe("term list counts are only aggregated on demand", () => {
 		});
 		await runMigrations(db);
 
+		// Migrations seed the `category` def declaring a `posts` collection; point
+		// it at the collection this test creates so the aggregate has a real table.
 		await new SchemaRegistry(db).createCollection({
 			slug: "post",
 			label: "Posts",
 			labelSingular: "Post",
 		});
 		await db
-			.updateTable("_emdash_taxonomy_defs")
+			.updateTable("_emdash_taxonomy_def_groups")
 			.set({ collections: JSON.stringify(["post"]) })
 			.where("name", "=", "category")
 			.execute();

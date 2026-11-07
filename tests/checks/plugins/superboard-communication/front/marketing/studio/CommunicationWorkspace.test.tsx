@@ -6,6 +6,7 @@ import {
 	render,
 	screen,
 	waitFor,
+	within,
 } from "../../../../../packages/supbrd-front-ui/render.js";
 
 globalThis.ResizeObserver ??= class {
@@ -29,6 +30,8 @@ vi.mock(
 );
 
 const email = vi.hoisted(() => ({
+	getEmailApiKeys: vi.fn(),
+	getEventWebhooks: vi.fn(),
 	getSmtpSettings: vi.fn(),
 	getProviderWebhooks: vi.fn(),
 	createProviderWebhook: vi.fn(),
@@ -109,6 +112,8 @@ describe("Communication workspace", () => {
 		studio.getStudioSenders.mockResolvedValue([{ id: "sender-1", name: "Primary" }]);
 		email.getSmtpSettings.mockResolvedValue({ configured: false, profiles: [] });
 		email.getProviderWebhooks.mockResolvedValue([]);
+		email.getEmailApiKeys.mockResolvedValue([]);
+		email.getEventWebhooks.mockResolvedValue([]);
 		marketing.getSmtpSettings.mockResolvedValue({ configured: false, profiles: [] });
 		marketing.getProviderWebhooks.mockResolvedValue([]);
 		marketing.getMarketingChannelConnectors.mockResolvedValue([]);
@@ -120,10 +125,8 @@ describe("Communication workspace", () => {
 		marketing.getEmailCampaigns.mockResolvedValue([]);
 	});
 
-	it("opens former Settings links on the merged sending preferences with correct webhook URLs", async () => {
+	it("opens former language links on the sending preferences", async () => {
 		window.history.replaceState(null, "", "/communication/settings?tab=languages");
-		email.getProviderWebhooks.mockResolvedValue([{ id: "hook-email", provider: "ses" }]);
-		marketing.getProviderWebhooks.mockResolvedValue([{ id: "hook-marketing", provider: "brevo" }]);
 		render(<CommunicationWorkspace initialTab="senders" />);
 
 		expect(await screen.findByRole("tab", { name: "Sending preferences" })).toHaveAttribute(
@@ -131,6 +134,27 @@ describe("Communication workspace", () => {
 			"true",
 		);
 		expect(await screen.findByDisplayValue("en, fr")).toBeVisible();
+		expect(screen.queryByText("Provider webhooks")).not.toBeInTheDocument();
+	});
+
+	it("opens former webhook links on the advanced settings with correct webhook URLs", async () => {
+		window.history.replaceState(null, "", "/communication/settings?tab=webhooks");
+		email.getProviderWebhooks.mockResolvedValue([{ id: "hook-email", provider: "ses" }]);
+		marketing.getProviderWebhooks.mockResolvedValue([{ id: "hook-marketing", provider: "brevo" }]);
+		render(<CommunicationWorkspace initialTab="senders" />);
+
+		expect(await screen.findByRole("tab", { name: "Advanced" })).toHaveAttribute(
+			"aria-selected",
+			"true",
+		);
+		const webhooks = await screen.findByRole("region", { name: "Webhooks" });
+		expect(
+			within(webhooks).getByRole("heading", { name: "Receive provider events" }),
+		).toBeVisible();
+		expect(
+			within(webhooks).getByRole("heading", { name: "Send events to your endpoints" }),
+		).toBeVisible();
+		expect(screen.getAllByRole("heading", { name: /webhooks/iu })).toHaveLength(1);
 		expect(
 			await screen.findByText("https://api.example.test/api/v1/email/provider-webhooks/hook-email"),
 		).toBeVisible();
@@ -313,6 +337,7 @@ describe("Communication workspace", () => {
 
 		expect(await screen.findByRole("tab", { name: "Expéditeurs et domaines" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Préférences d’envoi" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Avancé" })).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Automatisations" })).not.toBeInTheDocument();
 	});
 });

@@ -1,3 +1,28 @@
+/**
+ * Environment-variable credential store.
+ *
+ * Read-only. Reads the publisher's identity (the three fields needed to
+ * answer "who is authenticated?") from environment variables for use in
+ * CI:
+ *
+ *   - `EMDASH_PUBLISHER_DID`        — the publisher DID (required).
+ *   - `EMDASH_PUBLISHER_HANDLE`     — the publisher handle (required).
+ *   - `EMDASH_PUBLISHER_PDS`        — the PDS URL (required).
+ *
+ * NOTE: this store does NOT carry the OAuth session blob (refresh tokens,
+ * DPoP keys, PAR state). Those are managed by the OAuth client and keyed
+ * by DID via its own backing store. Until that backing store has an
+ * env-var implementation, automated `publish` from CI requires the OAuth
+ * library's session files to be present on disk too. Plan to add an
+ * env-var-backed OAuth session store before promoting CI publish out of
+ * "experimental".
+ *
+ * This store throws `ReadOnlyCredentialStoreError` from any mutating method.
+ * CI workflows that try to log in interactively are misconfigured by
+ * construction; we want a loud failure rather than silently writing
+ * credentials onto the runner's filesystem.
+ */
+
 import { isDid, isHandle } from "@atcute/lexicons/syntax";
 
 import {
@@ -8,6 +33,10 @@ import {
 } from "./types.js";
 
 export interface EnvCredentialStoreOptions {
+	/**
+	 * Override the env-var source. Defaults to `process.env`. Mainly useful for
+	 * tests; production callers should leave it alone.
+	 */
 	env?: Record<string, string | undefined>;
 }
 
@@ -17,6 +46,12 @@ const ENV_PDS = "EMDASH_PUBLISHER_PDS";
 
 export class EnvCredentialStore implements CredentialStore {
 	readonly #env: Record<string, string | undefined>;
+	/**
+	 * Stamped once at construction time so successive reads return the same
+	 * `updatedAt` -- otherwise `current()` and `get(did)` would disagree about
+	 * timestamps that were "snapshotted at the same moment", and any caller
+	 * caching by reference equality would see a fresh object on every read.
+	 */
 	readonly #createdAt = Date.now();
 
 	constructor(options: EnvCredentialStoreOptions = {}) {

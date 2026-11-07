@@ -14,7 +14,6 @@ const useEditApp = (app: AppDetail | undefined) => {
 	const [useSystemMfaConfig, setUseSystemMfaConfig] = useState(true);
 	const [requireEmailMfa, setRequireEmailMfa] = useState(false);
 	const [requireOtpMfa, setRequireOtpMfa] = useState(false);
-	const [requireSmsMfa, setRequireSmsMfa] = useState(false);
 	const [allowEmailMfaAsBackup, setAllowEmailMfaAsBackup] = useState(false);
 
 	const values = useMemo(
@@ -27,7 +26,6 @@ const useEditApp = (app: AppDetail | undefined) => {
 			useSystemMfaConfig,
 			requireEmailMfa,
 			requireOtpMfa,
-			requireSmsMfa,
 			allowEmailMfaAsBackup,
 		}),
 		[
@@ -39,7 +37,6 @@ const useEditApp = (app: AppDetail | undefined) => {
 			useSystemMfaConfig,
 			requireEmailMfa,
 			requireOtpMfa,
-			requireSmsMfa,
 			allowEmailMfaAsBackup,
 		],
 	);
@@ -53,7 +50,6 @@ const useEditApp = (app: AppDetail | undefined) => {
 		setUseSystemMfaConfig(app?.useSystemMfaConfig ?? true);
 		setRequireEmailMfa(app?.requireEmailMfa ?? false);
 		setRequireOtpMfa(app?.requireOtpMfa ?? false);
-		setRequireSmsMfa(app?.requireSmsMfa ?? false);
 		setAllowEmailMfaAsBackup(app?.allowEmailMfaAsBackup ?? false);
 	}, [app]);
 
@@ -88,7 +84,6 @@ const useEditApp = (app: AppDetail | undefined) => {
 				if (value) {
 					setRequireEmailMfa(false);
 					setRequireOtpMfa(false);
-					setRequireSmsMfa(false);
 					setAllowEmailMfaAsBackup(false);
 				}
 				break;
@@ -97,9 +92,6 @@ const useEditApp = (app: AppDetail | undefined) => {
 				break;
 			case "requireOtpMfa":
 				setRequireOtpMfa(value as boolean);
-				break;
-			case "requireSmsMfa":
-				setRequireSmsMfa(value as boolean);
 				break;
 			case "allowEmailMfaAsBackup":
 				setAllowEmailMfaAsBackup(value as boolean);

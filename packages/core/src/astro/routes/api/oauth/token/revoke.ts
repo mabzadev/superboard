@@ -1,3 +1,11 @@
+/**
+ * POST /_emdash/api/oauth/token/revoke
+ *
+ * Revoke an access or refresh token (RFC 7009).
+ * Always returns 200, even for invalid tokens.
+ * This is an unauthenticated endpoint (the caller presents the token to revoke).
+ */
+
 import type { APIRoute } from "astro";
 import { z } from "zod";
 

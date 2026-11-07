@@ -1,8 +1,14 @@
-import { useFrontContext } from "@superboard/front-ui/context";
-import { Button } from "@superboard/front-ui/ui/button.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
+import { Button } from "@superboard/front-ui/kumo";
+import {
+	SettingsActions,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+} from "@superboard/front-ui/settings-form";
+import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { useCallback, useEffect, useState } from "react";
 
+import { useObservabilityI18n } from "./i18n.js";
 import { GET, POST } from "./transport.js";
 
 interface Incident {
@@ -17,6 +23,8 @@ interface Incident {
 }
 interface Metric {
 	service: string;
+	outcome?: string;
+	eventType?: string;
 	invocations: number;
 	exceptions: number;
 	averageCpuMs: number;
@@ -27,73 +35,8 @@ interface Health {
 	status: "healthy" | "unhealthy" | "unknown";
 	observed_at: string;
 }
-const messages = {
-	en: {
-		title: "Observed incidents",
-		empty: "No incidents recorded.",
-		loading: "Loading observations…",
-		refresh: "Refresh observations",
-		acknowledge: "Acknowledge",
-		resolve: "Resolve",
-		resolution: "Resolution",
-		next: "Next page",
-		first: "First page",
-		open: "Open",
-		acknowledged: "Acknowledged",
-		resolved: "Resolved",
-		healthy: "Healthy",
-		unhealthy: "Unhealthy",
-		unknown: "Unknown",
-		service: "Service",
-		state: "State",
-		occurrences: "Occurrences",
-		last: "Last observation",
-		metrics: "Worker observations over the last hour",
-		invocations: "Invocations",
-		exceptions: "Exceptions",
-		cpu: "Average CPU (ms)",
-		wall: "Average duration (ms)",
-		noMetrics:
-			"No Worker observations received. No availability or activity is inferred from an empty window.",
-		health: "Latest observed service health",
-		healthNote:
-			"Health reflects the latest invocation. Observations older than five minutes are marked unknown.",
-	},
-	fr: {
-		title: "Incidents observés",
-		empty: "Aucun incident enregistré.",
-		loading: "Chargement des observations…",
-		refresh: "Actualiser les observations",
-		acknowledge: "Acquitter",
-		resolve: "Résoudre",
-		resolution: "Résolution",
-		next: "Page suivante",
-		first: "Première page",
-		open: "Ouvert",
-		acknowledged: "Acquitté",
-		resolved: "Résolu",
-		healthy: "Disponible",
-		unhealthy: "En erreur",
-		unknown: "Inconnu",
-		service: "Service",
-		state: "État",
-		occurrences: "Occurrences",
-		last: "Dernière observation",
-		metrics: "Observations des Workers sur la dernière heure",
-		invocations: "Invocations",
-		exceptions: "Exceptions",
-		cpu: "CPU moyen (ms)",
-		wall: "Durée moyenne (ms)",
-		noMetrics:
-			"Aucune observation de Worker reçue. Une période vide ne permet pas de déduire la disponibilité ou l’activité.",
-		health: "Dernier état observé des services",
-		healthNote:
-			"L’état reflète la dernière invocation. Les observations de plus de cinq minutes sont marquées inconnues.",
-	},
-};
-export default function IncidentsPanel() {
-	const { locale } = useFrontContext();
-	const t = messages[locale];
+
+export function useObservations() {
 	const [incidents, setIncidents] = useState<Incident[]>([]);
 	const [metrics, setMetrics] = useState<Metric[]>([]);
 	const [health, setHealth] = useState<Health[]>([]);
@@ -141,102 +84,234 @@ export default function IncidentsPanel() {
 			setBusy(false);
 		}
 	}
+	return {
+		incidents,
+		metrics,
+		health,
+		cursor,
+		setCursor,
+		next,
+		resolutions,
+		setResolutions,
+		error,
+		busy,
+		loading,
+		load,
+		transition,
+	};
+}
+
+export type Observations = ReturnType<typeof useObservations>;
+
+export default function IncidentsPanel({ observations }: { observations: Observations }) {
+	const i18n = useObservabilityI18n();
+	const { t } = i18n;
+	const { incidents, health, cursor, next, resolutions, error, busy, loading } = observations;
 	return (
-		<section className="grid gap-4 rounded-lg border p-5">
-			<h2 className="text-xl font-semibold">{t.title}</h2>
-			<Button disabled={loading || busy} onClick={() => void load()}>
-				{t.refresh}
-			</Button>
-			{error && <p role="alert">{error}</p>}
-			{loading && <p role="status">{t.loading}</p>}
-			{!loading && !incidents.length && <p>{t.empty}</p>}
-			{incidents.map((incident) => (
-				<article key={incident.incident_id} className="grid gap-3 rounded border p-4">
-					<h3>
-						{incident.service} · {incident.outcome} · {incident.http_status}
-					</h3>
-					<p>
-						{t[incident.status]} · {t.occurrences}: {incident.occurrences} · {t.last}:{" "}
-						{new Date(incident.last_observed_at).toLocaleString(locale)}
-					</p>
-					{incident.status === "open" && (
-						<Button disabled={busy} onClick={() => void transition(incident, "acknowledge")}>
-							{t.acknowledge}
-						</Button>
-					)}
-					{incident.status !== "resolved" ? (
-						<form
-							onSubmit={(event) => {
-								event.preventDefault();
-								void transition(incident, "resolve");
-							}}
-							className="flex items-end gap-3"
-						>
-							<label>
-								{t.resolution}
-								<Input
-									required
-									maxLength={2000}
-									value={resolutions[incident.incident_id] ?? ""}
-									onChange={(event) =>
-										setResolutions((current) => ({
-											...current,
-											[incident.incident_id]: event.target.value,
-										}))
-									}
-								/>
-							</label>
-							<Button disabled={busy || !resolutions[incident.incident_id]?.trim()}>
-								{t.resolve}
+		<>
+			<SettingsSection
+				title={t("Observed incidents")}
+				description={t("Errors detected on the services, to acknowledge then resolve.")}
+			>
+				{error && (
+					<SettingsRow>
+						<p role="alert" className="text-sm text-kumo-danger">
+							{error}
+						</p>
+					</SettingsRow>
+				)}
+				{loading && (
+					<SettingsRow>
+						<p role="status" className="text-sm text-kumo-subtle">
+							{t("Loading observations…")}
+						</p>
+					</SettingsRow>
+				)}
+				{!loading && !incidents.length && (
+					<SettingsRow>
+						<p className="text-sm text-kumo-subtle">{t("No incidents recorded.")}</p>
+					</SettingsRow>
+				)}
+				{incidents.map((incident) => {
+					const status = i18n.status(incident.status);
+					return (
+						<SettingsRow key={incident.incident_id}>
+							<article className="space-y-3">
+								<div className="flex items-start justify-between gap-3">
+									<div className="min-w-0 space-y-1">
+										<h3 className="text-sm font-medium">
+											{incident.service} · {incident.outcome} · {incident.http_status}
+										</h3>
+										<p className="text-xs text-kumo-subtle">
+											{t("Occurrences: {count} · Last observation: {date}", {
+												count: i18n.number(incident.occurrences),
+												date: i18n.date(incident.last_observed_at),
+											})}
+										</p>
+									</div>
+									<Badge variant={status.variant}>{status.label}</Badge>
+								</div>
+								{incident.status !== "resolved" ? (
+									<form
+										className="space-y-3"
+										onSubmit={(event) => {
+											event.preventDefault();
+											observations.transition(incident, "resolve").catch(() => undefined);
+										}}
+									>
+										<SettingsTextField
+											label={t("Resolution")}
+											required
+											maxLength={2000}
+											value={resolutions[incident.incident_id] ?? ""}
+											onChange={(event) => {
+												const value = event.target.value;
+												observations.setResolutions((current) => ({
+													...current,
+													[incident.incident_id]: value,
+												}));
+											}}
+										/>
+										<SettingsActions>
+											{incident.status === "open" && (
+												<Button
+													type="button"
+													disabled={busy}
+													onClick={() => void observations.transition(incident, "acknowledge")}
+												>
+													{t("Acknowledge")}
+												</Button>
+											)}
+											<Button
+												type="submit"
+												variant="primary"
+												disabled={busy || !resolutions[incident.incident_id]?.trim()}
+											>
+												{t("Resolve")}
+											</Button>
+										</SettingsActions>
+									</form>
+								) : (
+									<p className="text-sm">{incident.resolution}</p>
+								)}
+							</article>
+						</SettingsRow>
+					);
+				})}
+				<SettingsRow>
+					<SettingsActions>
+						{cursor && (
+							<Button
+								onClick={() => {
+									observations.setCursor("");
+								}}
+							>
+								{t("First page")}
 							</Button>
-						</form>
-					) : (
-						<p>{incident.resolution}</p>
-					)}
-				</article>
-			))}
-			<div className="flex gap-3">
-				{cursor && <Button onClick={() => setCursor("")}>{t.first}</Button>}
-				{next && <Button onClick={() => setCursor(next)}>{t.next}</Button>}
-			</div>
-			<h3>{t.metrics}</h3>
-			{metrics.length ? (
-				<div className="overflow-x-auto">
-					<table className="w-full text-start">
-						<thead>
-							<tr>
-								<th>{t.service}</th>
-								<th>{t.invocations}</th>
-								<th>{t.exceptions}</th>
-								<th>{t.cpu}</th>
-								<th>{t.wall}</th>
-							</tr>
-						</thead>
-						<tbody>
-							{metrics.map((row, index) => (
-								<tr key={`${row.service}:${index}`}>
-									<td>{row.service}</td>
-									<td>{row.invocations}</td>
-									<td>{row.exceptions}</td>
-									<td>{row.averageCpuMs}</td>
-									<td>{row.averageWallMs}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			) : (
-				!loading && <p>{t.noMetrics}</p>
-			)}
-			<h3>{t.health}</h3>
-			<p>{t.healthNote}</p>
-			<ul>
-				{health.map((row) => (
-					<li key={row.service}>
-						{row.service} · {t[row.status]} · {new Date(row.observed_at).toLocaleString(locale)}
-					</li>
-				))}
-			</ul>
-		</section>
+						)}
+						{next && (
+							<Button
+								onClick={() => {
+									observations.setCursor(next);
+								}}
+							>
+								{t("Next page")}
+							</Button>
+						)}
+						<Button disabled={loading || busy} onClick={() => void observations.load()}>
+							{t("Refresh observations")}
+						</Button>
+					</SettingsActions>
+				</SettingsRow>
+			</SettingsSection>
+			<SettingsSection
+				title={t("Latest service health")}
+				description={t(
+					"Health reflects the latest invocation; observations older than five minutes are marked unknown.",
+				)}
+			>
+				{health.length ? (
+					health.map((row) => {
+						const status = i18n.status(row.status);
+						return (
+							<SettingsRow key={row.service} className="flex items-center justify-between gap-3">
+								<div className="min-w-0">
+									<p className="text-sm font-medium">{row.service}</p>
+									<p className="text-xs text-kumo-subtle">{i18n.date(row.observed_at)}</p>
+								</div>
+								<Badge variant={status.variant}>{status.label}</Badge>
+							</SettingsRow>
+						);
+					})
+				) : (
+					<SettingsRow>
+						<p className="text-sm text-kumo-subtle">
+							{t("No service health has been observed yet.")}
+						</p>
+					</SettingsRow>
+				)}
+			</SettingsSection>
+		</>
 	);
+}
+
+export function WorkerObservations({ observations }: { observations: Observations }) {
+	const i18n = useObservabilityI18n();
+	const { t } = i18n;
+	const { metrics, loading } = observations;
+	return (
+		<SettingsSection
+			title={t("Worker observations")}
+			description={t("Invocations, exceptions and durations per service over the last hour.")}
+		>
+			<SettingsRow>
+				{metrics.length ? (
+					<div className="overflow-x-auto">
+						<table className="w-full text-start text-sm">
+							<thead className="border-b border-kumo-line text-xs text-kumo-subtle">
+								<tr>
+									<th className="py-2 text-start">{t("Service")}</th>
+									<th className="text-start">{t("Event")}</th>
+									<th className="text-start">{t("Outcome")}</th>
+									<th className="text-start">{t("Invocations")}</th>
+									<th className="text-start">{t("Exceptions")}</th>
+									<th className="text-start">{t("Average CPU")}</th>
+									<th className="text-start">{t("Average duration")}</th>
+								</tr>
+							</thead>
+							<tbody>
+								{metrics.map((row) => (
+									<tr
+										key={`${row.service}:${row.eventType ?? ""}:${row.outcome ?? ""}`}
+										className="border-b border-kumo-line last:border-0"
+									>
+										<td className="py-2">{row.service}</td>
+										<td>{row.eventType ?? "—"}</td>
+										<td>{row.outcome ? <OutcomeBadge value={row.outcome} /> : "—"}</td>
+										<td>{i18n.number(row.invocations)}</td>
+										<td>{i18n.number(row.exceptions)}</td>
+										<td>{i18n.duration(row.averageCpuMs)}</td>
+										<td>{i18n.duration(row.averageWallMs)}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				) : (
+					<p role={loading ? "status" : undefined} className="text-sm text-kumo-subtle">
+						{loading
+							? t("Loading observations…")
+							: t(
+									"No Worker observations received. No availability or activity is inferred from an empty window.",
+								)}
+					</p>
+				)}
+			</SettingsRow>
+		</SettingsSection>
+	);
+}
+
+function OutcomeBadge({ value }: { value: string }) {
+	const outcome = useObservabilityI18n().outcome(value);
+	return <Badge variant={outcome.variant}>{outcome.label}</Badge>;
 }

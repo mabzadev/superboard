@@ -2,10 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createD1SessionGuard } from "../../../../../packages/cloudflare/src/db/d1-session-guard.js";
 
+/** Short timeout so hang tests stay fast. */
 const TIMEOUT_MS = 25;
 
 interface MockD1Options {
+	/** When true, every statement execution returns a promise that never settles. */
 	hang?: boolean;
+	/** When set, every statement execution rejects with this error. */
 	error?: Error;
 	rows?: Record<string, unknown>[];
 }
@@ -18,6 +21,11 @@ function d1Result(rows: Record<string, unknown>[]) {
 	};
 }
 
+/**
+ * Minimal mock of the D1Database subset the guard wraps (prepare/batch and
+ * the statement methods). Records executed SQL so tests can assert which
+ * binding (session vs fallback) actually served a query.
+ */
 function createMockD1(options: MockD1Options = {}) {
 	const executed: string[] = [];
 	const batches: string[][] = [];
@@ -161,6 +169,8 @@ describe("createD1SessionGuard", () => {
 		const db = guard.wrap(healthy.database, fallback.database);
 		await db.prepare("select 1").bind().all();
 
+		// A slow-but-not-raced query after the healthy latch: hang the session
+		// and confirm the guard no longer intervenes within the timeout window.
 		const hanging = createMockD1({ hang: true });
 		const db2 = guard.wrap(hanging.database, fallback.database);
 		const pending = db2.prepare("select 2").bind().all();
@@ -180,10 +190,13 @@ describe("createD1SessionGuard", () => {
 		const session = createMockD1({ hang: true });
 		const fallback = createMockD1({ rows: [{ id: 1 }] });
 
+		// Trip the latch with one hanging SELECT.
 		const latchDb = guard.wrap(session.database, fallback.database);
 		await latchDb.prepare("select 1").bind().all();
 		expect(guard.isBroken()).toBe(true);
 
+		// A db created before or after the latch must not race again: measure
+		// that the fallback answers well below the guard timeout.
 		const db = guard.wrap(session.database, fallback.database);
 		const started = performance.now();
 		const result = await db.prepare("select * from posts").bind().all();
@@ -197,7 +210,9 @@ describe("createD1SessionGuard", () => {
 		expect(result.results).toEqual([{ id: 1 }]);
 		expect(batchResults).toHaveLength(2);
 		expect(fallback.batches).toEqual([["select * from a", "select * from b"]]);
+		// Three operations after the latch; racing would cost >= TIMEOUT_MS each.
 		expect(elapsed).toBeLessThan(TIMEOUT_MS);
+		// Only the latching query hit the (hanging) session.
 		expect(session.executed).toEqual(["select 1"]);
 	});
 

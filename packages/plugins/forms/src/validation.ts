@@ -1,3 +1,11 @@
+/**
+ * Server-side submission validation.
+ *
+ * Validates submitted data against the form's field definitions.
+ * These rules mirror what the client-side script checks, but server
+ * validation is authoritative — never trust the client.
+ */
+
 import type { FieldType, FormField } from "./types.js";
 
 export interface ValidationError {
@@ -8,6 +16,7 @@ export interface ValidationError {
 export interface ValidationResult {
 	valid: boolean;
 	errors: ValidationError[];
+	/** Sanitized/coerced values */
 	data: Record<string, unknown>;
 }
 
@@ -15,15 +24,32 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_RE = /^https?:\/\/.+/;
 const TEL_RE = /^[+\d][\d\s()-]*$/;
 
+/**
+ * Validate submission data against form field definitions.
+ *
+ * Returns sanitized data with proper type coercion and all validation
+ * errors. Conditionally hidden fields are excluded from validation
+ * if their condition is not met. File fields are satisfied by an entry
+ * in `fileFieldNames`, not by `data`, and are not copied into the result.
+ */
 export function validateSubmission(
 	fields: FormField[],
 	data: Record<string, unknown>,
+	fileFieldNames: ReadonlySet<string> = new Set(),
 ): ValidationResult {
 	const errors: ValidationError[] = [];
 	const validated: Record<string, unknown> = {};
 
 	for (const field of fields) {
+		// Skip conditionally hidden fields
 		if (field.condition && !evaluateCondition(field.condition, data)) {
+			continue;
+		}
+
+		if (field.type === "file") {
+			if (field.required && !fileFieldNames.has(field.name)) {
+				errors.push({ field: field.name, message: `${field.label} is required` });
+			}
 			continue;
 		}
 
@@ -31,21 +57,25 @@ export function validateSubmission(
 		const value = typeof raw === "string" ? raw.trim() : raw;
 		const isEmpty = value === undefined || value === null || value === "";
 
+		// Required check
 		if (field.required && isEmpty) {
 			errors.push({ field: field.name, message: `${field.label} is required` });
 			continue;
 		}
 
+		// Skip further validation if empty and not required
 		if (isEmpty) {
 			continue;
 		}
 
+		// Type-specific validation
 		const typeError = validateFieldType(field, value);
 		if (typeError) {
 			errors.push({ field: field.name, message: typeError });
 			continue;
 		}
 
+		// Validation rules
 		const ruleErrors = validateFieldRules(field, value);
 		for (const msg of ruleErrors) {
 			errors.push({ field: field.name, message: msg });
@@ -60,7 +90,16 @@ export function validateSubmission(
 }
 
 function validateFieldType(field: FormField, value: unknown): string | null {
-	if (typeof value !== "string" && field.type !== "checkbox" && field.type !== "number") {
+	const stringList =
+		field.type === "checkbox-group" &&
+		Array.isArray(value) &&
+		value.every((v) => typeof v === "string");
+	if (
+		typeof value !== "string" &&
+		!stringList &&
+		field.type !== "checkbox" &&
+		field.type !== "number"
+	) {
 		return `${field.label} has an invalid value`;
 	}
 
@@ -137,7 +176,9 @@ function validateFieldRules(field: FormField, value: unknown): string[] {
 			if (!re.test(strValue)) {
 				errors.push(v.patternMessage || `${field.label} has an invalid format`);
 			}
-		} catch {}
+		} catch {
+			// Invalid regex in config — skip pattern check
+		}
 	}
 
 	return errors;
@@ -148,7 +189,7 @@ function coerceValue(type: FieldType, value: unknown): unknown {
 		case "number":
 			return Number(value);
 		case "checkbox":
-			return value === "on" || value === "true" || value === true;
+			return value === "on" || value === "true" || value === "1" || value === true;
 		case "checkbox-group":
 			return Array.isArray(value) ? value : [value];
 		default:
@@ -156,7 +197,7 @@ function coerceValue(type: FieldType, value: unknown): unknown {
 	}
 }
 
-function evaluateCondition(
+export function evaluateCondition(
 	condition: { field: string; op: string; value?: string },
 	data: Record<string, unknown>,
 ): boolean {

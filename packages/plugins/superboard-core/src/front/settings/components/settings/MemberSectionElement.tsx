@@ -3,10 +3,20 @@ import { ADMIN_ROLE } from "@superboard/front-ui/constants/OptionsConstants.js";
 import { useUserContext } from "@superboard/front-ui/context/useUserContext.js";
 import type { InstanceMember } from "@superboard/front-ui/types";
 import { Avatar, AvatarFallback } from "@superboard/front-ui/ui/avatar.js";
+import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
-import { ShieldUser, Trash2, User } from "lucide-react";
 
+import { useSettingsI18n } from "../../i18n.js";
 import AdminOnlyDisplay from "../../lib/adminOnlyDisplay.js";
+
+function initials(name: string): string {
+	const parts = name.trim().split(/\s+/u);
+	return parts
+		.slice(0, 2)
+		.map((part) => part[0] ?? "")
+		.join("")
+		.toUpperCase();
+}
 
 const MemberSectionElement = ({
 	member,
@@ -15,55 +25,45 @@ const MemberSectionElement = ({
 	member: InstanceMember;
 	onRemove: (email: string) => void;
 }) => {
+	const { t } = useSettingsI18n();
 	const { userRef } = useUserContext();
-
-	function getInitials(name: string): string {
-		if (!name) return "";
-		const parts = name.trim().split(/\s+/);
-		if (parts.length === 1) {
-			return (parts[0]?.[0] ?? "").toUpperCase();
-		}
-		return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
-	}
+	const invited = member.name === t("team.invited");
 
 	return (
-		<div className="grid grid-cols-[1fr_140px_40px] items-center px-4 py-3 hover:bg-muted/30 transition-colors">
-			<div className="flex items-center gap-3 min-w-0">
-				<Avatar className="h-8 w-8 rounded-full shrink-0">
-					<AvatarFallback className="rounded-full text-[11px] font-medium">
-						{getInitials(member.name !== "Invited" ? member.name : member.email)}
-					</AvatarFallback>
-				</Avatar>
-				<div className="flex flex-col min-w-0">
-					<span className="text-sm font-medium truncate">{member.name}</span>
-					<span className="text-xs text-muted-foreground truncate">{member.email}</span>
-				</div>
+		<div className="flex items-center gap-3 p-4">
+			<Avatar className="size-8 shrink-0 rounded-full">
+				<AvatarFallback className="rounded-full text-[11px] font-medium">
+					{initials(invited ? member.email : member.name)}
+				</AvatarFallback>
+			</Avatar>
+			<div className="flex min-w-0 flex-1 flex-col">
+				<span className="truncate text-sm font-medium">{member.name}</span>
+				<span className="truncate text-xs text-kumo-subtle">{member.email}</span>
 			</div>
-
-			<div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
-				{member.role === ADMIN_ROLE ? (
-					<ShieldUser className="h-3.5 w-3.5" />
-				) : (
-					<User className="h-3.5 w-3.5" />
-				)}
-				{member.role === ADMIN_ROLE ? "Administrator" : "Member"}
-			</div>
-
-			<div className="flex items-center justify-end">
-				{userRef.current?.id !== member.id && (
-					<AdminOnlyDisplay>
-						<DeleteConfirm onConfirm={() => onRemove(member.email)}>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-							>
-								<Trash2 className="h-3.5 w-3.5" />
-							</Button>
-						</DeleteConfirm>
-					</AdminOnlyDisplay>
-				)}
-			</div>
+			<Badge variant={member.role === ADMIN_ROLE ? "info" : "default"}>
+				{t(member.role === ADMIN_ROLE ? "team.administrator" : "team.memberRole")}
+			</Badge>
+			{userRef.current?.id !== member.id && (
+				<AdminOnlyDisplay>
+					<DeleteConfirm
+						onConfirm={() => {
+							onRemove(member.email);
+						}}
+						title={t("team.removeTitle")}
+						description={t("team.removeDescription", { email: member.email })}
+						confirmText={t("team.removeConfirm")}
+					>
+						<Button
+							variant="ghost"
+							size="sm"
+							className="text-destructive"
+							aria-label={t("team.remove", { email: member.email })}
+						>
+							{t("team.removeConfirm")}
+						</Button>
+					</DeleteConfirm>
+				</AdminOnlyDisplay>
+			)}
 		</div>
 	);
 };

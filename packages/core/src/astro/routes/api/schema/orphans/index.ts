@@ -1,3 +1,9 @@
+/**
+ * Orphaned tables discovery endpoint
+ *
+ * GET  /_emdash/api/schema/orphans - List orphaned content tables
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

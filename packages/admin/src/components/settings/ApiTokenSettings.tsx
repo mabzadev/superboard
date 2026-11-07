@@ -1,3 +1,9 @@
+/**
+ * API Tokens settings page
+ *
+ * Allows admins to list, create, and revoke Personal Access Tokens.
+ */
+
 import { Banner, Button, Checkbox, Input, Loader, Select, Tooltip } from "@cloudflare/kumo";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
@@ -19,6 +25,10 @@ import { parseTimestamp } from "../../lib/utils.js";
 import { ConfirmDialog } from "../ConfirmDialog.js";
 import { SettingRow, SettingsFrame, SettingsSection } from "./SettingsLayout.js";
 
+// =============================================================================
+// Expiry options
+// =============================================================================
+
 const EXPIRY_OPTIONS = [
 	{ value: "none", label: msg`No expiry` },
 	{ value: "7d", label: msg`7 days` },
@@ -27,7 +37,7 @@ const EXPIRY_OPTIONS = [
 	{ value: "365d", label: msg`1 year` },
 ] as const;
 
-const API_TOKEN_SCOPE_VALUES: {
+export const API_TOKEN_SCOPE_VALUES: {
 	scope: ApiTokenScopeValue;
 	label: MessageDescriptor;
 	description: MessageDescriptor;
@@ -88,12 +98,28 @@ const API_TOKEN_SCOPE_VALUES: {
 		description: msg`Invoke MCP tools from all enabled plugins`,
 	},
 	{
+		scope: API_TOKEN_SCOPES.TransferExport,
+		label: msg`Site Export`,
+		description: msg`Download a copy of the entire site, including drafts, media, settings, and author emails. Admin includes this; choose it instead of Admin to give an agent narrower access.`,
+	},
+	{
+		scope: API_TOKEN_SCOPES.TransferAnalyze,
+		label: msg`Site Import Analysis`,
+		description: msg`Upload site packages and check whether they can be imported. Admin includes this; choose it instead of Admin to give an agent narrower access.`,
+	},
+	{
+		scope: API_TOKEN_SCOPES.TransferExecute,
+		label: msg`Site Import`,
+		description: msg`Import a site package into this site while it is empty, overwriting its initial setup. Admin includes this; choose it instead of Admin to give an agent narrower access.`,
+	},
+	{
 		scope: API_TOKEN_SCOPES.Admin,
 		label: msg`Admin`,
 		description: msg`Full admin access`,
 	},
 ];
 
+/** Wire scopes shown on the create-token form (contract-tested vs `API_TOKEN_SCOPES` and `@emdash-cms/auth`). */
 export const API_TOKEN_SCOPE_FORM_SCOPES: readonly ApiTokenScopeValue[] =
 	API_TOKEN_SCOPE_VALUES.map((row) => row.scope);
 
@@ -105,6 +131,10 @@ function computeExpiryDate(option: string): string | undefined {
 	date.setDate(date.getDate() + days);
 	return date.toISOString();
 }
+
+// =============================================================================
+// Main component
+// =============================================================================
 
 export function ApiTokenSettings() {
 	const { t, i18n } = useLingui();
@@ -160,7 +190,9 @@ export function ApiTokenSettings() {
 			await navigator.clipboard.writeText(newToken.token);
 			setCopied(true);
 			copyTimeoutRef.current = setTimeout(setCopied, 2000, false);
-		} catch {}
+		} catch {
+			// Clipboard API can fail in insecure contexts or when denied
+		}
 	};
 
 	const expirySelectItems = React.useMemo(
@@ -251,7 +283,10 @@ export function ApiTokenSettings() {
 									</Button>
 								</div>
 								<div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:ps-8">
-									<code className="flex min-h-10 min-w-0 flex-1 select-all items-center overflow-hidden break-all rounded border border-kumo-line bg-kumo-base px-3 py-2 font-mono text-[0.9em] leading-5">
+									<code
+										dir="ltr"
+										className="flex min-h-10 min-w-0 flex-1 select-all items-center overflow-hidden break-all rounded border border-kumo-line bg-kumo-base px-3 py-2 font-mono text-[0.9em] leading-5"
+									>
 										{tokenVisible ? newToken.token : "••••••••••••••••••••••••••••"}
 									</code>
 									<div className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
@@ -325,7 +360,10 @@ export function ApiTokenSettings() {
 									<div className="min-w-0 flex-1">
 										<div className="flex min-w-0 flex-wrap items-center gap-2">
 											<span className="truncate text-sm font-medium">{token.name}</span>
-											<code className="rounded bg-kumo-tint px-1.5 py-0.5 font-mono text-[0.9em] text-kumo-subtle">
+											<code
+												dir="ltr"
+												className="rounded bg-kumo-tint px-1.5 py-0.5 font-mono text-[0.9em] text-kumo-subtle"
+											>
 												{token.prefix}...
 											</code>
 										</div>
@@ -405,6 +443,10 @@ export function ApiTokenSettings() {
 		</SettingsFrame>
 	);
 }
+
+// =============================================================================
+// Create token form
+// =============================================================================
 
 interface CreateTokenFormProps {
 	expirySelectItems: Record<string, string>;

@@ -1,3 +1,10 @@
+/**
+ * `emdash-plugin whoami`
+ *
+ * Show the active publisher session, plus a short list of any other stored
+ * sessions. Read-only: this command never refreshes tokens or hits the network.
+ */
+
 import { FileCredentialStore } from "@emdash-cms/registry-client";
 import { defineCommand } from "citty";
 import { consola } from "consola";

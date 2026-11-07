@@ -1,28 +1,51 @@
 import { sql, type Kysely } from "kysely";
 import { ulid } from "ulidx";
 
+import { interpolateUrlPattern } from "../../i18n/resolve.js";
+import { isSiteRelativeDestination } from "../../redirects/destination.js";
 import {
 	compilePattern,
 	matchPattern,
 	interpolateDestination,
 	isPattern,
+	validatePattern,
 } from "../../redirects/patterns.js";
-import { currentTimestampValue } from "../dialect-helpers.js";
+import { currentTimestampValue, isPostgres } from "../dialect-helpers.js";
 import type { Database, RedirectTable } from "../types.js";
 import { encodeCursor, decodeCursor, type FindManyResult } from "./types.js";
 
+// ---------------------------------------------------------------------------
+// Bounded 404 logging
+// ---------------------------------------------------------------------------
+
+/**
+ * Hard cap on rows stored in `_emdash_404_log`. Scheduled maintenance evicts
+ * the oldest rows by `last_seen_at` without adding a read-amplifying count to
+ * the anonymous request path.
+ */
 export const MAX_404_LOG_ROWS = 10_000;
 
+/** Max stored length for the `Referer` header — truncated on insert. */
 export const REFERRER_MAX_LENGTH = 512;
 
+/** Max stored length for the `User-Agent` header — truncated on insert. */
 export const USER_AGENT_MAX_LENGTH = 256;
 
+/** Pattern to escape LIKE wildcards: %, _, and backslash */
 const LIKE_ESCAPE_RE = /[\\%_]/g;
 
+/**
+ * Truncate a header-derived string to `max` chars, preserving `null`/`undefined`
+ * as `null`. Empty strings stay empty (the caller decides whether to coerce).
+ */
 function truncateOrNull(value: string | null | undefined, max: number): string | null {
 	if (value === null || value === undefined) return null;
 	return value.length > max ? value.slice(0, max) : value;
 }
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export interface Redirect {
 	id: string;
@@ -79,6 +102,29 @@ export interface RedirectMatch {
 	resolvedDestination: string;
 }
 
+export interface VersionedRedirectRecord {
+	redirect: Redirect;
+	configRevision: string;
+}
+
+export class RedirectWriteBusyError extends Error {
+	override readonly name = "RedirectWriteBusyError";
+}
+
+export interface RedirectWriteFence {
+	token: string;
+	generation: number;
+}
+
+const REDIRECT_WRITE_LOCK_ID = 1;
+const REDIRECT_WRITE_LEASE_MS = 30_000;
+const REDIRECT_WRITE_LOCK_ATTEMPTS = 5;
+const POSTGRES_REDIRECT_LOCK_KEY = 1_168_624_763;
+
+// ---------------------------------------------------------------------------
+// Row mapping
+// ---------------------------------------------------------------------------
+
 function rowToRedirect(row: RedirectTable): Redirect {
 	return {
 		id: row.id,
@@ -96,16 +142,26 @@ function rowToRedirect(row: RedirectTable): Redirect {
 	};
 }
 
+// ---------------------------------------------------------------------------
+// Repository
+// ---------------------------------------------------------------------------
+
 export class RedirectRepository {
-	constructor(private db: Kysely<Database>) {}
+	constructor(readonly db: Kysely<Database>) {}
+
+	// --- CRUD ---------------------------------------------------------------
 
 	async findById(id: string): Promise<Redirect | null> {
+		return (await this.findVersionedById(id))?.redirect ?? null;
+	}
+
+	async findVersionedById(id: string): Promise<VersionedRedirectRecord | null> {
 		const row = await this.db
 			.selectFrom("_emdash_redirects")
 			.selectAll()
 			.where("id", "=", id)
 			.executeTakeFirst();
-		return row ? rowToRedirect(row) : null;
+		return row ? { redirect: rowToRedirect(row), configRevision: row.config_revision } : null;
 	}
 
 	async findBySource(source: string): Promise<Redirect | null> {
@@ -115,6 +171,75 @@ export class RedirectRepository {
 			.where("source", "=", source)
 			.executeTakeFirst();
 		return row ? rowToRedirect(row) : null;
+	}
+
+	async findConfigRevision(id: string): Promise<string | null> {
+		const row = await this.db
+			.selectFrom("_emdash_redirects")
+			.select("config_revision")
+			.where("id", "=", id)
+			.executeTakeFirst();
+		return row?.config_revision ?? null;
+	}
+
+	async withWriteLock<T>(
+		action: (fence: RedirectWriteFence, repository: RedirectRepository) => Promise<T>,
+	): Promise<T> {
+		if (isPostgres(this.db)) {
+			if (this.db.isTransaction) {
+				await sql`SELECT pg_advisory_xact_lock(${POSTGRES_REDIRECT_LOCK_KEY})`.execute(this.db);
+				return this.withLease(action);
+			}
+			return this.db.transaction().execute(async (transaction) => {
+				await sql`SELECT pg_advisory_xact_lock(${POSTGRES_REDIRECT_LOCK_KEY})`.execute(transaction);
+				const repository = new RedirectRepository(transaction);
+				return repository.withLease(action);
+			});
+		}
+		return this.withLease(action);
+	}
+
+	private async withLease<T>(
+		action: (fence: RedirectWriteFence, repository: RedirectRepository) => Promise<T>,
+	): Promise<T> {
+		const token = ulid();
+		let fence: RedirectWriteFence | undefined;
+		for (let attempt = 0; attempt < REDIRECT_WRITE_LOCK_ATTEMPTS; attempt++) {
+			const now = Date.now();
+			const result = await this.db
+				.updateTable("_emdash_redirect_write_lock")
+				.set({
+					token,
+					expires_at: now + REDIRECT_WRITE_LEASE_MS,
+					generation: sql`generation + 1`,
+				})
+				.where("id", "=", REDIRECT_WRITE_LOCK_ID)
+				.where((eb) => eb.or([eb("token", "=", ""), eb("expires_at", "<", now)]))
+				.returning("generation")
+				.executeTakeFirst();
+			if (result) {
+				fence = { token, generation: result.generation };
+				break;
+			}
+			await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
+		}
+		if (!fence) {
+			throw new RedirectWriteBusyError("Another redirect change is in progress");
+		}
+		try {
+			return await action(fence, this);
+		} finally {
+			try {
+				await this.db
+					.updateTable("_emdash_redirect_write_lock")
+					.set({ token: "", expires_at: 0 })
+					.where("id", "=", REDIRECT_WRITE_LOCK_ID)
+					.where("token", "=", token)
+					.execute();
+			} catch (error) {
+				console.error("Failed to release redirect write lock:", error);
+			}
+		}
 	}
 
 	async findMany(opts: {
@@ -135,6 +260,8 @@ export class RedirectRepository {
 			.limit(limit + 1);
 
 		if (opts.search) {
+			// Escape LIKE wildcards in the search term to prevent injection.
+			// Must include ESCAPE clause for SQLite to recognize backslash as escape char.
 			const escaped = opts.search.replace(LIKE_ESCAPE_RE, (c) => `\\${c}`);
 			const term = `%${escaped}%`;
 			query = query.where((eb) =>
@@ -179,7 +306,12 @@ export class RedirectRepository {
 		return result;
 	}
 
-	async create(input: CreateRedirectInput): Promise<Redirect> {
+	async create(input: CreateRedirectInput, fence?: RedirectWriteFence): Promise<Redirect> {
+		if (!fence) {
+			return this.withWriteLock((currentFence, repository) =>
+				repository.create(input, currentFence),
+			);
+		}
 		const id = ulid();
 		const now = new Date().toISOString();
 		const patternFlag = input.isPattern ?? isPattern(input.source);
@@ -197,6 +329,9 @@ export class RedirectRepository {
 				last_hit_at: null,
 				group_name: input.groupName ?? null,
 				auto: input.auto ? 1 : 0,
+				config_revision: ulid(),
+				source_guard: 1,
+				write_generation: fence?.generation ?? 0,
 				created_at: now,
 				updated_at: now,
 			})
@@ -205,15 +340,29 @@ export class RedirectRepository {
 		return (await this.findById(id))!;
 	}
 
-	async update(id: string, input: UpdateRedirectInput): Promise<Redirect | null> {
+	async update(
+		id: string,
+		input: UpdateRedirectInput,
+		expectedRevision?: string,
+		fence?: RedirectWriteFence,
+	): Promise<Redirect | null> {
+		if (!fence) {
+			return this.withWriteLock((currentFence, repository) =>
+				repository.update(id, input, expectedRevision, currentFence),
+			);
+		}
 		const existing = await this.findById(id);
 		if (!existing) return null;
 
-		const now = new Date().toISOString();
-		const values: Record<string, unknown> = { updated_at: now };
+		const now = new Date(
+			Math.max(Date.now(), new Date(existing.updatedAt).getTime() + 1),
+		).toISOString();
+		const values: Record<string, unknown> = { updated_at: now, config_revision: ulid() };
+		if (fence) values.write_generation = fence.generation;
 
 		if (input.source !== undefined) {
 			values.source = input.source;
+			values.source_guard = 1;
 			values.is_pattern =
 				input.isPattern !== undefined ? (input.isPattern ? 1 : 0) : isPattern(input.source) ? 1 : 0;
 		} else if (input.isPattern !== undefined) {
@@ -225,27 +374,75 @@ export class RedirectRepository {
 		if (input.enabled !== undefined) values.enabled = input.enabled ? 1 : 0;
 		if (input.groupName !== undefined) values.group_name = input.groupName;
 
-		await this.db.updateTable("_emdash_redirects").set(values).where("id", "=", id).execute();
+		let query = this.db.updateTable("_emdash_redirects").set(values).where("id", "=", id);
+		if (expectedRevision !== undefined) {
+			query = query.where("config_revision", "=", expectedRevision);
+		}
+		if (fence) {
+			query = query.where((eb) =>
+				eb.exists(
+					eb
+						.selectFrom("_emdash_redirect_write_lock")
+						.select("id")
+						.where("id", "=", REDIRECT_WRITE_LOCK_ID)
+						.where("token", "=", fence.token)
+						.where("generation", "=", fence.generation),
+				),
+			);
+		}
+		const result = await query.executeTakeFirst();
+		if (BigInt(result.numUpdatedRows) === 0n) return null;
 
 		return (await this.findById(id))!;
 	}
 
-	async delete(id: string): Promise<boolean> {
-		const result = await this.db
-			.deleteFrom("_emdash_redirects")
-			.where("id", "=", id)
-			.executeTakeFirst();
+	async delete(
+		id: string,
+		expectedRevision?: string,
+		fence?: RedirectWriteFence,
+	): Promise<boolean> {
+		if (!fence) {
+			return this.withWriteLock((currentFence, repository) =>
+				repository.delete(id, expectedRevision, currentFence),
+			);
+		}
+		let query = this.db.deleteFrom("_emdash_redirects").where("id", "=", id);
+		if (expectedRevision !== undefined) {
+			query = query.where("config_revision", "=", expectedRevision);
+		}
+		if (fence) {
+			query = query.where((eb) =>
+				eb.exists(
+					eb
+						.selectFrom("_emdash_redirect_write_lock")
+						.select("id")
+						.where("id", "=", REDIRECT_WRITE_LOCK_ID)
+						.where("token", "=", fence.token)
+						.where("generation", "=", fence.generation),
+				),
+			);
+		}
+		const result = await query.executeTakeFirst();
 		return BigInt(result.numDeletedRows) > 0n;
 	}
 
+	/**
+	 * Fetch all enabled redirects (for loop detection graph building).
+	 * Not paginated — returns the full set. Ordered oldest first: the earliest
+	 * matching pattern rule wins, so this order is match precedence.
+	 */
 	async findAllEnabled(): Promise<Redirect[]> {
 		const rows = await this.db
 			.selectFrom("_emdash_redirects")
 			.selectAll()
 			.where("enabled", "=", 1)
+			.orderBy("created_at", (order) => order.asc().nullsFirst())
+			.orderBy("id", "asc")
 			.execute();
 		return rows.map(rowToRedirect);
 	}
+
+	// --- Matching -----------------------------------------------------------
 
 	async findExactMatch(path: string): Promise<Redirect | null> {
 		const row = await this.db
@@ -264,28 +461,46 @@ export class RedirectRepository {
 			.selectAll()
 			.where("enabled", "=", 1)
 			.where("is_pattern", "=", 1)
+			.orderBy("created_at", (order) => order.asc().nullsFirst())
+			.orderBy("id", "asc")
 			.execute();
 		return rows.map(rowToRedirect);
 	}
 
+	/**
+	 * Match a request path against all enabled redirect rules.
+	 * Checks exact matches first (indexed), then pattern rules.
+	 * Returns the matched redirect and the resolved destination URL.
+	 */
 	async matchPath(path: string): Promise<RedirectMatch | null> {
-		const exact = await this.findExactMatch(path);
-		if (exact) {
+		// 1. Exact match (fast, indexed)
+		let exact = await this.findExactMatch(path);
+		if (!exact && path.length > 1) {
+			const alt = path.endsWith("/") ? path.slice(0, -1) : `${path}/`;
+			exact = await this.findExactMatch(alt);
+		}
+		if (exact && isSiteRelativeDestination(exact.destination)) {
 			return { redirect: exact, resolvedDestination: exact.destination };
 		}
 
+		// 2. Pattern match
 		const patterns = await this.findEnabledPatternRules();
 		for (const redirect of patterns) {
+			if (validatePattern(redirect.source)) continue;
 			const compiled = compilePattern(redirect.source);
 			const params = matchPattern(compiled, path);
 			if (params) {
 				const resolved = interpolateDestination(redirect.destination, params);
-				return { redirect, resolvedDestination: resolved };
+				if (isSiteRelativeDestination(resolved)) {
+					return { redirect, resolvedDestination: resolved };
+				}
 			}
 		}
 
 		return null;
 	}
+
+	// --- Hit tracking -------------------------------------------------------
 
 	async recordHit(id: string): Promise<void> {
 		await sql`
@@ -295,53 +510,140 @@ export class RedirectRepository {
 		`.execute(this.db);
 	}
 
+	// --- Auto-redirects (slug change) ---------------------------------------
+
+	/**
+	 * Create an auto-redirect when a content slug changes.
+	 * Uses the collection's URL pattern to compute old/new URLs.
+	 * Collapses existing redirect chains pointing to the old URL and
+	 * removes redirects that would shadow the now-live new URL, so a
+	 * rename that is later reverted cannot form a loop (#1986).
+	 *
+	 * Returns null when old and new URL are identical (nothing to redirect).
+	 */
 	async createAutoRedirect(
 		collection: string,
 		oldSlug: string,
 		newSlug: string,
 		contentId: string,
 		urlPattern: string | null,
+		oldPublishedAt?: string | null,
+		newPublishedAt?: string | null,
 	): Promise<Redirect | null> {
-		const oldUrl = urlPattern
-			? urlPattern.replace("{slug}", oldSlug).replace("{id}", contentId)
-			: `/${collection}/${oldSlug}`;
-		const newUrl = urlPattern
-			? urlPattern.replace("{slug}", newSlug).replace("{id}", contentId)
-			: `/${collection}/${newSlug}`;
+		return this.withWriteLock(async (fence, repository) => {
+			const oldUrl = interpolateUrlPattern({
+				pattern: urlPattern,
+				collection,
+				slug: oldSlug,
+				id: contentId,
+				date: oldPublishedAt,
+			});
+			const newUrl = interpolateUrlPattern({
+				pattern: urlPattern,
+				collection,
+				slug: newSlug,
+				id: contentId,
+				date: newPublishedAt,
+			});
 
-		if (oldUrl === newUrl) return null;
+			// A redirect from a URL to itself would make the page unreachable
+			if (oldUrl === newUrl) return null;
 
-		await this.collapseChains(oldUrl, newUrl);
+			// The new URL serves live content again — any redirect from it would
+			await repository.db
+				.deleteFrom("_emdash_redirects")
+				.where("source", "=", newUrl)
+				.where((eb) =>
+					eb.exists(
+						eb
+							.selectFrom("_emdash_redirect_write_lock")
+							.select("id")
+							.where("id", "=", REDIRECT_WRITE_LOCK_ID)
+							.where("token", "=", fence.token)
+							.where("generation", "=", fence.generation),
+					),
+				)
+				.execute();
 
-		await this.db.deleteFrom("_emdash_redirects").where("source", "=", newUrl).execute();
+			// Collapse chains: update any existing redirects pointing to the old URL
+			await repository.collapseChains(oldUrl, newUrl, fence);
 
-		const existing = await this.findBySource(oldUrl);
-		if (existing) {
-			return (await this.update(existing.id, { destination: newUrl }))!;
-		}
+			// Check if a redirect from this source already exists
+			const existing = await repository.findBySource(oldUrl);
+			if (existing) {
+				// Update the existing redirect to point to the new URL
+				return (await repository.update(existing.id, { destination: newUrl }, undefined, fence))!;
+			}
 
-		return this.create({
-			source: oldUrl,
-			destination: newUrl,
-			type: 301,
-			isPattern: false,
-			auto: true,
-			groupName: "Auto: slug change",
+			return repository.create(
+				{
+					source: oldUrl,
+					destination: newUrl,
+					type: 301,
+					isPattern: false,
+					auto: true,
+					groupName: "Auto: slug change",
+				},
+				fence,
+			);
 		});
 	}
 
-	async collapseChains(oldDestination: string, newDestination: string): Promise<number> {
-		const result = await this.db
+	/**
+	 * Update all redirects whose destination matches oldDestination
+	 * to point to newDestination instead. Prevents redirect chains.
+	 * Returns the number of updated rows.
+	 */
+	async collapseChains(
+		oldDestination: string,
+		newDestination: string,
+		fence?: RedirectWriteFence,
+	): Promise<number> {
+		if (!fence) {
+			return this.withWriteLock((currentFence, repository) =>
+				repository.collapseChains(oldDestination, newDestination, currentFence),
+			);
+		}
+		let query = this.db
 			.updateTable("_emdash_redirects")
 			.set({
 				destination: newDestination,
 				updated_at: new Date().toISOString(),
+				config_revision: ulid(),
+				...(fence ? { write_generation: fence.generation } : {}),
 			})
-			.where("destination", "=", oldDestination)
-			.executeTakeFirst();
+			.where("destination", "=", oldDestination);
+		if (fence) {
+			query = query.where((eb) =>
+				eb.exists(
+					eb
+						.selectFrom("_emdash_redirect_write_lock")
+						.select("id")
+						.where("id", "=", REDIRECT_WRITE_LOCK_ID)
+						.where("token", "=", fence.token)
+						.where("generation", "=", fence.generation),
+				),
+			);
+		}
+		const result = await query.executeTakeFirst();
 		return Number(result.numUpdatedRows);
 	}
 
+	// --- 404 log ------------------------------------------------------------
+
+	/**
+	 * Record a 404 hit for `entry.path`.
+	 *
+	 * Dedups by path: repeat hits increment `hits` and refresh `last_seen_at`
+	 * on the existing row instead of inserting a new one. Referrer and
+	 * user-agent are truncated to bounded lengths so a malicious client can't
+	 * blow up storage with huge headers. When the table would exceed
+	 * MAX_404_LOG_ROWS, the oldest entries (by `last_seen_at`) are evicted.
+	 *
+	 * This is called from the public redirect middleware on every 404 and
+	 * must never throw for an unauthenticated caller — failures bubble up to
+	 * the middleware, which catches and logs them.
+	 */
 	async log404(entry: {
 		path: string;
 		referrer?: string | null;
@@ -352,11 +654,16 @@ export class RedirectRepository {
 		const referrer = truncateOrNull(entry.referrer, REFERRER_MAX_LENGTH);
 		const userAgent = truncateOrNull(entry.userAgent, USER_AGENT_MAX_LENGTH);
 		const ip = entry.ip ?? null;
+		const id = ulid();
 
+		// Atomic upsert by path. The UNIQUE index on `path` makes this safe
+		// under concurrency: two requests for the same new path can't both
+		// insert — the second one hits the conflict branch and increments
+		// hits instead of failing with a uniqueness error.
 		await this.db
 			.insertInto("_emdash_404_log")
 			.values({
-				id: ulid(),
+				id,
 				path: entry.path,
 				referrer,
 				user_agent: userAgent,
@@ -367,7 +674,7 @@ export class RedirectRepository {
 			})
 			.onConflict((oc) =>
 				oc.column("path").doUpdateSet({
-					hits: sql`hits + 1`,
+					hits: sql`${sql.ref("_emdash_404_log.hits")} + 1`,
 					last_seen_at: now,
 					referrer,
 					user_agent: userAgent,
@@ -375,33 +682,51 @@ export class RedirectRepository {
 				}),
 			)
 			.execute();
-
-		await this.enforce404Cap();
 	}
 
-	private async enforce404Cap(): Promise<void> {
-		const countRow = await this.db
-			.selectFrom("_emdash_404_log")
-			.select((eb) => eb.fn.countAll<number>().as("c"))
-			.executeTakeFirst();
-		const count = Number(countRow?.c ?? 0);
-		if (count <= MAX_404_LOG_ROWS) return;
+	/**
+	 * Delete the oldest rows from `_emdash_404_log` if the row count exceeds
+	 * MAX_404_LOG_ROWS. "Oldest" is by `last_seen_at`, so a path that keeps
+	 * getting hit stays in the table even if it was first seen long ago.
+	 *
+	 * Called by scheduled system cleanup, never by the anonymous request path.
+	 */
+	async cleanup404Log(): Promise<number> {
+		// Cheap precheck: the expensive DELETE is only needed once the table
+		// has grown past MAX_404_LOG_ROWS. Counting a bounded sample avoids
+		// the full-table ORDER BY/NOT IN scan on the overwhelming majority
+		// of cron ticks when there is nothing to evict.
+		const probe = await this.db
+			.selectFrom(
+				this.db
+					.selectFrom("_emdash_404_log")
+					.select(sql`1`.as("one"))
+					.limit(MAX_404_LOG_ROWS + 1)
+					.as("sample"),
+			)
+			.select(({ fn }) => fn.countAll<number>().as("count"))
+			.executeTakeFirstOrThrow();
+		if (Number(probe.count) <= MAX_404_LOG_ROWS) {
+			return 0;
+		}
 
-		const excess = count - MAX_404_LOG_ROWS;
-
-		await this.db
+		// Keep the newest rows in one statement. Deriving the victims inside the
+		// DELETE makes overlapping cleanup runs idempotent: each statement
+		// evaluates the current newest set instead of acting on a stale count.
+		const result = await this.db
 			.deleteFrom("_emdash_404_log")
 			.where(
 				"id",
-				"in",
+				"not in",
 				this.db
 					.selectFrom("_emdash_404_log")
 					.select("id")
-					.orderBy("last_seen_at", "asc")
-					.orderBy("id", "asc")
-					.limit(excess),
+					.orderBy("last_seen_at", "desc")
+					.orderBy("id", "desc")
+					.limit(MAX_404_LOG_ROWS),
 			)
-			.execute();
+			.executeTakeFirst();
+		return Number(result.numDeletedRows);
 	}
 
 	async find404s(opts: {
@@ -454,6 +779,10 @@ export class RedirectRepository {
 	}
 
 	async get404Summary(limit = 50): Promise<NotFoundSummary[]> {
+		// Since rows are now deduped by path, each path has exactly one row
+		// with `hits` as the running count and `last_seen_at` as the latest
+		// timestamp. The subquery for `top_referrer` collapses to a simple
+		// pick of the row's stored referrer (the most recent one seen).
 		const rows = await sql<{
 			path: string;
 			count: number;

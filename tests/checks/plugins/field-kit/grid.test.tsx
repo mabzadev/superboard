@@ -47,7 +47,7 @@ describe("Grid widget", () => {
 	it("renders all cells as toggle checkboxes by default", () => {
 		render(<Grid value={{}} onChange={() => {}} label="Grid" id="g" options={{ rows, columns }} />);
 		const boxes = screen.getAllByRole("checkbox");
-		expect(boxes).toHaveLength(4);
+		expect(boxes).toHaveLength(4); // 2 rows × 2 cols
 	});
 
 	it("reflects existing toggle values", () => {

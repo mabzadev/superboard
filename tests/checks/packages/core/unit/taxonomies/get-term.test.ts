@@ -10,6 +10,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
 import { TaxonomyRepository } from "../../../../../../packages/core/src/database/repositories/taxonomy.js";
+import { primeRegisteredCollections } from "../../../../../../packages/core/src/schema/collection-slugs-cache.js";
 import {
 	describeEachDialect,
 	setupForDialectWithCollections,
@@ -17,6 +18,7 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
+// Mock loader.getDb so the runtime taxonomy functions read from our test db.
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 	getDb: vi.fn(),
 }));
@@ -24,6 +26,11 @@ vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 import { getDb } from "../../../../../../packages/core/src/loader.js";
 import { getTerm } from "../../../../../../packages/core/src/taxonomies/index.js";
 
+/**
+ * Counts every query executed through the wrapped Kysely instance.
+ * `transformQuery` runs once per execution, so it doubles as a
+ * round-trip counter for asserting query budgets.
+ */
 class QueryCountingPlugin implements KyselyPlugin {
 	count = 0;
 
@@ -49,11 +56,17 @@ describeEachDialect("getTerm", (dialect) => {
 		contentRepo = new ContentRepository(ctx.db);
 		counter = new QueryCountingPlugin();
 		vi.mocked(getDb).mockResolvedValue(ctx.db.withPlugin(counter));
+		// The migration-seeded `category` def declares `["posts"]`; counts are
+		// scoped to the def's declared collections, so point it at the test
+		// collection (`post`).
 		await ctx.db
-			.updateTable("_emdash_taxonomy_defs")
+			.updateTable("_emdash_taxonomy_def_groups")
 			.set({ collections: JSON.stringify(["post"]) })
 			.where("name", "=", "category")
 			.execute();
+		// In production the runtime's init read primes this; the query budget
+		// below reflects the steady state, not the once-per-isolate lookup.
+		primeRegisteredCollections(["post", "page"]);
 	});
 
 	afterEach(async () => {
@@ -105,6 +118,7 @@ describeEachDialect("getTerm", (dialect) => {
 		expect(term?.label).toBe("Technology");
 		expect(term?.description).toBe("All things tech");
 		expect(Number(term?.count)).toBe(2);
+		// Children in their manual order, which starts out as creation order
 		expect(term?.children.map((c) => c.slug)).toEqual(["web", "ai"]);
 		expect(term?.children.every((c) => c.parentId === parent.id)).toBe(true);
 	});
@@ -126,6 +140,7 @@ describeEachDialect("getTerm", (dialect) => {
 			label: "Web",
 			parentId: parent.id,
 		});
+		// A child row in a different locale must be filtered out.
 		await ctx.db
 			.insertInto("taxonomies")
 			.values({
@@ -170,6 +185,11 @@ describeEachDialect("getTerm", (dialect) => {
 		expect(term).not.toBeNull();
 		expect(Number(term?.count)).toBe(1);
 		expect(term?.children).toHaveLength(1);
+		// 1 def lookup (for the count's collection scope) + 1 term lookup +
+		// (count ∥ children) — anything more is a regression. The count is a
+		// single UNION ALL round-trip regardless of how many collections the
+		// taxonomy spans, and on a page that also renders the taxonomy widget
+		// the request cache makes it free.
 		expect(counter.count).toBe(4);
 	});
 });

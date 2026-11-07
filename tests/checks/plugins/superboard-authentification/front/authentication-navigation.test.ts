@@ -18,8 +18,8 @@ describe("authentication tabs", () => {
 		["roles", "access", "roles"],
 		["permissions", "access", "permissions"],
 		["scopes", "access", "permissions"],
-		["organizations", "access", "organizations"],
-		["orgs", "access", "organizations"],
+		["organizations", "access", null],
+		["orgs", "access", null],
 		["fields", "fields", null],
 		["user-attributes", "fields", null],
 		["appearance", "appearance", null],
@@ -41,14 +41,10 @@ describe("authentication tabs", () => {
 		expect(target("users", `tab=${tab}`)).toMatchObject({ view: "users", tab: expected });
 	});
 
-	it("moves logs to Users › Activity and banners to Appearance", () => {
+	it("moves logs to Users › Activity", () => {
 		expect(target("settings", "tab=logs&editor=email&id=7")).toMatchObject({
 			view: "users",
 			tab: "activity",
-		});
-		expect(target("settings", "tab=apps&editor=banners&id=3")).toMatchObject({
-			view: "settings",
-			tab: "appearance",
 		});
 	});
 

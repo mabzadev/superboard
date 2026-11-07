@@ -1,3 +1,7 @@
+/**
+ * Section CRUD handlers
+ */
+
 import type { Kysely } from "kysely";
 import { ulid } from "ulidx";
 
@@ -17,6 +21,9 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/;
 
 export type SectionListResponse = FindManyResult<Section>;
 
+/**
+ * List sections with optional filters
+ */
 export async function handleSectionList(
 	db: Kysely<Database>,
 	params: GetSectionsOptions,
@@ -44,6 +51,9 @@ export async function handleSectionList(
 	}
 }
 
+/**
+ * Create a section
+ */
 export async function handleSectionCreate(
 	db: Kysely<Database>,
 	input: {
@@ -58,6 +68,7 @@ export async function handleSectionCreate(
 	},
 ): Promise<ApiResult<Section>> {
 	try {
+		// Validate slug format
 		if (!SLUG_PATTERN.test(input.slug)) {
 			return {
 				success: false,
@@ -68,6 +79,7 @@ export async function handleSectionCreate(
 			};
 		}
 
+		// Check if slug already exists
 		const existing = await db
 			.selectFrom("_emdash_sections")
 			.select("id")
@@ -121,6 +133,9 @@ export async function handleSectionCreate(
 	}
 }
 
+/**
+ * Get a section by slug
+ */
 export async function handleSectionGet(
 	db: Kysely<Database>,
 	slug: string,
@@ -144,6 +159,9 @@ export async function handleSectionGet(
 	}
 }
 
+/**
+ * Update a section by slug
+ */
 export async function handleSectionUpdate(
 	db: Kysely<Database>,
 	slug: string,
@@ -157,6 +175,7 @@ export async function handleSectionUpdate(
 	},
 ): Promise<ApiResult<Section>> {
 	try {
+		// Check if section exists
 		const existing = await db
 			.selectFrom("_emdash_sections")
 			.select(["id", "source"])
@@ -170,6 +189,7 @@ export async function handleSectionUpdate(
 			};
 		}
 
+		// Validate new slug if changing
 		if (input.slug && input.slug !== slug) {
 			if (!SLUG_PATTERN.test(input.slug)) {
 				return {
@@ -181,6 +201,7 @@ export async function handleSectionUpdate(
 				};
 			}
 
+			// Check if new slug already exists
 			const slugExists = await db
 				.selectFrom("_emdash_sections")
 				.select("id")
@@ -198,6 +219,7 @@ export async function handleSectionUpdate(
 			}
 		}
 
+		// Build update object
 		const updates: Record<string, unknown> = {
 			updated_at: new Date().toISOString(),
 		};
@@ -228,11 +250,15 @@ export async function handleSectionUpdate(
 	}
 }
 
+/**
+ * Delete a section by slug
+ */
 export async function handleSectionDelete(
 	db: Kysely<Database>,
 	slug: string,
 ): Promise<ApiResult<{ deleted: true }>> {
 	try {
+		// Check if section exists and get source
 		const existing = await db
 			.selectFrom("_emdash_sections")
 			.select(["id", "source", "theme_id"])
@@ -246,6 +272,7 @@ export async function handleSectionDelete(
 			};
 		}
 
+		// Prevent deleting theme sections
 		if (existing.source === "theme") {
 			return {
 				success: false,

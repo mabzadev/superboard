@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const fixtureDir = resolve(__dirname, "..", "tests/fixtures/performance-site");
+const fixtureDir = resolve(__dirname, "../..", "tests/fixtures/performance-site");
 
 const r = spawnSync("pnpm", ["exec", "astro", "build"], {
 	cwd: fixtureDir,

@@ -34,7 +34,7 @@ const useMagicSignInForm = ({
       }
 
       const {
-        code, otp, org,
+        code, otp,
       } = getMagicSignInParams()
 
       if (!code || !otp) {
@@ -55,7 +55,6 @@ const useMagicSignInForm = ({
             code,
             mfaCode: otp,
             locale,
-            org: org || undefined,
           }),
         },
       )

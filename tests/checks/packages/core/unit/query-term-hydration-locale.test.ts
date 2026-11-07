@@ -1,3 +1,16 @@
+/**
+ * Locale-aware taxonomy term hydration in the public query helpers (#1441).
+ *
+ * `getEmDashEntry` / `getEmDashCollection` resolve the content row to a locale
+ * (explicit option > request context > defaultLocale). Term hydration must use
+ * that same resolved locale, otherwise a `fr-fr` entry can come back with the
+ * default-locale variants of its taxonomy terms.
+ *
+ * The bug was that `hydrateEntryTerms()` called `getAllTermsForEntries(type, ids)`
+ * with no locale, so term lookup fell back to the request-context / default
+ * locale instead of the entry's own locale.
+ */
+
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -24,10 +37,15 @@ interface TermFixture {
 	frTagId: string;
 }
 
+/**
+ * Seed an EN + FR post (same translation group) and a tag with EN + FR
+ * variants, attached to both posts by translation_group.
+ */
 async function seedLocalizedTags(db: Kysely<Database>): Promise<TermFixture> {
 	const contentRepo = new ContentRepository(db);
 	const taxRepo = new TaxonomyRepository(db);
 
+	// Two post rows sharing a translation group.
 	const enContent = await contentRepo.create({
 		type: "post",
 		slug: "hello",
@@ -42,6 +60,7 @@ async function seedLocalizedTags(db: Kysely<Database>): Promise<TermFixture> {
 		translationOf: enContent.id,
 	});
 
+	// One tag with EN + FR variants (shared translation_group).
 	const enTag = await taxRepo.create({ name: "tags", slug: "news", label: "News", locale: "en" });
 	const frTag = await taxRepo.create({
 		name: "tags",
@@ -51,6 +70,7 @@ async function seedLocalizedTags(db: Kysely<Database>): Promise<TermFixture> {
 		translationOf: enTag.id,
 	});
 
+	// Attach the tag (by group) to both entries.
 	await taxRepo.attachToEntry("post", enContent.id, enTag.id);
 	await taxRepo.attachToEntry("post", frContent.id, enTag.id);
 

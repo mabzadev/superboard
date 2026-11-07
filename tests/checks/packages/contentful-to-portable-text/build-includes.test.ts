@@ -1,3 +1,7 @@
+/**
+ * Tests for the buildIncludes() utility.
+ */
+
 import { describe, it, expect } from "vitest";
 
 import { buildIncludes } from "../../../../packages/contentful-to-portable-text/src/index.js";
@@ -9,8 +13,10 @@ describe("buildIncludes", () => {
 			Entry: fixture.items as Array<Record<string, unknown>>,
 		});
 
+		// Fixture has 13 items total
 		expect(includes.entries.size).toBe(13);
 
+		// Check a specific entry (blogCodeBlock)
 		const codeBlock = includes.entries.get("code-block-1");
 		expect(codeBlock).toBeDefined();
 		expect(codeBlock!.id).toBe("code-block-1");

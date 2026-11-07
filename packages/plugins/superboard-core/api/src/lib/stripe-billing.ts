@@ -1,4 +1,8 @@
 import type { BillingEnv } from "../types.js";
+import {
+	providerNotificationTarget,
+	providerNotificationUrl,
+} from "./apple-notification-configuration.js";
 import { applyVerifiedPurchase, type BillingEnvironment, type BillingStatus } from "./billing.js";
 import { readTextLimited } from "./http-limits.js";
 import { purchasesError } from "./purchases-v2.js";
@@ -81,6 +85,22 @@ async function stripeRequest(
 	);
 }
 
+async function storedStripeCipher(
+	env: BillingEnv,
+	projectId: string,
+	environment: BillingEnvironment,
+) {
+	const row = await env.DB.prepare(
+		"SELECT configuration_encrypted,billing_configuration_encrypted FROM billing_store_connections WHERE project_id=? AND provider='stripe' AND environment=?",
+	)
+		.bind(projectId, environment)
+		.first<{
+			configuration_encrypted: string | null;
+			billing_configuration_encrypted: string | null;
+		}>();
+	return row ? scopedStoreCredential(row, env) : null;
+}
+
 export async function configureStripe(
 	env: BillingEnv,
 	projectId: string,
@@ -89,18 +109,34 @@ export async function configureStripe(
 ) {
 	const secret = text(input.secret_key).trim();
 	const signing = text(input.webhook_secret).trim();
-	if (
-		!secret.startsWith(environment === "sandbox" ? "sk_test_" : "sk_live_") ||
-		!signing.startsWith("whsec_")
-	)
-		throw purchasesError(
+	const invalidCredentials = () =>
+		purchasesError(
 			"stripe_credentials_invalid",
 			"Use the Stripe secret key for this environment and its webhook signing secret",
 		);
+	if (
+		(secret && !secret.startsWith(environment === "sandbox" ? "sk_test_" : "sk_live_")) ||
+		(signing && !signing.startsWith("whsec_"))
+	)
+		throw invalidCredentials();
+	const stored = secret && signing ? null : await storedStripeCipher(env, projectId, environment);
+	if (!secret && !signing && stored) {
+		const allowedOrigin = origin(input.application_origin);
+		await env.DB.prepare(
+			"UPDATE billing_store_connections SET public_configuration=?,updated_at=datetime('now') WHERE project_id=? AND provider='stripe' AND environment=?",
+		)
+			.bind(JSON.stringify({ application_origin: allowedOrigin }), projectId, environment)
+			.run();
+		return { configured: true, environment, application_origin: allowedOrigin };
+	}
+	const kept = stored ? object(JSON.parse(await decryptCredential(env, stored))) : {};
+	const secretKey = secret || text(kept.secret_key);
+	const webhookSecret = signing || text(kept.webhook_secret);
+	if (!secretKey || !webhookSecret) throw invalidCredentials();
 	const allowedOrigin = origin(input.application_origin);
 	const encrypted = await encryptCredential(
 		env,
-		JSON.stringify({ secret_key: secret, webhook_secret: signing }),
+		JSON.stringify({ secret_key: secretKey, webhook_secret: webhookSecret }),
 	);
 	const billing = env.CREDENTIAL_KEY_SCOPE === "billing";
 	await env.DB.prepare(`INSERT INTO billing_store_connections(id,project_id,provider,environment,display_name,status,configuration_encrypted,billing_configuration_encrypted,public_configuration)
@@ -119,8 +155,24 @@ export async function configureStripe(
 	return { configured: true, environment, application_origin: allowedOrigin };
 }
 
+type PublicDomainEnv = { API_DOMAIN?: string; SDK_DOMAIN?: string; AUTH_DOMAIN?: string };
+
+function stripeWebhookUrl(
+	env: PublicDomainEnv,
+	environment: BillingEnvironment,
+	projectId: string,
+): string | null {
+	const target = providerNotificationTarget(env);
+	if (!target.domain) return null;
+	try {
+		return providerNotificationUrl(target.domain, "stripe", environment, projectId, target.unified);
+	} catch {
+		return null;
+	}
+}
+
 export async function stripeConnectionStatus(
-	env: BillingEnv,
+	env: BillingEnv & PublicDomainEnv,
 	projectId: string,
 	environment: BillingEnvironment,
 ) {
@@ -138,6 +190,7 @@ export async function stripeConnectionStatus(
 		}>();
 	return {
 		webhook_path: `/api/v2/purchases/providers/webhooks/stripe/${environment}/${projectId}`,
+		webhook_url: stripeWebhookUrl(env, environment, projectId),
 		configured: Boolean(row && scopedStoreCredential(row, env)),
 		environment,
 		application_origin: row

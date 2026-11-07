@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// ---------------------------------------------------------------------------
+// Sections: Input schemas
+// ---------------------------------------------------------------------------
+
 const sectionSource = z.enum(["theme", "user", "import"]);
 
 export const sectionsListQuery = z
@@ -34,6 +38,10 @@ export const updateSectionBody = z
 		previewMediaId: z.string().nullish(),
 	})
 	.meta({ id: "UpdateSectionBody" });
+
+// ---------------------------------------------------------------------------
+// Sections: Response schemas
+// ---------------------------------------------------------------------------
 
 export const sectionSchema = z
 	.object({

@@ -10,8 +10,8 @@ and never fork this code.
 
 ## Integrated EmDash foundation
 
-This repository integrates EmDash 0.35.0 from commit
-`1717d31b351164a5f78e95fe004ee582c7c50f40` from
+This repository integrates EmDash 1.4.0 from commit
+`10beb8c5a99e41c3a8554b09ac5123c4dddc8d11` from
 [`emdash-cms/emdash`](https://github.com/emdash-cms/emdash.git).
 `scripts/config/emdash-integration.json` records the imported revision and the root
 overlay used by the integrated repository.

@@ -1,10 +1,29 @@
-import { randomBytes } from "node:crypto";
+/**
+ * Miniflare Dev Runner
+ *
+ * Uses miniflare for plugin sandboxing during development.
+ * Provides the same SandboxRunner interface as WorkerdSandboxRunner
+ * but uses miniflare's serviceBindings-as-functions pattern instead
+ * of raw workerd + capnp + HTTP backing service.
+ *
+ * Advantages over raw workerd in dev:
+ * - No HTTP backing service needed (bridge calls are Node functions)
+ * - No capnp config generation
+ * - No child process management
+ * - Faster startup
+ */
+
+import { randomBytes, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 
 import type {
 	SandboxRunner,
 	SandboxedPluginInstance,
+	SandboxInvocationOptions,
+	ContentActionCallbacks,
 	SandboxEmailSendCallback,
+	SandboxCommentModerateCallback,
+	SandboxContentCreateCallback,
 	SandboxOptions,
 	SerializedRequest,
 } from "emdash";
@@ -14,7 +33,7 @@ const DEFAULT_WALL_TIME_MS = 30_000;
 import type { PluginManifest } from "emdash";
 
 import { createBridgeHandler } from "./bridge-handler.js";
-import { generatePluginWrapper } from "./wrapper.js";
+import { generatePluginWrapper, parseRouteTransport, stringifyRouteTransport } from "./wrapper.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -22,8 +41,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const SAFE_ID_RE = /[^a-z0-9_-]/gi;
 
+/**
+ * Stub for the "emdash" module that sandbox-entry plugins import to get
+ * `definePlugin`. The marketplace bundler inlines this via an alias, but
+ * statically-loaded sandboxed plugins (from `sandboxed: [...]`) embed
+ * their `dist/sandbox-entry.mjs` as-is, which still has the bare import.
+ * Providing the module here keeps that path working without rebuilding
+ * every plugin. Mirrors `EMDASH_SHIM` in @emdash-cms/cloudflare.
+ */
 const EMDASH_SHIM = "export const definePlugin = (d) => d;\n";
 
+/**
+ * Miniflare-based sandbox runner for development.
+ */
 export class MiniflareDevRunner implements SandboxRunner {
 	private options: SandboxOptions;
 	private siteInfo?: {
@@ -33,19 +63,35 @@ export class MiniflareDevRunner implements SandboxRunner {
 		trailingSlash?: "always" | "never" | "ignore";
 	};
 	private emailSendCallback: SandboxEmailSendCallback | null = null;
+	private commentModerateCallback: SandboxCommentModerateCallback | null = null;
+	private contentCreateCallback: SandboxContentCreateCallback | null = null;
+	private contentActionsCallback: ContentActionCallbacks | null = null;
+	private cronRescheduleCallback: (() => void) | null = null;
 
+	/** Miniflare instance (lazily created) */
 	private mf: InstanceType<typeof import("miniflare").Miniflare> | null = null;
 
+	/** Loaded plugins */
 	private plugins = new Map<string, { manifest: PluginManifest; code: string }>();
 
+	/** Whether miniflare is running */
 	private running = false;
 
+	/**
+	 * Per-startup token sent on every hook/route invocation. Plugins reject
+	 * requests without this token. In dev mode the plugin worker is only
+	 * reachable through miniflare's dispatchFetch, but we still wire the
+	 * token for consistency with production and so the wrapper template
+	 * is identical in both modes.
+	 */
 	private devInvokeToken: string;
 
 	constructor(options: SandboxOptions) {
 		this.options = options;
 		this.siteInfo = options.siteInfo;
 		this.emailSendCallback = options.emailSend ?? null;
+		this.commentModerateCallback = options.commentModerate ?? null;
+		this.contentActionsCallback = options.contentActions ?? null;
 		this.devInvokeToken = randomBytes(32).toString("hex");
 	}
 
@@ -53,6 +99,7 @@ export class MiniflareDevRunner implements SandboxRunner {
 		return this.options.limits?.wallTimeMs ?? DEFAULT_WALL_TIME_MS;
 	}
 
+	/** Get the per-startup invoke token (sent on hook/route requests to plugins) */
 	get invokeAuthToken() {
 		return this.devInvokeToken;
 	}
@@ -75,10 +122,31 @@ export class MiniflareDevRunner implements SandboxRunner {
 		this.emailSendCallback = callback;
 	}
 
+	setCommentModerate(callback: SandboxCommentModerateCallback | null): void {
+		this.commentModerateCallback = callback;
+	}
+
+	setContentCreate(callback: SandboxContentCreateCallback | null): void {
+		this.contentCreateCallback = callback;
+	}
+
+	setContentActions(callback: ContentActionCallbacks | null): void {
+		this.contentActionsCallback = callback;
+	}
+
+	get contentActions(): ContentActionCallbacks | null {
+		return this.contentActionsCallback;
+	}
+
+	setCronReschedule(callback: (() => void) | null): void {
+		this.cronRescheduleCallback = callback;
+	}
+
 	async load(manifest: PluginManifest, code: string): Promise<SandboxedPluginInstance> {
 		const pluginId = `${manifest.id}:${manifest.version}`;
 		this.plugins.set(pluginId, { manifest, code });
 
+		// Rebuild miniflare with all plugins
 		await this.rebuild();
 
 		return new MiniflareDevPlugin(pluginId, manifest, this);
@@ -93,12 +161,22 @@ export class MiniflareDevRunner implements SandboxRunner {
 		this.running = false;
 	}
 
+	/**
+	 * Unload a single plugin and rebuild miniflare without it.
+	 * Called from MiniflareDevPlugin.terminate() so marketplace
+	 * update/uninstall flows actually drop the old plugin from
+	 * the dev sandbox instead of leaving stale entries.
+	 */
 	async unloadPlugin(pluginId: string): Promise<void> {
 		if (this.plugins.delete(pluginId)) {
 			await this.rebuild();
 		}
 	}
 
+	/**
+	 * Rebuild miniflare with current plugin configuration.
+	 * Called on each plugin load/unload.
+	 */
 	private async rebuild(): Promise<void> {
 		if (this.mf) {
 			await this.mf.dispose();
@@ -112,6 +190,10 @@ export class MiniflareDevRunner implements SandboxRunner {
 
 		const { Miniflare } = await import("miniflare");
 
+		// Build worker configs with outboundService to intercept bridge calls.
+		// The wrapper code does fetch("http://bridge/method", ...).
+		// outboundService intercepts all outbound fetches and routes bridge
+		// calls to the Node handler function.
 		const workerConfigs = [];
 
 		for (const [pluginId, { manifest, code }] of this.plugins) {
@@ -122,10 +204,19 @@ export class MiniflareDevRunner implements SandboxRunner {
 				allowedHosts: manifest.allowedHosts || [],
 				storageCollections: Object.keys(manifest.storage || {}),
 				storageConfig: manifest.storage,
+				settingsSchema: manifest.admin?.settingsSchema,
 				i18nConfig: getI18nConfig(),
+				siteInfo: this.siteInfo,
 				db: this.options.db,
 				beforeContentWrite: this.options.beforeContentWrite,
+				contentCreateProvider: () => this.contentCreateCallback,
+				taxonomyWrite: this.options.taxonomyWrite,
+				contentActions: () => this.contentActionsCallback,
 				emailSend: () => this.emailSendCallback,
+				commentModerate: () => this.commentModerateCallback,
+				cronReschedule: () => this.cronRescheduleCallback?.(),
+				now: this.options.now,
+				httpFetch: this.options.httpFetch,
 				storage: this.options.mediaStorage,
 			});
 
@@ -136,8 +227,14 @@ export class MiniflareDevRunner implements SandboxRunner {
 				invokeToken: this.devInvokeToken,
 			});
 
+			// outboundService intercepts all fetch() calls from this worker.
+			// Calls to http://bridge/... go to the Node bridge handler.
+			// Other calls pass through for network:request.
 			workerConfigs.push({
 				name: pluginId.replace(SAFE_ID_RE, "_"),
+				// The wrapper imports "sandbox-plugin.js", so we provide both
+				// the wrapper as the main module and the plugin code as a
+				// named module that the wrapper can import.
 				modulesRoot: "/",
 				modules: [
 					{ type: "ESModule" as const, path: "worker.js", contents: wrapperCode },
@@ -146,11 +243,16 @@ export class MiniflareDevRunner implements SandboxRunner {
 				],
 				outboundService: async (request: Request) => {
 					const url = new URL(request.url);
+					// Only allow bridge calls. Any other outbound fetch is blocked
+					// to enforce that all network access goes through ctx.http.fetch
+					// (which routes via the bridge with capability + host validation).
+					// Without this, plugins could bypass network:request / allowedHosts
+					// by calling plain fetch() directly.
 					if (url.hostname === "bridge") {
 						return bridgeHandler(request);
 					}
 					return new Response(
-						`Direct fetch() blocked in sandbox. Plugin "${manifest.id}" must use ctx.http.fetch() (requires network:fetch capability).`,
+						`Direct fetch() blocked in sandbox. Plugin "${manifest.id}" must use ctx.http.fetch() (requires network:request capability).`,
 						{ status: 403 },
 					);
 				},
@@ -161,6 +263,14 @@ export class MiniflareDevRunner implements SandboxRunner {
 		this.running = true;
 	}
 
+	/**
+	 * Dispatch a fetch to a specific plugin worker in miniflare.
+	 *
+	 * Miniflare's `worker.fetch` uses undici's Request/Response/RequestInit
+	 * types, which are structurally compatible with the platform globals but
+	 * declared as distinct nominal types. Callers only consume status/ok and
+	 * the body via text()/json(), so we widen at this boundary.
+	 */
 	async dispatchToPlugin(pluginId: string, url: string, init?: RequestInit): Promise<Response> {
 		if (!this.mf) {
 			throw new Error(`Miniflare not running, cannot dispatch to ${pluginId}`);
@@ -175,6 +285,9 @@ export class MiniflareDevRunner implements SandboxRunner {
 	}
 }
 
+/**
+ * A plugin running in a miniflare dev isolate.
+ */
 class MiniflareDevPlugin implements SandboxedPluginInstance {
 	readonly id: string;
 	private manifest: PluginManifest;
@@ -190,14 +303,14 @@ class MiniflareDevPlugin implements SandboxedPluginInstance {
 		if (!this.runner.isHealthy()) {
 			throw new Error(`Dev sandbox unavailable for ${this.id}`);
 		}
-		return this.withWallTimeLimit(`hook:${hookName}`, async () => {
+		return this.withWallTimeLimit(`hook:${hookName}`, async (invocationId) => {
 			const res = await this.runner.dispatchToPlugin(this.id, `http://plugin/hook/${hookName}`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${this.runner.invokeAuthToken}`,
 				},
-				body: JSON.stringify({ event }),
+				body: JSON.stringify({ event, invocationId }),
 			});
 			if (!res.ok) {
 				const text = await res.text();
@@ -215,40 +328,62 @@ class MiniflareDevPlugin implements SandboxedPluginInstance {
 		routeName: string,
 		input: unknown,
 		request: SerializedRequest,
+		options?: SandboxInvocationOptions,
 	): Promise<unknown> {
 		if (!this.runner.isHealthy()) {
 			throw new Error(`Dev sandbox unavailable for ${this.id}`);
 		}
-		return this.withWallTimeLimit(`route:${routeName}`, async () => {
-			const res = await this.runner.dispatchToPlugin(this.id, `http://plugin/route/${routeName}`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${this.runner.invokeAuthToken}`,
-				},
-				body: JSON.stringify({ input, request }),
-			});
-			if (!res.ok) {
-				const text = await res.text();
-				let envelope = null;
-				try {
-					envelope = getSandboxRouteErrorEnvelope(JSON.parse(text));
-				} catch {}
-				if (envelope) {
-					throw createSandboxRouteError(envelope.error.code);
+		return this.withWallTimeLimit(
+			`route:${routeName}`,
+			async (invocationId) => {
+				const res = await this.runner.dispatchToPlugin(
+					this.id,
+					`http://plugin/route/${routeName}`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${this.runner.invokeAuthToken}`,
+						},
+						body: stringifyRouteTransport({ input, request, invocationId }),
+					},
+				);
+				if (!res.ok) {
+					const text = await res.text();
+					let envelope = null;
+					try {
+						envelope = getSandboxRouteErrorEnvelope(JSON.parse(text));
+					} catch {
+						// The generic route error below preserves non-protocol failures.
+					}
+					if (envelope) {
+						throw createSandboxRouteError(envelope.error.code);
+					}
+					throw new Error(`Plugin ${this.id} route ${routeName} failed: ${text}`);
 				}
-				throw new Error(`Plugin ${this.id} route ${routeName} failed: ${text}`);
-			}
-			return res.json();
-		});
+				return parseRouteTransport(await res.text());
+			},
+			options,
+		);
 	}
 
-	private async withWallTimeLimit<T>(operation: string, fn: () => Promise<T>): Promise<T> {
+	private async withWallTimeLimit<T>(
+		operation: string,
+		fn: (invocationId: string) => Promise<T>,
+		options?: SandboxInvocationOptions,
+	): Promise<T> {
 		const wallTimeMs = this.runner.wallTimeMs;
 		let timer: ReturnType<typeof setTimeout> | undefined;
+		const invocationId = randomUUID();
+		this.runner.contentActions?.begin?.(
+			this.manifest.id,
+			invocationId,
+			options?.invalidateContentCache,
+		);
 
 		const timeout = new Promise<never>((_, reject) => {
 			timer = setTimeout(() => {
+				void this.runner.contentActions?.flush(this.manifest.id, invocationId, false);
 				reject(
 					new Error(
 						`Plugin ${this.manifest.id} exceeded wall-time limit of ${wallTimeMs}ms during ${operation}`,
@@ -257,14 +392,21 @@ class MiniflareDevPlugin implements SandboxedPluginInstance {
 			}, wallTimeMs);
 		});
 
+		const invocation = fn(invocationId);
+		void invocation.then(
+			() => this.runner.contentActions?.flush(this.manifest.id, invocationId, true),
+			() => this.runner.contentActions?.flush(this.manifest.id, invocationId, true),
+		);
 		try {
-			return await Promise.race([fn(), timeout]);
+			return await Promise.race([invocation, timeout]);
 		} finally {
 			if (timer !== undefined) clearTimeout(timer);
 		}
 	}
 
 	async terminate(): Promise<void> {
+		// Drop this plugin from the runner so marketplace update/uninstall
+		// actually removes it from the dev sandbox.
 		await this.runner.unloadPlugin(this.id);
 	}
 }

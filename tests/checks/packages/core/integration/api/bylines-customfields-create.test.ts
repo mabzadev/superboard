@@ -1,3 +1,8 @@
+/**
+ * customFields write surface on the admin bylines POST (create) route
+ * (Phase 6 of Discussion #1174).
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
@@ -10,6 +15,10 @@ import { BylineRepository } from "../../../../../../packages/core/src/database/r
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { BylineSchemaRegistry } from "../../../../../../packages/core/src/schema/byline-registry.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 interface BuildOpts {
 	db: Kysely<Database>;
@@ -57,10 +66,18 @@ const baseCreate = {
 	isGuest: true,
 };
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe("POST /admin/bylines — customFields write surface", () => {
 	let db: Kysely<Database>;
 
 	beforeEach(async () => {
+		// The field-defs cache lives on globalThis (see
+		// `field-defs-cache.ts`); across tests in the same Vitest worker
+		// it would otherwise hold stale field IDs from a previous test's
+		// in-memory DB, producing spurious FK failures.
 		resetBylineFieldDefsCacheForTests();
 		db = await setupTestDatabase();
 
@@ -89,6 +106,10 @@ describe("POST /admin/bylines — customFields write surface", () => {
 	afterEach(async () => {
 		await teardownTestDatabase(db);
 	});
+
+	// ===========================================
+	// Round-trip
+	// ===========================================
 
 	it("POST writes customFields, GET reads them back", async () => {
 		const createRes = await createByline(
@@ -145,6 +166,10 @@ describe("POST /admin/bylines — customFields write surface", () => {
 		expect(res.status).toBe(201);
 	});
 
+	// ===========================================
+	// Validation failures → 400 + no bare byline left behind
+	// ===========================================
+
 	it("unknown customField slug → 400 VALIDATION_ERROR and no byline row created", async () => {
 		const res = await createByline(
 			buildContext({
@@ -159,6 +184,8 @@ describe("POST /admin/bylines — customFields write surface", () => {
 		expect(res.status).toBe(400);
 		expect(await res.json()).toMatchObject({ error: { code: "VALIDATION_ERROR" } });
 
+		// Validation MUST run before the row insert — otherwise a bad
+		// customFields payload would leave a bare byline orphaned.
 		const repo = new BylineRepository(db);
 		const found = await repo.findBySlug(baseCreate.slug);
 		expect(found).toBeNull();
@@ -195,7 +222,13 @@ describe("POST /admin/bylines — customFields write surface", () => {
 		expect(res.status).toBe(400);
 	});
 
+	// ===========================================
+	// D1 crash-recovery on retry (#1174 review BUG 2)
+	// ===========================================
+
 	it("retry after a D1-style crash (bare row, no fields) completes the customFields", async () => {
+		// Manual orphan-row insert is indistinguishable from a real D1
+		// crash from the API's perspective — same SQL state.
 		const repo = new BylineRepository(db);
 		const orphan = await repo.create({
 			slug: baseCreate.slug,
@@ -217,6 +250,8 @@ describe("POST /admin/bylines — customFields write surface", () => {
 				user: adminUser,
 			}),
 		);
+		// Recovery returns 201 like a fresh create; the byline id matching
+		// the pre-existing row is what distinguishes the two.
 		expect(res.status).toBe(201);
 		const json = (await res.json()) as {
 			data: { id: string; customFields?: Record<string, unknown> };
@@ -274,6 +309,9 @@ describe("POST /admin/bylines — customFields write surface", () => {
 	});
 
 	it("retry completes a partial customFields write (D1 mid-loop crash recovery)", async () => {
+		// Existing row has one of the two requested fields — simulates a
+		// crash between per-field writes. Recovery must complete the
+		// missing field.
 		const repo = new BylineRepository(db);
 		const partial = await repo.create({
 			slug: baseCreate.slug,
@@ -355,6 +393,9 @@ describe("POST /admin/bylines — customFields write surface", () => {
 	});
 
 	it("retry with translationOf pointing to a different group returns CONFLICT", async () => {
+		// Existing jane-fr is its own anchor. The retry's `translationOf`
+		// points to a different anchor — recovery must reject because
+		// the existing row's translationGroup ≠ sourceGroup.
 		const repo = new BylineRepository(db);
 		const janeAnchor = await repo.create({
 			slug: baseCreate.slug,
@@ -389,6 +430,9 @@ describe("POST /admin/bylines — customFields write surface", () => {
 	});
 
 	it("retry without translationOf against a non-anchor row returns CONFLICT", async () => {
+		// Existing row is a translation (translationGroup ≠ its own id).
+		// A retry without translationOf would, if treated as a fresh
+		// create, mint its own group — doesn't match, so recovery rejects.
 		const repo = new BylineRepository(db);
 		const source = await repo.create({
 			slug: "source-en",
@@ -424,6 +468,8 @@ describe("POST /admin/bylines — customFields write surface", () => {
 	});
 
 	it("retry where input omits a key the existing row stores returns CONFLICT", async () => {
+		// Caller may have intended to clear the omitted key — that's an
+		// update, not a recovery. Reject so callers reach for PUT explicitly.
 		const repo = new BylineRepository(db);
 		await repo.create({
 			slug: baseCreate.slug,
@@ -440,7 +486,7 @@ describe("POST /admin/bylines — customFields write surface", () => {
 				db,
 				request: postReq({
 					...baseCreate,
-					customFields: { job_title: "Editor" },
+					customFields: { job_title: "Editor" }, // twitter_handle absent
 				}),
 				user: adminUser,
 			}),
@@ -465,6 +511,10 @@ describe("POST /admin/bylines — customFields write surface", () => {
 		);
 		expect(res.status).toBe(409);
 	});
+
+	// ===========================================
+	// Auth — bylines:manage gate still applies
+	// ===========================================
 
 	it("returns 401 without a session", async () => {
 		const res = await createByline(

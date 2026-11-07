@@ -1,4 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+/**
+ * Tests for withEmDashRuntime() (#1887): the request-free runtime accessor
+ * for queue consumers and scheduled() handlers.
+ *
+ * Covers the stateless-adapter fast path, the connection-backed adapter path
+ * (event-scoped db in ALS + guaranteed commit/close), and error propagation.
+ */
+
+import type {
+	Kysely,
+	KyselyPlugin,
+	PluginTransformQueryArgs,
+	PluginTransformResultArgs,
+	QueryResult,
+	RootOperationNode,
+	UnknownRow,
+} from "kysely";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("astro:middleware", () => ({
 	defineMiddleware: (handler: unknown) => handler,
@@ -64,12 +81,50 @@ import { createRequestScopedDb } from "virtual:emdash/dialect";
 
 import { after } from "../../../../../../packages/core/src/after.js";
 import { withEmDashRuntime } from "../../../../../../packages/core/src/astro/middleware.js";
-import { getRequestContext } from "../../../../../../packages/core/src/request-context.js";
+import {
+	PREVIEW_SECRET_OPTION_KEY,
+	_clearSecretsCacheForTesting,
+	resolveSecretsCached,
+} from "../../../../../../packages/core/src/config/secrets.js";
+import { OptionsRepository } from "../../../../../../packages/core/src/database/repositories/options.js";
+import type { Database } from "../../../../../../packages/core/src/database/types.js";
+import {
+	getRequestContext,
+	runWithContext,
+} from "../../../../../../packages/core/src/request-context.js";
+import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
 const RUNTIME_HOLDER_KEY = Symbol.for("emdash:runtime-holder");
 
+const SECRET_ENV_VARS = [
+	"EMDASH_PREVIEW_SECRET",
+	"PREVIEW_SECRET",
+	"EMDASH_IP_SALT",
+	"EMDASH_AUTH_SECRET",
+	"AUTH_SECRET",
+];
+
+class QueryCountingPlugin implements KyselyPlugin {
+	count = 0;
+
+	transformQuery(args: PluginTransformQueryArgs): RootOperationNode {
+		this.count += 1;
+		return args.node;
+	}
+
+	transformResult(args: PluginTransformResultArgs): Promise<QueryResult<UnknownRow>> {
+		return Promise.resolve(args.result);
+	}
+}
+
+function scopedDbFromContext(): Kysely<Database> {
+	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- the event scope stores the adapter's handle
+	return getRequestContext()?.db as Kysely<Database>;
+}
+
 describe("withEmDashRuntime (#1887)", () => {
 	beforeEach(() => {
+		// Reset the globalThis runtime singleton so each test builds fresh
 		delete (globalThis as Record<symbol, unknown>)[RUNTIME_HOLDER_KEY];
 		vi.mocked(createRequestScopedDb).mockReset().mockReturnValue(null);
 		mockGetLastContentWriteAt.mockClear();
@@ -116,8 +171,11 @@ describe("withEmDashRuntime (#1887)", () => {
 		expect(dbSeenByCallback).toBe(scopedDb);
 		expect(commit).toHaveBeenCalledTimes(1);
 		expect(close).toHaveBeenCalledTimes(1);
+		// The event context must not leak past the call
 		expect(getRequestContext()).toBeUndefined();
 
+		// The scope must be flagged as a write workload so connection-backed
+		// adapters route queue jobs to the primary.
 		const opts = vi.mocked(createRequestScopedDb).mock.calls[0]?.[0];
 		expect(opts).toMatchObject({ isAuthenticated: false, isWrite: true });
 	});
@@ -191,5 +249,57 @@ describe("withEmDashRuntime (#1887)", () => {
 		).resolves.toBe("ok");
 		expect(dbSeenByCallback).toBe(scopedDb);
 		expect(commit).toHaveBeenCalledOnce();
+	});
+});
+
+// Requests get their handle from the same `createRequestScopedDb` wrapper as events.
+describe("resolveSecretsCached with request-scoped databases", () => {
+	let db: Kysely<Database>;
+
+	beforeEach(async () => {
+		delete (globalThis as Record<symbol, unknown>)[RUNTIME_HOLDER_KEY];
+		for (const name of SECRET_ENV_VARS) vi.stubEnv(name, "");
+		_clearSecretsCacheForTesting();
+		db = await setupTestDatabase();
+	});
+
+	afterEach(async () => {
+		vi.unstubAllEnvs();
+		vi.mocked(createRequestScopedDb).mockReset();
+		_clearSecretsCacheForTesting();
+		await teardownTestDatabase(db);
+	});
+
+	it("reads the stored secrets once across handles for different events", async () => {
+		const firstEvent = new QueryCountingPlugin();
+		const secondEvent = new QueryCountingPlugin();
+		vi.mocked(createRequestScopedDb)
+			.mockReturnValueOnce({ db: db.withPlugin(firstEvent), commit: vi.fn() })
+			.mockReturnValueOnce({ db: db.withPlugin(secondEvent), commit: vi.fn() });
+
+		const first = await withEmDashRuntime(() => resolveSecretsCached(scopedDbFromContext()));
+		const second = await withEmDashRuntime(() => resolveSecretsCached(scopedDbFromContext()));
+
+		expect(firstEvent.count).toBeGreaterThan(0);
+		expect(secondEvent.count).toBe(0);
+		expect(second).toEqual(first);
+	});
+
+	it("resolves a database that other code puts in the request context on its own", async () => {
+		vi.mocked(createRequestScopedDb).mockReturnValue({ db: db.withoutPlugins(), commit: vi.fn() });
+		const configured = await withEmDashRuntime(() => resolveSecretsCached(scopedDbFromContext()));
+
+		const otherDb = await setupTestDatabase();
+		try {
+			const other = await runWithContext({ editMode: false, db: otherDb }, () =>
+				resolveSecretsCached(otherDb),
+			);
+			expect(other.previewSecret).not.toBe(configured.previewSecret);
+			expect(other.previewSecret).toBe(
+				await new OptionsRepository(otherDb).get<string>(PREVIEW_SECRET_OPTION_KEY),
+			);
+		} finally {
+			await teardownTestDatabase(otherDb);
+		}
 	});
 });

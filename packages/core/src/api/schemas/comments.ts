@@ -1,12 +1,22 @@
 import { z } from "zod";
 
+// ---------------------------------------------------------------------------
+// Comments: Input schemas
+// ---------------------------------------------------------------------------
+
 export const createCommentBody = z
 	.object({
 		authorName: z.string().min(1).max(100),
-		authorEmail: z.string().email(),
+		authorEmail: z.email(),
 		body: z.string().min(1).max(5000),
 		parentId: z.string().optional(),
+		/** Honeypot field — hidden in the form, filled only by bots */
 		website_url: z.string().optional(),
+		/**
+		 * Turnstile response token from the form widget. Verified
+		 * server-side when a Turnstile secret key is configured.
+		 * Turnstile tokens can be up to 2048 characters.
+		 */
 		turnstileToken: z.string().max(2048).optional(),
 	})
 	.meta({ id: "CreateCommentBody" });
@@ -14,7 +24,9 @@ export const createCommentBody = z
 export const createReactionBody = z
 	.object({
 		commentId: z.string().min(1),
+		/** Reaction name. Positive-only ("like") by default; extensible. */
 		reaction: z.string().min(1).max(20).default("like"),
+		/** Honeypot field — hidden in the form, filled only by bots */
 		website_url: z.string().optional(),
 	})
 	.meta({ id: "CreateReactionBody" });
@@ -42,8 +54,19 @@ export const commentListQuery = z
 	})
 	.meta({ id: "CommentListQuery" });
 
+// ---------------------------------------------------------------------------
+// Comments: Response schemas
+// ---------------------------------------------------------------------------
+
 const commentStatusValues = z.enum(["pending", "approved", "spam", "trash"]);
 
+/**
+ * Public-facing comment (no email/IP).
+ *
+ * `replies` is recursive in practice (each reply can have replies), but we
+ * model it as a single level here to avoid circular type inference issues
+ * with tsgo. OpenAPI consumers should treat replies as the same shape.
+ */
 export const publicCommentSchema: z.ZodObject<{
 	id: z.ZodString;
 	authorName: z.ZodString;
@@ -64,6 +87,7 @@ export const publicCommentSchema: z.ZodObject<{
 	})
 	.meta({ id: "PublicComment" });
 
+/** Admin comment with full details */
 export const commentSchema = z
 	.object({
 		id: z.string(),

@@ -7,9 +7,9 @@ import { encodeBase64Url } from "hono/utils/encode";
 import { SignatureKey } from "hono/utils/jwt/jws";
 import { JWTPayload } from "hono/utils/jwt/types";
 
-import { kvService } from ".";
 import { errorConfig, messageConfig, typeConfig } from "../configs";
 import { cryptoUtil, loggerUtil } from "../utils";
+import * as kvService from "./kv";
 
 const EXTERNAL_JSON_MAX_BYTES = 1_048_576;
 
@@ -238,61 +238,6 @@ export const verifyGoogleCredential = async (clientId: string, credential: strin
 	return undefined;
 };
 
-export interface FacebookUser {
-	firstName: string;
-	lastName: string;
-	id: string;
-}
-
-export const verifyFacebookCredential = async (
-	clientId: string,
-	clientSecret: string,
-	credential: string,
-) => {
-	const graphBase = "https://graph.facebook.com";
-	const tokenRes = await fetch(
-		`${graphBase}/oauth/access_token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`,
-	);
-	if (tokenRes.ok) {
-		const tokenBody = await readJsonObjectLimited(tokenRes, EXTERNAL_JSON_MAX_BYTES);
-		if ("access_token" in tokenBody) {
-			const appAccessToken = String(tokenBody.access_token);
-			const verifyRes = await fetch(
-				`${graphBase}/debug_token?input_token=${credential}&access_token=${appAccessToken}`,
-			);
-			if (verifyRes.ok) {
-				const verifyBody = await readJsonObjectLimited(verifyRes, EXTERNAL_JSON_MAX_BYTES);
-				const data = "data" in verifyBody ? (verifyBody.data as object) : null;
-				if (
-					data &&
-					"is_valid" in data &&
-					data.is_valid &&
-					"app_id" in data &&
-					data.app_id === clientId &&
-					"user_id" in data
-				) {
-					const userRes = await fetch(
-						`${graphBase}/v20.0/${data.user_id}?access_token=${appAccessToken}`,
-					);
-					if (userRes.ok) {
-						const userBody = (await readJsonObjectLimited(
-							userRes,
-							EXTERNAL_JSON_MAX_BYTES,
-						)) as unknown as { name: string; id: string };
-						const user = {
-							firstName: userBody.name.split(" ")[0] ?? "",
-							lastName: userBody.name.split(" ")[2] ?? "",
-							id: userBody.id,
-						} as FacebookUser;
-						return user;
-					}
-				}
-			}
-		}
-	}
-	return undefined;
-};
-
 export interface GithubUser {
 	firstName: string;
 	lastName: string;
@@ -342,71 +287,6 @@ export const verifyGithubCredential = async (
 					email: userBody.email,
 					id: userBody.id,
 				} as GithubUser;
-				return user;
-			}
-		}
-	}
-	return undefined;
-};
-
-export interface DiscordUser {
-	firstName: string;
-	lastName: string;
-	id: string;
-	email: string;
-	emailVerified: boolean;
-}
-
-export const verifyDiscordCredential = async (
-	clientId: string,
-	clientSecret: string,
-	redirectUri: string,
-	credential: string,
-) => {
-	const params = new URLSearchParams();
-	params.append("grant_type", "authorization_code");
-	params.append("code", credential);
-	params.append("redirect_uri", redirectUri);
-
-	const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-
-	const tokenRes = await fetch("https://discord.com/api/v10/oauth2/token", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/x-www-form-urlencoded",
-			Authorization: `Basic ${basicAuth}`,
-		},
-		body: params,
-	});
-	if (tokenRes.ok) {
-		const tokenBody = await readJsonObjectLimited(tokenRes, EXTERNAL_JSON_MAX_BYTES);
-		if ("access_token" in tokenBody) {
-			const userRes = await fetch("https://discord.com/api/v10/users/@me", {
-				method: "GET",
-				headers: {
-					Authorization: `Bearer ${tokenBody.access_token}`,
-					"Content-Type": "application/json",
-					Accept: "application/json",
-				},
-			});
-			if (userRes.ok) {
-				const userBody = (await readJsonObjectLimited(
-					userRes,
-					EXTERNAL_JSON_MAX_BYTES,
-				)) as unknown as {
-					username: string;
-					id: string;
-					email: string;
-					verified: boolean;
-				};
-				const names = userBody.username.split(" ");
-				const user = {
-					firstName: names.length === 2 ? names[0] : "",
-					lastName: names.length === 2 ? names[1] : "",
-					email: userBody.email ?? null,
-					emailVerified: userBody.verified ?? false,
-					id: userBody.id,
-				} as DiscordUser;
 				return user;
 			}
 		}

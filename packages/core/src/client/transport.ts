@@ -1,5 +1,18 @@
+/**
+ * Transport layer for the EmDash client.
+ *
+ * Implements a composable interceptor pipeline that modifies requests
+ * and responses. The client calls `transport.fetch(request)` — everything
+ * else (auth, CSRF, retry) is handled by interceptors.
+ */
+
+// Regex patterns for transport utilities
 const COOKIE_NAME_VALUE_PATTERN = /^([^;]+)/;
 
+/**
+ * An interceptor can modify the request, call next(), inspect
+ * the response, and optionally retry.
+ */
 export type Interceptor = (
 	request: Request,
 	next: (request: Request) => Promise<Response>,
@@ -13,11 +26,15 @@ function baseFetch(request: Request): Promise<Response> {
 	return globalThis.fetch(request);
 }
 
+/**
+ * Creates a fetch function that runs requests through an interceptor pipeline.
+ */
 export function createTransport(options: TransportOptions = {}): {
 	fetch: (request: Request) => Promise<Response>;
 } {
 	const interceptors = options.interceptors ?? [];
 
+	// Build the chain once — interceptors don't change after construction
 	let chain: (request: Request) => Promise<Response> = baseFetch;
 	for (let i = interceptors.length - 1; i >= 0; i--) {
 		const interceptor = interceptors[i];
@@ -28,6 +45,16 @@ export function createTransport(options: TransportOptions = {}): {
 	return { fetch: chain };
 }
 
+// ---------------------------------------------------------------------------
+// Built-in interceptors
+// ---------------------------------------------------------------------------
+
+/**
+ * Adds X-EmDash-Request: 1 and Origin headers to mutation requests
+ * (POST, PUT, DELETE). The custom header satisfies EmDash's CSRF check;
+ * the Origin header satisfies Astro's built-in origin verification which
+ * rejects server-side POST requests that lack a matching Origin.
+ */
 export function csrfInterceptor(): Interceptor {
 	const MUTATION_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 
@@ -45,6 +72,9 @@ export function csrfInterceptor(): Interceptor {
 	};
 }
 
+/**
+ * Adds Authorization: Bearer header from a static token.
+ */
 export function tokenInterceptor(token: string): Interceptor {
 	return (request, next) => {
 		const headers = new Headers(request.headers);
@@ -53,6 +83,11 @@ export function tokenInterceptor(token: string): Interceptor {
 	};
 }
 
+/**
+ * Dev bypass interceptor. Calls the dev-bypass endpoint on first request
+ * to establish a session, then forwards the session cookie on subsequent
+ * requests.
+ */
 export function devBypassInterceptor(baseUrl: string): Interceptor {
 	let sessionCookie: string | null = null;
 	let initializing: Promise<void> | null = null;
@@ -61,20 +96,24 @@ export function devBypassInterceptor(baseUrl: string): Interceptor {
 		const bypassUrl = new URL("/_emdash/api/auth/dev-bypass", baseUrl);
 		const res = await globalThis.fetch(bypassUrl, { redirect: "manual" });
 
+		// Extract session cookie from Set-Cookie header
 		const setCookie = res.headers.get("set-cookie");
 		if (setCookie) {
+			// Extract just the cookie name=value part
 			const match = setCookie.match(COOKIE_NAME_VALUE_PATTERN);
 			if (match) {
 				sessionCookie = match[1]!;
 			}
 		}
 
+		// Consume the response body
 		if (res.body) {
 			await res.text().catch(() => {});
 		}
 	}
 
 	return async (request, next) => {
+		// Ensure we've initialized (only once, even with concurrent requests)
 		if (!sessionCookie) {
 			if (!initializing) {
 				initializing = init();
@@ -93,22 +132,30 @@ export function devBypassInterceptor(baseUrl: string): Interceptor {
 	};
 }
 
+/**
+ * Auto-refreshes expired OAuth tokens on 401 responses.
+ * Requires a refresh token and the token endpoint URL.
+ */
 export function refreshInterceptor(options: {
 	refreshToken: string;
 	tokenEndpoint: string;
 	onTokenRefreshed?: (accessToken: string, refreshToken: string, expiresAt: string) => void;
+	fetch?: (request: Request) => Promise<Response>;
 }): Interceptor {
+	const send = options.fetch ?? baseFetch;
 	let refreshing: Promise<string | null> | null = null;
 
 	async function refresh(): Promise<string | null> {
-		const res = await globalThis.fetch(options.tokenEndpoint, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				grant_type: "refresh_token",
-				refresh_token: options.refreshToken,
+		const res = await send(
+			new Request(options.tokenEndpoint, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					grant_type: "refresh_token",
+					refresh_token: options.refreshToken,
+				}),
 			}),
-		});
+		);
 
 		if (!res.ok) return null;
 
@@ -120,6 +167,8 @@ export function refreshInterceptor(options: {
 
 		const json = (await res.json()) as Record<string, unknown>;
 
+		// The token endpoint wraps the response in { success, data: ... } via apiSuccess.
+		// Handle both wrapped and bare shapes for robustness.
 		const tokenData: TokenFields =
 			json.data && typeof json.data === "object" && "access_token" in json.data
 				? (json.data as TokenFields)
@@ -141,11 +190,14 @@ export function refreshInterceptor(options: {
 	}
 
 	return async (request, next) => {
+		// A request body can only be read once; clone before sending so the
+		// 401 retry has an unconsumed request to rebuild from.
 		const retryTemplate = request.body ? request.clone() : request;
 
 		const response = await next(request);
 
 		if (response.status === 401) {
+			// Try to refresh
 			if (!refreshing) {
 				refreshing = refresh().finally(() => {
 					refreshing = null;
@@ -154,6 +206,7 @@ export function refreshInterceptor(options: {
 
 			const newToken = await refreshing;
 			if (newToken) {
+				// Retry with new token
 				const headers = new Headers(retryTemplate.headers);
 				headers.set("Authorization", `Bearer ${newToken}`);
 				return next(new Request(retryTemplate, { headers }));

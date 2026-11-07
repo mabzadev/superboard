@@ -6,7 +6,6 @@ import Consent from './Consent'
 import MfaEnroll from './MfaEnroll'
 import OtpSetup from './OtpSetup'
 import OtpMfa from './OtpMfa'
-import SmsMfa from './SmsMfa'
 import EmailMfa from './EmailMfa'
 import PasswordlessVerify from './PasswordlessVerify'
 import PasskeyEnroll from './PasskeyEnroll'
@@ -21,12 +20,10 @@ import ChangeEmail from './ChangeEmail'
 import AuthCodeExpired from './AuthCodeExpired'
 import VerifyEmail from './VerifyEmail'
 import RecoveryCodeSignIn from './RecoveryCodeSignIn'
-import SwitchOrg from './SwitchOrg'
-import ChangeOrg from './ChangeOrg'
 
 export {
-  AcceptInvitation, SignIn, MagicSignIn, SignUp, Consent, MfaEnroll, OtpSetup, OtpMfa, SmsMfa, EmailMfa,
+  AcceptInvitation, SignIn, MagicSignIn, SignUp, Consent, MfaEnroll, OtpSetup, OtpMfa, EmailMfa,
   PasskeyEnroll, ResetPassword, UpdateInfo, ChangePassword, ResetMfa, ManagePasskey,
   ChangeEmail, AuthCodeExpired, VerifyEmail, PasswordlessVerify, RecoveryCodeEnroll,
-  RecoveryCodeSignIn, ManageRecoveryCode, SwitchOrg, ChangeOrg,
+  RecoveryCodeSignIn, ManageRecoveryCode,
 }

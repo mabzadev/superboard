@@ -75,6 +75,10 @@ vi.mock("../../../../../packages/admin/src/components/RouterLinkButton.js", () =
 	),
 }));
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
 const UPLOAD_CTA_PATTERN = /Upload images, videos, and documents to keep reusable assets/;
 const UPLOAD_TO_LIBRARY_PATTERN = /Upload to Library/;
 const UPLOAD_FILES_PATTERN = /Upload Files/;
@@ -449,7 +453,7 @@ describe("MediaLibrary", () => {
 			await simulateMediaDrop(item, folder);
 			await vi.waitFor(() => expect(onMoveMedia).toHaveBeenCalledWith(item, folder));
 			expect(onOpenFolder).not.toHaveBeenCalled();
-			expect(screen.getByRole("heading", { name: "Media Details" }).query()).toBeNull();
+			expect(screen.getByRole("heading", { name: "Media details" }).query()).toBeNull();
 			await expect
 				.element(screen.getByText("Moved to Product photos", { exact: true }))
 				.toBeVisible();
@@ -510,7 +514,7 @@ describe("MediaLibrary", () => {
 
 			expect(onMoveMedia).not.toHaveBeenCalled();
 			await expect
-				.element(screen.getByRole("heading", { name: "Media Details" }))
+				.element(screen.getByRole("heading", { name: "Media details" }))
 				.toBeInTheDocument();
 		});
 
@@ -747,7 +751,7 @@ describe("MediaLibrary", () => {
 			await expect.element(screen.getByText("Loading folders")).toBeInTheDocument();
 		});
 
-		it("shows Back and breadcrumbs inside a folder and hides local creation actions", async () => {
+		it("shows Back and breadcrumbs inside a folder, hides folder creation, and keeps upload available", async () => {
 			const onBackToMain = vi.fn();
 			const screen = await renderLibrary({
 				folderId: "folder-1",
@@ -776,7 +780,9 @@ describe("MediaLibrary", () => {
 				getComputedStyle(currentFolder.element()).fontSize,
 			);
 			expect(screen.getByRole("button", { name: "Add new folder" }).query()).toBeNull();
-			expect(screen.getByRole("button", { name: UPLOAD_FILES_PATTERN }).query()).toBeNull();
+			await expect
+				.element(screen.getByRole("button", { name: UPLOAD_FILES_PATTERN }))
+				.toBeInTheDocument();
 		});
 
 		it("keeps browsing available without folder-management permission", async () => {
@@ -868,19 +874,28 @@ describe("MediaLibrary", () => {
 			expect(onOpenFolder).toHaveBeenCalledWith(expect.objectContaining({ id: "folder-result" }));
 		});
 
-		it("disables local page-drop upload while inside a folder", async () => {
-			const onUpload = vi.fn();
+		it("allows local page-drop upload while inside a folder and passes the folder id", async () => {
+			const onUpload = vi.fn().mockResolvedValue(undefined);
 			const screen = await renderLibrary({
 				folderId: "folder-1",
 				currentFolder: makeFolder(),
 				onUpload,
 			});
 
+			await expect
+				.element(screen.getByRole("button", { name: UPLOAD_FILES_PATTERN }))
+				.toBeInTheDocument();
+
 			dropFiles(window, [new File(["image"], "dropped.jpg", { type: "image/jpeg" })]);
 
-			await new Promise((resolve) => setTimeout(resolve, 50));
-			expect(onUpload).not.toHaveBeenCalled();
-			expect(screen.getByText("Drop files to upload").query()).toBeNull();
+			await vi.waitFor(() => expect(onUpload).toHaveBeenCalledTimes(1));
+			expect(onUpload).toHaveBeenCalledWith(
+				expect.objectContaining({ name: "dropped.jpg" }),
+				expect.objectContaining({ folderId: "folder-1" }),
+			);
+			await expect
+				.element(screen.getByRole("heading", { name: "Upload to Library" }))
+				.toBeInTheDocument();
 		});
 
 		it("keeps media usable when folders fail and offers retry", async () => {
@@ -929,7 +944,9 @@ describe("MediaLibrary", () => {
 				makeMediaItem({ id: "2", filename: "image2.jpg" }),
 			];
 			const screen = await renderLibrary({ items });
+			// Grid view is default — items render as buttons with alt text
 			await expect.element(screen.getByRole("tab", { name: "Grid view" })).toBeInTheDocument();
+			// Images should be present via their img alt attributes
 			await expect.element(screen.getByAltText("image1.jpg")).toBeInTheDocument();
 			await expect.element(screen.getByAltText("image2.jpg")).toBeInTheDocument();
 		});
@@ -950,6 +967,31 @@ describe("MediaLibrary", () => {
 			await expect.element(img).toHaveAttribute("src", "https://example.com/photo.jpg");
 			expect(img.element().style.objectPosition).toBe("20% 80%");
 		});
+
+		it("shows filenames and file formats on local grid cards", async () => {
+			const longFilename = "annual-report-final-approved-version.jpg";
+			const screen = await renderLibrary({
+				items: [
+					makeMediaItem({
+						id: "image-1",
+						filename: longFilename,
+						alt: "An annual report cover",
+						mimeType: "image/jpeg",
+					}),
+					makeMediaItem({
+						id: "document-1",
+						filename: "annual-report.pdf",
+						mimeType: "application/pdf",
+					}),
+				],
+			});
+
+			await expect.element(screen.getByText("JPEG", { exact: true })).toBeInTheDocument();
+			await expect.element(screen.getByText("PDF", { exact: true })).toBeInTheDocument();
+			await expect
+				.element(screen.getByRole("button", { name: longFilename, exact: true }))
+				.toBeInTheDocument();
+		});
 	});
 
 	describe("view mode toggle", () => {
@@ -957,10 +999,13 @@ describe("MediaLibrary", () => {
 			const items = [makeMediaItem({ id: "1", filename: "test.jpg" })];
 			const screen = await renderLibrary({ items });
 
+			// Default is grid
 			const listBtn = screen.getByRole("tab", { name: "List view" });
 			await listBtn.click();
 
+			// In list view, filename appears in table cell
 			await expect.element(screen.getByText("test.jpg")).toBeInTheDocument();
+			// Table headers should be visible
 			await expect.element(screen.getByText("Filename")).toBeInTheDocument();
 			await expect.element(screen.getByText("Type", { exact: true })).toBeInTheDocument();
 			await expect.element(screen.getByText("Size")).toBeInTheDocument();
@@ -1080,13 +1125,65 @@ describe("MediaLibrary", () => {
 	});
 
 	describe("item selection", () => {
+		it.each([
+			{
+				label: "owner",
+				role: 30,
+				authorId: "user-1",
+				duplicate: true,
+				replace: true,
+			},
+			{
+				label: "another author",
+				role: 30,
+				authorId: "user-2",
+				duplicate: true,
+				replace: false,
+			},
+			{
+				label: "subscriber",
+				role: 10,
+				authorId: "user-1",
+				duplicate: false,
+				replace: false,
+			},
+		])("derives crop actions for an $label", async (testCase) => {
+			setupMocks.role = testCase.role;
+			const item = makeLocalMediaItem({
+				status: "ready",
+				authorId: testCase.authorId,
+				url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'/%3E",
+			});
+			const screen = await renderLibrary({ items: [item] });
+
+			await screen.getByRole("button", { name: "photo.jpg" }).click();
+			screen.getByRole("tab", { name: "Edit image" }).element().click();
+			const crop = screen.getByRole("tab", { name: "Crop" });
+			if (!testCase.duplicate && !testCase.replace) {
+				expect(crop.query()).toBeNull();
+				return;
+			}
+			await expect.element(crop).toBeVisible();
+			crop.element().click();
+			await expect.element(screen.getByLabelText("Crop output dimensions")).toBeVisible();
+
+			expect(screen.getByRole("button", { name: "Create cropped copy" }).query() !== null).toBe(
+				testCase.duplicate,
+			);
+			expect(screen.getByRole("button", { name: "Replace original" }).query() !== null).toBe(
+				testCase.replace,
+			);
+		});
+
 		it("clicking an item opens detail dialog", async () => {
 			const items = [makeMediaItem({ id: "1", filename: "photo.jpg", alt: "A photo" })];
 			const screen = await renderLibrary({ items });
 
+			// Click the grid item button
 			await screen.getByRole("button", { name: "photo.jpg" }).click();
 
-			await expect.element(screen.getByText("Media Details")).toBeInTheDocument();
+			// MediaDetailPanel should open showing the item details
+			await expect.element(screen.getByText("Media details")).toBeInTheDocument();
 		});
 
 		it("opens the detail dialog on an animation frame so Kumo entry animation runs", async () => {
@@ -1109,12 +1206,12 @@ describe("MediaLibrary", () => {
 
 				expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(1);
 				await expect
-					.element(screen.getByText("Media Details"), { timeout: 100 })
+					.element(screen.getByText("Media details"), { timeout: 100 })
 					.not.toBeInTheDocument();
 
 				openFrame?.(performance.now());
 
-				await expect.element(screen.getByText("Media Details")).toBeInTheDocument();
+				await expect.element(screen.getByText("Media details")).toBeInTheDocument();
 			} finally {
 				requestAnimationFrameSpy.mockRestore();
 				cancelAnimationFrameSpy.mockRestore();
@@ -1147,7 +1244,7 @@ describe("MediaLibrary", () => {
 
 			await screen.getByRole("button", { name: "photo.jpg" }).click();
 			screen.getByRole("button", { name: "Delete" }).element().click();
-			await expect.element(screen.getByText("Delete Media?")).toBeInTheDocument();
+			await expect.element(screen.getByText("Delete media?")).toBeInTheDocument();
 			screen.getByRole("button", { name: "Delete" }).all().at(-1)!.element().click();
 
 			await vi.waitFor(() => {
@@ -1173,7 +1270,7 @@ describe("MediaLibrary", () => {
 
 			await screen.getByRole("button", { name: "photo.jpg" }).click();
 			screen.getByRole("button", { name: "Delete" }).element().click();
-			await expect.element(screen.getByText("Delete Media?")).toBeInTheDocument();
+			await expect.element(screen.getByText("Delete media?")).toBeInTheDocument();
 			screen.getByRole("button", { name: "Delete" }).all().at(-1)!.element().click();
 
 			await vi.waitFor(() => {
@@ -1198,6 +1295,7 @@ describe("MediaLibrary", () => {
 	describe("loading state", () => {
 		it("displays loading state", async () => {
 			const screen = await renderLibrary({ isLoading: true });
+			// When loading, neither empty state nor items are shown
 			expect(screen.getByText("Your media library is empty").query()).toBeNull();
 		});
 	});
@@ -1214,6 +1312,7 @@ describe("MediaLibrary", () => {
 			];
 			const screen = await renderLibrary({ items });
 
+			// Switch to list view
 			await screen.getByRole("tab", { name: "List view" }).click();
 
 			await expect.element(screen.getByText("document.pdf")).toBeInTheDocument();
@@ -1315,23 +1414,19 @@ describe("MediaLibrary", () => {
 				const [page, setPage] = React.useState(1);
 				const [isPending, setIsPending] = React.useState(false);
 				return (
-					<>
-						<MediaLibrary
-							items={[makeMediaItem({ id: String(page), filename: `page-${page}.jpg` })]}
-							pagination={makePagination({
-								page,
-								totalCount: 90,
-								isPending,
-								onPageChange(nextPage) {
-									setPage(nextPage);
-									setIsPending(true);
-								},
-							})}
-						/>
-						<button type="button" onClick={() => setIsPending(false)}>
-							Finish page request
-						</button>
-					</>
+					<MediaLibrary
+						items={[makeMediaItem({ id: String(page), filename: `page-${page}.jpg` })]}
+						pagination={makePagination({
+							page,
+							totalCount: 90,
+							isPending,
+							onPageChange(nextPage) {
+								setPage(nextPage);
+								setIsPending(true);
+								setTimeout(setIsPending, 50, false);
+							},
+						})}
+					/>
 				);
 			}
 
@@ -1343,7 +1438,6 @@ describe("MediaLibrary", () => {
 
 			const nextPage = screen.getByRole("button", { name: "Next page" });
 			await nextPage.click();
-			await screen.getByRole("button", { name: "Finish page request" }).click();
 
 			await vi.waitFor(() => {
 				expect(document.activeElement).toBe(nextPage.element());
@@ -1351,6 +1445,7 @@ describe("MediaLibrary", () => {
 		});
 	});
 
+	// #1221: the local library gained filename search + a type filter.
 	describe("local search and filter", () => {
 		it("reports the debounced filename query upward", async () => {
 			const onLocalSearchChange = vi.fn();
@@ -1369,6 +1464,7 @@ describe("MediaLibrary", () => {
 			const items = [makeMediaItem({ id: "1", filename: "a.jpg" })];
 			const screen = await renderLibrary({ items, onLocalMimeFilterChange });
 
+			// Open the type filter and choose Images.
 			await screen.getByRole("combobox", { name: "Filter by type" }).click();
 			await screen.getByRole("option", { name: "Images" }).click();
 
@@ -1467,6 +1563,8 @@ describe("MediaLibrary", () => {
 		const STREAM_POSTER =
 			"https://customer-abc123.cloudflarestream.com/UID/thumbnails/thumbnail.jpg";
 
+		// A Cloudflare Stream item: not an image, poster in `previewUrl`, and the
+		// byte size reported only under `meta`.
 		function makeStreamProviderItem(overrides: Partial<MediaProviderItem> = {}): MediaProviderItem {
 			return {
 				id: "6a4677c7694f6e2e4270540231dd47ff",
@@ -1502,6 +1600,21 @@ describe("MediaLibrary", () => {
 			const poster = screen.getByAltText("webinar.mp4");
 			await expect.element(poster).toBeInTheDocument();
 			expect(poster.element().getAttribute("src")).toBe(STREAM_POSTER);
+			await expect.element(screen.getByText("MP4", { exact: true })).toBeInTheDocument();
+		});
+
+		it("uses the file fallback when a provider image has no preview URL", async () => {
+			const screen = await renderStreamTab(
+				makeStreamProviderItem({
+					filename: "no-preview.jpg",
+					mimeType: "image/jpeg",
+					previewUrl: undefined,
+				}),
+			);
+
+			const item = screen.getByRole("button", { name: "no-preview.jpg" }).element();
+			expect(item.querySelector("img")).toBeNull();
+			await expect.element(screen.getByText("JPEG", { exact: true })).toBeInTheDocument();
 		});
 
 		it("shows a size the provider reports only under meta", async () => {

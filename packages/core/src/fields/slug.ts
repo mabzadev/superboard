@@ -4,18 +4,23 @@ import type { FieldDefinition, FieldUIHints } from "./types.js";
 
 export interface SlugOptions {
 	required?: boolean;
-	from?: string;
+	from?: string; // Field name to generate slug from
 	pattern?: RegExp;
 	helpText?: string;
 }
 
+// Default slug pattern: lowercase alphanumeric + hyphens
 const DEFAULT_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/**
+ * Slug field - URL-safe identifier
+ */
 export function slug(options: SlugOptions = {}): FieldDefinition<string> {
 	const pattern = options.pattern || DEFAULT_SLUG_PATTERN;
 	const stringSchema = z.string().regex(pattern, "Invalid slug format");
 
-	const schema: z.ZodTypeAny = options.required ? stringSchema : stringSchema.optional();
+	// Optional vs required
+	const schema: z.ZodType = options.required ? stringSchema : stringSchema.optional();
 
 	const ui: FieldUIHints = {
 		widget: "slug",

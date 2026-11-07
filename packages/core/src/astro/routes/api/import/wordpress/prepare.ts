@@ -1,3 +1,12 @@
+/**
+ * WordPress import prepare endpoint
+ *
+ * POST /_emdash/api/import/wordpress/prepare
+ *
+ * Creates collections and fields needed for import.
+ * This is called after analyze, before execute.
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -9,6 +18,7 @@ import type { EmDashHandlers } from "#types";
 
 import { capitalize, sanitizeSlug, singularize, type ImportFieldDef } from "./analyze.js";
 
+/** Validate that a string is a known FieldType, returning undefined if not */
 function asFieldType(value: string): FieldType | undefined {
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- validated by includes check
 	return (FIELD_TYPES as readonly string[]).includes(value) ? (value as FieldType) : undefined;
@@ -45,9 +55,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const body = await parseBody(request, wpPrepareBody);
 		if (isParseError(body)) return body;
 
-		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Zod schema output narrowed to PrepareRequest
-		const result = await prepareImport(emdash.db, body as PrepareRequest);
+		const result = await prepareImport(emdash.db, body);
 
+		// Invalidate the URL pattern cache when prepare adds new collections so
+		// public routing picks up their patterns immediately. The manifest
+		// itself is built fresh per admin request, so cross-request
+		// staleness (the original failure mode in #747) is no longer
+		// possible — the execute step always reads live schema.
 		if (result.collectionsCreated.length > 0) {
 			emdash.invalidateUrlPatternCache();
 		}
@@ -76,18 +90,22 @@ async function prepareImport(
 		const collectionSlug = sanitizeSlug(postType.collection);
 
 		try {
+			// Check if collection exists
 			let collection = await registry.getCollection(collectionSlug);
 
 			if (!collection) {
+				// Create the collection
 				const label = capitalize(collectionSlug);
 				const labelSingular = capitalize(singularize(collectionSlug));
 
+				// Enable search by default for posts and pages
 				const isSearchable = ["posts", "pages", "post", "page"].includes(collectionSlug);
 				const supports: ("revisions" | "drafts" | "search")[] = ["revisions", "drafts"];
 				if (isSearchable) {
 					supports.push("search");
 				}
 
+				// Default URL patterns for known post types
 				const urlPattern =
 					collectionSlug === "pages"
 						? "/{slug}"
@@ -107,11 +125,13 @@ async function prepareImport(
 				result.collectionsCreated.push(collectionSlug);
 			}
 
+			// Create missing fields
 			const existingFields = await registry.listFields(collection.id);
 			const existingFieldSlugs = new Set(existingFields.map((f) => f.slug));
 
 			for (const field of postType.fields) {
 				if (existingFieldSlugs.has(field.slug)) {
+					// Field already exists - skip
 					continue;
 				}
 
@@ -140,6 +160,7 @@ async function prepareImport(
 				});
 			}
 
+			// Enable search if collection supports it and has searchable fields
 			const isSearchable = ["posts", "pages", "post", "page"].includes(collectionSlug);
 			if (isSearchable) {
 				const { FTSManager } = await import("#search/fts-manager.js");
@@ -149,7 +170,9 @@ async function prepareImport(
 				if (searchableFields.length > 0) {
 					try {
 						await ftsManager.enableSearch(collectionSlug);
-					} catch {}
+					} catch {
+						// Ignore - search can be enabled manually later
+					}
 				}
 			}
 		} catch (error) {

@@ -1,3 +1,11 @@
+/**
+ * WordPress REST API probe
+ *
+ * Probes self-hosted WordPress sites to detect capabilities.
+ * This source is probe-only - it tells users what's available
+ * and suggests next steps (usually: upload WXR file).
+ */
+
 import { ssrfSafeFetch, validateExternalUrl } from "../ssrf.js";
 import type {
 	ImportSource,
@@ -12,6 +20,7 @@ import type {
 const TRAILING_SLASHES = /\/+$/;
 const WP_JSON_SUFFIX = /\/wp-json\/?$/;
 
+/** WordPress REST API discovery response */
 interface WpApiDiscovery {
 	name?: string;
 	description?: string;
@@ -36,8 +45,10 @@ export const wordpressRestSource: ImportSource = {
 		try {
 			const siteUrl = normalizeUrl(url);
 
+			// SSRF protection: validate URL before any outbound requests
 			validateExternalUrl(siteUrl);
 
+			// Try to fetch the WP REST API root
 			const apiUrl = `${siteUrl}/wp-json/`;
 			const response = await ssrfSafeFetch(apiUrl, {
 				headers: { Accept: "application/json" },
@@ -45,6 +56,7 @@ export const wordpressRestSource: ImportSource = {
 			});
 
 			if (!response.ok) {
+				// Try alternate location (some sites use different prefix)
 				const altResponse = await ssrfSafeFetch(`${siteUrl}/?rest_route=/`, {
 					headers: { Accept: "application/json" },
 					signal: AbortSignal.timeout(10000),
@@ -57,12 +69,15 @@ export const wordpressRestSource: ImportSource = {
 
 			const data: WpApiDiscovery = await response.json();
 
+			// Check if this looks like WordPress
 			if (!data.namespaces?.includes("wp/v2")) {
 				return null;
 			}
 
+			// Get content counts (unauthenticated - published only)
 			const preview = await getPublicContentCounts(siteUrl);
 
+			// Check for authentication methods
 			const hasAppPasswords = !!data.authentication?.["application-passwords"];
 
 			return {
@@ -75,9 +90,9 @@ export const wordpressRestSource: ImportSource = {
 				},
 				capabilities: {
 					publicContent: true,
-					privateContent: false,
-					customPostTypes: false,
-					allMeta: false,
+					privateContent: false, // Would need auth
+					customPostTypes: false, // Only if show_in_rest: true
+					allMeta: false, // Only if registered for REST
 					mediaStream: true,
 				},
 				auth: hasAppPasswords
@@ -95,11 +110,14 @@ export const wordpressRestSource: ImportSource = {
 				},
 			};
 		} catch {
+			// Probe failed - not a WordPress site or not accessible
 			return null;
 		}
 	},
 
 	async analyze(_input: SourceInput, _context: ImportContext): Promise<ImportAnalysis> {
+		// REST-only import not implemented - we use this for probe only
+		// and suggest WXR upload for actual import
 		throw new Error("Direct REST API import not implemented. Please upload a WXR export file.");
 	},
 
@@ -109,26 +127,36 @@ export const wordpressRestSource: ImportSource = {
 	},
 };
 
+/**
+ * Normalize a URL for API requests
+ */
 function normalizeUrl(url: string): string {
 	let normalized = url.trim();
 
+	// Add protocol if missing
 	if (!normalized.startsWith("http")) {
 		normalized = `https://${normalized}`;
 	}
 
+	// Remove trailing slash
 	normalized = normalized.replace(TRAILING_SLASHES, "");
 
+	// Remove /wp-json if included
 	normalized = normalized.replace(WP_JSON_SUFFIX, "");
 
 	return normalized;
 }
 
+/**
+ * Get public content counts from REST API
+ */
 async function getPublicContentCounts(
 	siteUrl: string,
 ): Promise<{ posts?: number; pages?: number; media?: number }> {
 	const result: { posts?: number; pages?: number; media?: number } = {};
 
 	try {
+		// Fetch with per_page=1 to get total from headers
 		const [postsRes, pagesRes, mediaRes] = await Promise.allSettled([
 			ssrfSafeFetch(`${siteUrl}/wp-json/wp/v2/posts?per_page=1`, {
 				signal: AbortSignal.timeout(5000),
@@ -155,7 +183,9 @@ async function getPublicContentCounts(
 			const total = mediaRes.value.headers.get("X-WP-Total");
 			if (total) result.media = parseInt(total, 10);
 		}
-	} catch {}
+	} catch {
+		// Counts are optional, continue without them
+	}
 
 	return result;
 }

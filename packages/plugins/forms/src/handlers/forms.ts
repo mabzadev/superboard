@@ -1,7 +1,15 @@
+/**
+ * Form CRUD route handlers.
+ *
+ * `forms/list` also serves editors (`plugins:read`), without the webhook URL. Creating,
+ * updating, duplicating and deleting forms stay admin-only (`plugins:manage`).
+ */
+
 import type { RouteContext, StorageCollection } from "emdash";
 import { PluginRouteError } from "emdash";
 import { ulid } from "ulidx";
 
+import { digestTaskName } from "../digest-task.js";
 import type {
 	FormCreateInput,
 	FormDeleteInput,
@@ -10,6 +18,7 @@ import type {
 } from "../schemas.js";
 import type { FormDefinition } from "../types.js";
 
+/** Typed access to plugin storage collections */
 function forms(ctx: RouteContext): StorageCollection<FormDefinition> {
 	return ctx.storage.forms as StorageCollection<FormDefinition>;
 }
@@ -18,22 +27,43 @@ function submissions(ctx: RouteContext): StorageCollection {
 	return ctx.storage.submissions as StorageCollection;
 }
 
+// ─── List Forms ──────────────────────────────────────────────────
+
+/** `Role.ADMIN` from @emdash-cms/auth; plugins do not depend on that package. */
+export const ADMIN_ROLE = 50;
+
+/** The webhook URL is a credential (for Slack or Discord it is all anyone needs to post). */
+function withoutWebhookUrl(form: FormDefinition): FormDefinition {
+	const settings = { ...form.settings };
+	delete settings.webhookUrl;
+	return { ...form, settings };
+}
+
 export async function formsListHandler(ctx: RouteContext) {
 	const result = await forms(ctx).query({
 		orderBy: { createdAt: "desc" },
 		limit: 100,
 	});
 
+	// No user (token without a bound user) is treated like a non-admin.
+	const isAdmin = (ctx.user?.role ?? 0) >= ADMIN_ROLE;
+
 	return {
-		items: result.items.map((item) => ({ id: item.id, ...item.data })),
+		items: result.items.map((item) => ({
+			id: item.id,
+			...(isAdmin ? item.data : withoutWebhookUrl(item.data)),
+		})),
 		hasMore: result.hasMore,
 		cursor: result.cursor,
 	};
 }
 
+// ─── Create Form ─────────────────────────────────────────────────
+
 export async function formsCreateHandler(ctx: RouteContext<FormCreateInput>) {
 	const input = ctx.input;
 
+	// Check slug uniqueness
 	const existing = await forms(ctx).query({
 		where: { slug: input.slug },
 		limit: 1,
@@ -42,6 +72,7 @@ export async function formsCreateHandler(ctx: RouteContext<FormCreateInput>) {
 		throw PluginRouteError.conflict(`A form with slug "${input.slug}" already exists`);
 	}
 
+	// Validate field names are unique across all pages
 	validateFieldNames(input.pages);
 
 	const now = new Date().toISOString();
@@ -73,14 +104,17 @@ export async function formsCreateHandler(ctx: RouteContext<FormCreateInput>) {
 
 	await forms(ctx).put(id, form);
 
+	// Schedule digest cron if enabled
 	if (form.settings.digestEnabled && ctx.cron) {
-		await ctx.cron.schedule(`digest:${id}`, {
+		await ctx.cron.schedule(digestTaskName(id), {
 			schedule: `0 ${form.settings.digestHour} * * *`,
 		});
 	}
 
 	return { id, ...form };
 }
+
+// ─── Update Form ─────────────────────────────────────────────────
 
 export async function formsUpdateHandler(ctx: RouteContext<FormUpdateInput>) {
 	const input = ctx.input;
@@ -90,6 +124,7 @@ export async function formsUpdateHandler(ctx: RouteContext<FormUpdateInput>) {
 		throw PluginRouteError.notFound("Form not found");
 	}
 
+	// Check slug uniqueness if changing
 	if (input.slug && input.slug !== existing.slug) {
 		const slugCheck = await forms(ctx).query({
 			where: { slug: input.slug },
@@ -114,23 +149,25 @@ export async function formsUpdateHandler(ctx: RouteContext<FormUpdateInput>) {
 		updatedAt: new Date().toISOString(),
 	};
 
+	// Clean up empty strings
 	if (updated.settings.redirectUrl === "") updated.settings.redirectUrl = undefined;
 	if (updated.settings.webhookUrl === "") updated.settings.webhookUrl = undefined;
 
 	await forms(ctx).put(input.id, updated);
 
+	// Update digest cron if settings changed
 	if (ctx.cron) {
 		if (updated.settings.digestEnabled && !existing.settings.digestEnabled) {
-			await ctx.cron.schedule(`digest:${input.id}`, {
+			await ctx.cron.schedule(digestTaskName(input.id), {
 				schedule: `0 ${updated.settings.digestHour} * * *`,
 			});
 		} else if (!updated.settings.digestEnabled && existing.settings.digestEnabled) {
-			await ctx.cron.cancel(`digest:${input.id}`);
+			await ctx.cron.cancel(digestTaskName(input.id));
 		} else if (
 			updated.settings.digestEnabled &&
 			updated.settings.digestHour !== existing.settings.digestHour
 		) {
-			await ctx.cron.schedule(`digest:${input.id}`, {
+			await ctx.cron.schedule(digestTaskName(input.id), {
 				schedule: `0 ${updated.settings.digestHour} * * *`,
 			});
 		}
@@ -138,6 +175,8 @@ export async function formsUpdateHandler(ctx: RouteContext<FormUpdateInput>) {
 
 	return { id: input.id, ...updated };
 }
+
+// ─── Delete Form ─────────────────────────────────────────────────
 
 export async function formsDeleteHandler(ctx: RouteContext<FormDeleteInput>) {
 	const input = ctx.input;
@@ -147,18 +186,22 @@ export async function formsDeleteHandler(ctx: RouteContext<FormDeleteInput>) {
 		throw PluginRouteError.notFound("Form not found");
 	}
 
+	// Delete associated submissions if requested
 	if (input.deleteSubmissions) {
 		await deleteFormSubmissions(input.id, ctx);
 	}
 
+	// Cancel digest cron
 	if (ctx.cron) {
-		await ctx.cron.cancel(`digest:${input.id}`).catch(() => {});
+		await ctx.cron.cancel(digestTaskName(input.id)).catch(() => {});
 	}
 
 	await forms(ctx).delete(input.id);
 
 	return { deleted: true };
 }
+
+// ─── Duplicate Form ──────────────────────────────────────────────
 
 export async function formsDuplicateHandler(ctx: RouteContext<FormDuplicateInput>) {
 	const input = ctx.input;
@@ -171,6 +214,7 @@ export async function formsDuplicateHandler(ctx: RouteContext<FormDuplicateInput
 	const newSlug = input.slug ?? `${existing.slug}-copy`;
 	const newName = input.name ?? `${existing.name} (Copy)`;
 
+	// Check slug uniqueness
 	const slugCheck = await forms(ctx).query({
 		where: { slug: newSlug },
 		limit: 1,
@@ -193,8 +237,17 @@ export async function formsDuplicateHandler(ctx: RouteContext<FormDuplicateInput
 
 	await forms(ctx).put(id, duplicate);
 
+	// The copy carries the digest setting, so it needs its own task
+	if (duplicate.settings.digestEnabled && ctx.cron) {
+		await ctx.cron.schedule(digestTaskName(id), {
+			schedule: `0 ${duplicate.settings.digestHour} * * *`,
+		});
+	}
+
 	return { id, ...duplicate };
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────
 
 function validateFieldNames(pages: Array<{ fields: Array<{ name: string }> }>) {
 	const names = new Set<string>();
@@ -208,6 +261,7 @@ function validateFieldNames(pages: Array<{ fields: Array<{ name: string }> }>) {
 	}
 }
 
+/** Delete all submissions for a form, including media files */
 async function deleteFormSubmissions(formId: string, ctx: RouteContext) {
 	let cursor: string | undefined;
 	do {
@@ -217,6 +271,7 @@ async function deleteFormSubmissions(formId: string, ctx: RouteContext) {
 			cursor,
 		});
 
+		// Delete associated media files
 		if (ctx.media && "delete" in ctx.media) {
 			const mediaWithDelete = ctx.media as { delete(id: string): Promise<boolean> };
 			for (const item of batch.items) {

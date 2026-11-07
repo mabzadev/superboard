@@ -1,3 +1,10 @@
+/**
+ * Plugin State Repository
+ *
+ * Database-backed storage for plugin activation state.
+ * Used by the admin API to persist plugin enable/disable across restarts.
+ */
+
 import type { Kysely } from "kysely";
 
 import type { Database } from "../database/types.js";
@@ -10,6 +17,16 @@ export function isPluginStateEnabled(
 	defaultEnabled: boolean = true,
 ): boolean {
 	return status === "active" || (status === undefined && defaultEnabled);
+}
+
+const TIMEZONE_SUFFIX = /(?:z|[+-]\d{2}(?::?\d{2})?)$/i;
+const HOUR_OFFSET_SUFFIX = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?[+-]\d{2}$/i;
+
+function parseDatabaseTimestamp(value: string): Date {
+	let normalized = value.trim().replace(" ", "T");
+	if (HOUR_OFFSET_SUFFIX.test(normalized)) normalized += ":00";
+	else if (!TIMEZONE_SUFFIX.test(normalized)) normalized += "Z";
+	return new Date(normalized);
 }
 
 function toPluginStatus(value: string): PluginStatus {
@@ -34,15 +51,34 @@ export interface PluginState {
 	marketplaceVersion: string | null;
 	displayName: string | null;
 	description: string | null;
+	/**
+	 * Publisher DID this plugin was published under. Populated only when
+	 * `source === "registry"`; null otherwise.
+	 */
 	registryPublisherDid: string | null;
+	/**
+	 * Slug under which the plugin was published in the publisher's repo
+	 * (the rkey of the `pm.fair.package.profile` record). Populated only
+	 * when `source === "registry"`; null otherwise.
+	 *
+	 * The opaque `pluginId` for registry installs is derived from
+	 * `(registryPublisherDid, registrySlug)` -- see
+	 * `packages/core/src/registry/plugin-id.ts`.
+	 */
 	registrySlug: string | null;
 	mcpToolsEnabled: boolean;
 	mcpToolsConsent: string | null;
 }
 
+/**
+ * Repository for plugin state in the database
+ */
 export class PluginStateRepository {
 	constructor(private db: Kysely<Database>) {}
 
+	/**
+	 * Get state for a specific plugin
+	 */
 	async get(pluginId: string): Promise<PluginState | null> {
 		const row = await this.db
 			.selectFrom("_plugin_state")
@@ -55,11 +91,17 @@ export class PluginStateRepository {
 		return rowToPluginState(row);
 	}
 
+	/**
+	 * Get all plugin states
+	 */
 	async getAll(): Promise<PluginState[]> {
 		const rows = await this.db.selectFrom("_plugin_state").selectAll().execute();
 		return rows.map(rowToPluginState);
 	}
 
+	/**
+	 * Get all marketplace-installed plugin states
+	 */
 	async getMarketplacePlugins(): Promise<PluginState[]> {
 		const rows = await this.db
 			.selectFrom("_plugin_state")
@@ -69,6 +111,12 @@ export class PluginStateRepository {
 		return rows.map(rowToPluginState);
 	}
 
+	/**
+	 * Get all registry-installed plugin states.
+	 *
+	 * The runtime's registry sync path uses this to discover which
+	 * registry plugins should be loaded into the sandbox on this worker.
+	 */
 	async getRegistryPlugins(): Promise<PluginState[]> {
 		const rows = await this.db
 			.selectFrom("_plugin_state")
@@ -78,6 +126,9 @@ export class PluginStateRepository {
 		return rows.map(rowToPluginState);
 	}
 
+	/**
+	 * Create or update plugin state
+	 */
 	async upsert(
 		pluginId: string,
 		version: string,
@@ -97,6 +148,7 @@ export class PluginStateRepository {
 		const existing = await this.get(pluginId);
 
 		if (existing) {
+			// Update existing state
 			const updates: Record<string, string | number | null> = {
 				status,
 				version,
@@ -137,6 +189,7 @@ export class PluginStateRepository {
 				.where("plugin_id", "=", pluginId)
 				.execute();
 		} else {
+			// Create new state
 			await this.db
 				.insertInto("_plugin_state")
 				.values({
@@ -162,14 +215,85 @@ export class PluginStateRepository {
 		return (await this.get(pluginId))!;
 	}
 
+	/**
+	 * Insert an active state row unless the plugin already has one.
+	 *
+	 * Returns true only for the caller whose insert created the row, so
+	 * concurrent callers agree on a single owner for one-time setup.
+	 */
+	async createActiveIfAbsent(
+		pluginId: string,
+		version: string,
+		source: PluginSource,
+	): Promise<boolean> {
+		const now = new Date().toISOString();
+		const inserted = await this.db
+			.insertInto("_plugin_state")
+			.values({
+				plugin_id: pluginId,
+				status: "active",
+				version,
+				installed_at: now,
+				activated_at: now,
+				deactivated_at: null,
+				data: null,
+				source,
+				marketplace_version: null,
+				display_name: null,
+				description: null,
+				registry_publisher_did: null,
+				registry_slug: null,
+				mcp_tools_consent: null,
+			})
+			.onConflict((oc) => oc.column("plugin_id").doNothing())
+			.returning("plugin_id")
+			.executeTakeFirst();
+		return inserted !== undefined;
+	}
+
+	async restoreIfVersion(expectedVersion: string, state: PluginState): Promise<boolean> {
+		const result = await this.db
+			.updateTable("_plugin_state")
+			.set({
+				version: state.version,
+				status: state.status,
+				installed_at: state.installedAt.toISOString(),
+				activated_at: state.activatedAt?.toISOString() ?? null,
+				deactivated_at: state.deactivatedAt?.toISOString() ?? null,
+				source: state.source,
+				marketplace_version: state.marketplaceVersion,
+				display_name: state.displayName,
+				description: state.description,
+				registry_publisher_did: state.registryPublisherDid,
+				registry_slug: state.registrySlug,
+				mcp_tools_enabled: state.mcpToolsEnabled ? 1 : 0,
+				mcp_tools_consent: state.mcpToolsConsent,
+			})
+			.where("plugin_id", "=", state.pluginId)
+			.where("version", "=", expectedVersion)
+			.where("source", "=", state.source)
+			.executeTakeFirst();
+
+		return (result.numUpdatedRows ?? 0n) > 0n;
+	}
+
+	/**
+	 * Enable a plugin
+	 */
 	async enable(pluginId: string, version: string): Promise<PluginState> {
 		return this.upsert(pluginId, version, "active");
 	}
 
+	/**
+	 * Disable a plugin
+	 */
 	async disable(pluginId: string, version: string): Promise<PluginState> {
 		return this.upsert(pluginId, version, "inactive");
 	}
 
+	/**
+	 * Delete plugin state
+	 */
 	async delete(pluginId: string): Promise<boolean> {
 		const result = await this.db
 			.deleteFrom("_plugin_state")
@@ -180,7 +304,12 @@ export class PluginStateRepository {
 	}
 }
 
-interface PluginStateRow {
+/**
+ * Map a `_plugin_state` row to the public `PluginState` shape. Every read
+ * path uses this, so adding a column to the table means changing this
+ * function and nothing else.
+ */
+export interface PluginStateRow {
 	plugin_id: string;
 	status: string;
 	version: string;
@@ -197,14 +326,14 @@ interface PluginStateRow {
 	mcp_tools_consent: string | null;
 }
 
-function rowToPluginState(row: PluginStateRow): PluginState {
+export function rowToPluginState(row: PluginStateRow): PluginState {
 	return {
 		pluginId: row.plugin_id,
 		status: toPluginStatus(row.status),
 		version: row.version,
-		installedAt: new Date(row.installed_at),
-		activatedAt: row.activated_at ? new Date(row.activated_at) : null,
-		deactivatedAt: row.deactivated_at ? new Date(row.deactivated_at) : null,
+		installedAt: parseDatabaseTimestamp(row.installed_at),
+		activatedAt: row.activated_at ? parseDatabaseTimestamp(row.activated_at) : null,
+		deactivatedAt: row.deactivated_at ? parseDatabaseTimestamp(row.deactivated_at) : null,
 		source: toPluginSource(row.source),
 		marketplaceVersion: row.marketplace_version ?? null,
 		displayName: row.display_name ?? null,

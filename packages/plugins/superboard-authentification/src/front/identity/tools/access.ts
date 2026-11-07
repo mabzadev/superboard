@@ -11,12 +11,9 @@ export enum Access {
 	WriteApp = "WriteApp",
 	ReadScope = "ReadScope",
 	WriteScope = "WriteScope",
-	ReadOrg = "ReadOrg",
-	WriteOrg = "WriteOrg",
 	ReadLog = "ReadLog",
 	WriteLog = "WriteLog",
 	Impersonation = "Impersonation",
-	ManageSamlSso = "ManageSamlSso",
 }
 
 export const AllowedRoles = [typeTool.Role.SuperAdmin];
@@ -33,12 +30,9 @@ export const RoleAccesses = {
 		Access.WriteApp,
 		Access.ReadScope,
 		Access.WriteScope,
-		Access.ReadOrg,
-		Access.WriteOrg,
 		Access.ReadLog,
 		Access.WriteLog,
 		Access.Impersonation,
-		Access.ManageSamlSso,
 	],
 };
 

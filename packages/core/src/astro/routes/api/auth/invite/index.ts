@@ -1,10 +1,23 @@
+/**
+ * POST /_emdash/api/auth/invite
+ *
+ * Create an invite for a new user. Admin only.
+ *
+ * When an email provider is configured (via the plugin email pipeline),
+ * the invite email is sent automatically.
+ * When no provider is configured, returns the invite URL for the admin
+ * to share manually (copy-link fallback).
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;
 
+import { getInviteEmailStrings } from "@emdash-cms/admin/locales/emails";
 import { createInvite, InviteError, Role } from "@emdash-cms/auth";
 import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
 
+import { resolveEmailLocale } from "#api/email-locale.js";
 import { apiError, apiSuccess, handleError } from "#api/error.js";
 import { isParseError, parseBody } from "#api/parse.js";
 import { inviteCreateBody } from "#api/schemas.js";
@@ -28,16 +41,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const body = await parseBody(request, inviteCreateBody);
 		if (isParseError(body)) return body;
 
+		// Default to AUTHOR role if not specified (Zod validates the level)
 		const role = body.role ?? Role.AUTHOR;
 
+		// Get site config for invite email
 		const options = new OptionsRepository(emdash.db);
-		const siteName = (await options.get<string>("emdash:site_title")) || "EmDash";
+		const siteOptions = await options.getMany<string>(["emdash:site_title", "emdash:locale"]);
+		const siteName = siteOptions.get("emdash:site_title") || "EmDash";
 
+		// Use the configured site URL (stored option as fallback) to prevent Host header spoofing in invite emails
 		const baseUrl = await getSiteBaseUrl(emdash.db, request, emdash.config);
 
+		// Build email sender from the plugin pipeline (if available)
 		const emailSend = emdash.email?.isAvailable()
 			? (message: { to: string; subject: string; text: string; html?: string }) =>
 					emdash.email!.send(message, "system")
+			: undefined;
+
+		// Localize the invite email copy. Only resolved when an
+		// email will actually be sent — the copy-link fallback has no copy.
+		const emailLocale = emailSend
+			? resolveEmailLocale(siteOptions.get("emdash:locale"), request)
+			: undefined;
+		const emailStrings = emailLocale
+			? await getInviteEmailStrings(emailLocale, siteName)
 			: undefined;
 
 		const result = await createInvite(
@@ -45,6 +72,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 				baseUrl,
 				siteName,
 				email: emailSend,
+				emailStrings,
+				emailLocale,
 			},
 			adapter,
 			body.email,
@@ -53,12 +82,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		);
 
 		if (emailSend) {
+			// Email was sent
 			return apiSuccess({
 				success: true,
 				message: `Invite sent to ${body.email}`,
 			});
 		}
 
+		// No email provider — return the invite URL for manual sharing
 		return apiSuccess(
 			{
 				success: true,

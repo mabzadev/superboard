@@ -10,6 +10,7 @@ import {
 } from "../../../../../../packages/core/src/astro/middleware/scoped-db.js";
 import { runWithContext } from "../../../../../../packages/core/src/request-context.js";
 
+/** Build a streaming Response whose body emits the given chunks. */
 function streamingResponse(chunks: string[], init?: ResponseInit): Response {
 	const encoder = new TextEncoder();
 	const body = new ReadableStream<Uint8Array>({
@@ -21,11 +22,17 @@ function streamingResponse(chunks: string[], init?: ResponseInit): Response {
 	return new Response(body, init);
 }
 
+/** Fully drain a response body so any stream-end hooks fire. */
 async function drain(response: Response): Promise<string> {
 	return response.body ? await new Response(response.body).text() : "";
 }
 
 describe("requestEndedAuthenticated", () => {
+	/**
+	 * Minimal AstroCookies stand-in: headers() yields serialized Set-Cookie
+	 * strings for cookies set during the request, and nothing for cookies that
+	 * only arrived on the request.
+	 */
 	function jar(outgoing: string[]) {
 		return { headers: () => outgoing };
 	}
@@ -41,6 +48,8 @@ describe("requestEndedAuthenticated", () => {
 	});
 
 	it("is false for an anonymous request that merely arrived with a session cookie", () => {
+		// A stale astro-session cookie on the request is not an outgoing
+		// cookie, so it yields nothing from headers().
 		expect(requestEndedAuthenticated(false, jar([]))).toBe(false);
 	});
 
@@ -59,6 +68,7 @@ describe("wrapResponseForScopedClose", () => {
 		const wrapped = wrapResponseForScopedClose(response, close);
 
 		expect(close).toHaveBeenCalledTimes(1);
+		// Bodyless responses pass through unchanged.
 		expect(wrapped).toBe(response);
 	});
 
@@ -66,6 +76,7 @@ describe("wrapResponseForScopedClose", () => {
 		const close = vi.fn();
 		const wrapped = wrapResponseForScopedClose(streamingResponse(["a", "b"]), close);
 
+		// Not closed yet — the body hasn't been read.
 		expect(close).not.toHaveBeenCalled();
 
 		const text = await drain(wrapped);
@@ -242,6 +253,7 @@ describe("finishScoped", () => {
 
 		const response = await finishScoped({ commit, close }, async () => streamingResponse(["body"]));
 
+		// commit runs before the response is returned; close is still pending.
 		expect(commit).toHaveBeenCalledTimes(1);
 		expect(close).not.toHaveBeenCalled();
 
@@ -287,6 +299,9 @@ describe("finishScoped", () => {
 	});
 
 	it("still closes the connection when commit() throws on the success path", async () => {
+		// Regression: a previous version called commit() unguarded on the
+		// success path, so a throwing commit skipped close() and leaked the
+		// connection.
 		const close = vi.fn();
 		const commit = vi.fn(() => {
 			throw new Error("commit failed");
@@ -313,12 +328,15 @@ describe("finishScoped", () => {
 			}),
 		).rejects.toBe(renderError);
 
+		// close still runs even though commit threw during error handling.
 		expect(close).toHaveBeenCalledTimes(1);
 		expect(errorSpy).toHaveBeenCalled();
 		errorSpy.mockRestore();
 	});
 
 	it("does not mask a run() error when close() throws on the error path", async () => {
+		// Regression: close() on the error path was unguarded, so a throwing
+		// teardown would replace the render error the caller needs to see.
 		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 		const commit = vi.fn();
 		const close = vi.fn(() => {
@@ -339,6 +357,8 @@ describe("finishScoped", () => {
 	});
 
 	it("surfaces the commit error, not a later close error, on the success path", async () => {
+		// When commit() fails after a successful render, the caller must see the
+		// commit failure; a throwing close() during cleanup must not mask it.
 		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 		const commit = vi.fn(() => {
 			throw new Error("commit failed");

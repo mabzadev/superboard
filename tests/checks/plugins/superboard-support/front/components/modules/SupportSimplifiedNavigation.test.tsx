@@ -1,7 +1,13 @@
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen, waitFor, within } from "../../../../../packages/supbrd-front-ui/render.js";
+import {
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within,
+} from "../../../../../packages/supbrd-front-ui/render.js";
 
 const transport = vi.hoisted(() => {
 	const page = (data: unknown[]) => ({
@@ -77,14 +83,17 @@ const transport = vi.hoisted(() => {
 		const match = routes.find(([pattern]) => pattern.test(path));
 		return { data: match ? match[1] : page([]) };
 	});
-	return { GET };
+	const PATCH = vi.fn(async (_url: string, body: Record<string, unknown>) => ({
+		data: { data: { ...(String(_url).includes("portals") ? portal : inbox), ...body } },
+	}));
+	return { GET, PATCH };
 });
 
 vi.mock("../../../../../../../packages/plugins/superboard-support/src/front/transport.js", () => ({
 	GET: transport.GET,
 	POST: vi.fn(),
 	PUT: vi.fn(),
-	PATCH: vi.fn(),
+	PATCH: transport.PATCH,
 	DELETE: vi.fn(),
 	request: vi.fn(),
 }));
@@ -114,6 +123,11 @@ const tabNames = (list: HTMLElement) =>
 		.map((tab) => tab.textContent);
 
 describe("Support pages keep a single navigation row", () => {
+	beforeAll(() => {
+		if (!("PointerEvent" in window))
+			Object.defineProperty(window, "PointerEvent", { value: MouseEvent, configurable: true });
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 		globalThis.ResizeObserver ??= class {
@@ -167,6 +181,46 @@ describe("Support pages keep a single navigation row", () => {
 			expect(screen.getByLabelText("Identifier")).toHaveValue("web-support");
 		},
 	);
+
+	it("saves an inbox setting as soon as its switch changes", async () => {
+		window.history.replaceState(null, "", "/support/inbox?inbox=inbox-1&tab=general");
+		render(<SupportInboxWorkspace />);
+		const satisfaction = await screen.findByRole("switch", { name: "Customer satisfaction" });
+		expect(satisfaction).toBeChecked();
+		expect(screen.queryByRole("button", { name: /save/i })).not.toBeInTheDocument();
+		fireEvent.click(satisfaction);
+		await waitFor(
+			() =>
+				expect(transport.PATCH).toHaveBeenCalledWith(
+					expect.stringMatching(/\/workforce\/inboxes\/inbox-1$/),
+					expect.objectContaining({ name: "Web support", csat_enabled: false }),
+					expect.anything(),
+				),
+			{ timeout: 3000 },
+		);
+	});
+
+	it("saves the help center portal settings automatically and never an empty name", async () => {
+		window.history.replaceState(null, "", "/support/help-center?portal=portal-1&tab=settings");
+		render(<SupportHelpCenterWorkspace />);
+		const name = await screen.findByLabelText("Name");
+		fireEvent.change(name, { target: { value: "" } });
+		expect(await screen.findByText("This field is required.")).toBeVisible();
+		await new Promise((resolve) => {
+			setTimeout(resolve, 900);
+		});
+		expect(transport.PATCH).not.toHaveBeenCalled();
+		fireEvent.change(name, { target: { value: "Help" } });
+		await waitFor(
+			() =>
+				expect(transport.PATCH).toHaveBeenCalledWith(
+					expect.stringMatching(/\/help-center\/portals\/portal-1$/),
+					expect.objectContaining({ name: "Help", slug: "customer-help", custom_domain: null }),
+					expect.anything(),
+				),
+			{ timeout: 3000 },
+		);
+	});
 
 	it("chooses the automation type from the toolbar instead of sub-tabs", async () => {
 		window.history.replaceState(null, "", "/support/inbox?section=automations");
@@ -237,7 +291,7 @@ describe("Support pages keep a single navigation row", () => {
 	});
 
 	it("replaces the contact list with the contact and returns to it", async () => {
-		window.history.replaceState(null, "", "/support/settings?tab=contacts");
+		window.history.replaceState(null, "", "/support/inbox?section=contacts");
 		const user = userEvent.setup();
 		render(<SupportContactsPage embedded />);
 
@@ -255,7 +309,7 @@ describe("Support pages keep a single navigation row", () => {
 
 		await user.click(screen.getByRole("button", { name: "All contacts" }));
 		expect(new URL(window.location.href).searchParams.has("contact")).toBe(false);
-		expect(new URL(window.location.href).searchParams.get("tab")).toBe("contacts");
+		expect(new URL(window.location.href).searchParams.get("section")).toBe("contacts");
 		expect(await screen.findByRole("button", { name: /Ada Lovelace/ })).toBeVisible();
 
 		await user.click(screen.getByRole("button", { name: "New contact" }));
@@ -265,7 +319,7 @@ describe("Support pages keep a single navigation row", () => {
 	});
 
 	it("opens a contact directly from its address", async () => {
-		window.history.replaceState(null, "", "/support/settings?tab=contacts&contact=contact-1");
+		window.history.replaceState(null, "", "/support/inbox?section=contacts&contact=contact-1");
 		render(<SupportContactsPage embedded />);
 		await waitFor(() => expect(screen.getByLabelText("Customer ID")).toHaveValue("user-1"));
 		expect(screen.getByLabelText("Name")).toHaveValue("Ada Lovelace");

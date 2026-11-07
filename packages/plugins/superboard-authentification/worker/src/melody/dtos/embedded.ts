@@ -138,16 +138,6 @@ export class MfaDto {
   }
 }
 
-export class SmsMfaSetupDto {
-  @IsString()
-  @IsNotEmpty()
-    phoneNumber: string
-
-  constructor (dto: SmsMfaSetupDto) {
-    this.phoneNumber = dto.phoneNumber
-  }
-}
-
 export class PostMfaEnrollmentDto {
   @IsString()
   @IsNotEmpty()
@@ -187,15 +177,5 @@ export class PostPasskeyVerifyDto {
   constructor (dto: PostPasskeyVerifyDto) {
     this.passkeyInfo = dto.passkeyInfo
     this.challenge = dto.challenge
-  }
-}
-
-export class PostSwitchUserOrgDto {
-  @IsString()
-  @IsNotEmpty()
-    org: string
-
-  constructor (dto: PostSwitchUserOrgDto) {
-    this.org = dto.org
   }
 }

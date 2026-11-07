@@ -1,3 +1,10 @@
+/**
+ * POST /_emdash/api/auth/signup/complete
+ *
+ * Complete self-signup by registering a passkey for the new user.
+ * This creates the user account and establishes a session.
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -15,12 +22,15 @@ import { createChallengeStore } from "#auth/challenge-store.js";
 import { getPasskeyConfig } from "#auth/passkey-config.js";
 import { OptionsRepository } from "#db/repositories/options.js";
 
+import { sessionUnavailableError } from "../../../../session-user.js";
+
 export const POST: APIRoute = async ({ request, locals, session }) => {
 	const { emdash } = locals;
 
 	if (!emdash?.db) {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
+	if (!session) return sessionUnavailableError();
 
 	try {
 		const body = await parseBody(request, signupCompleteBody);
@@ -28,6 +38,7 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 
 		const adapter = createKyselyAdapter(emdash.db);
 
+		// Get passkey config
 		const url = new URL(request.url);
 		const options = new OptionsRepository(emdash.db);
 		const siteName = (await options.get<string>("emdash:site_title")) ?? undefined;
@@ -38,6 +49,7 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 		);
 		const passkeyConfig = getPasskeyConfig(url, siteName, siteUrl, allowedOrigins);
 
+		// Verify the passkey registration response
 		const challengeStore = createChallengeStore(emdash.db);
 		const verified = await verifyRegistrationResponse(
 			passkeyConfig,
@@ -45,15 +57,15 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 			challengeStore,
 		);
 
+		// Complete the signup - creates the user
 		const user = await completeSignup(adapter, body.token, {
 			name: body.name,
 		});
 
+		// Register the passkey for the new user
 		await registerPasskey(adapter, user.id, verified, "Initial passkey");
 
-		if (session) {
-			session.set("user", { id: user.id });
-		}
+		session.set("user", { id: user.id });
 
 		return apiSuccess({
 			success: true,

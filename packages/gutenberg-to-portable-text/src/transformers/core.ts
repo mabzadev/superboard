@@ -1,7 +1,18 @@
-import { extractAlt, extractCaption, extractSrc, extractText } from "../inline.js";
+/**
+ * Transformers for WordPress core/* blocks
+ */
+
+import {
+	decodeUrlEntities,
+	extractAlt,
+	extractCaption,
+	extractSrc,
+	extractText,
+} from "../inline.js";
 import type {
 	GutenbergBlock,
 	PortableTextBlock,
+	PortableTextButtonBlock,
 	PortableTextTextBlock,
 	BlockTransformer,
 	TransformContext,
@@ -9,6 +20,7 @@ import type {
 import { attrString, attrNumber, attrBoolean, attrObject } from "../types.js";
 import { sanitizeHref } from "../url.js";
 
+// Regex patterns for core block transformers
 const UOL_TAG_PATTERN = /<[uo]l[^>]*>([\s\S]*)<\/[uo]l>/i;
 const LI_TAG_PATTERN = /<li[^>]*>([\s\S]*?)<\/li>/i;
 const UL_TAG_PATTERN = /<ul[^>]*>([\s\S]*)<\/ul>/i;
@@ -17,14 +29,10 @@ const NESTED_LIST_PATTERN = /<[uo]l[^>]*>[\s\S]*<\/[uo]l>/gi;
 const P_TAG_PATTERN = /<p[^>]*>([\s\S]*?)<\/p>/gi;
 const P_TAG_SINGLE_PATTERN = /<p[^>]*>([\s\S]*?)<\/p>/i;
 const HREF_PATTERN = /href="([^"]*)"/i;
+const ANCHOR_HREF_PATTERN = /<a\b[^>]*?\shref="([^"]*)"/i;
 const DATA_ID_PATTERN = /data-id=["'](\d+)["']/i;
 const CODE_TAG_PATTERN_SINGLE = /<code[^>]*>([\s\S]*?)<\/code>/i;
-const TABLE_TAG_PATTERN = /<table[^>]*>([\s\S]*?)<\/table>/i;
-const THEAD_TAG_PATTERN = /<thead[^>]*>([\s\S]*?)<\/thead>/i;
 const IMG_TAG_GLOBAL = /<img[^>]+>/gi;
-const TABLE_ROW_PATTERN = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-const TABLE_CELL_PATTERN = /<(th|td)[^>]*>([\s\S]*?)<\/\1>/gi;
-const TBODY_TAG_PATTERN = /<tbody[^>]*>([\s\S]*?)<\/tbody>/i;
 const CITE_TAG_PATTERN = /<cite[^>]*>([\s\S]*?)<\/cite>/i;
 const LT_ENTITY_PATTERN = /&lt;/g;
 const GT_ENTITY_PATTERN = /&gt;/g;
@@ -33,9 +41,13 @@ const QUOT_ENTITY_PATTERN = /&quot;/g;
 const APOS_ENTITY_PATTERN = /&#039;/g;
 const NBSP_ENTITY_PATTERN = /&nbsp;/g;
 
+/**
+ * core/paragraph → block with style "normal"
+ */
 export const paragraph: BlockTransformer = (block, _options, context) => {
 	const { children, markDefs } = context.parseInlineContent(block.innerHTML);
 
+	// Skip empty paragraphs
 	if (children.length === 1 && children[0]?.text === "") {
 		return [];
 	}
@@ -54,6 +66,9 @@ export const paragraph: BlockTransformer = (block, _options, context) => {
 	return [result];
 };
 
+/**
+ * core/heading → block with style "h1"-"h6"
+ */
 export const heading: BlockTransformer = (block, _options, context) => {
 	const level = attrNumber(block.attrs, "level") ?? 2;
 	const { children, markDefs } = context.parseInlineContent(block.innerHTML);
@@ -72,20 +87,30 @@ export const heading: BlockTransformer = (block, _options, context) => {
 	return [result];
 };
 
+/**
+ * core/list → blocks with listItem
+ *
+ * Handles both old format (HTML list) and new format (innerBlocks with list-item)
+ */
 export const list: BlockTransformer = (block, _options, context) => {
 	const ordered = block.attrs.ordered === true;
 	const listItem = ordered ? "number" : "bullet";
 
+	// Check for new format (WordPress 6.x) with core/list-item innerBlocks
 	if (block.innerBlocks.length > 0) {
 		return parseListItemBlocks(block.innerBlocks, listItem, 1, context);
 	}
 
+	// Old format: HTML content in innerHTML
 	const listMatch = block.innerHTML.match(UOL_TAG_PATTERN);
 	const listContent = listMatch?.[1] || block.innerHTML;
 
 	return parseListItems(listContent, listItem, 1, context);
 };
 
+/**
+ * Parse list-item blocks (WordPress 6.x format)
+ */
 function parseListItemBlocks(
 	innerBlocks: GutenbergBlock[],
 	listItem: "bullet" | "number",
@@ -97,6 +122,7 @@ function parseListItemBlocks(
 	for (const itemBlock of innerBlocks) {
 		if (itemBlock.blockName !== "core/list-item") continue;
 
+		// Get text content from the <li> in innerHTML
 		const textMatch = itemBlock.innerHTML.match(LI_TAG_PATTERN);
 		const textContent = textMatch?.[1]?.trim() || "";
 
@@ -119,6 +145,7 @@ function parseListItemBlocks(
 			blocks.push(block);
 		}
 
+		// Handle nested lists in innerBlocks
 		if (itemBlock.innerBlocks.length > 0) {
 			for (const nested of itemBlock.innerBlocks) {
 				if (nested.blockName === "core/list") {
@@ -135,6 +162,9 @@ function parseListItemBlocks(
 	return blocks;
 }
 
+/**
+ * Parse list items from HTML
+ */
 function parseListItems(
 	html: string,
 	listItem: "bullet" | "number",
@@ -143,12 +173,16 @@ function parseListItems(
 ): PortableTextTextBlock[] {
 	const blocks: PortableTextTextBlock[] = [];
 
+	// Match <li> elements - need to handle nested lists carefully
+	// Find each top-level <li> by tracking tag depth
 	const liItems = extractTopLevelListItems(html);
 
 	for (const liContent of liItems) {
+		// Check for nested lists
 		const nestedUl = liContent.match(UL_TAG_PATTERN);
 		const nestedOl = liContent.match(OL_TAG_PATTERN);
 
+		// Get text content (excluding nested lists)
 		let textContent = liContent.replace(NESTED_LIST_PATTERN, "").trim();
 
 		if (textContent) {
@@ -170,6 +204,7 @@ function parseListItems(
 			blocks.push(block);
 		}
 
+		// Process nested lists
 		if (nestedUl?.[1]) {
 			blocks.push(...parseListItems(nestedUl[1], "bullet", level + 1, context));
 		}
@@ -181,6 +216,9 @@ function parseListItems(
 	return blocks;
 }
 
+/**
+ * Extract top-level <li> items from HTML, handling nested lists correctly
+ */
 function extractTopLevelListItems(html: string): string[] {
 	const items: string[] = [];
 	let depth = 0;
@@ -189,7 +227,9 @@ function extractTopLevelListItems(html: string): string[] {
 	let i = 0;
 
 	while (i < html.length) {
+		// Check for opening tags
 		if (html.substring(i, i + 3).toLowerCase() === "<li") {
+			// Find end of tag
 			const tagEnd = html.indexOf(">", i);
 			if (tagEnd === -1) break;
 
@@ -198,6 +238,7 @@ function extractTopLevelListItems(html: string): string[] {
 				i = tagEnd + 1;
 				continue;
 			} else {
+				// Nested li
 				currentItem += html.substring(i, tagEnd + 1);
 				depth++;
 				i = tagEnd + 1;
@@ -205,14 +246,17 @@ function extractTopLevelListItems(html: string): string[] {
 			}
 		}
 
+		// Check for closing </li>
 		if (html.substring(i, i + 5).toLowerCase() === "</li>") {
 			if (depth === 0) {
+				// End of current top-level item
 				items.push(currentItem);
 				currentItem = "";
 				inLi = false;
 				i += 5;
 				continue;
 			} else {
+				// End of nested item
 				currentItem += "</li>";
 				depth--;
 				i += 5;
@@ -220,6 +264,7 @@ function extractTopLevelListItems(html: string): string[] {
 			}
 		}
 
+		// Check for nested list tags to track depth
 		if (
 			html.substring(i, i + 3).toLowerCase() === "<ul" ||
 			html.substring(i, i + 3).toLowerCase() === "<ol"
@@ -241,22 +286,29 @@ function extractTopLevelListItems(html: string): string[] {
 			continue;
 		}
 
+		// Regular character
 		if (inLi) {
 			currentItem += html[i];
 		}
 		i++;
 	}
 
+	// Handle case where closing </li> is missing
 	if (currentItem.trim()) {
 		items.push(currentItem);
 	}
 
+	// Filter out empty items that may result from whitespace between tags
 	return items.filter((item) => item.trim().length > 0);
 }
 
+/**
+ * core/quote → block with style "blockquote"
+ */
 export const quote: BlockTransformer = (block, _options, context) => {
 	const blocks: PortableTextBlock[] = [];
 
+	// Extract paragraphs from the blockquote
 	let match;
 
 	while ((match = P_TAG_PATTERN.exec(block.innerHTML)) !== null) {
@@ -277,6 +329,7 @@ export const quote: BlockTransformer = (block, _options, context) => {
 		blocks.push(quoteBlock);
 	}
 
+	// If no paragraphs found, treat entire content as quote
 	if (blocks.length === 0) {
 		const { children, markDefs } = context.parseInlineContent(block.innerHTML);
 
@@ -294,6 +347,7 @@ export const quote: BlockTransformer = (block, _options, context) => {
 		blocks.push(quoteBlock);
 	}
 
+	// Handle citation if present
 	const citation = attrString(block.attrs, "citation");
 	if (citation) {
 		const { children, markDefs } = context.parseInlineContent(citation);
@@ -322,6 +376,9 @@ export const quote: BlockTransformer = (block, _options, context) => {
 	return blocks;
 };
 
+/**
+ * core/image → image block
+ */
 export const image: BlockTransformer = (block, options, context) => {
 	const wpId = attrNumber(block.attrs, "id");
 	const src = attrString(block.attrs, "url") ?? extractSrc(block.innerHTML);
@@ -329,6 +386,7 @@ export const image: BlockTransformer = (block, options, context) => {
 	const caption = extractCaption(block.innerHTML);
 	const align = attrString(block.attrs, "align");
 
+	// Resolve media ID if we have a map
 	const ref = wpId && options.mediaMap?.get(wpId);
 
 	return [
@@ -347,10 +405,15 @@ export const image: BlockTransformer = (block, options, context) => {
 	];
 };
 
+/**
+ * core/code → code block
+ */
 export const code: BlockTransformer = (block, _options, context) => {
+	// Extract code from <pre><code>...</code></pre>
 	const codeMatch = block.innerHTML.match(CODE_TAG_PATTERN_SINGLE);
 	const codeContent = codeMatch?.[1] || block.innerHTML;
 
+	// Decode HTML entities
 	const decoded = decodeHtmlEntities(codeContent);
 
 	return [
@@ -363,6 +426,9 @@ export const code: BlockTransformer = (block, _options, context) => {
 	];
 };
 
+/**
+ * core/preformatted → code block (no syntax highlighting)
+ */
 export const preformatted: BlockTransformer = (block, _options, context) => {
 	const text = extractText(block.innerHTML);
 
@@ -375,6 +441,9 @@ export const preformatted: BlockTransformer = (block, _options, context) => {
 	];
 };
 
+/**
+ * core/separator / core/spacer → break block
+ */
 export const separator: BlockTransformer = (_block, _options, context) => {
 	return [
 		{
@@ -385,6 +454,9 @@ export const separator: BlockTransformer = (_block, _options, context) => {
 	];
 };
 
+/**
+ * core/gallery → gallery block
+ */
 export const gallery: BlockTransformer = (block, options, context) => {
 	const images: Array<{
 		_type: "image";
@@ -394,6 +466,7 @@ export const gallery: BlockTransformer = (block, options, context) => {
 		caption?: string;
 	}> = [];
 
+	// Extract images from inner blocks or HTML
 	if (block.innerBlocks.length > 0) {
 		for (const innerBlock of block.innerBlocks) {
 			if (innerBlock.blockName === "core/image") {
@@ -417,6 +490,7 @@ export const gallery: BlockTransformer = (block, options, context) => {
 			}
 		}
 	} else {
+		// Parse from HTML (older gallery format)
 		let match;
 		while ((match = IMG_TAG_GLOBAL.exec(block.innerHTML)) !== null) {
 			const imgHtml = match[0];
@@ -449,6 +523,9 @@ export const gallery: BlockTransformer = (block, options, context) => {
 	];
 };
 
+/**
+ * core/columns → columns block
+ */
 export const columns: BlockTransformer = (block, _options, context) => {
 	const columnBlocks = block.innerBlocks.map((col) => ({
 		_type: "column" as const,
@@ -465,20 +542,28 @@ export const columns: BlockTransformer = (block, _options, context) => {
 	];
 };
 
+/**
+ * core/group → flatten children (no special container)
+ */
 export const group: BlockTransformer = (block, _options, context) => {
 	return context.transformBlocks(block.innerBlocks);
 };
 
+/**
+ * core/table → table block
+ */
 export const table: BlockTransformer = (block, _options, context) => {
-	const tableMatch = block.innerHTML.match(TABLE_TAG_PATTERN);
+	// Parse the table HTML
+	const tableMatch = findTagPairs(block.innerHTML, ["table"], 1)[0];
 	if (!tableMatch) {
 		return [];
 	}
 
-	const tableContent = tableMatch[1]!;
+	const tableContent = tableMatch.content;
 
-	const theadMatch = tableContent.match(THEAD_TAG_PATTERN);
-	const tbodyMatch = tableContent.match(TBODY_TAG_PATTERN);
+	// Check for thead
+	const theadMatch = findTagPairs(tableContent, ["thead"], 1)[0];
+	const tbodyMatch = findTagPairs(tableContent, ["tbody"], 1)[0];
 
 	const rows: Array<{
 		_type: "tableRow";
@@ -492,15 +577,18 @@ export const table: BlockTransformer = (block, _options, context) => {
 		}>;
 	}> = [];
 
-	if (theadMatch?.[1]) {
-		const headerRows = parseTableRows(theadMatch[1], context, true);
+	// Parse header rows
+	if (theadMatch?.content) {
+		const headerRows = parseTableRows(theadMatch.content, context, true);
 		rows.push(...headerRows);
 	}
 
-	if (tbodyMatch?.[1]) {
-		const bodyRows = parseTableRows(tbodyMatch[1], context, false);
+	// Parse body rows
+	if (tbodyMatch?.content) {
+		const bodyRows = parseTableRows(tbodyMatch.content, context, false);
 		rows.push(...bodyRows);
 	} else if (!theadMatch) {
+		// No thead or tbody, parse rows directly
 		const directRows = parseTableRows(tableContent, context, false);
 		rows.push(...directRows);
 	}
@@ -514,11 +602,14 @@ export const table: BlockTransformer = (block, _options, context) => {
 			_type: "table" as const,
 			_key: context.generateKey(),
 			rows,
-			hasHeaderRow: !!theadMatch,
+			hasHeaderRow: !!theadMatch || rows[0]!.cells.every((cell) => cell.isHeader === true),
 		},
 	];
 };
 
+/**
+ * Parse table rows from HTML
+ */
 function parseTableRows(
 	html: string,
 	context: import("../types.js").TransformContext,
@@ -546,10 +637,8 @@ function parseTableRows(
 		}>;
 	}> = [];
 
-	let rowMatch;
-
-	while ((rowMatch = TABLE_ROW_PATTERN.exec(html)) !== null) {
-		const rowContent = rowMatch[1]!;
+	for (const rowMatch of findTagPairs(html, ["tr"])) {
+		const rowContent = rowMatch.content;
 		const cells: Array<{
 			_type: "tableCell";
 			_key: string;
@@ -558,11 +647,10 @@ function parseTableRows(
 			isHeader?: boolean;
 		}> = [];
 
-		let cellMatch;
-
-		while ((cellMatch = TABLE_CELL_PATTERN.exec(rowContent)) !== null) {
-			const isHeaderCell = cellMatch[1]!.toLowerCase() === "th" || isHeader;
-			const cellContent = cellMatch[2]!;
+		// Match both th and td cells
+		for (const cellMatch of findTagPairs(rowContent, ["th", "td"])) {
+			const isHeaderCell = cellMatch.name === "th" || isHeader;
+			const cellContent = cellMatch.content;
 
 			const { children, markDefs } = context.parseInlineContent(cellContent);
 
@@ -587,6 +675,72 @@ function parseTableRows(
 	return rows;
 }
 
+interface TagPair {
+	name: string;
+	content: string;
+}
+
+/**
+ * Finds `<name ...>content</name>` pairs in document order with the same
+ * results as the lazy regex `/<(name)[^>]*>([\s\S]*?)<\/\1>/gi`: each opening
+ * tag ends at the first `>` and pairs with the first closing tag of the same
+ * name, ignoring nesting. Names must be lowercase; they match ASCII
+ * case-insensitively and without a word boundary, so `th` also matches
+ * `<thead>`.
+ *
+ * Once an opening tag finds no closing tag, no later tag of that name can
+ * either, so the name is dropped. Retrying it from every later position would
+ * make unclosed markup quadratic.
+ */
+function findTagPairs(html: string, names: readonly string[], limit = Infinity): TagPair[] {
+	const pairs: TagPair[] = [];
+	const closable = new Set(names);
+	let lt = html.indexOf("<");
+	while (lt !== -1 && pairs.length < limit && closable.size > 0) {
+		const name = names.find((n) => closable.has(n) && matchesLowercase(html, lt + 1, n));
+		if (name !== undefined) {
+			const openEnd = html.indexOf(">", lt + 1 + name.length);
+			if (openEnd === -1) {
+				break;
+			}
+			const closeStart = indexOfCloseTag(html, name, openEnd + 1);
+			if (closeStart !== -1) {
+				pairs.push({ name, content: html.slice(openEnd + 1, closeStart) });
+				lt = html.indexOf("<", closeStart + name.length + 3);
+				continue;
+			}
+			closable.delete(name);
+		}
+		lt = html.indexOf("<", lt + 1);
+	}
+	return pairs;
+}
+
+function indexOfCloseTag(html: string, name: string, from: number): number {
+	let i = html.indexOf("</", from);
+	while (i !== -1) {
+		if (matchesLowercase(html, i + 2, name) && html[i + 2 + name.length] === ">") {
+			return i;
+		}
+		i = html.indexOf("</", i + 1);
+	}
+	return -1;
+}
+
+function matchesLowercase(html: string, at: number, lowercase: string): boolean {
+	for (let i = 0; i < lowercase.length; i++) {
+		const charCode = html.charCodeAt(at + i);
+		const folded = charCode >= 65 && charCode <= 90 ? charCode + 32 : charCode;
+		if (folded !== lowercase.charCodeAt(i)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Convert a heading level number to a PortableTextTextBlock style
+ */
 function toHeadingStyle(level: number): PortableTextTextBlock["style"] {
 	switch (level) {
 		case 1:
@@ -606,6 +760,9 @@ function toHeadingStyle(level: number): PortableTextTextBlock["style"] {
 	}
 }
 
+/**
+ * Map WordPress alignment to Portable Text alignment
+ */
 function mapAlignment(
 	align: string | undefined,
 ): "left" | "center" | "right" | "wide" | "full" | undefined {
@@ -621,6 +778,9 @@ function mapAlignment(
 	}
 }
 
+/**
+ * Decode HTML entities
+ */
 function decodeHtmlEntities(html: string): string {
 	return html
 		.replace(LT_ENTITY_PATTERN, "<")
@@ -631,8 +791,11 @@ function decodeHtmlEntities(html: string): string {
 		.replace(NBSP_ENTITY_PATTERN, " ");
 }
 
-export const button: BlockTransformer = (block, _options, context) => {
-	const url = sanitizeHref(attrString(block.attrs, "url"));
+function toButton(block: GutenbergBlock, context: TransformContext): PortableTextButtonBlock {
+	// WordPress stores the button link in the markup, not in the block comment attributes
+	const rawUrl =
+		attrString(block.attrs, "url") ||
+		decodeUrlEntities(block.innerHTML.match(ANCHOR_HREF_PATTERN)?.[1] ?? "");
 	const text = extractText(block.innerHTML).trim() || "Button";
 
 	let style: "default" | "outline" | "fill" = "default";
@@ -643,49 +806,29 @@ export const button: BlockTransformer = (block, _options, context) => {
 		style = "fill";
 	}
 
-	return [
-		{
-			_type: "button",
-			_key: context.generateKey(),
-			text,
-			url,
-			style,
-		},
-	];
-};
+	return {
+		_type: "button",
+		_key: context.generateKey(),
+		text,
+		url: sanitizeHref(rawUrl),
+		style,
+	};
+}
 
+/**
+ * core/button → button block
+ */
+export const button: BlockTransformer = (block, _options, context) => [toButton(block, context)];
+
+/**
+ * core/buttons → buttons container block
+ */
 export const buttons: BlockTransformer = (block, _options, context) => {
-	const buttonBlocks: Array<{
-		_type: "button";
-		_key: string;
-		text: string;
-		url?: string;
-		style?: "default" | "outline" | "fill";
-	}> = [];
+	const buttonBlocks = block.innerBlocks
+		.filter((innerBlock) => innerBlock.blockName === "core/button")
+		.map((innerBlock) => toButton(innerBlock, context));
 
-	for (const innerBlock of block.innerBlocks) {
-		if (innerBlock.blockName === "core/button") {
-			const url = attrString(innerBlock.attrs, "url");
-			const text = extractText(innerBlock.innerHTML).trim() || "Button";
-
-			let style: "default" | "outline" | "fill" = "default";
-			const className = attrString(innerBlock.attrs, "className");
-			if (className?.includes("is-style-outline")) {
-				style = "outline";
-			} else if (className?.includes("is-style-fill")) {
-				style = "fill";
-			}
-
-			buttonBlocks.push({
-				_type: "button",
-				_key: context.generateKey(),
-				text,
-				url,
-				style,
-			});
-		}
-	}
-
+	// Detect layout from attrs
 	const layoutObj = attrObject(block.attrs, "layout");
 	const layout =
 		layoutObj && typeof layoutObj["type"] === "string" && layoutObj["type"] === "flex"
@@ -702,6 +845,9 @@ export const buttons: BlockTransformer = (block, _options, context) => {
 	];
 };
 
+/**
+ * core/cover → cover block
+ */
 export const cover: BlockTransformer = (block, _options, context) => {
 	const url = attrString(block.attrs, "url");
 	const overlayColor = attrString(block.attrs, "overlayColor");
@@ -711,13 +857,16 @@ export const cover: BlockTransformer = (block, _options, context) => {
 	const minHeightUnit = attrString(block.attrs, "minHeightUnit");
 	const contentPosition = attrString(block.attrs, "contentPosition");
 
+	// Transform inner blocks for content
 	const content = context.transformBlocks(block.innerBlocks);
 
+	// Determine alignment from content position
 	let alignment: "left" | "center" | "right" | undefined;
 	if (contentPosition?.includes("left")) alignment = "left";
 	else if (contentPosition?.includes("right")) alignment = "right";
 	else if (contentPosition?.includes("center")) alignment = "center";
 
+	// Build min height string
 	let minHeightStr: string | undefined;
 	if (minHeight !== undefined) {
 		minHeightStr = minHeightUnit ? `${minHeight}${minHeightUnit}` : `${minHeight}px`;
@@ -737,17 +886,22 @@ export const cover: BlockTransformer = (block, _options, context) => {
 	];
 };
 
+/**
+ * core/file → file block
+ */
 export const file: BlockTransformer = (block, _options, context) => {
 	const href = sanitizeHref(attrString(block.attrs, "href"));
 	const fileName = attrString(block.attrs, "fileName");
 	const showDownloadButton = attrBoolean(block.attrs, "showDownloadButton");
 
+	// Try to extract href from HTML if not in attrs
 	let url = href;
 	if (!url) {
 		const hrefMatch = block.innerHTML.match(HREF_PATTERN);
 		url = sanitizeHref(hrefMatch?.[1]);
 	}
 
+	// Try to extract filename from HTML if not in attrs
 	let filename = fileName;
 	if (!filename && url) {
 		filename = url.split("/").pop()?.split("?")[0];
@@ -764,10 +918,15 @@ export const file: BlockTransformer = (block, _options, context) => {
 	];
 };
 
+/**
+ * core/pullquote → pullquote block
+ */
 export const pullquote: BlockTransformer = (block, _options, context) => {
+	// Extract text from blockquote > p
 	const pMatch = block.innerHTML.match(P_TAG_SINGLE_PATTERN);
 	const text = pMatch ? extractText(pMatch[1]!) : extractText(block.innerHTML);
 
+	// Extract citation
 	const citeMatch = block.innerHTML.match(CITE_TAG_PATTERN);
 	const citation = citeMatch ? extractText(citeMatch[1]!) : attrString(block.attrs, "citation");
 
@@ -781,6 +940,9 @@ export const pullquote: BlockTransformer = (block, _options, context) => {
 	];
 };
 
+/**
+ * core/html → htmlBlock (pass through)
+ */
 export const html: BlockTransformer = (block, _options, context) => {
 	return [
 		{
@@ -792,6 +954,9 @@ export const html: BlockTransformer = (block, _options, context) => {
 	];
 };
 
+/**
+ * core/verse → code block (preserves whitespace like preformatted)
+ */
 export const verse: BlockTransformer = (block, _options, context) => {
 	const text = extractText(block.innerHTML);
 
@@ -800,31 +965,40 @@ export const verse: BlockTransformer = (block, _options, context) => {
 			_type: "code",
 			_key: context.generateKey(),
 			code: text,
-			language: "text",
+			language: "text", // Mark as plain text
 		},
 	];
 };
 
+/**
+ * core/more → break block with "readMore" style
+ */
 export const more: BlockTransformer = (_block, _options, context) => {
 	return [
 		{
 			_type: "break",
 			_key: context.generateKey(),
-			style: "lineBreak",
+			style: "lineBreak", // Could be "readMore" if we add that type
 		},
 	];
 };
 
+/**
+ * core/nextpage → break block with page break indicator
+ */
 export const nextpage: BlockTransformer = (_block, _options, context) => {
 	return [
 		{
 			_type: "break",
 			_key: context.generateKey(),
-			style: "lineBreak",
+			style: "lineBreak", // Could be "pageBreak" if we add that type
 		},
 	];
 };
 
+/**
+ * core/shortcode → htmlBlock (preserve for manual handling)
+ */
 export const shortcode: BlockTransformer = (block, _options, context) => {
 	return [
 		{
@@ -836,6 +1010,9 @@ export const shortcode: BlockTransformer = (block, _options, context) => {
 	];
 };
 
+/**
+ * core/media-text → columns block with 2 columns
+ */
 export const mediaText: BlockTransformer = (block, _options, context) => {
 	const mediaId = attrNumber(block.attrs, "mediaId");
 	const mediaUrl = attrString(block.attrs, "mediaUrl");
@@ -843,6 +1020,7 @@ export const mediaText: BlockTransformer = (block, _options, context) => {
 	const mediaPosition = attrString(block.attrs, "mediaPosition");
 	const mediaAlt = attrString(block.attrs, "mediaAlt");
 
+	// Create media column
 	const mediaBlock: PortableTextBlock[] =
 		mediaType === "video"
 			? [
@@ -866,8 +1044,10 @@ export const mediaText: BlockTransformer = (block, _options, context) => {
 					},
 				];
 
+	// Transform content blocks
 	const contentBlocks = context.transformBlocks(block.innerBlocks);
 
+	// Order based on media position
 	const mediaTextColumns =
 		mediaPosition === "right"
 			? [

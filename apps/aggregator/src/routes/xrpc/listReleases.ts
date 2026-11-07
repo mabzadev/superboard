@@ -1,9 +1,23 @@
+/**
+ * `com.emdashcms.experimental.aggregator.listReleases` — releases for a
+ * (did, package), descending semver. Cursor pagination over
+ * `(version_sort, version)` so tied semver-precedence cases (shouldn't
+ * happen in practice but defensive) still page deterministically.
+ *
+ * Returns `NotFound` when the parent package isn't indexed, even if a
+ * (orphaned) release row exists — the lexicon's contract is "list
+ * releases of a known package", not "list any release rows for this
+ * (did, package)".
+ */
+
 import { InvalidRequestError, json } from "@atcute/xrpc-server";
 import { type AggregatorDefs, type AggregatorListReleases } from "@emdash-cms/registry-lexicons";
 
 import {
 	ACTIVE_PROJECTION_JOINS_SQL,
 	ACTIVE_PROJECTION_POLICY_SQL,
+	ACTIVE_PROFILE_REDACTION_SQL,
+	ACTIVE_PROFILE_SQL,
 	ACTIVE_PUBLIC_RELEASE_SQL,
 	ACTIVE_RELEASE_REDACTION_SQL,
 	activeProjectionPolicyBindings,
@@ -29,6 +43,11 @@ export async function listReleases(
 	if (packageResult.state !== "visible") throwPackageLookupError(packageResult);
 	const policy = await getListingPolicy(env);
 
+	// Cursor encodes the LAST seen (version_sort, version) on the previous
+	// page so the next page picks up below it in DESC order. `WHERE`
+	// half-tuple inequality so SQLite's index on (did, package, version_sort
+	// DESC) stays useful. A *provided* cursor that fails to decode 400s
+	// (would otherwise loop the client through page 1 forever).
 	let cursor: ReturnType<typeof decodeListCursor>;
 	try {
 		cursor = decodeListCursor(params.cursor);
@@ -57,6 +76,7 @@ export async function listReleases(
 		.all<ReleaseRow & { version_sort: string }>();
 
 	const items = rows.results ?? [];
+	// Read limit+1 to detect a next page without a trailing COUNT query.
 	const hasMore = items.length > limit;
 	const page = hasMore ? items.slice(0, limit) : items;
 	const last = page.at(-1);
@@ -68,6 +88,12 @@ export async function listReleases(
 		releases: page.map(releaseView),
 	};
 	if (hasMore && last) {
+		// Cursor encodes the internal `version_sort` format. If the
+		// `computeVersionSort` encoding ever changes, in-flight cursors
+		// will be cursor-incompatible across the deploy — clients will
+		// 400 (per the strict-cursor policy) and fall back to fetching
+		// page 1. Acceptable for the experimental NSID; revisit if/when
+		// we stabilise.
 		response.cursor = encodeListCursor({ versionSort: last.version_sort, version: last.version });
 	}
 	return json(response);
@@ -91,8 +117,13 @@ function listReleasesSql(policy: ListingPolicyConfig, hasCursor: boolean): strin
 			LIMIT ?`;
 	}
 	return `SELECT ${releaseColumns("r.")}, r.version_sort
-		FROM releases r
-		WHERE r.did = ? AND r.package = ? AND r.tombstoned_at IS NULL
+		FROM packages p
+		JOIN releases r ON r.did = p.did AND r.package = p.slug
+		WHERE r.did = ? AND r.package = ?
+		  AND p.installability_status = 'valid'
+		  AND ${ACTIVE_PROFILE_SQL}
+		  AND ${ACTIVE_PROFILE_REDACTION_SQL}
+		  AND r.tombstoned_at IS NULL
 		  AND ${ACTIVE_RELEASE_REDACTION_SQL}
 		${hasCursor ? "AND (r.version_sort < ? OR (r.version_sort = ? AND r.version < ?))" : ""}
 		ORDER BY r.version_sort DESC, r.version DESC

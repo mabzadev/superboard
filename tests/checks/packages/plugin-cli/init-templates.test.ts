@@ -1,13 +1,30 @@
+/**
+ * Coverage for the init scaffolder's pure template functions.
+ *
+ * Tests focus on the manifest renderer because that's the file users
+ * see first and the one whose shape has to satisfy the schema. The
+ * other templates (package.json, tsconfig, README) get smoke checks
+ * that they produce valid JSON / non-empty content; their exact
+ * wording is verified by the integration test in init-scaffold.test.ts.
+ */
+
+import { readFileSync } from "node:fs";
+
+import semver from "semver";
 import { describe, expect, it } from "vitest";
 
 import {
 	renderGitignore,
+	renderAgentsGuide,
+	renderCreatingPluginsSkill,
 	renderManifest,
 	renderPackageJson,
+	renderPnpmWorkspace,
 	renderPluginEntry,
 	renderReadme,
 	renderTest,
 	renderTsconfig,
+	renderVitestConfig,
 	type ScaffoldInputs,
 } from "../../../../packages/plugin-cli/src/init/templates.js";
 import { ManifestSchema } from "../../../../packages/plugin-cli/src/manifest/schema.js";
@@ -21,6 +38,9 @@ const FULL_INPUTS: ScaffoldInputs = {
 	security: { email: "security@example.com" },
 	description: "Image gallery plugin",
 	repo: "https://github.com/example/gallery",
+	packageManager: "npm",
+	packageManagerVersion: "11.6.2",
+	cliVersion: "0.10.0",
 };
 
 const MINIMAL_INPUTS: ScaffoldInputs = {
@@ -32,11 +52,19 @@ const MINIMAL_INPUTS: ScaffoldInputs = {
 	security: undefined,
 	description: undefined,
 	repo: undefined,
+	packageManager: "npm",
+	packageManagerVersion: "11.6.2",
+	cliVersion: "0.10.0",
 };
 
 describe("renderManifest (fully-populated)", () => {
 	it("produces a manifest that passes the schema", () => {
 		const source = renderManifest(FULL_INPUTS);
+		// JSONC parser strips comments and trailing commas before
+		// validation. We parse via the same loader path the CLI uses
+		// elsewhere, but for the test a quick `parse` from jsonc-parser
+		// is enough — we only need to confirm the rendered bytes
+		// validate.
 		const parsed = parseJsonc(source);
 		const result = ManifestSchema.safeParse(parsed);
 		expect(result.success).toBe(true);
@@ -45,10 +73,15 @@ describe("renderManifest (fully-populated)", () => {
 	it("renders identity, license, author, security, description, repo", () => {
 		const source = renderManifest(FULL_INPUTS);
 		expect(source).toContain('"slug": "gallery"');
+		// `version` deliberately omitted from the manifest scaffold —
+		// package.json#version is the source of truth.
 		expect(source).not.toContain('"version":');
 		expect(source).toContain('"publisher": "did:plc:abc123def456"');
 		expect(source).toContain('"license": "MIT"');
 		expect(source).toContain('"name": "Jane Doe"');
+		// author's url. The publisher comment also contains "example.com",
+		// so we anchor on the author block by looking for the
+		// url-key shape rather than the bare hostname.
 		expect(source).toContain('"url": "https://example.com"');
 		expect(source).toContain('"email": "jane@example.com"');
 		expect(source).toContain('"email": "security@example.com"');
@@ -78,6 +111,7 @@ describe("renderManifest (fully-populated)", () => {
 	});
 
 	it("emits empty default arrays for the trust contract", () => {
+		// init starts with no declared capabilities. The author opts in.
 		const source = renderManifest(FULL_INPUTS);
 		expect(source).toContain('"capabilities": []');
 		expect(source).toContain('"allowedHosts": []');
@@ -88,14 +122,21 @@ describe("renderManifest (fully-populated)", () => {
 describe("renderManifest (minimal — no flags, no prompts)", () => {
 	it("produces a manifest with TODO placeholders", () => {
 		const source = renderManifest(MINIMAL_INPUTS);
+		// Three TODOs: publisher, author, security. License has a
+		// default (MIT) so it never carries a TODO.
 		const todoLines = source.split("\n").filter((line) => line.includes("TODO"));
 		expect(todoLines.length).toBeGreaterThanOrEqual(3);
+		// At least one TODO mentions atproto (publisher), one mentions
+		// the author name, one mentions security.
 		expect(todoLines.some((l) => /atproto handle|DID/i.test(l))).toBe(true);
 		expect(todoLines.some((l) => /name|author/i.test(l))).toBe(true);
 		expect(todoLines.some((l) => /security/i.test(l))).toBe(true);
 	});
 
 	it("emits an empty publisher value the schema will reject", () => {
+		// The TODO is visible to the user; the empty string is what
+		// schema validation hits. This is intentional: the manifest is
+		// "valid JSONC, schema-invalid until publisher is filled in".
 		const source = renderManifest(MINIMAL_INPUTS);
 		expect(source).toContain('"publisher": ""');
 	});
@@ -106,6 +147,8 @@ describe("renderManifest (minimal — no flags, no prompts)", () => {
 	});
 
 	it("renders to the smallest plausible manifest", () => {
+		// description and repo are truly-optional fields. They must
+		// not appear when unset (no empty-string keys lying around).
 		const source = renderManifest(MINIMAL_INPUTS);
 		expect(source).not.toMatch(/"description":/);
 		expect(source).not.toMatch(/"repo":/);
@@ -116,7 +159,7 @@ describe("renderManifest (partial author/security)", () => {
 	it("emits author.url and author.email only when provided", () => {
 		const source = renderManifest({
 			...FULL_INPUTS,
-			author: { name: "Jane Doe" },
+			author: { name: "Jane Doe" }, // no url, no email
 		});
 		expect(source).toContain('"name": "Jane Doe"');
 		expect(source).not.toContain('"url":');
@@ -142,10 +185,36 @@ describe("renderPackageJson", () => {
 
 	it("ships build/dev/typecheck/test scripts", () => {
 		const parsed = JSON.parse(renderPackageJson(FULL_INPUTS));
+		expect(parsed.scripts.validate).toBe("emdash-plugin validate");
 		expect(parsed.scripts.build).toBe("emdash-plugin build");
 		expect(parsed.scripts.dev).toBe("emdash-plugin dev");
+		expect(parsed.scripts.bundle).toBe("emdash-plugin bundle");
+		expect(parsed.scripts.publish).toBe("emdash-plugin publish");
+		expect(parsed.scripts["release:setup"]).toBe("emdash-plugin release setup");
 		expect(parsed.scripts.typecheck).toBeDefined();
-		expect(parsed.scripts.test).toBeDefined();
+		expect(parsed.scripts.test).toContain("emdash-plugin validate");
+	});
+
+	it("pins the generating CLI and selected package manager", () => {
+		const parsed = JSON.parse(renderPackageJson(FULL_INPUTS));
+		expect(parsed.packageManager).toBe("npm@11.6.2");
+		expect(parsed.devDependencies["@emdash-cms/plugin-cli"]).toBe("0.10.0");
+	});
+
+	it("accepts the current emdash and plugin-test releases as devDependencies", () => {
+		const parsed = JSON.parse(renderPackageJson(FULL_INPUTS));
+		const current = (dir: string): string =>
+			JSON.parse(
+				readFileSync(new URL(`../../../../packages/${dir}/package.json`, import.meta.url), "utf8"),
+			).version;
+		expect(
+			semver.satisfies(current("core"), parsed.devDependencies.emdash, { includePrerelease: true }),
+		).toBe(true);
+		expect(
+			semver.satisfies(current("plugin-test"), parsed.devDependencies["@emdash-cms/plugin-test"], {
+				includePrerelease: true,
+			}),
+		).toBe(true);
 	});
 
 	it("ships npm-shape main/exports/files so the plugin is pnpm-add-able", () => {
@@ -167,6 +236,8 @@ describe("renderTsconfig", () => {
 	it("produces a strict standalone tsconfig", () => {
 		const parsed = JSON.parse(renderTsconfig());
 		expect(parsed.compilerOptions.strict).toBe(true);
+		// No outDir / declaration — source is the artefact, bundle
+		// transpiles at publish time.
 		expect(parsed.compilerOptions.outDir).toBeUndefined();
 		expect(parsed.compilerOptions.declaration).toBeUndefined();
 	});
@@ -175,6 +246,7 @@ describe("renderTsconfig", () => {
 		const parsed = JSON.parse(renderTsconfig());
 		expect(parsed.include).toContain("src/**/*");
 		expect(parsed.include).toContain("tests/**/*");
+		expect(parsed.include).toContain("vitest.config.ts");
 	});
 });
 
@@ -182,25 +254,43 @@ describe("renderPluginEntry", () => {
 	it("type-only-imports SandboxedPlugin from emdash/plugin", () => {
 		const source = renderPluginEntry();
 		expect(source).toContain('import type { SandboxedPlugin } from "emdash/plugin"');
+		// No runtime emdash imports — sandboxed plugins must not pull
+		// the emdash runtime into their bundle.
 		expect(source).not.toContain('import { definePlugin } from "emdash"');
 	});
 
-	it("default-exports a bare object with `satisfies SandboxedPlugin` and a hello route", () => {
+	it("default-exports an explicitly typed SandboxedPlugin with a hello route", () => {
 		const source = renderPluginEntry();
-		expect(source).toContain("export default {");
-		expect(source).toContain("satisfies SandboxedPlugin");
+		expect(source).toContain("const plugin: SandboxedPlugin = {");
+		expect(source).toContain("export default plugin");
 		expect(source).toContain("hello:");
 		expect(source).toContain("greeting:");
+		// definePlugin must not appear in the scaffold — it's
+		// native-only now and would throw at runtime if used here.
 		expect(source).not.toContain("definePlugin");
 	});
 });
 
 describe("renderTest", () => {
-	it("imports the plugin and exercises the hello route", () => {
-		const source = renderTest();
-		expect(source).toContain('from "../src/plugin.js"');
-		expect(source).toContain("hello");
+	it("exercises the hello route through the sandbox host", () => {
+		const source = renderTest(FULL_INPUTS);
+		expect(source).toContain('from "@emdash-cms/plugin-test"');
+		expect(source).toContain('host.invokeRoute("hello")');
 		expect(source).toContain("expect(result)");
+	});
+
+	it("expects the scaffolded plugin ID from the real host", () => {
+		const source = renderTest(FULL_INPUTS);
+		expect(source).toContain('pluginId: "gallery"');
+		expect(source).not.toContain('id: "test-plugin"');
+	});
+});
+
+describe("renderVitestConfig", () => {
+	it("configures the workerd-backed EmDash plugin host", () => {
+		const source = renderVitestConfig();
+		expect(source).toContain('from "@emdash-cms/plugin-test/config"');
+		expect(source).toContain("emdashPluginTest()");
 	});
 });
 
@@ -217,8 +307,8 @@ describe("renderGitignore", () => {
 describe("renderReadme", () => {
 	it("documents the publish path", () => {
 		const source = renderReadme(FULL_INPUTS);
-		expect(source).toContain("emdash-plugin bundle");
-		expect(source).toContain("emdash-plugin publish");
+		expect(source).toContain("npm run publish");
+		expect(source).toContain("uploads artifacts to your PDS");
 	});
 
 	it("documents version-bump rules for the trust contract", () => {
@@ -234,12 +324,85 @@ describe("renderReadme", () => {
 
 	it("camel-cases the import binding so hyphenated slugs produce valid JS", () => {
 		const source = renderReadme({ ...FULL_INPUTS, slug: "my-plugin" });
+		// The import specifier is the slug as-is; the binding must be a
+		// legal JS identifier (`myPlugin`, not `my-plugin`).
 		expect(source).toContain('import myPlugin from "my-plugin"');
 		expect(source).toContain("sandboxed: [myPlugin]");
 		expect(source).not.toContain("import my-plugin");
 	});
 });
 
+describe("agent guidance", () => {
+	it("generates an AGENTS.md that routes plugin work to the bundled skill", () => {
+		expect(renderAgentsGuide()).toContain("skills/creating-plugins/SKILL.md");
+		expect(renderAgentsGuide()).toContain(".agents/skills");
+		expect(renderAgentsGuide()).toContain(".claude/skills");
+	});
+
+	it("generates a valid concise creating-plugins skill", () => {
+		const skill = renderCreatingPluginsSkill();
+		expect(skill).toContain("name: creating-plugins");
+		expect(skill).toContain("emdash-plugin.jsonc");
+		expect(skill).toContain("Use the package scripts");
+		expect(skill).toContain("createPluginTestHost()");
+		expect(skill).toContain("createPluginRuntimeTestHost()");
+		expect(skill).toContain("actions.plugin.updateSettings()");
+		expect(skill).toContain("inspect.settings.raw()");
+		expect(skill).toContain('ctx.settings.get("<key>")');
+		expect(skill).toContain('ctx.kv.get("settings:<key>")');
+		expect(skill).toContain("EMDASH_ENCRYPTION_KEY");
+		expect(skill).toContain("media:bytes:read");
+		expect(skill).toContain("media:metadata:write");
+		expect(skill).toContain("redirects:read");
+		expect(skill).toContain("redirects:write");
+		expect(skill).toContain("visitor destinations");
+		expect(skill).toContain("host.fixtures.redirect()");
+		expect(skill).toContain("host.inspect.redirects()");
+		expect(skill).toContain("hooks.content-policy:register");
+		expect(skill).toContain("this capability does not grant content reads");
+		expect(skill).toContain("structured Block Kit links");
+		expect(skill).toContain("admin.editorPanels");
+		expect(skill).toContain("saved-entry panels");
+		expect(skill).toContain("routeCtx.ui");
+		expect(skill).toContain("`admin` helpers");
+		expect(skill).toContain("host.http.respond(url, response)");
+		expect(skill).toContain("8 MiB of decoded bytes");
+		expect(skill).toContain("pluginRoute()");
+		expect(skill).toContain('response: "raw"');
+		expect(skill).toContain("pluginResponse()");
+		expect(skill).toContain("Raw routes cannot back MCP tools");
+		expect(skill).toContain("rawBody");
+		expect(skill).toContain("host.actions.routes.request()");
+		expect(skill).toContain("Node/workerd parity opt-in");
+		expect(skill).toContain("schema:read");
+		expect(skill).toContain("content:revisions:read");
+		expect(skill).toContain("{ locale, translationOf }");
+		expect(skill).toContain("pass a taxonomy name and term fields to `createTerm()`");
+		expect(skill).toContain(
+			"The method rejects `parentId` for a non-hierarchical taxonomy instead of ignoring it",
+		);
+		expect(skill).toContain("Pass term IDs to `addEntryTerms()` and `removeEntryTerms()`");
+		expect(skill).toContain("@<publisher-handle>/<slug>");
+		expect(skill).toContain("info <handle> <slug> --version <version> --watch");
+	});
+
+	it("allows the build scripts required by sandbox tests in pnpm projects", () => {
+		expect(renderPnpmWorkspace()).toContain("allowBuilds:");
+		expect(renderPnpmWorkspace()).toContain("esbuild: true");
+		expect(renderPnpmWorkspace()).toContain("workerd: true");
+	});
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Parse JSONC for testing the rendered manifest. We use the
+ * jsonc-parser dep directly here rather than going through the full
+ * loader because the loader requires a file path and we want to
+ * keep these tests in-memory.
+ */
 function parseJsonc(source: string): unknown {
 	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const { parse } = require("jsonc-parser") as typeof import("jsonc-parser");

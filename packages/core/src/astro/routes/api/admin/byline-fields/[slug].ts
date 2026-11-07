@@ -1,3 +1,23 @@
+/**
+ * Byline custom-field schema management — single field CRUD.
+ *
+ * - GET    /_emdash/api/admin/byline-fields/{slug}    read one definition
+ * - PATCH  /_emdash/api/admin/byline-fields/{slug}    update label / required /
+ *                                                     translatable / validation /
+ *                                                     sort order
+ * - DELETE /_emdash/api/admin/byline-fields/{slug}    drop the definition and all
+ *                                                     stored values (FK CASCADE +
+ *                                                     app-level cleanup; see
+ *                                                     `BylineSchemaRegistry.deleteField`)
+ *
+ * Thin wrappers around the handler layer; status mapping happens in
+ * `unwrapResult`. `slug` and `type` are immutable post-create — see
+ * `bylineFieldUpdateBody`. Flipping `translatable` while value rows
+ * exist surfaces as a 409 `TRANSLATABLE_LOCKED`.
+ *
+ * Phase 4 of Discussion #1174.
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -12,6 +32,8 @@ import { bylineFieldUpdateBody } from "#api/schemas.js";
 
 export const prerender = false;
 
+// GET requires `schema:read` (Editor+); see sibling `index.ts` GET
+// for rationale.
 export const GET: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const denied = requirePerm(user, "schema:read");
@@ -45,6 +67,9 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 		label: body.label,
 		required: body.required,
 		translatable: body.translatable,
+		// `null` clears the stored validation; `undefined` leaves it as-is.
+		// The zod schema makes `validation` itself optional, so an absent
+		// key reaches the handler as `undefined`.
 		validation: body.validation,
 		sortOrder: body.sortOrder,
 	});

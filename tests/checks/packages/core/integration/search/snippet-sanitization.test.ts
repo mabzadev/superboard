@@ -9,6 +9,17 @@ import { searchWithDb } from "../../../../../../packages/core/src/search/query.j
 import { createPostFixture } from "../../utils/fixtures.js";
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../../utils/test-db.js";
 
+/**
+ * Snippets returned by FTS5 splice literal `<mark>` markers around matched
+ * terms but never escape the surrounding text. If the indexed content
+ * contains characters that mean something in HTML (`<`, `>`, `&`, `"`,
+ * `'`) the resulting "snippet" is unsafe to render with set:html or
+ * innerHTML — both for visual integrity (broken markup, mojibake) and
+ * for security (a `<script>` literal in a title becomes executable).
+ *
+ * The shipped contract is "snippet is safe HTML containing only <mark>
+ * highlight tags." These tests pin that contract.
+ */
 describe("search snippet sanitization", () => {
 	let db: Kysely<Database>;
 	let repo: ContentRepository;
@@ -28,6 +39,8 @@ describe("search snippet sanitization", () => {
 	});
 
 	it("escapes `<` and `>` in matched content so a `<script>` title cannot execute", async () => {
+		// A title containing a literal script tag — exactly the payload
+		// that an attacker would aim at a poorly-escaped highlighter.
 		await repo.create(
 			createPostFixture({
 				slug: "xss-attempt",
@@ -43,6 +56,10 @@ describe("search snippet sanitization", () => {
 		expect(items).toHaveLength(1);
 		const snippet = items[0]!.snippet ?? "";
 
+		// The dangerous `<script>` substring must be escaped. The result
+		// is allowed to contain `<mark>...</mark>` highlights, so we
+		// can't just assert "no `<` chars" — we assert the script tag
+		// itself cannot appear as live markup.
 		expect(snippet).not.toContain("<script>");
 		expect(snippet).not.toContain("</script>");
 		expect(snippet).toContain("&lt;script&gt;");
@@ -64,13 +81,23 @@ describe("search snippet sanitization", () => {
 		expect(items).toHaveLength(1);
 		const snippet = items[0]!.snippet ?? "";
 
+		// Bare `&` must be escaped to `&amp;` — otherwise a downstream
+		// HTML parser may interpret `& Jerry` as the start of an entity.
 		expect(snippet).toContain("&amp;");
 		expect(snippet).not.toMatch(/&(?!amp;|lt;|gt;|quot;|#39;)/);
 
+		// `<` from "2 < 3" must also be escaped, even though it's not
+		// adjacent to a tag-like structure.
 		expect(snippet).toContain("&lt;");
 	});
 
 	it("does not crash when the snippet column is NULL", async () => {
+		// FTS triggers insert raw column values with no COALESCE, so any
+		// row whose title (the column the snippet() call targets) is
+		// NULL produces a NULL snippet from SQLite — even when the row
+		// matched via a different searchable column. A regression that
+		// drops the null-guard throws "Cannot read properties of null
+		// (reading 'replace')" before these assertions can run.
 		const registry = new SchemaRegistry(db);
 		await registry.updateField("post", "content", { searchable: true });
 		const ftsManager = new FTSManager(db);
@@ -81,6 +108,8 @@ describe("search snippet sanitization", () => {
 				slug: "no-title",
 				status: "published",
 				data: {
+					// Deliberately NULL title — matched via the content
+					// column so this row still surfaces in results.
 					title: null,
 					content: [
 						{
@@ -98,10 +127,14 @@ describe("search snippet sanitization", () => {
 		});
 
 		expect(items).toHaveLength(1);
+		// Whether the snippet ends up as a string or undefined doesn't
+		// matter — the contract is "the search call must not throw".
 		expect(typeof items[0]!.snippet === "string" || items[0]!.snippet === undefined).toBe(true);
 	});
 
 	it("preserves `<mark>` highlight tags as live HTML", async () => {
+		// The whole point of returning a snippet is highlighting matches.
+		// Sanitization must not strip the markers we deliberately added.
 		await repo.create(
 			createPostFixture({
 				slug: "highlight",
@@ -119,6 +152,7 @@ describe("search snippet sanitization", () => {
 
 		expect(snippet).toContain("<mark>");
 		expect(snippet).toContain("</mark>");
+		// And the highlighted token should be the matched word.
 		expect(snippet).toMatch(/<mark>fox<\/mark>/i);
 	});
 });

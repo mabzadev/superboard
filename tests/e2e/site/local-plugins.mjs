@@ -34,7 +34,7 @@ try {
 		const action = enabled ? "enable" : "disable";
 		const pending = page.waitForResponse(
 			(response) =>
-				response.url().endsWith(`/plugins/supbrd-plug-communication/${action}`) &&
+				response.url().endsWith(`/plugins/superboard-communication/${action}`) &&
 				response.request().method() === "POST",
 			{ timeout: 60000 },
 		);

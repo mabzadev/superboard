@@ -1,3 +1,5 @@
+// ── Composition Objects ──────────────────────────────────────────────────────
+
 export interface ConfirmDialog {
 	title: string;
 	text: string;
@@ -6,6 +8,8 @@ export interface ConfirmDialog {
 	style?: "danger";
 }
 
+// ── Elements ─────────────────────────────────────────────────────────────────
+
 export interface ButtonElement {
 	type: "button";
 	action_id: string;
@@ -13,6 +17,31 @@ export interface ButtonElement {
 	style?: "primary" | "danger" | "secondary";
 	value?: unknown;
 	confirm?: ConfirmDialog;
+}
+
+export type LinkTarget =
+	| { kind: "content"; collection: string; id: string; locale?: string }
+	| { kind: "plugin-page"; path: string }
+	| { kind: "plugin-settings" }
+	| { kind: "external"; url: string };
+
+/** Host-resolved navigation that never dispatches a block action. */
+export interface LinkElement {
+	type: "link";
+	label: string;
+	target: LinkTarget;
+	appearance?: "inline" | "primary" | "secondary";
+}
+
+export type NavigationElement = LinkElement;
+
+/** A button that opens a list of choices; picking one dispatches `action_id` with the item's value. */
+export interface MenuElement {
+	type: "menu";
+	action_id: string;
+	label: string;
+	items: Array<{ label: string; value: string }>;
+	style?: "primary" | "secondary";
 }
 
 export interface TextInputElement {
@@ -39,6 +68,7 @@ export interface SelectElement {
 	label: string;
 	options: Array<{ label: string; value: string }>;
 	initial_value?: string;
+	/** Plugin route that returns `{ items: Array<{ id, name }> }` to populate options dynamically */
 	optionsRoute?: string;
 }
 
@@ -91,27 +121,55 @@ export interface RadioElement {
 	initial_value?: string;
 }
 
+/**
+ * Sub-field types allowed inside a RepeaterElement. Limited to the scalar
+ * inputs the admin widget currently renders inline.
+ */
 export type RepeaterSubField =
 	| TextInputElement
 	| NumberInputElement
 	| SelectElement
 	| ToggleElement;
 
+/**
+ * Array-of-objects field. Renders as a list of collapsible cards with inline
+ * add/remove and drag-and-drop reordering. Sub-fields are scalar Block Kit
+ * elements keyed by their `action_id`.
+ *
+ * Admin-authoring only: this element is rendered by the admin widget so plugin
+ * blocks can capture repeating data. The runtime block renderer
+ * (`renderElement`) deliberately returns `null` for `repeater` — repeater
+ * values are persisted on the parent block and consumed by the plugin's own
+ * runtime component, not re-rendered as a stand-alone block.
+ */
 export interface RepeaterElement {
 	type: "repeater";
 	action_id: string;
 	label: string;
+	/** Singular label used in the UI (e.g. "FAQ" → "Add FAQ"). */
 	item_label?: string;
 	fields: RepeaterSubField[];
 	min_items?: number;
 	max_items?: number;
+	/**
+	 * Default rows for the field. Note: the admin widget seeds new rows from
+	 * the sub-field types (empty string / `false`), not from `initial_value`;
+	 * plugins should populate persisted state via the form `values` payload
+	 * instead of relying on `initial_value` for pre-filled rows.
+	 */
 	initial_value?: Array<Record<string, unknown>>;
 }
 
+/**
+ * Picks an item from the media library (or uploads a new one). The stored value
+ * is the selected asset's URL string, so this element is value-compatible with a
+ * plain `text_input` — existing content continues to work after swapping.
+ */
 export interface MediaPickerElement {
 	type: "media_picker";
 	action_id: string;
 	label: string;
+	/** Mime-type prefix filter (e.g. "image/"). Defaults to "image/". */
 	mime_type_filter?: string;
 	initial_value?: string;
 	placeholder?: string;
@@ -130,6 +188,10 @@ export type Element =
 	| RadioElement
 	| RepeaterElement
 	| MediaPickerElement;
+
+export type ActionElement = Element | NavigationElement | MenuElement;
+
+// ── Form Fields (elements + optional condition) ──────────────────────────────
 
 export type FieldCondition =
 	| { field: string; eq?: unknown; neq?: never }
@@ -150,10 +212,13 @@ export type FormField = (
 	condition?: FieldCondition;
 };
 
+// ── Block Sub-types ──────────────────────────────────────────────────────────
+
 export interface TableColumn {
 	key: string;
 	label: string;
-	format?: "text" | "badge" | "relative_time" | "number" | "code";
+	/** `element`: each row holds a button, link, or menu element under this column's key. */
+	format?: "text" | "badge" | "relative_time" | "number" | "code" | "element";
 	sortable?: boolean;
 }
 
@@ -164,29 +229,48 @@ export interface StatItem {
 	trend?: "up" | "down" | "neutral";
 }
 
+/** A single data series for a timeseries chart. */
 export interface ChartSeries {
+	/** Display name shown in tooltips and legends */
 	name: string;
+	/** Array of `[timestamp_ms, value]` tuples ordered by time */
 	data: [number, number][];
+	/**
+	 * Hex color for this series. If omitted, an automatic categorical color
+	 * from the Kumo palette is assigned based on the series index.
+	 */
 	color?: string;
 }
 
+/** Timeseries-specific chart configuration */
 export interface TimeseriesChartConfig {
 	chart_type: "timeseries";
+	/** Visual style of each series. Defaults to `"line"`. */
 	style?: "line" | "bar";
+	/** Array of time series to display */
 	series: ChartSeries[];
+	/** Label for the x-axis */
 	x_axis_name?: string;
+	/** Label for the y-axis */
 	y_axis_name?: string;
+	/** Height of the chart in pixels. Defaults to 350. */
 	height?: number;
+	/** Render a gradient fill beneath line series */
 	gradient?: boolean;
 }
 
+/** Custom chart configuration using raw ECharts options (pie, etc.) */
 export interface CustomChartConfig {
 	chart_type: "custom";
+	/** Raw ECharts option object — passed through to `chart.setOption()` */
 	options: Record<string, unknown>;
+	/** Height of the chart in pixels. Defaults to 350. */
 	height?: number;
 }
 
 export type ChartConfig = TimeseriesChartConfig | CustomChartConfig;
+
+// ── Blocks ───────────────────────────────────────────────────────────────────
 
 interface BlockBase {
 	block_id?: string;
@@ -200,7 +284,7 @@ export interface HeaderBlock extends BlockBase {
 export interface SectionBlock extends BlockBase {
 	type: "section";
 	text: string;
-	accessory?: Element;
+	accessory?: ActionElement;
 }
 
 export interface DividerBlock extends BlockBase {
@@ -223,7 +307,7 @@ export interface TableBlock extends BlockBase {
 
 export interface ActionsBlock extends BlockBase {
 	type: "actions";
-	elements: Element[];
+	elements: ActionElement[];
 }
 
 export interface StatsBlock extends BlockBase {
@@ -298,7 +382,7 @@ export interface EmptyBlock extends BlockBase {
 	description?: string;
 	command_line?: string;
 	size?: "sm" | "base" | "lg";
-	actions?: Element[];
+	actions?: ActionElement[];
 }
 
 export interface AccordionBlock extends BlockBase {
@@ -328,11 +412,15 @@ export type Block =
 	| EmptyBlock
 	| AccordionBlock;
 
+// ── Interactions ─────────────────────────────────────────────────────────────
+
 export interface BlockAction {
 	type: "block_action";
 	action_id: string;
 	block_id?: string;
 	value?: unknown;
+	/** Admin page or widget that originated the interaction. */
+	page?: string;
 }
 
 export interface FormSubmit {
@@ -340,6 +428,8 @@ export interface FormSubmit {
 	action_id: string;
 	block_id?: string;
 	values: Record<string, unknown>;
+	/** Admin page or widget that originated the interaction. */
+	page?: string;
 }
 
 export interface PageLoad {
@@ -347,9 +437,100 @@ export interface PageLoad {
 	page: string;
 }
 
+interface PluginUiContextBase {
+	locale: string;
+	direction: "ltr" | "rtl";
+	contentLocale?: string;
+}
+
+/** Context derived and attached by the EmDash host for Block Kit requests. */
+export type PluginUiContext = PluginUiContextBase &
+	(
+		| {
+				surface: "admin-page" | "dashboard-widget";
+				entry?: never;
+				extensionId?: never;
+		  }
+		| {
+				surface: "content-editor-panel" | "content-editor-action";
+				/** Saved entry identity resolved by the host for this invocation. */
+				entry: {
+					collection: string;
+					id: string;
+					locale: string | null;
+					version: number;
+				};
+				/** Manifest-declared panel or action selected by the host. */
+				extensionId: string;
+		  }
+	);
+
+export type LinkTargetResolver = (target: LinkTarget) => string | null;
+
 export type BlockInteraction = BlockAction | FormSubmit | PageLoad;
+
+export type ContentEditorPanelInteraction =
+	| { type: "panel_load" }
+	| (Omit<BlockAction, "page"> & { draft?: EditorDraftSnapshot })
+	| (Omit<FormSubmit, "page"> & { draft?: EditorDraftSnapshot });
+
+export interface ContentEditorActionInvocation {
+	type: "editor_action";
+	draft?: EditorDraftSnapshot;
+}
+
+export interface EditorDraftFieldDefinition {
+	slug: string;
+	label: string;
+	type: string;
+	required: boolean;
+	translatable: boolean;
+	validation?: Record<string, unknown>;
+	options?: unknown;
+}
+
+export interface EditorDraftSnapshot {
+	collection: string;
+	entryId: string;
+	locale: string | null;
+	baseRevision: string;
+	invocationId: string;
+	fields: Record<string, unknown>;
+	fieldDefinitions: EditorDraftFieldDefinition[];
+}
+
+export type EditorDraftPatchOperation =
+	| { op: "set"; field: string; value: unknown }
+	| { op: "clear"; field: string };
+
+export interface EditorDraftPatchEffect {
+	type: "editor-draft-patch";
+	operations: EditorDraftPatchOperation[];
+}
+
+export interface EditorDraftInvocationReceipt {
+	entryId: string;
+	locale: string | null;
+	baseRevision: string;
+	generation: number;
+	invocationId: string;
+	fieldDefinitions: EditorDraftFieldDefinition[];
+}
+
+// ── Response ─────────────────────────────────────────────────────────────────
 
 export interface BlockResponse {
 	blocks: Block[];
 	toast?: { message: string; type: "success" | "error" | "info" };
+	patch?: EditorDraftPatchEffect;
+	refresh?: true;
+	navigate?: LinkTarget;
+}
+
+/** Bounded host effects returned by a content-editor action route. */
+export interface ContentEditorActionResponse {
+	toast?: { message: string; type: "success" | "error" | "info" };
+	refresh?: true;
+	navigate?: LinkTarget;
+	patch?: EditorDraftPatchEffect;
 }

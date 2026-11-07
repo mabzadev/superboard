@@ -21,7 +21,10 @@ concurrency:
 
 jobs:
   plugin-regressions:
-    runs-on: ubuntu-latest
+    # Pushes and manual runs use the self-hosted runners only while the repository
+    # variable SUPERBOARD_SELF_HOSTED_RUNNERS is true. Pull requests can come from
+    # forks of this public repository, so they always use GitHub's runners.
+    runs-on: ${{ github.event_name != 'pull_request' && vars.SUPERBOARD_SELF_HOSTED_RUNNERS == 'true' && fromJSON('["self-hosted", "superboard"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -29,12 +32,16 @@ jobs:
         check: [local, development, artifact]
     env:
       HUSKY: "0"
-      NODE_OPTIONS: --max-old-space-size=2048
+      NODE_OPTIONS: --max-old-space-size=4096
       GOMAXPROCS: "1"
       GOMEMLIMIT: 768MiB
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      # Self-hosted runners keep their home directory between jobs, so each job
+      # installs pnpm in its own temporary directory.
       - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: 24

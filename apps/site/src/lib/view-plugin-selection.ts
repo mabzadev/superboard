@@ -1,13 +1,14 @@
 import { canonicalPluginId } from "@superboard/contracts/plugin-packages";
 import { readJsonObjectLimited, RequestBodyError } from "@superboard/contracts/request-body";
 import type { FrontReleasePayload } from "@superboard/supbrd-core";
-import type { APIContext } from "astro";
-import { GET, PUT } from "emdash/routes/api/content/_collection_/_id_";
+import type { APIContext, MiddlewareNext } from "astro";
+import { requirePerm } from "emdash/api/plugin-settings";
 
 import { resolveViewConnections } from "./view-connections.js";
 
 export async function saveViewPluginSelection(
 	context: APIContext,
+	next: MiddlewareNext,
 	release: FrontReleasePayload | null,
 ): Promise<Response | null> {
 	let body: Record<string, unknown>;
@@ -22,10 +23,17 @@ export async function saveViewPluginSelection(
 		throw error;
 	}
 	if (!isRecord(body.data) || !("plugin_id" in body.data)) return null;
-	const existing = await GET(context);
-	if (!existing.ok) return existing;
-	const document = await readJsonObjectLimited(existing, 2_000_000);
-	const item = isRecord(document.data) ? document.data.item : null;
+	const denied = requirePerm(context.locals.user, "content:read");
+	if (denied) return denied;
+	const { collection, id } = context.params;
+	if (!collection || !id) return null;
+	const existing = await context.locals.emdash.handleContentGet(
+		collection,
+		id,
+		context.url.searchParams.get("locale") || undefined,
+		{ includeDrafts: true },
+	);
+	const item = existing.success && isRecord(existing.data) ? existing.data.item : null;
 	if (!isRecord(item) || !isRecord(item.data))
 		return Response.json(
 			{ error: { code: "NOT_FOUND", message: "View not found" } },
@@ -51,10 +59,7 @@ export async function saveViewPluginSelection(
 	body.data.plugin_id = connections.plugin_id;
 	const headers = new Headers(context.request.headers);
 	headers.delete("Content-Length");
-	return PUT({
-		...context,
-		request: new Request(context.request, { method: "PUT", headers, body: JSON.stringify(body) }),
-	});
+	return next(new Request(context.request, { method: "PUT", headers, body: JSON.stringify(body) }));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

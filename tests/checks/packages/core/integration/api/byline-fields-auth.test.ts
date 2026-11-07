@@ -1,3 +1,26 @@
+/**
+ * Auth, permission, and request-validation tests for the byline-fields
+ * admin API routes (Phase 4 of Discussion #1174).
+ *
+ * Covers acceptance criteria from `extensible-bylines-pr.mdx` §Phase 4:
+ *
+ * - Every byline-fields endpoint returns `UNAUTHORIZED` without auth.
+ * - Every byline-fields endpoint returns 403 for a user without
+ *   `schema:manage` (Editor isn't enough — it's an Admin-only perm).
+ * - Reserved slugs rejected at the zod layer (400 VALIDATION_ERROR).
+ * - Invalid slugs / types rejected at the zod layer (400).
+ * - Happy paths round-trip through the registry.
+ * - `BylineSchemaError` codes map to the documented HTTP statuses
+ *   (`FIELD_EXISTS` → 409, `FIELD_NOT_FOUND` → 404,
+ *   `TRANSLATABLE_LOCKED` → 409, `REORDER_MISMATCH` → 400).
+ *
+ * CSRF is enforced by the auth middleware, not the route handler — see
+ * `astro/middleware/auth.ts:284-294`. These tests invoke the route
+ * exports directly, so the middleware does not run; the AC is satisfied
+ * by the middleware's blanket `X-EmDash-Request` check on every
+ * unsafe-method API request.
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
@@ -18,6 +41,10 @@ import { resetBylineFieldDefsCacheForTests } from "../../../../../../packages/co
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { BylineSchemaRegistry } from "../../../../../../packages/core/src/schema/byline-registry.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
+
+// ---------------------------------------------------------------------------
+// Context builder
+// ---------------------------------------------------------------------------
 
 interface BuildOpts {
 	db: Kysely<Database>;
@@ -53,10 +80,15 @@ function jsonRequest(url: string, method: string, body?: unknown): Request {
 const adminUser = { id: "admin-1", role: Role.ADMIN };
 const editorUser = { id: "editor-1", role: Role.EDITOR };
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe("admin/byline-fields routes — auth + permissions + validation", () => {
 	let db: Kysely<Database>;
 
 	beforeEach(async () => {
+		// See sibling test `bylines-customfields-write.test.ts` for why.
 		resetBylineFieldDefsCacheForTests();
 		db = await setupTestDatabase();
 	});
@@ -64,6 +96,10 @@ describe("admin/byline-fields routes — auth + permissions + validation", () =>
 	afterEach(async () => {
 		await teardownTestDatabase(db);
 	});
+
+	// ===========================================
+	// Auth gate (no user → 401)
+	// ===========================================
 
 	describe("UNAUTHORIZED without a session", () => {
 		it("GET /byline-fields returns 401", async () => {
@@ -125,6 +161,16 @@ describe("admin/byline-fields routes — auth + permissions + validation", () =>
 			expect(res.status).toBe(401);
 		});
 	});
+
+	// ===========================================
+	// Permission gate — read/manage split (Phase 6 of #1174)
+	//
+	// Editors need to *read* the registry so the byline edit form can
+	// render custom-field inputs (Phase 6). Only admins can mutate
+	// the registry. The split is anchored by two perms:
+	//   - `schema:read`  → Editor (read endpoints)
+	//   - `schema:manage` → Admin  (mutation endpoints)
+	// ===========================================
 
 	describe("editors can read but not mutate", () => {
 		it("GET /byline-fields succeeds for Editor (schema:read)", async () => {
@@ -209,6 +255,10 @@ describe("admin/byline-fields routes — auth + permissions + validation", () =>
 			expect(res.status).toBe(403);
 		});
 	});
+
+	// ===========================================
+	// Happy paths — Admin can manage fields
+	// ===========================================
 
 	describe("happy paths with schema:manage", () => {
 		it("creates and lists a field", async () => {
@@ -307,10 +357,14 @@ describe("admin/byline-fields routes — auth + permissions + validation", () =>
 		});
 	});
 
+	// ===========================================
+	// Zod-layer rejections (400 VALIDATION_ERROR)
+	// ===========================================
+
 	describe("zod-layer rejections", () => {
 		it("rejects a reserved slug at the zod layer", async () => {
 			const req = jsonRequest("http://localhost/_emdash/api/admin/byline-fields", "POST", {
-				slug: "display_name",
+				slug: "display_name", // reserved (column collision)
 				label: "Display name",
 				type: "string",
 			});
@@ -322,6 +376,10 @@ describe("admin/byline-fields routes — auth + permissions + validation", () =>
 		});
 
 		it("rejects `reorder` at the zod layer — would collide with the static reorder route", async () => {
+			// Astro's static-route precedence: `/byline-fields/reorder` resolves
+			// to `reorder.ts` (POST-only), so a field with slug `reorder` is
+			// unreachable via single-field CRUD on `[slug].ts`. Reserve at the
+			// system level — see `RESERVED_BYLINE_FIELD_SLUGS` JSDoc rationale.
 			const req = jsonRequest("http://localhost/_emdash/api/admin/byline-fields", "POST", {
 				slug: "reorder",
 				label: "Reorder",
@@ -343,7 +401,7 @@ describe("admin/byline-fields routes — auth + permissions + validation", () =>
 
 		it("rejects an invalid slug pattern at the zod layer", async () => {
 			const req = jsonRequest("http://localhost/_emdash/api/admin/byline-fields", "POST", {
-				slug: "Bad-Slug",
+				slug: "Bad-Slug", // hyphen + uppercase — pattern is /^[a-z][a-z0-9_]*$/
 				label: "X",
 				type: "string",
 			});
@@ -358,7 +416,7 @@ describe("admin/byline-fields routes — auth + permissions + validation", () =>
 			const req = jsonRequest("http://localhost/_emdash/api/admin/byline-fields", "POST", {
 				slug: "x",
 				label: "X",
-				type: "portableText",
+				type: "portableText", // not in v1 byline subset
 			});
 			const res = await createField(buildContext({ db, request: req, user: adminUser }));
 			expect(res.status).toBe(400);
@@ -376,6 +434,10 @@ describe("admin/byline-fields routes — auth + permissions + validation", () =>
 		});
 
 		it("accepts an empty reorder list when zero fields are registered (no-op)", async () => {
+			// Registry contract: `reorderFields([])` against an empty set
+			// is a valid no-op (length match passes; loop runs 0 times).
+			// The zod schema must agree to avoid producing a spurious 400
+			// for the UI's "reorder after deleting the last field" flow.
 			const req = jsonRequest("http://localhost/_emdash/api/admin/byline-fields/reorder", "POST", {
 				slugs: [],
 			});
@@ -385,6 +447,10 @@ describe("admin/byline-fields routes — auth + permissions + validation", () =>
 			expect(body.data.items).toEqual([]);
 		});
 	});
+
+	// ===========================================
+	// Registry-error mapping
+	// ===========================================
 
 	describe("registry-error → HTTP mapping", () => {
 		it("FIELD_EXISTS → 409 on duplicate create", async () => {

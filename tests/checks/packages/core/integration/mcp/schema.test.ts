@@ -1,3 +1,23 @@
+/**
+ * MCP schema tools — comprehensive integration tests.
+ *
+ * Covers every branch of:
+ *   - schema_list_collections
+ *   - schema_get_collection
+ *   - schema_create_collection (also bug #11 — supports default)
+ *   - schema_update_collection
+ *   - schema_delete_collection
+ *   - schema_create_field
+ *   - schema_update_field
+ *   - schema_delete_field
+ *
+ * For each tool: happy path, edge cases (empty, missing, duplicate,
+ * reserved names), permission gates, error envelope (bug #3 — currently
+ * generic). Where the omnibus fix is expected to introduce structured
+ * errors, the assertions name the specific failure mode so they fail
+ * usefully today.
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -18,6 +38,10 @@ const EDITOR_ID = "user_editor";
 const AUTHOR_ID = "user_author";
 
 const VALIDATION_ERROR = /validation|invalid|reserved|pattern|format|required/i;
+
+// ---------------------------------------------------------------------------
+// schema_list_collections
+// ---------------------------------------------------------------------------
 
 describe("schema_list_collections", () => {
 	let db: Kysely<Database>;
@@ -80,6 +104,10 @@ describe("schema_list_collections", () => {
 		expect(result.isError, extractText(result)).toBeFalsy();
 	});
 });
+
+// ---------------------------------------------------------------------------
+// schema_get_collection
+// ---------------------------------------------------------------------------
 
 describe("schema_get_collection", () => {
 	let db: Kysely<Database>;
@@ -145,6 +173,10 @@ describe("schema_get_collection", () => {
 		expect(result.isError).toBe(true);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// schema_create_collection
+// ---------------------------------------------------------------------------
 
 describe("schema_create_collection", () => {
 	let db: Kysely<Database>;
@@ -255,6 +287,7 @@ describe("schema_create_collection", () => {
 
 	it("rejects reserved slug like 'media' or 'options'", async () => {
 		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
+		// `options` is a reserved table name
 		const result = await harness.client.callTool({
 			name: "schema_create_collection",
 			arguments: { slug: "options", label: "Options" },
@@ -281,6 +314,10 @@ describe("schema_create_collection", () => {
 		expect(result.isError).toBe(true);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// schema_update_collection
+// ---------------------------------------------------------------------------
 
 describe("schema_update_collection", () => {
 	let db: Kysely<Database>;
@@ -404,6 +441,31 @@ describe("schema_update_collection", () => {
 		expect((await new SchemaRegistry(db).getCollection("post"))?.urlPattern).toBeUndefined();
 	});
 
+	it("round-trips an unchanged legacy URL pattern but rejects a changed invalid pattern", async () => {
+		await db
+			.updateTable("_emdash_collections")
+			.set({ url_pattern: "/{slug}-{id}" })
+			.where("slug", "=", "post")
+			.execute();
+
+		const unchanged = await harness.client.callTool({
+			name: "schema_update_collection",
+			arguments: { slug: "post", label: "Articles", urlPattern: "/{slug}-{id}" },
+		});
+		expect(unchanged.isError, extractText(unchanged)).toBeFalsy();
+
+		const changed = await harness.client.callTool({
+			name: "schema_update_collection",
+			arguments: { slug: "post", urlPattern: "/{year}{slug}" },
+		});
+		expect(changed.isError).toBe(true);
+		expect(extractText(changed)).toContain("[INVALID_URL_PATTERN]");
+		expect(await new SchemaRegistry(db).getCollection("post")).toMatchObject({
+			label: "Articles",
+			urlPattern: "/{slug}-{id}",
+		});
+	});
+
 	it("derives SEO when supports changes without hasSeo", async () => {
 		const result = await harness.client.callTool({
 			name: "schema_update_collection",
@@ -484,6 +546,10 @@ describe("schema_update_collection", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// schema_delete_collection
+// ---------------------------------------------------------------------------
+
 describe("schema_delete_collection", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -508,6 +574,7 @@ describe("schema_delete_collection", () => {
 		});
 		expect(result.isError, extractText(result)).toBeFalsy();
 
+		// Verify it's gone
 		const list = await harness.client.callTool({
 			name: "schema_list_collections",
 			arguments: {},
@@ -528,6 +595,9 @@ describe("schema_delete_collection", () => {
 			arguments: { slug: "post" },
 		});
 		expect(result.isError).toBe(true);
+		// Tight: the error must say "has content" and tell the caller how
+		// to override (force: true). Loose word matches like /empty|content/
+		// passed against unrelated 500s, hiding regressions.
 		const text = extractText(result);
 		expect(text).toMatch(/has content/i);
 		expect(text).toContain("force: true");
@@ -567,6 +637,10 @@ describe("schema_delete_collection", () => {
 		expect(result.isError).toBe(true);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// schema_create_field
+// ---------------------------------------------------------------------------
 
 describe("schema_create_field", () => {
 	let db: Kysely<Database>;
@@ -744,6 +818,10 @@ describe("schema_create_field", () => {
 		expect(field.required).toBe(true);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// schema_update_field
+// ---------------------------------------------------------------------------
 
 describe("schema_update_field", () => {
 	let db: Kysely<Database>;
@@ -1002,6 +1080,10 @@ describe("schema_update_field", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// schema_delete_field
+// ---------------------------------------------------------------------------
+
 describe("schema_delete_field", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -1027,6 +1109,7 @@ describe("schema_delete_field", () => {
 		});
 		expect(result.isError, extractText(result)).toBeFalsy();
 
+		// Verify it's gone
 		const get = await harness.client.callTool({
 			name: "schema_get_collection",
 			arguments: { slug: "post" },
@@ -1066,25 +1149,34 @@ describe("schema_delete_field", () => {
 	});
 
 	it("deleting a field with existing content also drops the data (no orphan)", async () => {
+		// Create content using the field
 		await harness.client.callTool({
 			name: "content_create",
 			arguments: { collection: "post", data: { title: "T", body: "Body content" } },
 		});
 
+		// Delete the field
 		const result = await harness.client.callTool({
 			name: "schema_delete_field",
 			arguments: { collection: "post", fieldSlug: "body" },
 		});
 		expect(result.isError, extractText(result)).toBeFalsy();
 
+		// content_get should return data without the body field
 		const list = await harness.client.callTool({
 			name: "content_list",
 			arguments: { collection: "post" },
 		});
 		const items = extractJson<{ items: Array<Record<string, unknown>> }>(list).items;
+		// At minimum, the API shouldn't crash. The field should not appear,
+		// and the data fetch should still succeed.
 		expect(items.length).toBeGreaterThan(0);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Cross-cutting: error envelope quality (bug #3 lens)
+// ---------------------------------------------------------------------------
 
 describe("schema tools — error envelope quality (bug #3 lens)", () => {
 	let db: Kysely<Database>;
@@ -1111,6 +1203,8 @@ describe("schema tools — error envelope quality (bug #3 lens)", () => {
 		});
 		expect(result.isError).toBe(true);
 		const text = extractText(result);
+		// Today: probably leaks raw SQLite UNIQUE error or generic. After fix:
+		// a stable signal like "already exists" / CONFLICT.
 		expect(text).toMatch(/exist|conflict|duplicate|unique|already/i);
 		expect(text).not.toMatch(/^Failed to /);
 	});

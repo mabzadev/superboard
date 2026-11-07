@@ -1,4 +1,16 @@
+/**
+ * Tests for render-path hreflang alternates (#1690).
+ *
+ * Mirrors the sitemap route's semantics: alternates per published
+ * translation sibling (including self), `x-default` on the
+ * default-locale variant, unroutable locales dropped, and empty output
+ * when i18n is disabled. `astro:i18n` isn't available under vitest, so
+ * `localizePath` uses its manual-prefix fallback — the same behaviour
+ * default-routing sites get.
+ */
+
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createDatabase } from "../../../../../../packages/core/src/database/connection.js";
@@ -71,6 +83,29 @@ describe("getHreflangAlternates (#1690)", () => {
 		]);
 	});
 
+	it("resolves date tokens from each variant's publish date, matching the sitemap", async () => {
+		await db
+			.updateTable("_emdash_collections")
+			.set({ url_pattern: "/{year}/{month}/{day}/{slug}" })
+			.where("slug", "=", "post")
+			.execute();
+		const { en, fr } = await createPair();
+		await sql`UPDATE ec_post SET published_at = ${"2023-05-08T10:00:00.000Z"} WHERE id = ${en.id}`.execute(
+			db,
+		);
+		await sql`UPDATE ec_post SET published_at = ${"2024-01-02T10:00:00.000Z"} WHERE id = ${fr.id}`.execute(
+			db,
+		);
+
+		const alternates = await getHreflangAlternatesWithDb(db, "post", en.id, { siteUrl: SITE });
+
+		expect(alternates).toEqual([
+			{ hreflang: "en", href: `${SITE}/2023/05/08/hello` },
+			{ hreflang: "fr", href: `${SITE}/fr/2024/01/02/bonjour` },
+			{ hreflang: "x-default", href: `${SITE}/2023/05/08/hello` },
+		]);
+	});
+
 	it("returns the same set when resolved from a non-default sibling", async () => {
 		const { fr } = await createPair();
 
@@ -132,7 +167,7 @@ describe("getHreflangAlternates (#1690)", () => {
 			slug: "hallo",
 			data: { title: "Hallo" },
 			status: "published",
-			locale: "de",
+			locale: "de", // not in ["en", "fr"]
 			translationOf: en.id,
 		});
 

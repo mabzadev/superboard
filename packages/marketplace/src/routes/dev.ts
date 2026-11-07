@@ -1,3 +1,9 @@
+/**
+ * Dev-only routes for testing audit/moderation locally.
+ *
+ * Gated by hostname — only responds on localhost/127.0.0.1.
+ */
+
 import { Hono } from "hono";
 import { createGzipDecoder, unpackTar } from "modern-tar";
 
@@ -15,6 +21,7 @@ type DevEnv = { Bindings: Env };
 
 export const devRoutes = new Hono<DevEnv>();
 
+// Block all requests not from localhost
 devRoutes.use("/dev/*", async (c, next) => {
 	const url = new URL(c.req.url);
 	if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
@@ -23,6 +30,15 @@ devRoutes.use("/dev/*", async (c, next) => {
 	await next();
 });
 
+/**
+ * POST /dev/audit
+ *
+ * Accepts either:
+ * - A .tar.gz bundle as multipart form data (field: "bundle")
+ * - Raw JSON with { backendCode, adminCode?, manifest }
+ *
+ * Returns code audit + image audit results without auth or DB writes.
+ */
 devRoutes.post("/dev/audit", async (c) => {
 	const contentType = c.req.header("content-type") ?? "";
 
@@ -30,6 +46,7 @@ devRoutes.post("/dev/audit", async (c) => {
 	let imageFiles: ImageInput[] = [];
 
 	if (contentType.includes("multipart/form-data")) {
+		// Tarball mode
 		const formData = await c.req.formData();
 		const bundleFile = formData.get("bundle");
 		if (!bundleFile || !(bundleFile instanceof File)) {
@@ -96,6 +113,7 @@ devRoutes.post("/dev/audit", async (c) => {
 			adminCode: adminBytes ? decoder.decode(adminBytes) : undefined,
 		};
 
+		// Collect images
 		const iconData = files.get("icon.png");
 		if (iconData) {
 			imageFiles.push({
@@ -114,6 +132,7 @@ devRoutes.post("/dev/audit", async (c) => {
 			}
 		}
 	} else {
+		// JSON mode — manifest is optional for quick code-only testing
 		let body: {
 			backendCode: string;
 			adminCode?: string;
@@ -154,6 +173,7 @@ devRoutes.post("/dev/audit", async (c) => {
 				adminCode: body.adminCode,
 			};
 		} else {
+			// No manifest provided — use minimal defaults for code-only audit
 			auditInput = {
 				manifest: {
 					id: "dev-test",
@@ -167,6 +187,7 @@ devRoutes.post("/dev/audit", async (c) => {
 		}
 	}
 
+	// Run audits
 	if (!c.env.AI) {
 		return c.json({ error: "AI binding not configured �� auditing is unavailable" }, 503);
 	}
@@ -185,10 +206,13 @@ devRoutes.post("/dev/audit", async (c) => {
 	});
 });
 
-const MAX_DECOMPRESSED_BYTES = 50 * 1024 * 1024;
+// ── Tarball extraction (duplicated from author.ts to avoid coupling) ──
+
+const MAX_DECOMPRESSED_BYTES = 50 * 1024 * 1024; // 50MB decompressed size limit for tarballs
 const MAX_TAR_FILES = 200;
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
+/** Read an entire ReadableStream into a single Uint8Array, aborting if it exceeds `limit` bytes. */
 async function collectStream(
 	stream: ReadableStream<Uint8Array>,
 	limit: number,
@@ -219,6 +243,11 @@ async function collectStream(
 }
 
 async function extractTarball(data: ArrayBuffer): Promise<Map<string, Uint8Array>> {
+	// Decompress fully into memory first, then parse the tar.
+	// Passing a pipeThrough() stream directly to unpackTar causes a backpressure
+	// deadlock in workerd: the tar decoder's body-stream pull() needs more
+	// decompressed data, but the upstream pipe is stalled waiting for the
+	// decoder's writable side to drain — a circular dependency.
 	const decompressed = await collectStream(
 		new Response(data).body!.pipeThrough(createGzipDecoder()),
 		MAX_DECOMPRESSED_BYTES,

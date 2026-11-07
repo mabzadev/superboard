@@ -1,3 +1,17 @@
+/**
+ * Plugins Manager E2E Tests
+ *
+ * Tests the plugins manager admin page at /plugins-manager.
+ * Verifies that the page renders and displays plugin info.
+ *
+ * This test exists because the plugins page previously crashed due to
+ * incorrect API response envelope unwrapping (fetchPlugins returned
+ * { items: [...] } instead of [...]) -- a bug that component tests
+ * never caught because they mock fetchPlugins at the module level.
+ *
+ * The e2e fixture configures a color plugin (id: "color", version: "0.0.1").
+ */
+
 import { test, expect } from "../../fixtures/emdash-browser";
 
 test.describe("Plugins Manager", () => {
@@ -11,10 +25,13 @@ test.describe("Plugins Manager", () => {
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Page title
 			await admin.expectPageTitle("Plugins");
 
+			// Should show the plugin count
 			await expect(page.locator("text=/\\d+ plugin/")).toBeVisible({ timeout: 10000 });
 
+			// Should have at least one plugin card (the color plugin from the fixture)
 			const pluginCards = page.locator(".rounded-lg.border.bg-kumo-base");
 			await expect(pluginCards.first()).toBeVisible({ timeout: 10000 });
 		});
@@ -24,6 +41,9 @@ test.describe("Plugins Manager", () => {
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Regression guard: the page must actually render its content (a blank
+			// page must fail this) and must not fall back to the error state that
+			// prompted this test.
 			await expect(page.locator("text=/\\d+ plugin/")).toBeVisible({ timeout: 10000 });
 			await expect(page.locator("text=Failed to load plugins")).not.toBeVisible();
 		});
@@ -35,15 +55,19 @@ test.describe("Plugins Manager", () => {
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Find the color plugin card
 			const colorCard = page
 				.locator(".rounded-lg.border.bg-kumo-base", { hasText: "color" })
 				.first();
 			await expect(colorCard).toBeVisible({ timeout: 10000 });
 
+			// Plugin name
 			await expect(colorCard.locator("h3")).toContainText("color");
 
+			// Version badge
 			await expect(colorCard.locator("text=v0.0.1")).toBeVisible();
 
+			// Enable/disable switch
 			const toggle = colorCard.locator("button[role='switch']");
 			await expect(toggle).toBeVisible();
 		});
@@ -60,13 +84,16 @@ test.describe("Plugins Manager", () => {
 				.first();
 			await expect(colorCard).toBeVisible({ timeout: 10000 });
 
+			// Find and click the expand button
 			const expandBtn = colorCard.locator("button[aria-label='Expand details']");
 			await expect(expandBtn).toBeVisible();
 			await expandBtn.click();
 
+			// The details section should now be visible (it has a border-t class)
 			const detailsSection = colorCard.locator(".border-t.px-4");
 			await expect(detailsSection).toBeVisible({ timeout: 5000 });
 
+			// Collapse button should now be present
 			await expect(colorCard.locator("button[aria-label='Collapse details']")).toBeVisible();
 		});
 
@@ -80,20 +107,27 @@ test.describe("Plugins Manager", () => {
 				.first();
 			await expect(colorCard).toBeVisible({ timeout: 10000 });
 
+			// Expand first
 			await colorCard.locator("button[aria-label='Expand details']").click();
 			const detailsSection = colorCard.locator(".border-t.px-4");
 			await expect(detailsSection).toBeVisible({ timeout: 5000 });
 
+			// Now collapse
 			await colorCard.locator("button[aria-label='Collapse details']").click();
 
+			// Details should be hidden
 			await expect(detailsSection).not.toBeVisible({ timeout: 5000 });
 
+			// Expand button should be back
 			await expect(colorCard.locator("button[aria-label='Expand details']")).toBeVisible();
 		});
 	});
 
 	test.describe("API integration", () => {
 		test("plugins API returns the correct envelope shape", async ({ page, serverInfo }) => {
+			// Directly verify the API response shape that caused the original bug.
+			// fetchPlugins expected { data: { items: [...] } } but was getting
+			// the items at a different nesting level.
 			const res = await page.request.get("/_emdash/api/admin/plugins", {
 				headers: {
 					"X-EmDash-Request": "1",
@@ -104,11 +138,13 @@ test.describe("Plugins Manager", () => {
 			expect(res.ok()).toBe(true);
 			const body = await res.json();
 
+			// The response should have { data: { items: [...] } }
 			expect(body.data).toBeDefined();
 			expect(body.data.items).toBeDefined();
 			expect(Array.isArray(body.data.items)).toBe(true);
 			expect(body.data.items.length).toBeGreaterThan(0);
 
+			// Each plugin should have the expected shape
 			const plugin = body.data.items[0];
 			expect(plugin.id).toBeDefined();
 			expect(plugin.name).toBeDefined();

@@ -12,7 +12,7 @@ import {
 } from "./retirement-api-helpers.js";
 const plugin = "superboard-dynamic-links";
 const file = "retirement-api-dynamic-links.runtime.test.ts";
-test("canonical Dynamic Links APIs persist campaigns, redirect behavior, tracking facts and operator-confirmed domain metadata", async () => {
+test("canonical Dynamic Links APIs persist campaigns, redirect behavior, tracking facts and DNS-checked domain metadata", async () => {
 	const scope = await prepareApiPlugin(plugin);
 	const base = `/api/v1/dynamic-links/projects/${scope.production_project_ref}`;
 	const db = pluginDatabase("dynamic-links");
@@ -208,12 +208,12 @@ test("canonical Dynamic Links APIs persist campaigns, redirect behavior, trackin
 	await jsonResult(
 		await command("verify_domain", "POST", `/domains/${domain.data.id}/verify`, { verified: true }),
 	);
-	const confirmed = await db
+	const unproven = await db
 		.prepare("SELECT status,verified_at FROM domains WHERE id=?")
 		.bind(domain.data.id)
-		.first<{ status: string; verified_at: string }>();
-	expect(confirmed?.status).toBe("verified");
-	expect(confirmed?.verified_at).toBeTruthy();
+		.first<{ status: string; verified_at: string | null }>();
+	expect(unproven?.status).toBe("pending");
+	expect(unproven?.verified_at).toBeFalsy();
 	proveApi(plugin, "verify_domain", "mutation", file, [domain.data.id]);
 	await jsonResult(await command("delete_domain", "DELETE", `/domains/${domain.data.id}`));
 	expect(

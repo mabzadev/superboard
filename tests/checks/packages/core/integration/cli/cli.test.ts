@@ -1,3 +1,12 @@
+/**
+ * E2E tests for CLI commands against a real Astro dev server.
+ *
+ * Shells out to the actual `emdash` binary with --url and --token
+ * flags, verifying real command output and exit codes.
+ *
+ * Runs by default. Requires built artifacts (auto-builds if missing).
+ */
+
 import { execFile } from "node:child_process";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
@@ -10,8 +19,9 @@ import { assertNodeVersion, createTestServer } from "../server.js";
 
 const exec = promisify(execFile);
 
-const PORT = 4398;
+const PORT = 4398; // Different port from client integration tests
 
+// Path to the built CLI binary
 const CLI_BIN = resolve(import.meta.dirname, "../../../../../../packages/core/dist/cli/index.mjs");
 
 describe("CLI Integration", () => {
@@ -26,6 +36,7 @@ describe("CLI Integration", () => {
 		await ctx?.cleanup();
 	});
 
+	/** Run an emdash CLI command and return stdout */
 	async function cli(...args: string[]): Promise<string> {
 		const { stdout } = await exec(
 			"node",
@@ -37,10 +48,15 @@ describe("CLI Integration", () => {
 		return stdout;
 	}
 
+	/** Run CLI and parse JSON output */
 	async function cliJson<T = unknown>(...args: string[]): Promise<T> {
 		const stdout = await cli(...args);
 		return JSON.parse(stdout) as T;
 	}
+
+	// -----------------------------------------------------------------------
+	// Schema commands
+	// -----------------------------------------------------------------------
 
 	describe("schema", () => {
 		it("lists collections", async () => {
@@ -67,18 +83,23 @@ describe("CLI Integration", () => {
 			);
 			expect(created.slug).toBe("cli_temp");
 
+			// Verify it exists
 			const list = await cliJson<{ slug: string }[]>("schema", "list");
 			expect(list.map((c) => c.slug)).toContain("cli_temp");
 
+			// Delete
 			await cli("schema", "delete", "cli_temp", "--force");
 
+			// Verify it's gone
 			const listAfter = await cliJson<{ slug: string }[]>("schema", "list");
 			expect(listAfter.map((c) => c.slug)).not.toContain("cli_temp");
 		});
 
 		it("adds and removes fields", async () => {
+			// Create a temp collection
 			await cli("schema", "create", "cli_fields", "--label", "Fields Test");
 
+			// Add a field
 			const field = await cliJson<{ slug: string; type: string }>(
 				"schema",
 				"add-field",
@@ -92,11 +113,17 @@ describe("CLI Integration", () => {
 			expect(field.slug).toBe("name");
 			expect(field.type).toBe("string");
 
+			// Remove the field
 			await cli("schema", "remove-field", "cli_fields", "name");
 
+			// Clean up
 			await cli("schema", "delete", "cli_fields", "--force");
 		});
 	});
+
+	// -----------------------------------------------------------------------
+	// Content commands
+	// -----------------------------------------------------------------------
 
 	describe("content", () => {
 		it("lists content", async () => {
@@ -115,6 +142,7 @@ describe("CLI Integration", () => {
 		});
 
 		it("creates, updates, and deletes content", async () => {
+			// Create
 			const created = await cliJson<{ id: string; slug: string }>(
 				"content",
 				"create",
@@ -127,6 +155,7 @@ describe("CLI Integration", () => {
 			expect(created.id).toBeDefined();
 			expect(created.slug).toBe("cli-post");
 
+			// Update (get first to obtain _rev, then update with it)
 			const fetched = await cliJson<{ _rev: string }>("content", "get", "posts", created.id);
 			const updated = await cliJson<{ data: { title: string } }>(
 				"content",
@@ -140,6 +169,7 @@ describe("CLI Integration", () => {
 			);
 			expect(updated.data.title).toBe("Updated CLI Post");
 
+			// Delete
 			await cli("content", "delete", "posts", created.id);
 		});
 
@@ -225,9 +255,14 @@ describe("CLI Integration", () => {
 			await cli("content", "publish", "posts", item.id);
 			await cli("content", "unpublish", "posts", item.id);
 
+			// Clean up
 			await cli("content", "delete", "posts", item.id);
 		});
 	});
+
+	// -----------------------------------------------------------------------
+	// Content lifecycle: schedule and restore
+	// -----------------------------------------------------------------------
 
 	describe("content lifecycle", () => {
 		it("schedules content for publishing", async () => {
@@ -239,11 +274,14 @@ describe("CLI Integration", () => {
 				JSON.stringify({ title: "CLI Schedule Test" }),
 			);
 
-			await cli("content", "schedule", "posts", item.id, "--at", "2027-06-01T09:00:00Z");
+			// Schedule does not produce JSON output, just a success message
+			await cli("content", "schedule", "posts", item.id, "--at", "2027-06-01T04:00:00-05:00");
 
+			// Verify via get
 			const fetched = await cliJson<{ scheduledAt: string }>("content", "get", "posts", item.id);
-			expect(fetched.scheduledAt).toBe("2027-06-01T09:00:00Z");
+			expect(fetched.scheduledAt).toBe("2027-06-01T09:00:00.000Z");
 
+			// Clean up
 			await cli("content", "delete", "posts", item.id);
 		});
 
@@ -256,16 +294,24 @@ describe("CLI Integration", () => {
 				JSON.stringify({ title: "CLI Restore Test" }),
 			);
 
+			// Delete (soft trash)
 			await cli("content", "delete", "posts", item.id);
 
+			// Restore
 			await cli("content", "restore", "posts", item.id);
 
+			// Accessible again, as a draft even though it was auto-published before deletion
 			const fetched = await cliJson<{ status: string }>("content", "get", "posts", item.id);
-			expect(fetched.status).toBe("published");
+			expect(fetched.status).toBe("draft");
 
+			// Final cleanup
 			await cli("content", "delete", "posts", item.id);
 		});
 	});
+
+	// -----------------------------------------------------------------------
+	// Media commands
+	// -----------------------------------------------------------------------
 
 	describe("media", () => {
 		it("repairs media usage for a collection", async () => {
@@ -294,10 +340,12 @@ describe("CLI Integration", () => {
 		});
 
 		it("uploads, lists, gets, and deletes media", async () => {
+			// Create a temp file to upload
 			const { writeFileSync } = await import("node:fs");
 			const { join } = await import("node:path");
 			const { tmpdir } = await import("node:os");
 
+			// 1x1 PNG pixel
 			const pngBytes = Buffer.from([
 				0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
 				0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90,
@@ -308,36 +356,59 @@ describe("CLI Integration", () => {
 			const tmpFile = join(tmpdir(), "emdash-cli-test.png");
 			writeFileSync(tmpFile, pngBytes);
 
+			// Upload
 			const uploaded = await cliJson<{ id: string; filename: string }>(
 				"media",
 				"upload",
 				tmpFile,
 				"--alt",
 				"CLI test image",
+				"--caption",
+				"CLI test caption",
 			);
 			expect(uploaded.id).toBeDefined();
 			expect(uploaded.filename).toBe("emdash-cli-test.png");
 
+			// List
 			const list = await cliJson<{ items: { id: string }[] }>("media", "list");
 			const ids = list.items.map((m) => m.id);
 			expect(ids).toContain(uploaded.id);
 
-			const fetched = await cliJson<{ id: string; filename: string }>("media", "get", uploaded.id);
+			// Get
+			const fetched = await cliJson<{
+				id: string;
+				filename: string;
+				alt: string | null;
+				caption: string | null;
+			}>("media", "get", uploaded.id);
 			expect(fetched.id).toBe(uploaded.id);
+			expect(fetched.alt).toBe("CLI test image");
+			expect(fetched.caption).toBe("CLI test caption");
 
+			// Delete
 			await cli("media", "delete", uploaded.id);
 
+			// Clean up temp file
 			const { unlinkSync } = await import("node:fs");
 			unlinkSync(tmpFile);
 		});
 	});
 
+	// -----------------------------------------------------------------------
+	// Search command
+	// -----------------------------------------------------------------------
+
 	describe("search", () => {
 		it("searches content", async () => {
+			// Search should work even if no results (the command shouldn't error)
 			const result = await cliJson<unknown[]>("search", "First Post");
 			expect(Array.isArray(result)).toBe(true);
 		});
 	});
+
+	// -----------------------------------------------------------------------
+	// Auth commands
+	// -----------------------------------------------------------------------
 
 	describe("auth", () => {
 		it("whoami returns user info with token auth", async () => {
@@ -345,7 +416,37 @@ describe("CLI Integration", () => {
 			expect(result.email).toBe("dev@emdash.local");
 			expect(result.role).toBe("admin");
 		});
+
+		it("whoami without a token on localhost reports the dev-bypass user", async () => {
+			const { mkdtempSync, rmSync } = await import("node:fs");
+			const { join } = await import("node:path");
+			const { tmpdir } = await import("node:os");
+			const isolated = mkdtempSync(join(tmpdir(), "emdash-whoami-"));
+			const env: NodeJS.ProcessEnv = { ...process.env, XDG_CONFIG_HOME: isolated };
+			delete env.EMDASH_TOKEN;
+			delete env.EMDASH_URL;
+			delete env.EMDASH_HEADERS;
+
+			try {
+				const { stdout } = await exec("node", [CLI_BIN, "whoami", "--url", ctx.baseUrl, "--json"], {
+					cwd: isolated,
+					env,
+					timeout: 15_000,
+				});
+				expect(JSON.parse(stdout)).toMatchObject({
+					email: "dev@emdash.local",
+					role: "admin",
+					authMethod: "dev-bypass",
+				});
+			} finally {
+				rmSync(isolated, { recursive: true, force: true });
+			}
+		});
 	});
+
+	// -----------------------------------------------------------------------
+	// Taxonomy commands
+	// -----------------------------------------------------------------------
 
 	describe("taxonomy", () => {
 		it("taxonomy list returns valid JSON array", async () => {
@@ -368,6 +469,10 @@ describe("CLI Integration", () => {
 			expect(slugs).toContain("news");
 		});
 	});
+
+	// -----------------------------------------------------------------------
+	// Menu commands
+	// -----------------------------------------------------------------------
 
 	describe("menu", () => {
 		it("menu list returns valid JSON array", async () => {

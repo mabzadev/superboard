@@ -1017,6 +1017,7 @@ export type StripeConnection = {
 	application_origin: string;
 	last_tested_at: string | null;
 	webhook_path: string;
+	webhook_url: string | null;
 };
 export async function getStripeConnection(projectId: string): Promise<StripeConnection> {
 	const data: unknown = (await GET(config.apiPath + `/billing/${projectId}/stripe`)).data;
@@ -1038,6 +1039,8 @@ export async function getStripeConnection(projectId: string): Promise<StripeConn
 		environment: data.environment,
 		application_origin: data.application_origin,
 		webhook_path: data.webhook_path,
+		webhook_url:
+			"webhook_url" in data && typeof data.webhook_url === "string" ? data.webhook_url : null,
 		last_tested_at:
 			"last_tested_at" in data && typeof data.last_tested_at === "string"
 				? data.last_tested_at
@@ -1046,7 +1049,7 @@ export async function getStripeConnection(projectId: string): Promise<StripeConn
 }
 export async function saveStripeConnection(
 	projectId: string,
-	input: { secret_key: string; webhook_secret: string; application_origin: string },
+	input: { secret_key?: string; webhook_secret?: string; application_origin: string },
 ): Promise<unknown> {
 	const data: unknown = (await POST(config.apiPath + `/billing/${projectId}/stripe`, input)).data;
 	return data;

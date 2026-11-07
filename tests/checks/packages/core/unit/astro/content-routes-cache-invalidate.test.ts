@@ -1,9 +1,28 @@
+/**
+ * PUT content updates must only purge edge cache tags when live/public
+ * content actually changed. Pure draft staging on revision collections
+ * leaves live columns untouched and must not thrash Workers Cache.
+ */
+
 import { Role } from "@emdash-cms/auth";
-import { describe, it, expect, vi } from "vitest";
+import type { Kysely } from "kysely";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 
 import { PUT as updateContent } from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/[id].js";
+import type { Database } from "../../../../../../packages/core/src/database/types.js";
+import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
 describe("PUT content route — edge cache invalidation", () => {
+	let db: Kysely<Database>;
+
+	beforeAll(async () => {
+		db = await setupTestDatabase();
+	});
+
+	afterAll(async () => {
+		await teardownTestDatabase(db);
+	});
+
 	const makeUser = () => ({
 		id: "user-1",
 		role: Role.EDITOR,
@@ -38,7 +57,7 @@ describe("PUT content route — edge cache invalidation", () => {
 			request,
 			url: new URL(request.url),
 			locals: {
-				emdash: { handleContentUpdate, handleContentGet },
+				emdash: { handleContentUpdate, handleContentGet, db },
 				user: makeUser(),
 			},
 			cache: { enabled: true, invalidate },

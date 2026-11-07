@@ -79,13 +79,27 @@ export type RedirectRule = {
 	active: boolean;
 };
 
+export type DomainVerificationRecord = { type: string; name: string; value: string };
+
 export type LinkDomain = {
 	id: string;
 	hostname: string;
 	status: string;
 	verification_token: string;
+	verification_record?: DomainVerificationRecord;
 	verified_at?: string | null;
 	is_default: number;
+};
+
+export type DomainVerification = {
+	id: string;
+	verified: boolean;
+	status?: string;
+	check?: {
+		result: "verified" | "not_found" | "mismatch" | "lookup_failed";
+		record: DomainVerificationRecord;
+		found: string[];
+	};
 };
 
 export type TrackingSettings = {
@@ -239,7 +253,7 @@ export async function createDomain(projectRef: string, payload: Record<string, u
 }
 
 export async function verifyDomain(projectRef: string, id: string, verified = true) {
-	return unwrap<{ verified: boolean }>(
+	return unwrap<DomainVerification>(
 		await POST(path(projectRef, `/domains/${id}/verify`), { verified }),
 	);
 }

@@ -1,14 +1,23 @@
-import BetterSqlite3 from "better-sqlite3";
+/**
+ * Marketplace plugin state tests
+ *
+ * Tests the PluginStateRepository marketplace extensions:
+ * - source/marketplaceVersion fields in upsert
+ * - getMarketplacePlugins filter
+ * - Migration 022 columns
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { runMigrations } from "../../../../../../packages/core/src/database/migrations/runner.js";
 import type { Database as DbSchema } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as BetterSqlite3 } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { PluginStateRepository } from "../../../../../../packages/core/src/plugins/state.js";
 
 describe("PluginStateRepository – marketplace extensions", () => {
 	let db: Kysely<DbSchema>;
-	let sqliteDb: BetterSqlite3.Database;
+	let sqliteDb: BetterSqlite3;
 	let repo: PluginStateRepository;
 
 	beforeEach(async () => {

@@ -9,10 +9,15 @@ import {
 	generateEncryptionKey,
 	isDirNonEmpty,
 	parseTargetArg,
+	replacePackageManagerCommands,
 	sanitizePackageName,
+	setWorkerLoader,
 	writeEncryptionKey,
 } from "../../../../packages/create-emdash/src/utils.js";
 
+// ---------------------------------------------------------------------------
+// sanitizePackageName
+// ---------------------------------------------------------------------------
 describe("sanitizePackageName", () => {
 	it("passes through a valid lowercase name unchanged", () => {
 		expect(sanitizePackageName("my-site")).toBe("my-site");
@@ -59,6 +64,8 @@ describe("sanitizePackageName", () => {
 	});
 
 	it("handles a single period (basename of root on some systems)", () => {
+		// basename("/") on some platforms can return "/" which sanitises to "my-site"
+		// but basename of a relative "." is ".", which becomes empty after stripping
 		expect(sanitizePackageName(".")).toBe("my-site");
 	});
 
@@ -71,6 +78,7 @@ describe("sanitizePackageName", () => {
 	});
 
 	it("collapses multiple consecutive invalid chars into individual hyphens", () => {
+		// Each invalid char becomes a separate hyphen – no collapsing
 		expect(sanitizePackageName("a   b")).toBe("a---b");
 	});
 
@@ -79,10 +87,14 @@ describe("sanitizePackageName", () => {
 	});
 
 	it("handles paths that look like scoped packages", () => {
+		// The @ and / are both invalid, so they become hyphens
 		expect(sanitizePackageName("@scope/package")).toBe("scope-package");
 	});
 });
 
+// ---------------------------------------------------------------------------
+// PROJECT_NAME_PATTERN
+// ---------------------------------------------------------------------------
 describe("PROJECT_NAME_PATTERN", () => {
 	const valid = ["my-site", "blog", "a", "123", "my-cool-site-2"];
 	const invalid = ["My-Site", "my site", "my.site", "my_site", ".", ".hidden", "@scope/pkg", ""];
@@ -100,8 +112,12 @@ describe("PROJECT_NAME_PATTERN", () => {
 	}
 });
 
+// ---------------------------------------------------------------------------
+// parseTargetArg
+// ---------------------------------------------------------------------------
 describe("parseTargetArg", () => {
 	it("returns undefined when no arguments are passed", () => {
+		// process.argv always has at least [node, script]
 		expect(parseTargetArg(["node", "script.js"])).toBeUndefined();
 	});
 
@@ -130,6 +146,9 @@ describe("parseTargetArg", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// isDirNonEmpty
+// ---------------------------------------------------------------------------
 describe("isDirNonEmpty", () => {
 	let tempDir: string;
 
@@ -162,10 +181,23 @@ describe("isDirNonEmpty", () => {
 	it("returns false for a path that is a file, not a directory", () => {
 		const filePath = join(tempDir, "a-file.txt");
 		writeFileSync(filePath, "content");
+		// readdirSync on a file throws ENOTDIR, which the catch handles
 		expect(isDirNonEmpty(filePath)).toBe(false);
 	});
 });
 
+// ---------------------------------------------------------------------------
+// generateEncryptionKey — format alignment with `emdash`'s parser
+// ---------------------------------------------------------------------------
+//
+// The vendored generator must emit values that pass the canonical-base64url
+// check in `packages/core/src/config/secrets.ts`. If the prefix or body
+// length ever drifts in core, this test won't catch it directly — but the
+// shape assertion here is the same shape `parseEncryptionKeys` checks, so
+// any encoding regression will be caught immediately.
+//
+// We don't import from `emdash` directly because `create-emdash` ships
+// without the heavy core dep; the duplication is intentional.
 describe("generateEncryptionKey", () => {
 	it("produces the v1 prefix and a 43-char unpadded base64url body", () => {
 		const key = generateEncryptionKey();
@@ -175,11 +207,14 @@ describe("generateEncryptionKey", () => {
 	it("body decodes to exactly 32 bytes", () => {
 		const key = generateEncryptionKey();
 		const body = key.slice("emdash_enc_v1_".length);
+		// base64url -> Uint8Array; rely on Node's built-in handling.
 		const bytes = Buffer.from(body, "base64url");
 		expect(bytes.length).toBe(32);
 	});
 
 	it("body is canonical (re-encoding decoded bytes yields the same string)", () => {
+		// Aligns with `parseEncryptionKeys`'s canonical check. If this
+		// fails, the generator and parser have drifted apart.
 		const key = generateEncryptionKey();
 		const body = key.slice("emdash_enc_v1_".length);
 		const bytes = Buffer.from(body, "base64url");
@@ -192,6 +227,13 @@ describe("generateEncryptionKey", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// writeEncryptionKey — parallel coverage with the core CLI's helper
+// ---------------------------------------------------------------------------
+//
+// These cases mirror `tests/unit/cli/secrets-commands.test.ts` in the core
+// package. The two implementations are independently maintained (per
+// scaffold-time-no-emdash-dep constraint) so both need their own tests.
 describe("writeEncryptionKey", () => {
 	let tempDir: string;
 	const fileName = ".env";
@@ -241,6 +283,7 @@ describe("writeEncryptionKey", () => {
 		const result = writeEncryptionKey(tempDir, fileName);
 		expect(result).toBe("skipped");
 		const content = read();
+		// File untouched.
 		expect(content).toBe(`EMDASH_ENCRYPTION_KEY=${sample}\nOTHER=value\n`);
 	});
 
@@ -260,5 +303,95 @@ describe("writeEncryptionKey", () => {
 		expect(result).toBe("wrote");
 		const content = read();
 		expect(content.endsWith("\n")).toBe(true);
+	});
+});
+
+describe("setWorkerLoader", () => {
+	let tempDir: string;
+	const fileName = "wrangler.jsonc";
+	const legacy = `{
+	// Worker Loader for plugin sandboxing
+	"worker_loaders": [
+		{
+			"binding": "LOADER",
+		},
+	],
+	"triggers": { "crons": ["* * * * *"] },
+}
+`;
+	const commented = `{
+	// Sandboxed plugins require Worker Loader, available on Workers paid plans. Uncomment to enable:
+	// "worker_loaders": [{ "binding": "LOADER" }],
+	"triggers": { "crons": ["* * * * *"] },
+}
+`;
+
+	beforeEach(() => {
+		tempDir = mkdtempSync(join(tmpdir(), "create-emdash-loader-"));
+	});
+
+	afterEach(() => {
+		rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	function write(content: string): void {
+		writeFileSync(join(tempDir, fileName), content);
+	}
+
+	function read(): string {
+		return readFileSync(join(tempDir, fileName), "utf-8");
+	}
+
+	it("does nothing when wrangler.jsonc is absent", () => {
+		expect(setWorkerLoader(tempDir, true)).toBe("absent");
+		expect(setWorkerLoader(tempDir, false)).toBe("absent");
+	});
+
+	it("disables the legacy multi-line binding", () => {
+		write(legacy);
+
+		expect(setWorkerLoader(tempDir, false)).toBe("disabled");
+		expect(read()).not.toMatch(/^\s*"worker_loaders"\s*:/m);
+		expect(read()).toMatch(/^\s*\/\/\s*"worker_loaders"\s*:/m);
+		expect(read()).toContain(`"crons": ["* * * * *"]`);
+	});
+
+	it("enables the canonical commented binding", () => {
+		write(commented);
+
+		expect(setWorkerLoader(tempDir, true)).toBe("enabled");
+		expect(read()).toMatch(/^\s*"worker_loaders"\s*:/m);
+		expect(read()).not.toMatch(/^\s*\/\/\s*"worker_loaders"\s*:/m);
+	});
+
+	it("round-trips without duplicating the declaration", () => {
+		write(commented);
+
+		setWorkerLoader(tempDir, true);
+		setWorkerLoader(tempDir, false);
+
+		expect(read().match(/worker_loaders/g)).toHaveLength(1);
+		expect(read().endsWith("\n")).toBe(true);
+	});
+});
+
+describe("replacePackageManagerCommands", () => {
+	const scripts = ["dev", "build", "deploy"];
+
+	it.each([
+		["npm", "pnpm dev", "npm run dev"],
+		["npm", "pnpm install", "npm install"],
+		["yarn", "pnpm deploy", "yarn deploy"],
+		["bun", "pnpm dev", "bun dev"],
+		["bun", "`pnpm deploy`", "`bun run deploy`"],
+		["bun", "pnpm build", "bun run build"],
+		["bun", "pnpm run build", "bun run build"],
+		["npm", "pnpm wrangler login", "npx wrangler login"],
+		["bun", "pnpm wrangler login", "bun wrangler login"],
+		["npm", "npx emdash types", "npx emdash types"],
+		["bun", "`pnpm-workspace.yaml`", "`pnpm-workspace.yaml`"],
+		["pnpm", "pnpm dev", "pnpm dev"],
+	] as const)("%s: %s -> %s", (pm, input, expected) => {
+		expect(replacePackageManagerCommands(input, pm, scripts)).toBe(expected);
 	});
 });

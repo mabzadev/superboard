@@ -1,6 +1,21 @@
+/**
+ * Playground middleware — injected by the EmDash integration as order: "pre".
+ *
+ * Runs BEFORE the EmDash runtime init middleware. Creates a per-session
+ * Durable Object database, runs migrations, applies the seed, creates an
+ * anonymous admin user, and sets the DB in ALS via runWithContext().
+ *
+ * By the time the runtime middleware runs, the ALS-scoped DB is ready.
+ * The runtime's `db` getter checks ALS first, so all init queries
+ * (migrations, FTS, cron, manifest) operate on the real DO database.
+ *
+ * This module is registered via `addMiddleware({ entrypoint: "..." })` in
+ * the integration, NOT in the user's src/middleware.ts.
+ */
+
 import { defineMiddleware } from "astro:middleware";
 import { env } from "cloudflare:workers";
-import { Kysely, sql } from "kysely";
+import { Kysely } from "kysely";
 import { ulid } from "ulidx";
 // @ts-ignore - virtual module populated by EmDash integration at build time
 import virtualConfig from "virtual:emdash/config";
@@ -9,17 +24,22 @@ import type { EmDashPreviewDB } from "./do-class.js";
 import { PreviewDODialect } from "./do-dialect.js";
 import type { PreviewDBStub } from "./do-dialect.js";
 import { isBlockedInPlayground } from "./do-playground-routes.js";
+import { insertBeforeBodyEnd } from "./insert-before-body-end.js";
+import { initializePlayground } from "./playground-initializer.js";
 import { renderPlaygroundLoadingPage } from "./playground-loading.js";
 import { renderPlaygroundToolbar } from "./playground-toolbar.js";
 
+/** Default TTL for playground data (1 hour) */
 const DEFAULT_TTL = 3600;
 
+/** Cookie name for playground session */
 const COOKIE_NAME = "emdash_playground";
 
+/** Playground admin user constants */
 const PLAYGROUND_USER_ID = "playground-admin";
 const PLAYGROUND_USER_EMAIL = "playground@emdashcms.com";
 const PLAYGROUND_USER_NAME = "Playground User";
-const PLAYGROUND_USER_ROLE = 50;
+const PLAYGROUND_USER_ROLE = 50; // Admin
 
 const PLAYGROUND_USER = {
 	id: PLAYGROUND_USER_ID,
@@ -28,8 +48,34 @@ const PLAYGROUND_USER = {
 	role: PLAYGROUND_USER_ROLE,
 };
 
+/** Track which DOs have been initialized this Worker lifetime */
 const initializedSessions = new Set<string>();
 
+async function ensurePlaygroundInitialized(
+	binding: string,
+	token: string,
+	ttl: number,
+): Promise<void> {
+	if (initializedSessions.has(token)) return;
+
+	const stub = getStub(binding, token);
+	const dialect = new PreviewDODialect({ getStub: () => stub });
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const db = new Kysely<any>({ dialect });
+	try {
+		await getFullStub(binding, token).setTtlAlarm(ttl);
+		const { loadSeed } = await import("emdash/seed");
+		await initializePlayground(db, await loadSeed());
+		initializedSessions.add(token);
+	} finally {
+		await db.destroy();
+	}
+}
+
+/**
+ * Read the DO binding name from the virtual config.
+ * The database config has the binding in `config.database.config.binding`.
+ */
 function getBindingName(): string {
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- virtual module import
 	const config = virtualConfig as { database?: { config?: { binding?: string } } } | null;
@@ -43,6 +89,9 @@ function getBindingName(): string {
 	return binding;
 }
 
+/**
+ * Get a PreviewDBStub for the given session token.
+ */
 function getStub(binding: string, token: string): PreviewDBStub {
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Worker binding from untyped env
 	const ns = (env as Record<string, unknown>)[binding];
@@ -56,6 +105,9 @@ function getStub(binding: string, token: string): PreviewDBStub {
 	return stub;
 }
 
+/**
+ * Get the full DO stub for direct RPC calls (e.g. setTtlAlarm).
+ */
 function getFullStub(binding: string, token: string): DurableObjectStub<EmDashPreviewDB> {
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Worker binding from untyped env
 	const ns = (env as Record<string, unknown>)[binding];
@@ -68,6 +120,9 @@ function getFullStub(binding: string, token: string): DurableObjectStub<EmDashPr
 	return namespace.get(doId);
 }
 
+/**
+ * Derive a created-at timestamp from the ULID session token.
+ */
 function getSessionCreatedAt(token: string): string {
 	try {
 		const ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -82,80 +137,9 @@ function getSessionCreatedAt(token: string): string {
 	}
 }
 
-async function initializePlayground(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	db: Kysely<any>,
-	token: string,
-): Promise<void> {
-	try {
-		const { rows } = await sql<{ value: string }>`
-			SELECT value FROM options WHERE name = ${"emdash:setup_complete"}
-		`.execute(db);
-
-		if (rows.length > 0) {
-			return;
-		}
-	} catch {}
-
-	console.log(`[playground] Initializing session ${token}`);
-
-	const { runMigrations } = await import("emdash/db");
-	try {
-		const migrations = await runMigrations(db);
-		console.log(`[playground] Migrations applied: ${migrations.applied.length}`);
-	} catch (migrationError) {
-		const msg = migrationError instanceof Error ? migrationError.message : String(migrationError);
-		if (msg.includes("already exists")) {
-			console.log(`[playground] Migrations skipped (tables already exist)`);
-			try {
-				await sql`
-					INSERT OR IGNORE INTO options (name, value)
-					VALUES (${"emdash:setup_complete"}, ${JSON.stringify(true)})
-				`.execute(db);
-			} catch {}
-			return;
-		}
-		throw migrationError;
-	}
-
-	const { loadSeed } = await import("emdash/seed");
-	const { applySeed } = await import("emdash");
-	const seed = await loadSeed();
-	const seedResult = await applySeed(db, seed, {
-		includeContent: true,
-		onConflict: "skip",
-		skipMediaDownload: true,
-	});
-	console.log(
-		`[playground] Seed applied: ${seedResult.collections.created} collections, ${seedResult.content.created} content entries`,
-	);
-
-	const now = new Date().toISOString();
-	try {
-		await sql`
-			INSERT INTO users (id, email, name, role, email_verified, created_at, updated_at)
-			VALUES (${PLAYGROUND_USER_ID}, ${PLAYGROUND_USER_EMAIL}, ${PLAYGROUND_USER_NAME},
-			        ${PLAYGROUND_USER_ROLE}, ${1}, ${now}, ${now})
-		`.execute(db);
-	} catch {}
-
-	try {
-		await sql`
-			INSERT INTO options (name, value)
-			VALUES (${"emdash:setup_complete"}, ${JSON.stringify(true)})
-		`.execute(db);
-	} catch {}
-
-	try {
-		await sql`
-			INSERT OR REPLACE INTO options (name, value)
-			VALUES (${"emdash:site_title"}, ${JSON.stringify("EmDash Playground")})
-		`.execute(db);
-	} catch {}
-
-	console.log(`[playground] Session ${token} initialized`);
-}
-
+/**
+ * Inject playground toolbar HTML into an HTML response.
+ */
 async function injectPlaygroundToolbar(
 	response: Response,
 	config: { createdAt: string; ttl: number; editMode: boolean },
@@ -164,10 +148,9 @@ async function injectPlaygroundToolbar(
 	if (!contentType?.includes("text/html")) return response;
 
 	const html = await response.text();
-	if (!html.includes("</body>")) return new Response(html, response);
+	const injected = insertBeforeBodyEnd(html, renderPlaygroundToolbar(config));
+	if (injected === undefined) return new Response(html, response);
 
-	const toolbarHtml = renderPlaygroundToolbar(config);
-	const injected = html.replace("</body>", `${toolbarHtml}</body>`);
 	return new Response(injected, {
 		status: response.status,
 		headers: response.headers,
@@ -178,8 +161,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	const { url, cookies } = context;
 	const ttl = DEFAULT_TTL;
 
+	// Lazy-load binding name from virtual config
 	const binding = getBindingName();
 
+	// --- Entry point: /playground ---
+	// Show a loading page immediately. The page calls /_playground/init via
+	// fetch to do the actual setup, then redirects to admin when ready.
+	// If the session is already initialized, skip the loading page.
 	if (url.pathname === "/playground") {
 		let token = cookies.get(COOKIE_NAME)?.value;
 		if (!token) {
@@ -192,6 +180,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 			});
 		}
 
+		// Already initialized? Skip the loading page and go straight to admin.
 		if (initializedSessions.has(token)) {
 			return context.redirect("/_emdash/admin");
 		}
@@ -202,6 +191,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		});
 	}
 
+	// --- Init endpoint: called by the loading page ---
 	if (url.pathname === "/_playground/init" && context.request.method === "POST") {
 		const token = cookies.get(COOKIE_NAME)?.value;
 		if (!token) {
@@ -215,19 +205,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 			return Response.json({ ok: true });
 		}
 
-		const stub = getStub(binding, token);
-		const dialect = new PreviewDODialect({ getStub: () => stub });
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const db = new Kysely<any>({ dialect });
-
 		try {
-			await initializePlayground(db, token);
+			await ensurePlaygroundInitialized(binding, token, ttl);
 			console.log(`[playground] Session ${token} initialized`);
-			initializedSessions.add(token);
-			const fullStub = getFullStub(binding, token);
-			console.log(`[playground] Setting TTL alarm for session ${token} (${ttl} seconds)`);
-			await fullStub.setTtlAlarm(ttl);
-			console.log(`[playground] TTL alarm set for session ${token}`);
 			return Response.json({ ok: true });
 		} catch (error) {
 			console.error("Playground initialization failed:", error);
@@ -241,43 +221,56 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		}
 	}
 
+	// --- Reset endpoint ---
+	// Instead of dropping tables on the old DO (which is fragile and races
+	// with cached state), just clear the cookie and redirect to /playground.
+	// That creates a brand new DO with a fresh session -- clean slate.
+	// The old DO expires via its TTL alarm.
 	if (url.pathname === "/_playground/reset") {
 		cookies.delete(COOKIE_NAME, { path: "/" });
 		return context.redirect("/playground");
 	}
 
-	if (isBlockedInPlayground(url.pathname)) {
+	// --- Route gating ---
+	if (isBlockedInPlayground(url.pathname, context.request.method)) {
 		return Response.json(
 			{ error: { code: "PLAYGROUND_MODE", message: "Not available in playground mode" } },
 			{ status: 403 },
 		);
 	}
 
+	// --- Resolve session ---
 	const token = cookies.get(COOKIE_NAME)?.value;
 	if (!token) {
+		// No session -- redirect to /playground to create one
 		return context.redirect("/playground");
 	}
 
+	// Ensure initialized
+	try {
+		await ensurePlaygroundInitialized(binding, token, ttl);
+	} catch (error) {
+		console.error("Playground initialization failed:", error);
+		return Response.json(
+			{ error: { code: "PLAYGROUND_INIT_ERROR", message: "Failed to initialize playground" } },
+			{ status: 500 },
+		);
+	}
+
+	// --- Set up DO database and ALS ---
 	const stub = getStub(binding, token);
 	const dialect = new PreviewDODialect({ getStub: () => stub });
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const db = new Kysely<any>({ dialect });
 
-	if (!initializedSessions.has(token)) {
-		try {
-			await initializePlayground(db, token);
-			initializedSessions.add(token);
-			const fullStub = getFullStub(binding, token);
-			await fullStub.setTtlAlarm(ttl);
-		} catch (error) {
-			console.error("Playground initialization failed:", error);
-			return Response.json(
-				{ error: { code: "PLAYGROUND_INIT_ERROR", message: "Failed to initialize playground" } },
-				{ status: 500 },
-			);
-		}
-	}
-
+	// Stash the DO database and user on locals so downstream middleware
+	// (runtime init, request-context) can use them. We can't use ALS directly
+	// because this middleware is in @emdash-cms/cloudflare and resolves to a
+	// different AsyncLocalStorage instance than the emdash core package
+	// (workerd loads dist modules separately from Vite's source modules).
+	// The request-context middleware (same module context as the loader)
+	// detects locals.__playgroundDb and wraps the render in runWithContext().
+	// The __playgroundDb property is declared on App.Locals in emdash's locals.d.ts.
 	Object.assign(context.locals, { __playgroundDb: db, user: PLAYGROUND_USER });
 
 	const editMode = cookies.get("emdash-edit-mode")?.value === "true";

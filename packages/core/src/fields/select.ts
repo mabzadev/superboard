@@ -10,15 +10,20 @@ export interface SelectOptions<T extends readonly [string, ...string[]]> {
 	helpText?: string;
 }
 
+/**
+ * Select field - single choice from predefined options
+ */
 export function select<T extends readonly [string, ...string[]]>(
 	selectOptions: SelectOptions<T>,
 ): FieldDefinition<T[number]> {
 	const enumSchema = z.enum(selectOptions.options);
 
-	let schema: z.ZodTypeAny;
+	// Apply default first, then optional
+	let schema: z.ZodType;
 	if (selectOptions.default !== undefined) {
 		schema = enumSchema.default(selectOptions.default);
 	} else if (!selectOptions.required) {
+		// Only make it optional if no default is provided
 		schema = enumSchema.optional();
 	} else {
 		schema = enumSchema;

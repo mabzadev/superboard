@@ -643,7 +643,7 @@ async function enqueueMessage(
 			input.templateKey,
 			input.idempotencyKey,
 			requestSha256,
-			sender?.publicConfig.from_name ?? env.MAIL_FROM_NAME,
+			input.fromName ?? sender?.publicConfig.from_name ?? env.MAIL_FROM_NAME,
 			sender?.publicConfig.from_email ?? env.MAIL_FROM_ADDRESS,
 			input.replyTo || sender?.publicConfig.reply_to || env.MAIL_REPLY_TO || null,
 			input.subject,

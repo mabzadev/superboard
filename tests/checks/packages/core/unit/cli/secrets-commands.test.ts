@@ -1,3 +1,12 @@
+/**
+ * Tests for the `emdash secrets` CLI surface.
+ *
+ * Focuses on the file-write helper used by `secrets generate --write`,
+ * which is the only piece with non-trivial logic. The command runners
+ * themselves are thin wrappers around `generateEncryptionKey()` and
+ * `fingerprintKey()` (covered by `tests/unit/config/secrets.test.ts`).
+ */
+
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -49,6 +58,7 @@ describe("secrets CLI: writeEncryptionKeyToFile", () => {
 		const result = writeEncryptionKeyToFile(target, sample2, false);
 		expect(result).toBe("skipped");
 		const content = await readFile(target, "utf-8");
+		// Entry untouched.
 		expect(content).toBe(`EMDASH_ENCRYPTION_KEY=${sample}\nOTHER=value\n`);
 	});
 
@@ -57,10 +67,13 @@ describe("secrets CLI: writeEncryptionKeyToFile", () => {
 		const result = writeEncryptionKeyToFile(target, sample2, true);
 		expect(result).toBe("wrote");
 		const content = await readFile(target, "utf-8");
+		// Other vars untouched, key replaced inline (no duplication).
 		expect(content).toBe(`OTHER=value\nEMDASH_ENCRYPTION_KEY=${sample2}\nMORE=stuff\n`);
 	});
 
 	it("treats an empty-value entry as not-set and replaces it without --force", async () => {
+		// Operators sometimes leave `EMDASH_ENCRYPTION_KEY=` as a placeholder.
+		// A skip in that case would be hostile — they actively want a value.
 		await writeFile(target, `OTHER=value\nEMDASH_ENCRYPTION_KEY=\nMORE=stuff\n`);
 		const result = writeEncryptionKeyToFile(target, sample, false);
 		expect(result).toBe("wrote");

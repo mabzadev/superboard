@@ -1,3 +1,12 @@
+/**
+ * Tests for WXR import date handling
+ *
+ * Verifies that wxrPostToNormalizedItem correctly preserves post dates
+ * and publish status from WordPress exports.
+ *
+ * @see https://github.com/emdash-cms/emdash/issues/322
+ */
+
 import { describe, it, expect } from "vitest";
 
 import type { WxrPost } from "../../../../../../packages/core/src/cli/wxr/parser.js";
@@ -20,6 +29,7 @@ describe("wxrPostToNormalizedItem date handling", () => {
 			postType: "post",
 			status: "publish",
 			postName: "test-post",
+			// postDate is site-local time (no timezone), postDateGmt is UTC
 			postDate: "2023-06-15 08:30:00",
 			postDateGmt: "2023-06-15 12:30:00",
 			pubDate: "Thu, 15 Jun 2023 12:30:00 +0000",
@@ -27,6 +37,7 @@ describe("wxrPostToNormalizedItem date handling", () => {
 
 		const item = wxrPostToNormalizedItem(post, new Map());
 
+		// Should use the GMT date, not the site-local date
 		expect(item.date.toISOString()).toBe("2023-06-15T12:30:00.000Z");
 	});
 
@@ -43,6 +54,7 @@ describe("wxrPostToNormalizedItem date handling", () => {
 
 		const item = wxrPostToNormalizedItem(post, new Map());
 
+		// pubDate is RFC 2822 with timezone, should parse correctly to UTC
 		expect(item.date.toISOString()).toBe("2023-06-15T12:30:00.000Z");
 	});
 
@@ -58,6 +70,7 @@ describe("wxrPostToNormalizedItem date handling", () => {
 
 		const item = wxrPostToNormalizedItem(post, new Map());
 
+		// postDate is site-local, parsed as-is (imprecise but best available)
 		expect(item.date).toBeInstanceOf(Date);
 		expect(item.date.getTime()).not.toBeNaN();
 	});
@@ -93,6 +106,7 @@ describe("wxrPostToNormalizedItem date handling", () => {
 
 		const item = wxrPostToNormalizedItem(post, new Map());
 
+		// Should NOT use the zero sentinel, should fall back to pubDate
 		expect(item.date.toISOString()).toBe("2023-06-15T12:30:00.000Z");
 	});
 
@@ -146,6 +160,7 @@ describe("wxrPostToNormalizedItem date handling", () => {
 
 		const item = wxrPostToNormalizedItem(post, new Map());
 
+		// Should skip the sentinel and fall back to postModified
 		expect(item.modified).toBeInstanceOf(Date);
 		expect(item.modified!.getTime()).not.toBeNaN();
 	});

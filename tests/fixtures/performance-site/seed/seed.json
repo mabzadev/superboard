@@ -15,12 +15,7 @@
 			"slug": "posts",
 			"label": "Posts",
 			"labelSingular": "Post",
-			"supports": [
-				"drafts",
-				"revisions",
-				"search",
-				"seo"
-			],
+			"supports": ["drafts", "revisions", "search", "seo"],
 			"commentsEnabled": true,
 			"fields": [
 				{
@@ -45,6 +40,15 @@
 					"slug": "excerpt",
 					"label": "Excerpt",
 					"type": "text"
+				},
+				{
+					"slug": "related_posts",
+					"label": "Related posts",
+					"type": "reference",
+					"validation": {
+						"relation": "posts_related_posts",
+						"relationSide": "parent"
+					}
 				}
 			]
 		},
@@ -52,11 +56,7 @@
 			"slug": "pages",
 			"label": "Pages",
 			"labelSingular": "Page",
-			"supports": [
-				"drafts",
-				"revisions",
-				"search"
-			],
+			"supports": ["drafts", "revisions", "search"],
 			"fields": [
 				{
 					"slug": "title",
@@ -74,15 +74,24 @@
 			]
 		}
 	],
+	"relations": [
+		{
+			"slug": "posts_related_posts",
+			"parentCollection": "posts",
+			"childCollection": "posts",
+			"parentLabel": "Referenced by",
+			"parentLabelSingular": "Referenced by",
+			"childLabel": "Related posts",
+			"childLabelSingular": "Related post"
+		}
+	],
 	"taxonomies": [
 		{
 			"name": "category",
 			"label": "Categories",
 			"labelSingular": "Category",
 			"hierarchical": true,
-			"collections": [
-				"posts"
-			],
+			"collections": ["posts"],
 			"terms": [
 				{
 					"slug": "development",
@@ -103,9 +112,7 @@
 			"label": "Tags",
 			"labelSingular": "Tag",
 			"hierarchical": false,
-			"collections": [
-				"posts"
-			],
+			"collections": ["posts"],
 			"terms": [
 				{
 					"slug": "webdev",
@@ -248,7 +255,7 @@
 					"type": "component",
 					"componentId": "core:recent-posts",
 					"title": "Recent Posts",
-					"settings": {
+					"props": {
 						"count": 5,
 						"showDate": true
 					}
@@ -257,7 +264,7 @@
 					"type": "component",
 					"componentId": "core:archives",
 					"title": "Archives",
-					"settings": {
+					"props": {
 						"type": "monthly",
 						"limit": 6
 					}
@@ -293,12 +300,7 @@
 			"slug": "newsletter-signup",
 			"title": "Newsletter Signup",
 			"description": "A call-to-action block for newsletter subscriptions",
-			"keywords": [
-				"newsletter",
-				"subscribe",
-				"email",
-				"cta"
-			],
+			"keywords": ["newsletter", "subscribe", "email", "cta"],
 			"source": "theme",
 			"content": [
 				{
@@ -327,11 +329,7 @@
 			"slug": "about-author",
 			"title": "About the Author",
 			"description": "Brief author bio for use in posts or pages",
-			"keywords": [
-				"author",
-				"bio",
-				"about"
-			],
+			"keywords": ["author", "bio", "about"],
 			"source": "theme",
 			"content": [
 				{
@@ -464,12 +462,8 @@
 					}
 				],
 				"taxonomies": {
-					"category": [
-						"development"
-					],
-					"tag": [
-						"opinion"
-					]
+					"category": ["development"],
+					"tag": ["opinion"]
 				}
 			},
 			{
@@ -545,13 +539,8 @@
 					}
 				],
 				"taxonomies": {
-					"category": [
-						"development"
-					],
-					"tag": [
-						"webdev",
-						"opinion"
-					]
+					"category": ["development"],
+					"tag": ["webdev", "opinion"]
 				}
 			},
 			{
@@ -622,12 +611,8 @@
 					]
 				},
 				"taxonomies": {
-					"category": [
-						"notes"
-					],
-					"tag": [
-						"opinion"
-					]
+					"category": ["notes"],
+					"tag": ["opinion"]
 				},
 				"bylines": [
 					{
@@ -703,12 +688,8 @@
 					]
 				},
 				"taxonomies": {
-					"category": [
-						"development"
-					],
-					"tag": [
-						"tools"
-					]
+					"category": ["development"],
+					"tag": ["tools"]
 				},
 				"bylines": [
 					{
@@ -723,6 +704,7 @@
 				"data": {
 					"title": "Designing with Constraints",
 					"excerpt": "Limitations aren't obstacles to creativity. They're the structure that makes creativity possible.",
+					"related_posts": ["$ref:post-1", "$ref:post-2", "$ref:post-3"],
 					"featured_image": {
 						"$media": {
 							"url": "https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=1200&h=800&fit=crop",
@@ -784,12 +766,8 @@
 					]
 				},
 				"taxonomies": {
-					"category": [
-						"design"
-					],
-					"tag": [
-						"creativity"
-					]
+					"category": ["design"],
+					"tag": ["creativity"]
 				},
 				"bylines": [
 					{
@@ -865,12 +843,8 @@
 					]
 				},
 				"taxonomies": {
-					"category": [
-						"development"
-					],
-					"tag": [
-						"creativity"
-					]
+					"category": ["development"],
+					"tag": ["creativity"]
 				},
 				"bylines": [
 					{
@@ -885,6 +859,7 @@
 				"data": {
 					"title": "Notes on Simplicity",
 					"excerpt": "Simplicity isn't the absence of complexity. It's the result of understanding a problem well enough to solve it cleanly.",
+					"related_posts": ["$ref:post-4", "$ref:post-6"],
 					"featured_image": {
 						"$media": {
 							"url": "https://images.unsplash.com/photo-1559051668-e1fa58f25786?w=1200&h=800&fit=crop",
@@ -946,12 +921,8 @@
 					]
 				},
 				"taxonomies": {
-					"category": [
-						"notes"
-					],
-					"tag": [
-						"opinion"
-					]
+					"category": ["notes"],
+					"tag": ["opinion"]
 				},
 				"bylines": [
 					{

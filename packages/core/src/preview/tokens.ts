@@ -1,19 +1,45 @@
+/**
+ * Preview token generation and verification
+ *
+ * Tokens are compact, URL-safe, and HMAC-signed.
+ * Format: base64url(JSON payload).base64url(HMAC signature)
+ *
+ * Payload: { cid: contentId, exp: expiryTimestamp, iat: issuedAt }
+ */
+
 import { encodeBase64url, decodeBase64url } from "../utils/base64.js";
 
+// Regex pattern for duration parsing
 const DURATION_PATTERN = /^(\d+)([smhdw])$/;
 
+/**
+ * Preview token payload
+ */
 export interface PreviewTokenPayload {
+	/** Content ID in format "collection:id" (e.g., "posts:abc123") */
 	cid: string;
+	/** Expiry timestamp (seconds since epoch) */
 	exp: number;
+	/** Issued at timestamp (seconds since epoch) */
 	iat: number;
 }
 
+/**
+ * Options for generating a preview token
+ */
 export interface GeneratePreviewTokenOptions {
+	/** Content ID in format "collection:id" */
 	contentId: string;
+	/** How long the token is valid. Accepts "1h", "30m", "1d", or seconds as number. Default: "1h" */
 	expiresIn?: string | number;
+	/** Secret key for signing. Should be from environment variable. */
 	secret: string;
 }
 
+/**
+ * Parse duration string to seconds
+ * Supports: "1h", "30m", "1d", "2w", or raw seconds
+ */
 function parseDuration(duration: string | number): number {
 	if (typeof duration === "number") {
 		return duration;
@@ -45,6 +71,9 @@ function parseDuration(duration: string | number): number {
 	}
 }
 
+/**
+ * Create HMAC-SHA256 signature using Web Crypto API
+ */
 async function createSignature(data: string, secret: string): Promise<Uint8Array> {
 	const encoder = new TextEncoder();
 	const key = await crypto.subtle.importKey(
@@ -58,6 +87,9 @@ async function createSignature(data: string, secret: string): Promise<Uint8Array
 	return new Uint8Array(signature);
 }
 
+/**
+ * Verify HMAC-SHA256 signature
+ */
 async function verifySignature(
 	data: string,
 	signature: Uint8Array,
@@ -71,11 +103,25 @@ async function verifySignature(
 		false,
 		["verify"],
 	);
+	// Create a new ArrayBuffer from the signature to satisfy BufferSource typing
+	// (Uint8Array.buffer is ArrayBufferLike which includes SharedArrayBuffer)
 	const sigBuffer: ArrayBuffer = new ArrayBuffer(signature.byteLength);
 	new Uint8Array(sigBuffer).set(signature);
 	return crypto.subtle.verify("HMAC", key, sigBuffer, encoder.encode(data));
 }
 
+/**
+ * Generate a preview token for content
+ *
+ * @example
+ * ```ts
+ * const token = await generatePreviewToken({
+ *   contentId: "posts:abc123",
+ *   expiresIn: "1h",
+ *   secret: process.env.PREVIEW_SECRET!,
+ * });
+ * ```
+ */
 export async function generatePreviewToken(options: GeneratePreviewTokenOptions): Promise<string> {
 	const { contentId, expiresIn = "1h", secret } = options;
 
@@ -96,28 +142,59 @@ export async function generatePreviewToken(options: GeneratePreviewTokenOptions)
 		iat: now,
 	};
 
+	// Encode payload
 	const payloadJson = JSON.stringify(payload);
 	const encodedPayload = encodeBase64url(new TextEncoder().encode(payloadJson));
 
+	// Sign it
 	const signature = await createSignature(encodedPayload, secret);
 	const encodedSignature = encodeBase64url(signature);
 
 	return `${encodedPayload}.${encodedSignature}`;
 }
 
+/**
+ * Result of verifying a preview token
+ */
 export type VerifyPreviewTokenResult =
 	| { valid: true; payload: PreviewTokenPayload }
 	| { valid: false; error: "invalid" | "expired" | "malformed" | "none" };
 
+/**
+ * Options for verifyPreviewToken
+ */
 export type VerifyPreviewTokenOptions = {
+	/** Secret key for verifying tokens */
 	secret: string;
 } & (
-	| { url: URL }
+	| { /** URL to extract _preview token from */ url: URL }
 	| {
-			token: string | null | undefined;
+			/** Preview token string (can be null) */ token: string | null | undefined;
 	  }
 );
 
+/**
+ * Verify a preview token and return the payload
+ *
+ * @example
+ * ```ts
+ * // With URL (extracts _preview query param)
+ * const result = await verifyPreviewToken({
+ *   url: Astro.url,
+ *   secret: import.meta.env.PREVIEW_SECRET,
+ * });
+ *
+ * // With token directly
+ * const result = await verifyPreviewToken({
+ *   token: someToken,
+ *   secret: import.meta.env.PREVIEW_SECRET,
+ * });
+ *
+ * if (result.valid) {
+ *   console.log(result.payload.cid); // "posts:abc123"
+ * }
+ * ```
+ */
 export async function verifyPreviewToken(
 	options: VerifyPreviewTokenOptions,
 ): Promise<VerifyPreviewTokenResult> {
@@ -127,12 +204,15 @@ export async function verifyPreviewToken(
 		throw new Error("Preview secret is required");
 	}
 
+	// Extract token from URL or use provided token
 	const token = "url" in options ? options.url.searchParams.get("_preview") : options.token;
 
+	// Handle null/undefined token
 	if (!token) {
 		return { valid: false, error: "none" };
 	}
 
+	// Split token into payload and signature
 	const parts = token.split(".");
 	if (parts.length !== 2) {
 		return { valid: false, error: "malformed" };
@@ -140,6 +220,7 @@ export async function verifyPreviewToken(
 
 	const [encodedPayload, encodedSignature] = parts;
 
+	// Verify signature
 	let signature: Uint8Array;
 	try {
 		signature = decodeBase64url(encodedSignature);
@@ -152,6 +233,7 @@ export async function verifyPreviewToken(
 		return { valid: false, error: "invalid" };
 	}
 
+	// Decode and parse payload
 	let payload: PreviewTokenPayload;
 	try {
 		const payloadBytes = decodeBase64url(encodedPayload);
@@ -161,6 +243,7 @@ export async function verifyPreviewToken(
 		return { valid: false, error: "malformed" };
 	}
 
+	// Check required fields
 	if (
 		typeof payload.cid !== "string" ||
 		typeof payload.exp !== "number" ||
@@ -169,6 +252,7 @@ export async function verifyPreviewToken(
 		return { valid: false, error: "malformed" };
 	}
 
+	// Check expiry
 	const now = Math.floor(Date.now() / 1000);
 	if (payload.exp < now) {
 		return { valid: false, error: "expired" };
@@ -177,6 +261,9 @@ export async function verifyPreviewToken(
 	return { valid: true, payload };
 }
 
+/**
+ * Parse a content ID into collection and id
+ */
 export function parseContentId(contentId: string): {
 	collection: string;
 	id: string;

@@ -11,9 +11,13 @@ export interface TextareaOptions {
 	helpText?: string;
 }
 
+/**
+ * Textarea field - multi-line text input
+ */
 export function textarea(options: TextareaOptions = {}): FieldDefinition<string> {
 	let stringSchema = z.string();
 
+	// Apply constraints
 	if (options.minLength !== undefined) {
 		stringSchema = stringSchema.min(
 			options.minLength,
@@ -28,7 +32,8 @@ export function textarea(options: TextareaOptions = {}): FieldDefinition<string>
 		);
 	}
 
-	const schema: z.ZodTypeAny = options.required ? stringSchema : stringSchema.optional();
+	// Optional vs required
+	const schema: z.ZodType = options.required ? stringSchema : stringSchema.optional();
 
 	const ui: FieldUIHints = {
 		widget: "textarea",

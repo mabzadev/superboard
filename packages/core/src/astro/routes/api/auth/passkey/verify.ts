@@ -1,3 +1,9 @@
+/**
+ * POST /_emdash/api/auth/passkey/verify
+ *
+ * Verify a passkey authentication and create a session
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -14,17 +20,21 @@ import { createChallengeStore } from "#auth/challenge-store.js";
 import { getPasskeyConfig } from "#auth/passkey-config.js";
 import { OptionsRepository } from "#db/repositories/options.js";
 
+import { sessionUnavailableError } from "../../../../session-user.js";
+
 export const POST: APIRoute = async ({ request, locals, session }) => {
 	const { emdash } = locals;
 
 	if (!emdash?.db) {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
+	if (!session) return sessionUnavailableError();
 
 	try {
 		const body = await parseBody(request, passkeyVerifyBody);
 		if (isParseError(body)) return body;
 
+		// Get passkey config
 		const url = new URL(request.url);
 		const options = new OptionsRepository(emdash.db);
 		const siteName = (await options.get<string>("emdash:site_title")) ?? undefined;
@@ -35,6 +45,7 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 		);
 		const passkeyConfig = getPasskeyConfig(url, siteName, siteUrl, allowedOrigins);
 
+		// Authenticate with passkey
 		const adapter = createKyselyAdapter(emdash.db);
 		const challengeStore = createChallengeStore(emdash.db);
 
@@ -45,13 +56,11 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 			challengeStore,
 		);
 
-		if (session) {
-			session.set("user", { id: user.id });
-			session.set("strongReauthentication", {
-				userId: user.id,
-				verifiedAt: new Date().toISOString(),
-			});
-		}
+		session.set("user", { id: user.id });
+		session.set("strongReauthentication", {
+			userId: user.id,
+			verifiedAt: new Date().toISOString(),
+		});
 
 		return apiSuccess({
 			success: true,

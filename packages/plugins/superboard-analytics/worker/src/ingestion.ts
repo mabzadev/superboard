@@ -30,13 +30,6 @@ export async function ingestAnalyticsEvents(
 	options: { coreCollection?: boolean } = {},
 ): Promise<AnalyticsIngestResultV1[]> {
 	const projectId = String(project.projectId);
-	if (project.role !== "system" && !(await dataCollectionEnabled(env.DB, projectId))) {
-		return events.map((event) => ({
-			event_id: event.event_id,
-			status: "rejected",
-			code: "analytics_collection_disabled",
-		}));
-	}
 	const coreCollection = options.coreCollection === true;
 	const [inactiveApplications, receipts, payloadHashes] = await Promise.all([
 		project.role === "system"
@@ -139,14 +132,6 @@ async function disabledApplications(
 		for (const row of rows.results) disabled.add(row.application_id);
 	}
 	return disabled;
-}
-
-async function dataCollectionEnabled(db: D1Database, projectId: string): Promise<boolean> {
-	const row = await db
-		.prepare("SELECT data_collection_enabled FROM analytics_project_settings WHERE project_id = ?")
-		.bind(projectId)
-		.first<{ data_collection_enabled: number }>();
-	return row == null || Number(row.data_collection_enabled) === 1;
 }
 
 function insertStatements(db: D1Database, entry: PendingIngest): D1PreparedStatement[] {

@@ -1,23 +1,37 @@
 "use client";
 
 import { deploymentI18n } from "@superboard/front-ui/deployment-i18n.js";
+import { useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
+import { useEffect } from "react";
 
 import GeneralSection from "./components/settings/GeneralSection.js";
+import ProjectAdvancedSection from "./components/settings/ProjectAdvancedSection.js";
 import TeamMebersSection from "./components/settings/TeamMebersSection.js";
 import UsageSection from "./components/settings/UsageSection.js";
 import { useSettingsI18n } from "./i18n.js";
-import InstanceConfiguration from "./InstanceConfiguration.js";
 import { useTabParam } from "./lib/useTabParam.js";
 
-export const environmentSettingsTabs = ["general", "team", "usage", "infrastructure"] as const;
+export const environmentSettingsTabs = ["general", "team", "usage", "advanced"] as const;
+const SERVICE_HEALTH_PATH = "/core/infrastructure";
 export type EnvironmentSettingsTab = (typeof environmentSettingsTabs)[number];
 
 export default function EnvironmentSettings() {
 	const { locale, t } = useSettingsI18n();
 	const title = deploymentI18n(locale)("title");
 	const [tab, selectTab] = useTabParam(environmentSettingsTabs, { initialTab: "general" });
+	const router = useRouter();
+	const moved = useSearchParams().get("tab") === "infrastructure";
+	useEffect(() => {
+		if (!moved || !globalThis.location) return;
+		const url = new URL(globalThis.location.href);
+		url.pathname = SERVICE_HEALTH_PATH;
+		url.searchParams.delete("tab");
+		router.replace(`${url.pathname}${url.search}`);
+	}, [moved, router]);
+
+	if (moved) return <p role="status">{t("environment.moved")}</p>;
 
 	return (
 		<div className="ds-page space-y-5">
@@ -45,8 +59,8 @@ export default function EnvironmentSettings() {
 				<TabsContent value="usage">
 					<UsageSection />
 				</TabsContent>
-				<TabsContent value="infrastructure">
-					<InstanceConfiguration />
+				<TabsContent value="advanced">
+					<ProjectAdvancedSection />
 				</TabsContent>
 			</Tabs>
 		</div>

@@ -707,6 +707,44 @@ describe("Domain authentication settings", () => {
 		expect(invalid.status).toBe(422);
 		expect((await admin(h, "GET", "/settings/smtp/unknown/authentication")).status).toBe(404);
 	});
+
+	it("reads the DKIM selector from domain authentication and falls back to the sender's stored one", async () => {
+		const h = await harness();
+		h.sqlite.prepare("UPDATE email_smtp_profiles SET dkim_selector = 'legacy'").run();
+		const selector = async () =>
+			(
+				(await (await admin(h, "GET", "/settings/smtp/profile-1/authentication")).json()) as {
+					data: { config: { dkim_selector: string | null } };
+				}
+			).data.config.dkim_selector;
+		expect(await selector()).toBe("legacy");
+
+		const sender = {
+			id: "profile-1",
+			name: "Primary",
+			host: "smtp.example.test",
+			port: 587,
+			security: "starttls",
+			username: "mailer",
+			from_email: "hello@example.com",
+		};
+		expect((await admin(h, "PUT", "/settings/smtp", sender)).status).toBe(200);
+		expect(await selector()).toBe("legacy");
+
+		await admin(h, "PUT", "/settings/smtp/profile-1/authentication", {
+			config: { dkim_selector: "s2" },
+		});
+		h.sqlite.prepare("UPDATE email_smtp_profiles SET dkim_selector = 'stale'").run();
+		expect(await selector()).toBe("s2");
+
+		expect(
+			(await admin(h, "PUT", "/settings/smtp", { ...sender, dkim_selector: null })).status,
+		).toBe(200);
+		expect(h.sqlite.prepare("SELECT dkim_selector FROM email_smtp_profiles").get()).toEqual({
+			dkim_selector: null,
+		});
+		expect(await selector()).toBe("s2");
+	});
 });
 
 function queueMessage(body: unknown) {

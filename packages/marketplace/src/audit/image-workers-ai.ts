@@ -82,6 +82,7 @@ async function auditSingleImage(ai: Ai, image: ImageInput): Promise<ImageAuditFi
 					],
 				},
 			],
+			// guided_json: AUDIT_SCHEMA,
 			response_format: { type: "json_schema", json_schema: AUDIT_SCHEMA },
 			temperature: 0.1,
 			max_tokens: 500,
@@ -101,6 +102,9 @@ async function auditSingleImage(ai: Ai, image: ImageInput): Promise<ImageAuditFi
 		};
 	} catch (err) {
 		console.error(`Error auditing image ${image.filename}:`, String(err));
+		// Fail-closed: an audit that couldn't complete must not produce a
+		// passing result.  Returning "fail" ensures block-mode enforcement
+		// rejects the version rather than silently publishing it.
 		return {
 			filename: image.filename,
 			verdict: "fail",

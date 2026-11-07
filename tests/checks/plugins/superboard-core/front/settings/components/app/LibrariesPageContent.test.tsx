@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { FrontContextProvider } from "../../../../../../../../packages/supbrd-front-ui/src/context.js";
 import { render, screen, within } from "../../../../../../packages/supbrd-front-ui/render.js";
 
 const mocks = vi.hoisted(() => ({
@@ -224,5 +226,45 @@ describe("LibrariesPageContent", () => {
 				name: "Copy SuperBoard Flows JavaScript installation",
 			}),
 		).not.toBeInTheDocument();
+	});
+
+	it("keeps the maintainer material in a separate Advanced section", async () => {
+		render(<LibrariesPageContent />);
+
+		const advanced = (await screen.findByRole("heading", { name: "Advanced" })).closest("section");
+		if (!advanced) throw new Error("The Advanced section is required");
+		expect(within(advanced).getByText("Remote project configuration")).toBeInTheDocument();
+		expect(within(advanced).getByRole("link", { name: "Open Git-owned DSL" })).toBeInTheDocument();
+		const sections = screen.getAllByRole("heading", { level: 2 });
+		expect(sections.at(-1)).toHaveTextContent("Advanced");
+	});
+
+	it("renders the catalogue in French", async () => {
+		function French({ children }: { children: ReactNode }) {
+			return (
+				<FrontContextProvider
+					value={{
+						instanceId: "1",
+						pluginId: "superboard-settings",
+						path: "/core/libraries",
+						parameters: {},
+						locale: "fr",
+						operator: null,
+						projectScope: null,
+						activePluginIds: ["superboard-settings"],
+					}}
+				>
+					{children}
+				</FrontContextProvider>
+			);
+		}
+		render(<LibrariesPageContent />, { wrapper: French });
+
+		const library = within(await screen.findByTestId("library-flutterflow"));
+		expect(library.getByText("Publication en attente")).toBeInTheDocument();
+		expect(library.getByText("Dernière version publiée")).toBeInTheDocument();
+		expect(screen.getByText("1 tag immuable en attente")).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Avancé" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Actualiser" })).toBeInTheDocument();
 	});
 });

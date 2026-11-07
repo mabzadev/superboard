@@ -1,0 +1,117 @@
+---
+import { getLiveCollection } from "astro:content";
+
+import PluginCard from "../components/PluginCard.astro";
+import SearchHead from "../components/search/SearchHead.astro";
+import { SEARCH_LIMIT, refineKeywords, resultSummary } from "../lib/search.js";
+import StatePanel from "../components/StatePanel.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import {
+	isRegistryRequestRejected,
+	REGISTRY_PAGE_CACHE,
+} from "../lib/registry.js";
+
+const query = Astro.url.searchParams.get("q")?.trim() ?? "";
+
+const result = await getLiveCollection("plugins", {
+	...(query ? { q: query } : {}),
+	limit: SEARCH_LIMIT,
+	includeLatestRelease: true,
+});
+const entries = result.entries ?? [];
+const hasError =
+	Boolean(result.error) && !(query && isRegistryRequestRejected(result.error));
+if (hasError) {
+	Astro.response.status = 503;
+	Astro.response.headers.set("Retry-After", "30");
+} else {
+	Astro.cache.set({ ...REGISTRY_PAGE_CACHE, tags: ["registry"] });
+}
+
+const summary = hasError ? undefined : resultSummary(query, entries.length);
+const keywords = refineKeywords(
+	entries.map((entry) => entry.data.package),
+	query,
+);
+const capped = entries.length >= SEARCH_LIMIT;
+---
+
+<BaseLayout
+	title={query ? `Search results for ${query}` : "All plugins"}
+	description={query
+		? `Search results for “${query}” in the EmDash plugin registry.`
+		: "Browse every plugin in the EmDash plugin registry."}
+	canonical={query ? `/search?q=${encodeURIComponent(query)}` : "/search"}
+	noindex={Boolean(query)}
+>
+	<SearchHead query={query} summary={summary} keywords={keywords} />
+
+	<section class="search-results shell" aria-labelledby="search-title">
+		{
+			hasError ? (
+				<StatePanel
+					icon="refresh"
+					title="The registry is taking a moment"
+					headingLevel={2}
+				>
+					Try again shortly. Plugins already installed on your site keep
+					working.
+					<a
+						slot="actions"
+						class="btn btn-secondary"
+						href={Astro.url.pathname + Astro.url.search}
+					>
+						Try again
+					</a>
+				</StatePanel>
+			) : entries.length === 0 && !query ? (
+				<StatePanel icon="box" title="Plugins are on the way" headingLevel={2}>
+					Published plugins will appear here after registry review.
+					<a
+						slot="actions"
+						class="btn btn-secondary"
+						href="https://docs.emdashcms.com/plugins/creating-plugins/publishing/"
+					>
+						Publishing guide
+					</a>
+				</StatePanel>
+			) : entries.length === 0 ? (
+				<StatePanel
+					icon="search"
+					title={`No plugins match “${query}”`}
+					headingLevel={2}
+				>
+					Try a different keyword or a publisher handle, or browse every plugin.
+					<a slot="actions" class="btn btn-primary" href="/search">
+						Browse all plugins
+					</a>
+				</StatePanel>
+			) : (
+				<>
+					<ul class="plugin-grid">
+						{entries.map((entry) => (
+							<li>
+								<PluginCard entry={entry.data} headingLevel={2} />
+							</li>
+						))}
+					</ul>
+					{capped && (
+						<p class="search-capped">
+							Showing the first {SEARCH_LIMIT} plugins. Search to narrow the
+							list.
+						</p>
+					)}
+				</>
+			)
+		}
+	</section>
+</BaseLayout>
+
+<style>
+	.search-capped {
+		margin: 2rem 0 0;
+		color: var(--muted);
+		font-size: 14px;
+		text-align: center;
+	}
+</style>

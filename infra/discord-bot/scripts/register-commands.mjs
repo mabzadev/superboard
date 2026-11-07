@@ -1,3 +1,13 @@
+/**
+ * Register Discord slash commands for the bot.
+ *
+ * Usage:
+ *   DISCORD_APP_ID=... DISCORD_BOT_TOKEN=... DISCORD_GUILD_ID=... node scripts/register-commands.mjs
+ *
+ * Set DISCORD_GUILD_ID for guild-scoped (instant) registration.
+ * Omit it for global registration (propagates in ~1 hour).
+ */
+
 const appId = process.env.DISCORD_APP_ID;
 const botToken = process.env.DISCORD_BOT_TOKEN;
 const guildId = process.env.DISCORD_GUILD_ID;
@@ -14,6 +24,13 @@ const commands = [
 		name: "link",
 		description:
 			"Link your GitHub account to receive the Contributor role when your PRs are merged",
+		type: 1, // CHAT_INPUT
+		integration_types: [0], // 0 = GUILD_INSTALL
+		contexts: [0], // 0 = GUILD (not DM, not group DM)
+	},
+	{
+		name: "unlink",
+		description: "Unlink your GitHub account and remove the Contributor role",
 		type: 1,
 		integration_types: [0],
 		contexts: [0],

@@ -1,8 +1,20 @@
+/**
+ * End-to-end tests for the per-collection sitemap route.
+ *
+ * Exercises the actual route handler (XML output, hreflang alternates,
+ * urlset namespace) with EmDash i18n configured. The `astro:i18n`
+ * virtual module isn't available in vitest, so `localizePath` falls
+ * back to its manual prefix path -- which is also what most sites
+ * with default routing will produce.
+ */
+
 import type { APIContext } from "astro";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { SITEMAP_PAGE_SIZE } from "../../../../../../packages/core/src/api/handlers/seo.js";
 import { GET as getSitemap } from "../../../../../../packages/core/src/astro/routes/sitemap-[collection].xml.js";
+import { GET as getSitemapIndex } from "../../../../../../packages/core/src/astro/routes/sitemap.xml.js";
 import { createDatabase } from "../../../../../../packages/core/src/database/connection.js";
 import { runMigrations } from "../../../../../../packages/core/src/database/migrations/runner.js";
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
@@ -61,6 +73,27 @@ describe("sitemap-[collection].xml route", () => {
 	it("returns a 500 when emdash is not configured", async () => {
 		const res = await getSitemap(mockContext({ collectionSlug: "post", db: null }));
 		expect(res.status).toBe(500);
+	});
+
+	// 64 is one past the collection slug cap; 129 is past validateIdentifier's cap.
+	const invalidSlugs = ["0", "1a", "Post", "_post", "po.st", "a".repeat(64), "a".repeat(129)];
+
+	it("still returns a 500 without a runtime for a valid 63-character slug", async () => {
+		const res = await getSitemap(mockContext({ collectionSlug: "a".repeat(63), db: null }));
+		expect(res.status).toBe(500);
+	});
+
+	it.each(invalidSlugs)(
+		"returns a 404 for %s without a runtime, since it cannot be a collection slug",
+		async (collectionSlug) => {
+			const res = await getSitemap(mockContext({ collectionSlug, db: null }));
+			expect(res.status).toBe(404);
+		},
+	);
+
+	it.each(invalidSlugs)("returns a 404 for %s with a runtime", async (collectionSlug) => {
+		const res = await getSitemap(mockContext({ collectionSlug, db }));
+		expect(res.status).toBe(404);
 	});
 
 	it("returns a 404 when the collection has no published content", async () => {
@@ -124,6 +157,7 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
+		// Sitemap + image namespaces declared; no xhtml when i18n is off.
 		expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
 		expect(xml).toContain('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"');
 		expect(xml).not.toContain("xmlns:xhtml");
@@ -141,6 +175,7 @@ describe("sitemap-[collection].xml route", () => {
 			data: { title: "Hello" },
 			status: "published",
 		});
+		// SEO panel stores seo_image as a root-relative media API path.
 		await db
 			.insertInto("_emdash_seo")
 			.values({
@@ -158,6 +193,7 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
+		// image namespace declared + absolute <image:loc> emitted.
 		expect(xml).toContain('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"');
 		expect(xml).toContain(
 			"<image:loc>http://localhost:4321/_emdash/api/media/file/01ABCDEF.webp</image:loc>",
@@ -208,11 +244,16 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
+		// xhtml namespace declared on urlset.
 		expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
 
+		// Default-locale row sits at /blog/hello (no prefix); French row
+		// has its own slug ("bonjour") and is prefixed with /fr.
 		expect(xml).toContain("<loc>http://localhost:4321/blog/hello</loc>");
 		expect(xml).toContain("<loc>http://localhost:4321/fr/blog/bonjour</loc>");
 
+		// Each <url> declares both siblings + x-default pointing at the
+		// default-locale variant.
 		const enUrlMatch = xml.match(
 			/<url>(?:(?!<\/url>)[\s\S])*<loc>http:\/\/localhost:4321\/blog\/hello<\/loc>[\s\S]*?<\/url>/,
 		);
@@ -271,6 +312,7 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
+		// Single-row translation_group still advertises its own locale and fallback.
 		expect(xml).toContain("<loc>http://localhost:4321/blog/solo</loc>");
 		expect(xml).toContain(
 			'<xhtml:link rel="alternate" hreflang="en" href="http://localhost:4321/blog/solo" />',
@@ -294,6 +336,9 @@ describe("sitemap-[collection].xml route", () => {
 			status: "published",
 			locale: "en",
 		});
+		// `de` isn't a configured locale -- the site has no /de/ route.
+		// Better to drop the entry than to publish a sitemap link that
+		// 404s.
 		await repo.create({
 			type: "post",
 			slug: "hallo",
@@ -319,6 +364,8 @@ describe("sitemap-[collection].xml route", () => {
 			prefixDefaultLocale: false,
 		});
 
+		// English source + French translation (routable) + German
+		// translation (locale not configured -- unroutable).
 		const en = await repo.create({
 			type: "post",
 			slug: "hello",
@@ -347,18 +394,98 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
+		// French + English routable rows present.
 		expect(xml).toContain("<loc>http://localhost:4321/blog/hello</loc>");
 		expect(xml).toContain("<loc>http://localhost:4321/fr/blog/bonjour</loc>");
 
+		// German row dropped, and no German hreflang on remaining rows.
 		expect(xml).not.toContain("/de/");
 		expect(xml).not.toContain('hreflang="de"');
 		expect(xml).not.toContain("hallo");
 
+		// English row still lists French as an alternate (and x-default).
 		expect(xml).toContain(
 			'<xhtml:link rel="alternate" hreflang="fr" href="http://localhost:4321/fr/blog/bonjour" />',
 		);
 		expect(xml).toContain(
 			'<xhtml:link rel="alternate" hreflang="x-default" href="http://localhost:4321/blog/hello" />',
 		);
+	});
+
+	describe("pagination", () => {
+		/** Published rows whose IDs sort before any ULID, so they fill page 1 first. */
+		async function insertFiller(count: number) {
+			const rows = Array.from({ length: count }, (_, i) => `000000${String(i).padStart(6, "0")}`);
+			for (let i = 0; i < rows.length; i += 200) {
+				const values = rows
+					.slice(i, i + 200)
+					.map((id) => sql`(${id}, ${`filler-${id}`}, 'published', 'en', ${id})`);
+				await sql`
+					INSERT INTO ec_post (id, slug, status, locale, translation_group)
+					VALUES ${sql.join(values)}
+				`.execute(db);
+			}
+		}
+
+		it("rejects an explicit first-page suffix and malformed names", async () => {
+			await repo.create({ type: "post", slug: "hello", data: {}, status: "published" });
+
+			for (const param of ["post-1", "post-02", "post-", "post-x", "post-1000000"]) {
+				const res = await getSitemap(mockContext({ collectionSlug: param, db }));
+				expect(res.status, param).toBe(404);
+			}
+		});
+
+		it("continues on the next page and keeps cross-page hreflang alternates", async () => {
+			setI18nConfig({ defaultLocale: "en", locales: ["en", "fr"], prefixDefaultLocale: false });
+			await insertFiller(SITEMAP_PAGE_SIZE - 1);
+			const en = await repo.create({
+				type: "post",
+				slug: "hello",
+				data: {},
+				status: "published",
+				locale: "en",
+			});
+			const fr = await repo.create({
+				type: "post",
+				slug: "bonjour",
+				data: {},
+				status: "published",
+				locale: "fr",
+				translationOf: en.id,
+			});
+			const enLoc = "http://localhost:4321/blog/hello";
+			const frLoc = "http://localhost:4321/fr/blog/bonjour";
+			const [firstLoc, secondLoc] = en.id < fr.id ? [enLoc, frLoc] : [frLoc, enLoc];
+
+			const first = await (await getSitemap(mockContext({ collectionSlug: "post", db }))).text();
+			const secondRes = await getSitemap(mockContext({ collectionSlug: "post-2", db }));
+			expect(secondRes.status).toBe(200);
+			const second = await secondRes.text();
+
+			expect(first.match(/<url>/g)).toHaveLength(SITEMAP_PAGE_SIZE);
+			expect(first).toContain(`<loc>${firstLoc}</loc>`);
+			expect(first).not.toContain(`<loc>${secondLoc}</loc>`);
+			expect(second.match(/<url>/g)).toHaveLength(1);
+			expect(second).toContain(`<loc>${secondLoc}</loc>`);
+
+			for (const xml of [first, second]) {
+				expect(xml).toContain(`<xhtml:link rel="alternate" hreflang="en" href="${enLoc}" />`);
+				expect(xml).toContain(`<xhtml:link rel="alternate" hreflang="fr" href="${frLoc}" />`);
+				expect(xml).toContain(
+					`<xhtml:link rel="alternate" hreflang="x-default" href="${enLoc}" />`,
+				);
+			}
+
+			const third = await getSitemap(mockContext({ collectionSlug: "post-3", db }));
+			expect(third.status).toBe(404);
+
+			const index = await (
+				await getSitemapIndex(mockContext({ collectionSlug: undefined, db }))
+			).text();
+			expect(index).toContain("<loc>http://localhost:4321/sitemap-post.xml</loc>");
+			expect(index).toContain("<loc>http://localhost:4321/sitemap-post-2.xml</loc>");
+			expect(index).not.toContain("sitemap-post-3.xml");
+		});
 	});
 });

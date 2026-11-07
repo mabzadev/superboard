@@ -28,7 +28,7 @@ const useManagePasskeyForm = ({
     () => getFollowUpParams(),
     [],
   )
-  const qs = `?code=${followUpParams.code}&locale=${locale}&org=${followUpParams.org}`
+  const qs = `?code=${followUpParams.code}&locale=${locale}`
 
   const [isRemoving, setIsRemoving] = useState(false)
   const [isEnrolling, setIsEnrolling] = useState(false)

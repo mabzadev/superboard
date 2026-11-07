@@ -1327,7 +1327,6 @@ test("generated identity and files configs are private and parameterized", () =>
 	});
 	assert.equal(identity.vars.AUTH_SERVER_URL, "https://sdk.mabza.dev/v1/auth");
 	assert.equal(identity.vars.EMAIL_PROVIDER_NAME, "superboard");
-	assert.equal(identity.vars.ENABLE_SAML_SSO_AS_SP, true);
 	assert.equal(files.workers_dev, false);
 	assert.equal(files.vars.AUTH_GATEWAY_JWKS_URL, "https://sdk.mabza.dev/v1/auth/.well-known/application-jwks.json");
 	assert.equal(files.vars.FILES_PUBLIC_ORIGIN, "https://sdk.mabza.dev/v1/data");

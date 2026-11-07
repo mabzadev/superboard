@@ -41,6 +41,7 @@ describe("Loader cursor pagination", () => {
 		expect(result.entries).toHaveLength(3);
 		expect(result.nextCursor).toBeTruthy();
 
+		// Verify the cursor is a valid encoded cursor
 		const decoded = decodeCursor(result.nextCursor!);
 		expect(decoded).not.toBeNull();
 		expect(decoded!.orderValue).toBeTruthy();
@@ -81,12 +82,14 @@ describe("Loader cursor pagination", () => {
 
 		const loader = emdashLoader();
 
+		// First page
 		const page1 = await runWithContext({ editMode: false, db }, () =>
 			loader.loadCollection!({ filter: { type: "post", limit: 2 } }),
 		);
 		expect(page1.entries).toHaveLength(2);
 		expect(page1.nextCursor).toBeTruthy();
 
+		// Second page
 		const page2 = await runWithContext({ editMode: false, db }, () =>
 			loader.loadCollection!({
 				filter: { type: "post", limit: 2, cursor: page1.nextCursor },
@@ -95,6 +98,7 @@ describe("Loader cursor pagination", () => {
 		expect(page2.entries).toHaveLength(2);
 		expect(page2.nextCursor).toBeTruthy();
 
+		// Third page (last item)
 		const page3 = await runWithContext({ editMode: false, db }, () =>
 			loader.loadCollection!({
 				filter: { type: "post", limit: 2, cursor: page2.nextCursor },
@@ -103,6 +107,7 @@ describe("Loader cursor pagination", () => {
 		expect(page3.entries).toHaveLength(1);
 		expect(page3.nextCursor).toBeUndefined();
 
+		// Verify no overlap between pages
 		const allIds = [
 			...page1.entries!.map((e) => e.data.id),
 			...page2.entries!.map((e) => e.data.id),
@@ -113,6 +118,7 @@ describe("Loader cursor pagination", () => {
 	});
 
 	it("should maintain sort order across pages", async () => {
+		// Create posts with different titles to test ascending sort
 		const titles = ["Delta", "Alpha", "Echo", "Bravo", "Charlie"];
 		for (const title of titles) {
 			await createPublishedPost(title);
@@ -120,6 +126,7 @@ describe("Loader cursor pagination", () => {
 
 		const loader = emdashLoader();
 
+		// Paginate with ascending title order
 		const allEntries: Array<{ data: Record<string, unknown> }> = [];
 		let cursor: string | undefined;
 
@@ -161,6 +168,9 @@ describe("Loader cursor pagination", () => {
 
 		const loader = emdashLoader();
 
+		// Invalid cursors now fail loud rather than silently re-fetching the
+		// first page. The loader catches `InvalidCursorError` from
+		// `decodeCursor` and surfaces it via the loader-result envelope.
 		const result = await runWithContext({ editMode: false, db }, () =>
 			loader.loadCollection!({
 				filter: { type: "post", limit: 10, cursor: "not-a-valid-cursor" },
@@ -179,6 +189,7 @@ describe("Loader cursor pagination", () => {
 		const allEntries: Array<{ data: Record<string, unknown> }> = [];
 		let cursor: string | undefined;
 
+		// Page through one at a time
 		for (let page = 0; page < 10; page++) {
 			const result = await runWithContext({ editMode: false, db }, () =>
 				loader.loadCollection!({
@@ -205,6 +216,7 @@ describe("Loader cursor pagination", () => {
 			loader.loadCollection!({ filter: { type: "post", limit: 2 } }),
 		);
 
+		// Both cacheHint and nextCursor should be present
 		expect(result.cacheHint).toBeDefined();
 		expect(result.cacheHint!.tags).toEqual(["post"]);
 		expect(result.nextCursor).toBeTruthy();

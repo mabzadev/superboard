@@ -5,6 +5,9 @@ import { resolveStarterSiteIdentity as resolveStarterSiteIdentityNode } from "..
 
 describe("starter template site identity", () => {
 	it("uses CMS site title and tagline when provided", () => {
+		// Favicon is intentionally absent from the helper return: core's
+		// EmDashHead now emits the favicon link via renderSiteIdentity()
+		// (#831), so the template no longer needs to surface it.
 		const settings = {
 			title: "Example Site",
 			tagline: "Shipping notes",

@@ -1,20 +1,35 @@
-import Database from "better-sqlite3";
+/**
+ * Isolate-wide taxonomy-definitions cache (perf: removes the per-render
+ * `SELECT * FROM _emdash_taxonomy_defs` on warm isolates).
+ *
+ * The cache lives on globalThis and holds every locale's rows. Because
+ * `requestCached` dedupes within a single request scope, we exercise the
+ * isolate cache by running each `getTaxonomyDefs()` call inside its own
+ * `runWithContext` scope (a fresh context object => a fresh per-request
+ * cache bucket), so a second call only avoids the DB if the *isolate*
+ * cache served it.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { ulid } from "ulidx";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runMigrations } from "../../../../../../packages/core/src/database/migrations/runner.js";
 import type { Database as EmDashDatabase } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
+import { setI18nConfig } from "../../../../../../packages/core/src/i18n/config.js";
 import { runWithContext } from "../../../../../../packages/core/src/request-context.js";
 import {
+	getTaxonomyDef,
 	getTaxonomyDefs,
 	invalidateTaxonomyDefsCache,
 	resetTaxonomyDefsCacheForTests,
 } from "../../../../../../packages/core/src/taxonomies/index.js";
+import { createStalledDatabase } from "../../utils/test-db.js";
 
 let queryCount = 0;
 
-function makeDb(): { db: Kysely<EmDashDatabase>; sqlite: Database.Database } {
+function makeDb(): { db: Kysely<EmDashDatabase>; sqlite: Database } {
 	const sqlite = new Database(":memory:");
 	const db = new Kysely<EmDashDatabase>({
 		dialect: new SqliteDialect({ database: sqlite }),
@@ -41,6 +56,7 @@ async function insertDef(db: Kysely<EmDashDatabase>, name: string): Promise<void
 		.execute();
 }
 
+/** Run a getter in a fresh per-request scope with the test db as the ALS db. */
 function inScope<T>(
 	db: Kysely<EmDashDatabase>,
 	fn: () => Promise<T>,
@@ -51,17 +67,20 @@ function inScope<T>(
 
 describe("getTaxonomyDefs — isolate cache", () => {
 	let db: Kysely<EmDashDatabase>;
-	let sqlite: Database.Database;
+	let sqlite: Database;
 
 	beforeEach(async () => {
 		({ db, sqlite } = makeDb());
 		await runMigrations(db);
+		// Holder lives on globalThis; reset so sibling tests don't leak the
+		// previous test's rows into this one.
 		resetTaxonomyDefsCacheForTests();
 		await insertDef(db, "genre");
 		queryCount = 0;
 	});
 
 	afterEach(async () => {
+		vi.useRealTimers();
 		await db.destroy();
 		sqlite.close();
 	});
@@ -71,9 +90,29 @@ describe("getTaxonomyDefs — isolate cache", () => {
 		expect(queryCount).toBe(1);
 		expect(first.map((d) => d.name)).toContain("genre");
 
+		// A separate request scope: per-request cache can't help, so a second
+		// query would fire unless the isolate cache served it.
 		const second = await inScope(db, () => getTaxonomyDefs());
 		expect(queryCount).toBe(1);
 		expect(second.map((d) => d.name).toSorted()).toEqual(first.map((d) => d.name).toSorted());
+	});
+
+	it("does not strand later requests on a first query that never settles", async () => {
+		const stalled = createStalledDatabase();
+		const stranded = inScope(stalled.db, () => getTaxonomyDefs());
+		void stranded.catch(() => {});
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// Past the single-flight reclaim deadline, the next reader takes over.
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(Date.now() + 60_000);
+
+		try {
+			const defs = await inScope(db, () => getTaxonomyDefs());
+			expect(defs.map((d) => d.name)).toContain("genre");
+		} finally {
+			stalled.abort();
+		}
 	});
 
 	it("re-queries after invalidateTaxonomyDefsCache()", async () => {
@@ -92,6 +131,7 @@ describe("getTaxonomyDefs — isolate cache", () => {
 
 		await insertDef(db, "topic");
 
+		// Still cached — stale read is expected without an explicit bump.
 		const stale = await inScope(db, () => getTaxonomyDefs());
 		expect(stale.map((d) => d.name)).not.toContain("topic");
 
@@ -101,9 +141,23 @@ describe("getTaxonomyDefs — isolate cache", () => {
 		expect(fresh.map((d) => d.name)).toContain("topic");
 	});
 
+	it("serves every locale, and single-definition lookups, from one query", async () => {
+		setI18nConfig({ defaultLocale: "en", locales: ["en", "es", "fr"] });
+		try {
+			await inScope(db, () => getTaxonomyDefs({ locale: "en" }));
+			await inScope(db, () => getTaxonomyDefs({ locale: "es" }));
+			const def = await inScope(db, () => getTaxonomyDef("genre", { locale: "fr" }));
+			expect(def?.name).toBe("genre");
+			expect(queryCount).toBe(1);
+		} finally {
+			setI18nConfig(null);
+		}
+	});
+
 	it("bypasses the isolate cache for isolated databases (playground / DO preview)", async () => {
 		await inScope(db, () => getTaxonomyDefs(), { dbIsIsolated: true });
 		await inScope(db, () => getTaxonomyDefs(), { dbIsIsolated: true });
+		// Never cached across requests => one query each.
 		expect(queryCount).toBe(2);
 	});
 });

@@ -1,15 +1,33 @@
+/**
+ * Backing Service HTTP Handler
+ *
+ * Runs in the Node process for production workerd deployments.
+ * Receives HTTP requests from plugin workers running in workerd isolates.
+ * Each request is authenticated via a per-plugin auth token.
+ *
+ * This is a thin wrapper around createBridgeHandler that adds:
+ * - Auth token validation (extracting claims from the HMAC token)
+ * - Node http.IncomingMessage -> Request conversion
+ * - Response -> http.ServerResponse conversion
+ *
+ * The actual bridge logic (dispatch, capability enforcement, DB queries)
+ * lives in bridge-handler.ts and is shared with the dev runner.
+ */
+
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { getI18nConfig } from "emdash";
+import { PLUGIN_HTTP_MAX_REQUEST_BYTES } from "emdash/internal/plugins/http-wire";
 
 import { createBridgeHandler } from "./bridge-handler.js";
 import type { WorkerdSandboxRunner } from "./runner.js";
 
 export interface BackingServiceHandler {
 	handler: (req: IncomingMessage, res: ServerResponse) => void;
-	removePlugin: (pluginId: string) => void;
+	removePlugin: (pluginId: string, version: string) => void;
 }
 
+/** Error carrying an HTTP status code, used to surface request-level failures. */
 class HttpError extends Error {
 	constructor(
 		message: string,
@@ -19,11 +37,18 @@ class HttpError extends Error {
 	}
 }
 
+/**
+ * Create an HTTP request handler for the backing service.
+ */
 export function createBackingServiceHandler(runner: WorkerdSandboxRunner): BackingServiceHandler {
-	const handlerCache = new Map<string, (request: Request) => Promise<Response>>();
+	const handlerCache = new Map<
+		string,
+		{ token: string; handler: (request: Request) => Promise<Response> }
+	>();
 
 	const handler = async (req: IncomingMessage, res: ServerResponse) => {
 		try {
+			// Parse auth token from Authorization header
 			const authHeader = req.headers.authorization;
 			if (!authHeader?.startsWith("Bearer ")) {
 				res.writeHead(401, { "Content-Type": "application/json" });
@@ -39,26 +64,42 @@ export function createBackingServiceHandler(runner: WorkerdSandboxRunner): Backi
 				return;
 			}
 
-			const cacheKey = claims.pluginId;
-			let bridgeHandler = handlerCache.get(cacheKey);
-			if (!bridgeHandler) {
-				bridgeHandler = createBridgeHandler({
+			// Get or create bridge handler for this plugin
+			const cacheKey = `${claims.pluginId}:${claims.version}`;
+			let cached = handlerCache.get(cacheKey);
+			if (!cached || cached.token !== token) {
+				const bridgeHandler = createBridgeHandler({
 					pluginId: claims.pluginId,
 					version: claims.version,
 					capabilities: claims.capabilities,
 					allowedHosts: claims.allowedHosts,
 					storageCollections: claims.storageCollections,
 					storageConfig: runner.getPluginStorageConfig(claims.pluginId, claims.version),
+					settingsSchema: runner.getPluginSettingsSchema(claims.pluginId, claims.version),
 					i18nConfig: getI18nConfig(),
+					siteInfo: runner.getSiteInfo(),
 					db: runner.db,
 					beforeContentWrite: runner.beforeContentWrite,
+					contentCreate: runner.contentCreate ?? undefined,
+					taxonomyWrite: runner.taxonomyWrite,
+					contentActions: () => runner.contentActions,
 					emailSend: () => runner.emailSend,
+					commentModerate: () => runner.commentModerate,
+					cronReschedule: () => runner.cronReschedule?.(),
+					now: runner.now,
+					httpFetch: runner.httpFetch,
 					storage: runner.mediaStorage,
 				});
-				handlerCache.set(cacheKey, bridgeHandler);
+				cached = { token, handler: bridgeHandler };
+				handlerCache.set(cacheKey, cached);
 			}
 
+			// Convert Node request to web Request
 			const body = await readBody(req);
+			// A request waiting for its body has not entered bridge dispatch yet.
+			if (!runner.validateToken(token)) {
+				throw new HttpError("Invalid auth token", 401);
+			}
 			const url = `http://bridge${req.url || "/"}`;
 			const webRequest = new Request(url, {
 				method: req.method || "POST",
@@ -66,7 +107,8 @@ export function createBackingServiceHandler(runner: WorkerdSandboxRunner): Backi
 				body: JSON.stringify(body),
 			});
 
-			const webResponse = await bridgeHandler(webRequest);
+			// Dispatch through the shared bridge handler
+			const webResponse = await cached.handler(webRequest);
 			const responseBody = await webResponse.text();
 
 			res.writeHead(webResponse.status, { "Content-Type": "application/json" });
@@ -81,19 +123,22 @@ export function createBackingServiceHandler(runner: WorkerdSandboxRunner): Backi
 
 	return {
 		handler,
-		removePlugin(pluginId: string) {
-			handlerCache.delete(pluginId);
+		removePlugin(pluginId: string, version: string) {
+			handlerCache.delete(`${pluginId}:${version}`);
 		},
 	};
 }
 
-const MAX_BRIDGE_BODY_BYTES = 10 * 1024 * 1024;
+const MAX_BRIDGE_BODY_BYTES = Math.ceil((PLUGIN_HTTP_MAX_REQUEST_BYTES * 4) / 3) + 64 * 1024;
 
 function isJsonObject(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+	// IncomingMessage is a Node Readable; async-iteration yields chunks typed
+	// as `any`. Validate each chunk is a Buffer (the runtime guarantee for
+	// non-object-mode streams) so we can compose them safely.
 	const chunks: Buffer[] = [];
 	let totalBytes = 0;
 	for await (const chunk of req) {

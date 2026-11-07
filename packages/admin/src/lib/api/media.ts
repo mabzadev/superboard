@@ -1,3 +1,7 @@
+/**
+ * Media upload, list, delete, and provider APIs
+ */
+
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -13,12 +17,17 @@ export const MEDIA_SEARCH_MAX_LENGTH = 200;
 
 export interface MediaUploadOptions {
 	signal?: AbortSignal;
+	folderId?: string | null;
 }
 
 export interface UploadMediaOptions extends MediaUploadOptions {
 	fieldId?: string;
+	deduplicate?: boolean;
+	ensureUniqueFilename?: boolean;
+	folderId?: string | null;
 }
 
+/** Trim and clamp a search term to the server-accepted range. */
 export function normalizeMediaSearch(value: string | undefined | null): string {
 	return (value ?? "").trim().slice(0, MEDIA_SEARCH_MAX_LENGTH);
 }
@@ -41,7 +50,12 @@ export interface MediaUsageOccurrenceDetail {
 	fieldSlug: string;
 	fieldPath: string;
 	occurrenceIndex: number;
-	referenceType: "image_field" | "file_field" | "portable_text_image" | "unknown";
+	referenceType:
+		| "image_field"
+		| "file_field"
+		| "portable_text_image"
+		| "portable_text_video"
+		| "unknown";
 }
 
 export interface MediaUsageSourceDetail {
@@ -61,9 +75,14 @@ export interface MediaUsageEntryDetail {
 	sources: MediaUsageSourceDetail[];
 }
 
+export interface MediaUsageSiteSettingDetail {
+	setting: "logo" | "favicon" | "seo.defaultOgImage";
+}
+
 export interface MediaUsageDetailsResponse {
 	items: MediaUsageEntryDetail[];
 	nextCursor?: string;
+	siteSettings: MediaUsageSiteSettingDetail[];
 	coverage: MediaUsageCoverage;
 }
 
@@ -79,18 +98,25 @@ export interface MediaItem {
 	filename: string;
 	mimeType: string;
 	url: string;
+	/** Storage key for local media (e.g., "01ABC.jpg"). Not present for external URLs. */
 	storageKey?: string;
+	contentHash?: string | null;
 	size: number;
 	width?: number;
 	height?: number;
 	focalX?: number | null;
 	focalY?: number | null;
+	/** LQIP blurhash placeholder (images only) */
 	blurhash?: string;
+	/** LQIP dominant-color placeholder, as a CSS color (images only) */
 	dominantColor?: string;
 	alt?: string;
 	caption?: string;
 	createdAt: string;
+	status?: "pending" | "ready" | "failed";
+	/** Provider ID for external media (e.g., "cloudflare-images") */
 	provider?: string;
+	/** Provider-specific metadata */
 	meta?: Record<string, unknown>;
 }
 
@@ -112,12 +138,16 @@ export interface MediaListResult extends FindManyResult<LocalMediaItem> {
 
 export interface MediaFolderListResult extends FindManyResult<MediaFolder> {}
 
+/**
+ * Fetch media list
+ */
 export async function fetchMediaList(options?: {
 	cursor?: string;
 	page?: number;
 	limit?: number;
 	mimeType?: string | string[];
 	folderId?: string | null;
+	/** Case-insensitive filename substring search (also matches extensions). */
 	search?: string;
 }): Promise<MediaListResult> {
 	const params = new URLSearchParams();
@@ -134,6 +164,8 @@ export async function fetchMediaList(options?: {
 		params.set("folderId", options.folderId);
 	}
 	if (options?.search) {
+		// Trim and clamp to the server's accepted range so a long or
+		// whitespace-only term can't trigger an avoidable 400.
 		const q = normalizeMediaSearch(options.search);
 		if (q) params.set("q", q);
 	}
@@ -143,6 +175,12 @@ export async function fetchMediaList(options?: {
 	return parseApiResponse<MediaListResult>(response, i18n._(msg`Failed to fetch media`));
 }
 
+/**
+ * Fetch a single media item by id.
+ *
+ * Used to resolve an id-only reference (e.g. a byline's `avatarMediaId`)
+ * back into a full media item for display.
+ */
 export async function fetchMediaItem(
 	id: string,
 	options?: MediaUploadOptions,
@@ -237,6 +275,9 @@ export async function deleteMediaFolder(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete media folder`));
 }
 
+/**
+ * Upload URL response from the API
+ */
 interface UploadUrlResponse {
 	uploadUrl: string;
 	method: "PUT";
@@ -274,12 +315,17 @@ async function computeContentHash(file: File, signal?: AbortSignal): Promise<str
 	}
 }
 
+/**
+ * Try to get a signed upload URL
+ * Returns null if signed URLs are not supported (e.g., local storage)
+ */
 async function getUploadUrl(
 	file: File,
 	opts?: UploadMediaOptions,
 ): Promise<UploadUrlResponse | ExistingMediaResponse | null> {
 	try {
-		const contentHash = await computeContentHash(file, opts?.signal);
+		const contentHash =
+			opts?.deduplicate === false ? undefined : await computeContentHash(file, opts?.signal);
 		const response = await apiFetch(`${API_BASE}/media/upload-url`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -290,10 +336,14 @@ async function getUploadUrl(
 				size: file.size,
 				...(contentHash ? { contentHash } : {}),
 				...(opts?.fieldId ? { fieldId: opts.fieldId } : {}),
+				...(opts?.deduplicate === false ? { deduplicate: false } : {}),
+				...(opts?.ensureUniqueFilename ? { ensureUniqueFilename: true } : {}),
+				...(opts?.folderId !== undefined ? { folderId: opts.folderId } : {}),
 			}),
 		});
 
 		if (response.status === 501) {
+			// Not implemented - storage doesn't support signed URLs
 			return null;
 		}
 
@@ -303,6 +353,7 @@ async function getUploadUrl(
 		);
 	} catch (error) {
 		opts?.signal?.throwIfAborted();
+		// If the endpoint doesn't exist, fall back to direct upload
 		if (error instanceof TypeError && error.message.includes("fetch")) {
 			return null;
 		}
@@ -310,35 +361,43 @@ async function getUploadUrl(
 	}
 }
 
+/**
+ * Confirm upload after uploading to signed URL
+ */
 async function confirmUpload(
 	mediaId: string,
 	metadata?: { width?: number; height?: number; size?: number },
 	options?: MediaUploadOptions,
-): Promise<MediaItem> {
+): Promise<LocalMediaItem> {
 	const response = await apiFetch(`${API_BASE}/media/${mediaId}/confirm`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(metadata || {}),
 		signal: options?.signal,
 	});
-	const data = await parseApiResponse<{ item: MediaItem }>(
+	const data = await parseApiResponse<{ item: LocalMediaItem }>(
 		response,
 		i18n._(msg`Failed to confirm upload`),
 	);
 	return data.item;
 }
 
+/**
+ * Upload directly to signed URL
+ */
 async function uploadToSignedUrl(
 	file: File,
 	uploadInfo: UploadUrlResponse,
 	options?: MediaUploadOptions,
 ): Promise<void> {
+	const headers = { ...uploadInfo.headers };
+	if (file.type) {
+		headers["Content-Type"] = file.type;
+	}
+
 	const response = await fetch(uploadInfo.uploadUrl, {
 		method: uploadInfo.method,
-		headers: {
-			...uploadInfo.headers,
-			"Content-Type": file.type,
-		},
+		headers,
 		body: file,
 		signal: options?.signal,
 	});
@@ -346,7 +405,10 @@ async function uploadToSignedUrl(
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to upload file`));
 }
 
-async function getImageDimensions(
+/**
+ * Get image dimensions from a file
+ */
+export async function getImageDimensions(
 	file: File,
 	options?: MediaUploadOptions,
 ): Promise<{ width: number; height: number } | null> {
@@ -386,42 +448,139 @@ async function getImageDimensions(
 	});
 }
 
-async function uploadMediaDirect(file: File, opts?: UploadMediaOptions): Promise<MediaItem> {
-	const dimensions = await getImageDimensions(file, opts);
+function isVideoFile(file: File): boolean {
+	return file.type.startsWith("video/");
+}
+
+/**
+ * Get video dimensions from a file.
+ *
+ * The browser reports oriented dimensions in `videoWidth`/`videoHeight` once
+ * `loadedmetadata` fires, so phone videos with rotation metadata show the
+ * display width/height rather than the encoded frame size.
+ */
+export async function getVideoDimensions(
+	file: File,
+	options?: MediaUploadOptions,
+): Promise<{ width: number; height: number } | null> {
+	options?.signal?.throwIfAborted();
+	if (!isVideoFile(file)) {
+		return null;
+	}
+
+	return new Promise((resolve, reject) => {
+		const video = document.createElement("video");
+		const objectUrl = URL.createObjectURL(file);
+		const cleanup = () => {
+			video.removeEventListener("loadedmetadata", handleLoaded);
+			video.removeEventListener("error", handleError);
+			options?.signal?.removeEventListener("abort", handleAbort);
+			video.src = "";
+			video.load();
+			URL.revokeObjectURL(objectUrl);
+		};
+		const handleLoaded = () => {
+			const width = video.videoWidth;
+			const height = video.videoHeight;
+			cleanup();
+			if (width && height) {
+				resolve({ width, height });
+			} else {
+				resolve(null);
+			}
+		};
+		const handleError = () => {
+			cleanup();
+			resolve(null);
+		};
+		const handleAbort = () => {
+			cleanup();
+			reject(options?.signal?.reason);
+		};
+		video.addEventListener("loadedmetadata", handleLoaded, { once: true });
+		video.addEventListener("error", handleError, { once: true });
+		options?.signal?.addEventListener("abort", handleAbort, { once: true });
+		if (options?.signal?.aborted) {
+			handleAbort();
+			return;
+		}
+		video.muted = true;
+		video.playsInline = true;
+		video.preload = "metadata";
+		video.src = objectUrl;
+		video.load();
+	});
+}
+
+function getMediaDimensions(
+	file: File,
+	options?: MediaUploadOptions,
+): Promise<{ width: number; height: number } | null> {
+	if (file.type.startsWith("image/")) {
+		return getImageDimensions(file, options);
+	}
+	if (isVideoFile(file)) {
+		return getVideoDimensions(file, options);
+	}
+	return Promise.resolve(null);
+}
+
+/**
+ * Upload media file via direct upload (legacy/local storage)
+ */
+async function uploadMediaDirect(file: File, opts?: UploadMediaOptions): Promise<LocalMediaItem> {
+	// Get media dimensions before upload
+	const dimensions = await getMediaDimensions(file, opts);
 
 	const formData = new FormData();
 	formData.append("file", file);
+	// Send dimensions as form fields
 	if (dimensions?.width) formData.append("width", String(dimensions.width));
 	if (dimensions?.height) formData.append("height", String(dimensions.height));
 	if (opts?.fieldId) formData.append("fieldId", opts.fieldId);
+	if (opts?.deduplicate === false) formData.append("deduplicate", "false");
+	if (opts?.ensureUniqueFilename) formData.append("ensureUniqueFilename", "true");
+	if (opts?.folderId === null) formData.append("folderId", "unfiled");
+	else if (opts?.folderId !== undefined) formData.append("folderId", opts.folderId);
 
 	const response = await apiFetch(`${API_BASE}/media`, {
 		method: "POST",
 		body: formData,
 		signal: opts?.signal,
 	});
-	const data = await parseApiResponse<{ item: MediaItem }>(
+	const data = await parseApiResponse<{ item: LocalMediaItem }>(
 		response,
 		i18n._(msg`Failed to upload media`),
 	);
 	return data.item;
 }
 
-export async function uploadMedia(file: File, opts?: UploadMediaOptions): Promise<MediaItem> {
+/**
+ * Upload media file
+ *
+ * Tries signed URL upload first (for S3/R2 storage), falls back to direct upload
+ * (for local storage) if signed URLs are not supported.
+ */
+export async function uploadMedia(file: File, opts?: UploadMediaOptions): Promise<LocalMediaItem> {
 	opts?.signal?.throwIfAborted();
+	// Try to get a signed upload URL
 	const uploadInfo = await getUploadUrl(file, opts);
 
 	if (!uploadInfo) {
+		// Signed URLs not supported, use direct upload
 		return uploadMediaDirect(file, opts);
 	}
 	if ("existing" in uploadInfo) {
 		return fetchMediaItem(uploadInfo.mediaId, opts);
 	}
 
+	// Upload directly to storage via signed URL
 	await uploadToSignedUrl(file, uploadInfo, opts);
 
-	const dimensions = await getImageDimensions(file, opts);
+	// Get media dimensions for confirmation
+	const dimensions = await getMediaDimensions(file, opts);
 
+	// Confirm the upload
 	return confirmUpload(
 		uploadInfo.mediaId,
 		{
@@ -433,6 +592,31 @@ export async function uploadMedia(file: File, opts?: UploadMediaOptions): Promis
 	);
 }
 
+export async function replaceMediaImage(
+	id: string,
+	file: File,
+	dimensions: { width: number; height: number },
+	options?: MediaUploadOptions,
+): Promise<LocalMediaItem> {
+	const formData = new FormData();
+	formData.append("file", file);
+	formData.append("width", String(dimensions.width));
+	formData.append("height", String(dimensions.height));
+	const response = await apiFetch(`${API_BASE}/media/${encodeURIComponent(id)}/replace`, {
+		method: "PUT",
+		body: formData,
+		signal: options?.signal,
+	});
+	const data = await parseApiResponse<{ item: LocalMediaItem }>(
+		response,
+		i18n._(msg`Failed to replace media image`),
+	);
+	return data.item;
+}
+
+/**
+ * Delete media
+ */
 export async function deleteMedia(id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/media/${id}`, {
 		method: "DELETE",
@@ -440,6 +624,9 @@ export async function deleteMedia(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete media`));
 }
 
+/**
+ * Update media metadata (dimensions, alt text, etc.)
+ */
 export interface MediaUpdateInput {
 	alt?: string;
 	caption?: string;
@@ -463,6 +650,11 @@ export async function updateMedia(id: string, input: MediaUpdateInput): Promise<
 	return data.item;
 }
 
+// =============================================================================
+// Media Providers API
+// =============================================================================
+
+/** Media provider capabilities */
 export interface MediaProviderCapabilities {
 	browse: boolean;
 	search: boolean;
@@ -470,6 +662,7 @@ export interface MediaProviderCapabilities {
 	delete: boolean;
 }
 
+/** Media provider info from the API */
 export interface MediaProviderInfo {
 	id: string;
 	name: string;
@@ -477,6 +670,7 @@ export interface MediaProviderInfo {
 	capabilities: MediaProviderCapabilities;
 }
 
+/** Media item from a provider */
 export interface MediaProviderItem {
 	id: string;
 	filename: string;
@@ -484,13 +678,19 @@ export interface MediaProviderItem {
 	size?: number;
 	width?: number;
 	height?: number;
+	/** LQIP blurhash placeholder (images only) */
 	blurhash?: string;
+	/** LQIP dominant-color placeholder, as a CSS color (images only) */
 	dominantColor?: string;
 	alt?: string;
+	caption?: string;
 	previewUrl?: string;
 	meta?: Record<string, unknown>;
 }
 
+/**
+ * Fetch all configured media providers
+ */
 export async function fetchMediaProviders(): Promise<MediaProviderInfo[]> {
 	const response = await apiFetch(`${API_BASE}/media/providers`);
 	const data = await parseApiResponse<{ items: MediaProviderInfo[] }>(
@@ -500,6 +700,9 @@ export async function fetchMediaProviders(): Promise<MediaProviderInfo[]> {
 	return data.items;
 }
 
+/**
+ * Fetch media items from a specific provider
+ */
 export async function fetchProviderMedia(
 	providerId: string,
 	options?: {
@@ -526,6 +729,9 @@ export async function fetchProviderMedia(
 	);
 }
 
+/**
+ * Upload media to a specific provider
+ */
 export async function uploadToProvider(
 	providerId: string,
 	file: File,
@@ -549,6 +755,9 @@ export async function uploadToProvider(
 	return data.item;
 }
 
+/**
+ * Delete media from a specific provider
+ */
 export async function deleteFromProvider(providerId: string, itemId: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/media/providers/${providerId}/${itemId}`, {
 		method: "DELETE",

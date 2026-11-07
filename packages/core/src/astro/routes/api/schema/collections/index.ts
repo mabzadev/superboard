@@ -1,3 +1,10 @@
+/**
+ * Schema collections list and create endpoints
+ *
+ * GET  /_emdash/api/schema/collections - List collections
+ * POST /_emdash/api/schema/collections - Create collection
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

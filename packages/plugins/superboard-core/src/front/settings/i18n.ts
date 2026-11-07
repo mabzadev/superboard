@@ -2,12 +2,13 @@ import { useOptionalFrontContext } from "@superboard/front-ui/context";
 
 const messages = {
 	en: {
-		"environment.description": "Manage this environment’s project, team, usage and infrastructure.",
+		"environment.description": "Manage this environment’s project, team and usage.",
+		"environment.moved": "Opening Service health…",
 		"environment.sections": "Environment settings sections",
 		"tab.general": "General",
 		"tab.team": "Team",
 		"tab.usage": "Usage",
-		"tab.infrastructure": "Infrastructure",
+		"tab.advanced": "Advanced",
 		"general.title": "Project",
 		"general.description": "Identity of the project served by this environment.",
 		"general.name": "Project name",
@@ -25,11 +26,13 @@ const messages = {
 		"general.maintenanceDescription":
 			"Maintenance mode is a runtime policy returned to each SDK, so it is set per platform.",
 		"general.unavailable": "No project is linked to this environment yet.",
-		"danger.title": "Danger Zone",
-		"danger.description": "Irreversible actions that permanently affect this project.",
+		"danger.title": "Project-wide actions",
+		"danger.description":
+			"These actions apply to the whole project, its production and test environments included, not only to this environment.",
+		"danger.adminOnly": "Only project owners and administrators can delete the project.",
 		"danger.deleteTitle": "Delete this project",
 		"danger.deleteDescription":
-			"Permanently remove all links, data, and shared resources. This cannot be undone.",
+			"Permanently removes the project with its production and test environments, links, data and shared resources. This cannot be undone.",
 		"danger.delete": "Delete Project",
 		"danger.deleted": "Project deleted",
 		"team.title": "Team Members",
@@ -46,6 +49,31 @@ const messages = {
 		"usage.last30Days": "Last 30 days",
 		"usage.users": "Users",
 		"usage.last3Months": "Last 3 months",
+		"usage.empty": "No data for this period",
+		"usage.emptyDescription":
+			"Active users will appear here once your app starts receiving traffic.",
+		"general.maintenanceOn": "Maintenance on",
+		"general.maintenanceOff": "Off",
+		"general.notConfigured": "Not configured",
+		"general.statusUnavailable": "Unavailable",
+		"general.configure": "Configure {platform}",
+		"general.configureShort": "Configure",
+		"general.noEnvironment": "No environment is linked to this project yet.",
+		"danger.confirmTitle": "Delete this project?",
+		"team.administrator": "Administrator",
+		"team.memberRole": "Member",
+		"team.empty": "No members yet.",
+		"team.remove": "Remove {email}",
+		"team.removeTitle": "Remove this member?",
+		"team.removeDescription": "{email} immediately loses access to this project.",
+		"team.removeConfirm": "Remove",
+		"invite.title": "Invite member",
+		"invite.description":
+			"New members get access according to their role and receive an email to create their account.",
+		"invite.email": "Email address",
+		"invite.role": "Role",
+		"invite.cancel": "Cancel",
+		"invite.submit": "Add member",
 		"sdk.title": "SDK & apps",
 		"sdk.description":
 			"Install the SuperBoard SDKs and register the Web, iOS and Android applications of this project.",
@@ -104,13 +132,13 @@ const messages = {
 			"Where your team keeps these credentials, for example secret://store/app-store. Purchase verification uses the credentials saved above, not this reference.",
 	},
 	fr: {
-		"environment.description":
-			"Gérez le projet, l’équipe, l’utilisation et l’infrastructure de cet environnement.",
+		"environment.description": "Gérez le projet, l’équipe et l’utilisation de cet environnement.",
+		"environment.moved": "Ouverture de l’état des services…",
 		"environment.sections": "Sections des paramètres de l’environnement",
 		"tab.general": "Général",
 		"tab.team": "Équipe",
 		"tab.usage": "Utilisation",
-		"tab.infrastructure": "Infrastructure",
+		"tab.advanced": "Avancé",
 		"general.title": "Projet",
 		"general.description": "Identité du projet servi par cet environnement.",
 		"general.name": "Nom du projet",
@@ -128,11 +156,14 @@ const messages = {
 		"general.maintenanceDescription":
 			"Le mode maintenance est une politique d’exécution renvoyée à chaque SDK : il se règle par plateforme.",
 		"general.unavailable": "Aucun projet n’est encore associé à cet environnement.",
-		"danger.title": "Zone de danger",
-		"danger.description": "Actions irréversibles qui affectent définitivement ce projet.",
+		"danger.title": "Actions sur tout le projet",
+		"danger.description":
+			"Ces actions s’appliquent à tout le projet, environnements de production et de test compris, pas seulement à cet environnement.",
+		"danger.adminOnly":
+			"Seuls les propriétaires et administrateurs du projet peuvent le supprimer.",
 		"danger.deleteTitle": "Supprimer ce projet",
 		"danger.deleteDescription":
-			"Supprime définitivement tous les liens, données et ressources partagées. Action irréversible.",
+			"Supprime définitivement le projet avec ses environnements de production et de test, ses liens, ses données et ses ressources partagées. Action irréversible.",
 		"danger.delete": "Supprimer le projet",
 		"danger.deleted": "Projet supprimé",
 		"team.title": "Membres de l’équipe",
@@ -149,6 +180,31 @@ const messages = {
 		"usage.last30Days": "30 derniers jours",
 		"usage.users": "Utilisateurs",
 		"usage.last3Months": "3 derniers mois",
+		"usage.empty": "Aucune donnée sur cette période",
+		"usage.emptyDescription":
+			"Les utilisateurs actifs apparaîtront ici dès que votre application recevra du trafic.",
+		"general.maintenanceOn": "En maintenance",
+		"general.maintenanceOff": "Désactivé",
+		"general.notConfigured": "Non configuré",
+		"general.statusUnavailable": "Indisponible",
+		"general.configure": "Configurer {platform}",
+		"general.configureShort": "Configurer",
+		"general.noEnvironment": "Aucun environnement n’est encore associé à ce projet.",
+		"danger.confirmTitle": "Supprimer ce projet ?",
+		"team.administrator": "Administrateur",
+		"team.memberRole": "Membre",
+		"team.empty": "Aucun membre pour l’instant.",
+		"team.remove": "Retirer {email}",
+		"team.removeTitle": "Retirer ce membre ?",
+		"team.removeDescription": "{email} perd immédiatement l’accès à ce projet.",
+		"team.removeConfirm": "Retirer",
+		"invite.title": "Inviter un membre",
+		"invite.description":
+			"Les nouveaux membres accèdent au projet selon leur rôle et reçoivent un e-mail pour créer leur compte.",
+		"invite.email": "Adresse e-mail",
+		"invite.role": "Rôle",
+		"invite.cancel": "Annuler",
+		"invite.submit": "Ajouter le membre",
 		"sdk.title": "SDK et applications",
 		"sdk.description":
 			"Installez les SDK SuperBoard et enregistrez les applications Web, iOS et Android de ce projet.",
@@ -216,5 +272,9 @@ export type SettingsMessage = keyof (typeof messages)["en"];
 export function useSettingsI18n() {
 	const locale = useOptionalFrontContext()?.locale === "fr" ? "fr" : "en";
 	const catalog: Record<SettingsMessage, string> = messages[locale];
-	return { locale, t: (id: SettingsMessage) => catalog[id] };
+	return {
+		locale,
+		t: (id: SettingsMessage, values: Record<string, string> = {}) =>
+			catalog[id].replace(/\{(\w+)\}/gu, (match, name: string) => values[name] ?? match),
+	};
 }

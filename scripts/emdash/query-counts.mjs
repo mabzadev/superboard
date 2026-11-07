@@ -1,4 +1,60 @@
 #!/usr/bin/env node
+/**
+ * Query-count harness for the runtime perf fixture.
+ *
+ * Builds fixtures/perf-site with `astro build`, then serves it via the
+ * production adapter entry (node or wrangler, never `astro dev`) so the
+ * measured code paths match what real visitors hit. For each fixture
+ * route we record cold and warm phase queries — the Kysely log hook
+ * emits `[emdash-query-log]`-prefixed NDJSON on stdout, which the harness
+ * captures.
+ *
+ * Two snapshots are written/compared per target:
+ *   query-counts.snapshot.{target}.json  — per route+phase query *count*
+ *   query-counts.queries.{target}.json   — per route+phase map of the
+ *                                          actual SQL -> occurrence count,
+ *                                          so a count change shows which
+ *                                          query moved, not just the total.
+ *
+ * The recorder is flushed when the response body finishes streaming (not
+ * when middleware returns), so queries issued by components *during*
+ * streaming are captured. Before that fix the counts only saw queries that
+ * ran before the response headers were sent.
+ *
+ * Two targets, two server strategies:
+ *   --target sqlite   Node adapter standalone entry. One long-lived
+ *                     process. First request warms the runtime (migrations
+ *                     + auto-seed on first boot). Cold/warm is per-route
+ *                     first-vs-second hit.
+ *
+ *   --target d1       Cloudflare adapter via `astro preview` (wrangler dev
+ *                     against the built worker). Because real D1 visitors
+ *                     often land on a fresh isolate, we measure that:
+ *                     seed once in a dedicated boot, stop; then spin a
+ *                     fresh preview per route for one cold + one warm
+ *                     hit, stop, next route.
+ *
+ * Seeding (per target):
+ *   sqlite: `emdash init && emdash seed` via the CLI — writes directly to
+ *           data.db, no HTTP layer involved.
+ *   d1:     astro dev + POST /_emdash/api/setup/dev-bypass. The dev-bypass
+ *           endpoint is dead-code-eliminated from prod builds, so it's
+ *           only reachable via dev mode. Local D1 state persists in
+ *           .wrangler/state across dev → preview.
+ *
+ * Usage:
+ *   node scripts/query-counts.mjs                       # sqlite, compare
+ *   node scripts/query-counts.mjs --target d1           # d1, compare
+ *   node scripts/query-counts.mjs --update              # rewrite snapshot
+ *   node scripts/query-counts.mjs --target d1 --update
+ *   node scripts/query-counts.mjs --skip-seed           # reuse existing db
+ *   node scripts/query-counts.mjs --skip-build          # reuse existing build
+ *
+ * --skip-seed and --skip-build compose. Passing both gives the fastest
+ * local iteration loop once the fixture is set up.
+ *
+ * Prerequisite: `pnpm build` has run (the emdash CLI lives in dist/).
+ */
 
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -6,6 +62,8 @@ import { createConnection } from "node:net";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
+
+import { normalizeSql } from "./query-counts-normalize.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
@@ -16,23 +74,41 @@ const PORT = 14321;
 const BASE = `http://${HOST}:${PORT}`;
 
 const ROUTES = [
-	["GET", "/"],
-	["GET", "/posts"],
-	["GET", "/posts/building-for-the-long-term"],
-	["GET", "/pages/about"],
-	["GET", "/category/development"],
-	["GET", "/tag/webdev"],
-	["GET", "/rss.xml"],
-	["GET", "/search?q=static"],
-	["GET", "/contributors"],
-	["GET", "/contributors-naive"],
+	["GET", "/", "text/html"],
+	["GET", "/posts", "text/html"],
+	["GET", "/posts/building-for-the-long-term", "text/html"],
+	["GET", "/pages/about", "text/html"],
+	["GET", "/category/development", "text/html"],
+	["GET", "/tag/webdev", "text/html"],
+	["GET", "/rss.xml", "application/rss+xml"],
+	["GET", "/search?q=static", "text/html"],
+	// Byline-avatar list pages. /contributors uses the avatar storage key folded
+	// into byline hydration; /contributors-naive resolves each avatar with a
+	// per-byline media lookup. The gap between them is the N+1 the join removes.
+	["GET", "/contributors", "text/html"],
+	["GET", "/contributors-naive", "text/html"],
+	// An entry read with and without a reference field. /related opts in;
+	// /related-baseline is the same page without the option. The gap between
+	// them is the whole cost of `getEmDashEntry(..., { references })`.
+	["GET", "/related", "text/html"],
+	["GET", "/related-baseline", "text/html"],
 ];
 
 const TRACKED_PHASES = new Set(["cold", "warm"]);
 const VALID_TARGETS = new Set(["sqlite", "d1"]);
 const QUERY_LOG_PREFIX = "[emdash-query-log] ";
+// Emitted by stream-end-metrics.ts when the response body finishes
+// streaming, including queries that Server-Timing headers can't see.
+// Deferred work that outlives the response body is not included.
 const STREAM_END_PREFIX = "[emdash-stream-end] ";
 
+/**
+ * Resolve once a TCP connection to (host, port) succeeds, or reject on
+ * timeout. Uses a raw TCP connect rather than an HTTP request so we
+ * don't warm a fresh workerd isolate — workerd initialises the isolate
+ * on the first HTTP request, not on TCP accept. This keeps the
+ * per-route "cold" measurement genuinely cold on the D1 path.
+ */
 function waitForPort(host, port, timeoutMs = 120_000) {
 	const deadline = Date.now() + timeoutMs;
 	return new Promise((resolveReady, rejectReady) => {
@@ -49,6 +125,37 @@ function waitForPort(host, port, timeoutMs = 120_000) {
 			socket.once("error", () => {
 				socket.destroy();
 				setTimeout(attempt, 100);
+			});
+		};
+		attempt();
+	});
+}
+
+/**
+ * Resolve once nothing accepts connections on (host, port), or reject if
+ * something still does after the timeout. Anything left listening there
+ * would answer the measured requests in place of the server under test.
+ */
+function waitForPortFree(host, port, timeoutMs = 5_000) {
+	const deadline = Date.now() + timeoutMs;
+	return new Promise((resolveFree, rejectFree) => {
+		const attempt = () => {
+			const socket = createConnection({ host, port });
+			socket.once("connect", () => {
+				socket.destroy();
+				if (Date.now() > deadline) {
+					rejectFree(
+						new Error(
+							`${host}:${port} is already in use. Stop the process listening there (for example an astro dev or preview server left over from an earlier run) and retry.`,
+						),
+					);
+					return;
+				}
+				setTimeout(attempt, 100);
+			});
+			socket.once("error", () => {
+				socket.destroy();
+				resolveFree();
 			});
 		};
 		attempt();
@@ -78,6 +185,8 @@ function parseArgs(argv) {
 
 const { target, update, skipBuild, skipSeed } = parseArgs(process.argv.slice(2));
 const snapshotPath = resolve(__dirname, `query-counts.snapshot.${target}.json`);
+// Companion snapshot of the actual SQL per route+phase, so a count change
+// shows *which* query appeared/vanished, not just that the number moved.
 const querySnapshotPath = resolve(__dirname, `query-counts.queries.${target}.json`);
 
 function resetSqliteState() {
@@ -118,6 +227,15 @@ function assertExistingBuildMatchesTarget() {
 	}
 }
 
+// SQLite: seed the file DB via the emdash CLI directly — it runs
+// migrations, applies the virtual-module seed, and sets
+// `emdash:setup_complete`, all without going through the HTTP layer.
+//
+// We invoke the CLI entry by absolute path rather than via `pnpm exec
+// emdash` so the harness works in CI, where pnpm's bin-linking step
+// isn't run (see scripts/relink-bins-if-needed.mjs — it early-exits
+// under CI, expecting the CI job to handle bin links, which this job
+// intentionally does not).
 const emdashCliPath = resolve(repoRoot, "packages/core/dist/cli/index.mjs");
 
 function seedSqliteCli() {
@@ -132,12 +250,25 @@ function seedSqliteCli() {
 	}
 }
 
+// Long-lived astro servers start from the fixture's bin shim, not through
+// `pnpm exec`: when the global pnpm differs from `packageManager`, `pnpm` is
+// a launcher that runs the pinned pnpm as a separate process, so stopping the
+// spawned child would orphan the server. The shim execs node in place, and
+// the dev server needs the NODE_PATH it sets to resolve its Babel plugins.
+const astroBin = resolve(fixtureDir, "node_modules/.bin/astro");
+
+// D1: the CLI can't reach D1 over the Workers protocol, so we seed by
+// running astro dev once (dev-bypass is gated on import.meta.env.DEV
+// and is stripped from prod builds) and hitting the dev-bypass endpoint.
+// Local D1 state persists in .wrangler/state across dev → preview.
 async function seedD1ViaDevBypass(events) {
 	process.stdout.write(`--- seeding via astro dev + dev-bypass ---\n`);
-	const child = spawn("pnpm", ["exec", "astro", "dev", "--host", HOST, "--port", String(PORT)], {
+	await waitForPortFree(HOST, PORT);
+	const child = spawn(astroBin, ["dev", "--host", HOST, "--port", String(PORT)], {
 		cwd: fixtureDir,
 		env: {
 			...process.env,
+			ASTRO_DEV_BACKGROUND: "0",
 			EMDASH_FIXTURE_TARGET: "d1",
 			EMDASH_QUERY_LOG: "1",
 		},
@@ -151,9 +282,12 @@ async function seedD1ViaDevBypass(events) {
 			const payload = line.slice(idx + QUERY_LOG_PREFIX.length);
 			try {
 				events.push(JSON.parse(payload));
-			} catch {}
+			} catch {
+				// ignore
+			}
 			return;
 		}
+		// Stream-end snapshots from seeding aren't measurements; swallow them.
 		if (line.includes(STREAM_END_PREFIX)) return;
 		process.stdout.write(line + "\n");
 	});
@@ -181,21 +315,31 @@ async function seedD1ViaDevBypass(events) {
 	}
 }
 
-function startServer({ collectedEvents, streamEndSnapshots = [] }) {
+/**
+ * Spawn the prod server for the current target. Resolves to { ready, stop }.
+ *   sqlite: node ./dist/server/entry.mjs (HOST/PORT env)
+ *   d1:     astro preview (cloudflare adapter → wrangler dev)
+ * `ready` resolves on a successful TCP connection — no HTTP probing,
+ * so a fresh workerd isolate stays cold until our first tagged request.
+ */
+async function startServer({ collectedEvents, streamEndSnapshots = [] }) {
 	let cmd;
 	let args;
 	if (target === "sqlite") {
 		cmd = "node";
 		args = ["./dist/server/entry.mjs"];
 	} else {
-		cmd = "pnpm";
-		args = ["exec", "astro", "preview", "--host", HOST, "--port", String(PORT)];
+		cmd = astroBin;
+		args = ["preview", "--host", HOST, "--port", String(PORT)];
 	}
+
+	await waitForPortFree(HOST, PORT);
 
 	const child = spawn(cmd, args, {
 		cwd: fixtureDir,
 		env: {
 			...process.env,
+			ASTRO_PREVIEW_BACKGROUND: "0",
 			EMDASH_FIXTURE_TARGET: target,
 			EMDASH_QUERY_LOG: "1",
 			HOST,
@@ -246,32 +390,44 @@ function startServer({ collectedEvents, streamEndSnapshots = [] }) {
 			exited,
 			new Promise((r) => setTimeout(r, 5_000)).then(() => child.kill("SIGKILL")),
 		]);
+		// Small pause for the OS to release the port before the next spawn.
 		await new Promise((r) => setTimeout(r, 250));
 	}
 
 	return { ready, stop };
 }
 
-async function hit(method, path, phase) {
+async function hit(method, path, accept, phase) {
+	// Tiny retry for the very first hit against a just-spawned wrangler
+	// preview — "ready" fires before the HTTP listener actually accepts
+	// on some runs. We're not measuring these retry attempts (they're
+	// in the "default" phase), just papering over a race.
 	let lastErr;
 	for (let i = 0; i < 10; i++) {
+		let response;
 		try {
-			const r = await fetch(`${BASE}${path}`, {
+			response = await fetch(`${BASE}${path}`, {
 				method,
-				headers: { "x-perf-phase": phase },
+				headers: { Accept: accept, "x-perf-phase": phase },
 				redirect: "manual",
 			});
-			await r.arrayBuffer();
-			process.stdout.write(`  ${phase.padEnd(5)} ${method} ${path} -> ${r.status}\n`);
-			return r.status;
 		} catch (err) {
 			lastErr = err;
 			await new Promise((r) => setTimeout(r, 200));
+			continue;
 		}
+		await response.arrayBuffer();
+		process.stdout.write(`  ${phase.padEnd(5)} ${method} ${path} -> ${response.status}\n`);
+		if (!response.ok) {
+			throw new Error(`${phase} ${method} ${path} returned ${response.status}`);
+		}
+		return response.status;
 	}
 	throw lastErr;
 }
 
+// An untagged hit that triggers runtime init (migrations + auto-seed on
+// first boot). Events here land in "default" phase and are filtered out.
 async function warmup() {
 	const r = await fetch(BASE, { redirect: "manual" });
 	await r.arrayBuffer();
@@ -288,13 +444,9 @@ function aggregate(events) {
 	return Object.fromEntries(Object.entries(counts).toSorted(([a], [b]) => a.localeCompare(b)));
 }
 
-function normalizeSql(sql) {
-	return sql
-		.replace(/\s+/g, " ")
-		.replace(/\bin\s*\(\s*\?(?:\s*,\s*\?)*\s*\)/gi, "in (...)")
-		.trim();
-}
-
+// Per route+phase, a map of normalized SQL -> occurrence count. Sorted keys
+// keep it order-independent (queued rendering issues queries concurrently,
+// so arrival order is not stable). The summed values equal the count snapshot.
 function aggregateQueries(events) {
 	const byRoute = {};
 	for (const e of events) {
@@ -342,6 +494,9 @@ function diffSnapshot(actual) {
 	return 1;
 }
 
+// Diff the per-route SQL snapshot. Surfaces exactly which query text
+// appeared, vanished, or changed multiplicity — the "what dropped" view
+// that a bare count can't give.
 function diffQuerySnapshot(actual) {
 	if (!existsSync(querySnapshotPath)) {
 		process.stderr.write(
@@ -377,6 +532,9 @@ function diffQuerySnapshot(actual) {
 	return 1;
 }
 
+// SQLite: seed the file DB via CLI, build, then run one long-lived node
+// entry. Warmup hit absorbs runtime init queries (filtered as "default"
+// phase). Tagged cold = first visit to route (runtime warm); warm = second.
 async function runSqlite(events, streamEndSnapshots) {
 	if (!skipSeed) {
 		resetSqliteState();
@@ -384,38 +542,56 @@ async function runSqlite(events, streamEndSnapshots) {
 	}
 	if (skipBuild) assertExistingBuildMatchesTarget();
 	else buildFixture();
-	const server = startServer({ collectedEvents: events, streamEndSnapshots });
+	const server = await startServer({ collectedEvents: events, streamEndSnapshots });
 	try {
 		await server.ready;
 		await warmup();
-		for (const [m, p] of ROUTES) await hit(m, p, "cold");
-		for (const [m, p] of ROUTES) await hit(m, p, "warm");
+		for (const [m, p, accept] of ROUTES) await hit(m, p, accept, "cold");
+		for (const [m, p, accept] of ROUTES) await hit(m, p, accept, "warm");
 	} finally {
 		await server.stop();
 	}
 }
 
+// D1: seed via dev-bypass (dev mode only — dev-bypass is stripped from
+// prod builds), then build the worker, then for each route spin up a
+// fresh `astro preview` (cloudflare adapter runs wrangler dev). The
+// first tagged hit lands on a genuinely cold workerd isolate; the
+// second hit shares that isolate.
+//
+// Seed must precede build: `astro dev` leaves `.wrangler/deploy/`
+// without the build-time `config.json` that `astro preview` requires,
+// so building afterwards is what makes the subsequent previews work.
 async function runD1(events, streamEndSnapshots) {
 	if (!skipSeed) {
 		resetD1State();
+		// seeding uses its own event sink; we don't want to commingle
+		// those with the measurement events (they're all "default" phase
+		// anyway, but keeping them separate is tidier).
 		await seedD1ViaDevBypass([]);
 	}
 	if (skipBuild) assertExistingBuildMatchesTarget();
 	else buildFixture();
 
-	for (const [m, p] of ROUTES) {
+	for (const [m, p, accept] of ROUTES) {
 		process.stdout.write(`--- fresh isolate for ${m} ${p} ---\n`);
-		const server = startServer({ collectedEvents: events, streamEndSnapshots });
+		const server = await startServer({ collectedEvents: events, streamEndSnapshots });
 		try {
 			await server.ready;
-			await hit(m, p, "cold");
-			await hit(m, p, "warm");
+			await hit(m, p, accept, "cold");
+			await hit(m, p, accept, "warm");
 		} finally {
 			await server.stop();
 		}
 	}
 }
 
+/**
+ * Print the per-route snapshots through the end of the response body.
+ * Timings are machine-dependent and are not saved in snapshot files. The value is
+ * `dbCount` here vs. the header-time count: the difference is queries
+ * issued during body streaming, invisible to Server-Timing.
+ */
 function reportStreamEnd(snapshots) {
 	const tracked = snapshots
 		.filter((s) => TRACKED_PHASES.has(s.phase))
@@ -423,7 +599,7 @@ function reportStreamEnd(snapshots) {
 			`${a.method} ${a.route} ${a.phase}`.localeCompare(`${b.method} ${b.route} ${b.phase}`),
 		);
 	if (tracked.length === 0) return;
-	process.stdout.write("\nStream-end metrics (full request, incl. post-header queries):\n");
+	process.stdout.write("\nStream-end metrics (through end of response body):\n");
 	for (const s of tracked) {
 		const dbMs = typeof s.dbTotalMs === "number" ? s.dbTotalMs.toFixed(1) : "?";
 		const totalMs = typeof s.totalMs === "number" ? s.totalMs.toFixed(1) : "?";
@@ -434,6 +610,7 @@ function reportStreamEnd(snapshots) {
 }
 
 async function main() {
+	await waitForPortFree(HOST, PORT);
 	const events = [];
 	const streamEndSnapshots = [];
 	if (target === "sqlite") await runSqlite(events, streamEndSnapshots);
@@ -444,12 +621,19 @@ async function main() {
 	const counts = aggregate(events);
 	const queries = aggregateQueries(events);
 	if (update) {
+		// Use tab indent so the output matches oxfmt's default and
+		// doesn't thrash under `pnpm format`. Space-indented output
+		// would be reformatted to tabs by the formatter, producing
+		// a false-positive "drift" signal in CI (the raw harness
+		// output wouldn't match the committed file).
 		writeFileSync(snapshotPath, JSON.stringify(counts, null, "\t") + "\n");
 		process.stdout.write(`Wrote ${Object.keys(counts).length} entries to ${snapshotPath}\n`);
 		writeFileSync(querySnapshotPath, JSON.stringify(queries, null, "\t") + "\n");
 		process.stdout.write(`Wrote ${Object.keys(queries).length} entries to ${querySnapshotPath}\n`);
 		return 0;
 	}
+	// Both must match. Run both so a single invocation surfaces count and
+	// text drift together; OR the exit codes so either failing fails CI.
 	const countCode = diffSnapshot(counts);
 	const queryCode = diffQuerySnapshot(queries);
 	return countCode || queryCode;

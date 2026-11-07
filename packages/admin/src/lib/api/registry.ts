@@ -1,4 +1,25 @@
+/**
+ * Registry API client
+ *
+ * The admin UI talks to two distinct services for registry features:
+ *
+ *   - **Browse / search / detail**: directly to the configured aggregator
+ *     via `@emdash-cms/registry-client`'s `DiscoveryClient`. The
+ *     aggregator is a public, CORS-enabled atproto AppView; no server
+ *     proxy is needed.
+ *   - **Verify / install**: POST to the EmDash server. The server reads
+ *     signed records directly from the publisher PDS, verifies the bundle
+ *     and provenance, returns consent evidence, then repeats those checks
+ *     against acknowledged CIDs when installing.
+ *
+ * The discovery client is constructed lazily so we only pull
+ * `@atcute/client` into the admin bundle when the registry path is
+ * actually exercised. Sites with no active `registry` config never
+ * pay the cost (verified at ~2 KB gzip when it does load).
+ */
+
 import type { Did, Handle } from "@atcute/lexicons";
+import type { DeclaredAccess } from "@emdash-cms/plugin-types";
 import type {
 	ListingStatusResult,
 	ValidatedListReleases,
@@ -9,6 +30,7 @@ import type {
 import { hostEnvFromVersions } from "@emdash-cms/registry-client/env";
 import type { HostEnv } from "@emdash-cms/registry-client/env";
 import {
+	isProvenFirstRelease,
 	registryLabelerPolicy,
 	registryLabelerPolicyKey,
 	type RegistryLabelerPolicy,
@@ -18,6 +40,7 @@ import { msg } from "@lingui/core/macro";
 
 import {
 	API_BASE,
+	ApiResponseError,
 	apiFetch,
 	parseApiResponse,
 	throwResponseError,
@@ -28,6 +51,15 @@ import { PluginMcpConsentRequiredError, type PluginMcpConsentTool } from "./mark
 export type { Did, Handle };
 export type { HostEnv };
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/**
+ * Registry configuration carried on the EmDash manifest. The browser
+ * reads this on app boot and passes the relevant fields into the
+ * DiscoveryClient and the latest-release policy filter.
+ */
 export interface RegistryClientConfig {
 	aggregatorUrl: string;
 	acceptLabelers?: string;
@@ -37,6 +69,13 @@ export interface RegistryClientConfig {
 	};
 }
 
+/**
+ * Re-exports of the registry-client view types. `DiscoveryClient` validates
+ * the embedded signed `profile` / `release` records against their lexicons
+ * at the read-side trust boundary, so they arrive here as the typed lexicon
+ * shape or `null` when the aggregator returned a non-conforming record.
+ * Callers must null-check; they no longer need to shape-narrow.
+ */
 export type RegistryPackageView = ValidatedPackageView;
 export type RegistryReleaseView = ValidatedReleaseView;
 export type RegistrySearchResult = ValidatedSearchPackages;
@@ -54,6 +93,9 @@ export interface RegistryInstallRequest {
 	version?: string;
 	acknowledgedDeclaredAccess?: unknown;
 	acknowledgedMcpTools?: PluginMcpConsentTool[];
+	acknowledgedPublicRoutes?: string[];
+	acknowledgedProfileCid?: string;
+	acknowledgedReleaseCid?: string;
 }
 
 export interface RegistryInstallResult {
@@ -62,7 +104,26 @@ export interface RegistryInstallResult {
 	slug: string;
 	version: string;
 	capabilities: string[];
+	declaredAccess: DeclaredAccess;
+	mcpTools: PluginMcpConsentTool[];
+	publicRoutes: string[];
+	verification: RegistryRecordVerificationSummary;
 }
+
+export interface RegistryRecordVerificationSummary {
+	profileCid: string;
+	releaseCid: string;
+	provenance: "verified" | "absent-optional";
+	policy: {
+		requireProvenance: boolean;
+		confirmation: "escalation-only" | "always";
+		approvers: string[];
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Discovery client (lazy)
+// ---------------------------------------------------------------------------
 
 interface WrappedDiscoveryClient {
 	searchPackages: (opts: RegistrySearchOpts) => Promise<RegistrySearchResult>;
@@ -171,9 +232,26 @@ async function getDiscoveryClient(config: RegistryClientConfig): Promise<Wrapped
 	return wrapped;
 }
 
+// ---------------------------------------------------------------------------
+// Latest-release policy filter
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns whether a release should be considered installable given the
+ * configured policy. Applies the `minimumReleaseAgeExclude` allowlist first,
+ * then the proven-first-release exemption, then the minimum-release-age
+ * holdback described in RFC 0001's "Pre-label gap and launch tempo" section.
+ *
+ * Returns `false` (release blocked) when the policy is configured but
+ * the release is missing a valid `indexedAt` -- we fail closed rather
+ * than silently letting unbounded-age releases through.
+ */
 export function releasePassesPolicy(
 	release: RegistryReleaseView,
-	pkg: { did: string; slug: string },
+	pkg: Pick<
+		RegistryPackageView,
+		"did" | "slug" | "historicalReleaseCount" | "releaseHistoryComplete"
+	>,
 	policy: RegistryClientConfig["policy"],
 	now: number = Date.now(),
 ): boolean {
@@ -181,12 +259,22 @@ export function releasePassesPolicy(
 	if (releaseExemptFromMinimumAge(policy.minimumReleaseAgeExclude, pkg.did, pkg.slug)) {
 		return true;
 	}
+	if (isProvenFirstRelease(pkg)) return true;
 	const indexedAt = Date.parse(release.indexedAt);
 	if (!Number.isFinite(indexedAt)) return false;
 	const ageSeconds = (now - indexedAt) / 1000;
 	return ageSeconds >= policy.minimumReleaseAgeSeconds;
 }
 
+/**
+ * Canonicalize a capabilities list for set-style comparison. Mirrors
+ * the server-side helper `canonicalCapabilitiesForDriftCheck` in
+ * `packages/core/src/registry/config.ts` -- both sides must produce
+ * the same canonical shape so the install handler's drift check is
+ * stable across reorderings, duplicates, and junk entries.
+ *
+ * Filters non-strings, deduplicates, and sorts lexically.
+ */
 export function canonicalCapabilitiesForDriftCheck(value: unknown): string[] {
 	if (!Array.isArray(value)) return [];
 	const seen = new Set<string>();
@@ -198,6 +286,20 @@ export function canonicalCapabilitiesForDriftCheck(value: unknown): string[] {
 	return [...seen].toSorted();
 }
 
+/**
+ * Matches a `(publisher_did, slug)` against the
+ * `minimumReleaseAgeExclude` allowlist. Mirrors the server-side helper
+ * of the same name in `packages/core/src/registry/config.ts`.
+ *
+ * DID-only on purpose: handles are aggregator-supplied envelope data
+ * and accepting them as a trust input would let a compromised
+ * aggregator bypass the holdback by claiming any handle for any
+ * package. DIDs are tied to the AT URI of the record itself.
+ *
+ * Entries from the config list have already been lowercased at
+ * manifest build time, so this only needs to lowercase the runtime
+ * values for comparison.
+ */
 export function releaseExemptFromMinimumAge(
 	exclude: readonly string[] | undefined,
 	publisherDid: string,
@@ -215,6 +317,16 @@ export function releaseExemptFromMinimumAge(
 	return false;
 }
 
+// ---------------------------------------------------------------------------
+// Profile sections
+// ---------------------------------------------------------------------------
+
+/**
+ * The FAIR-recognised long-form section keys, in display order. Publishers may
+ * also ship unrecognised keys (the lexicon's `sections` map is open), but the
+ * admin renders only this known set so an aggregator can't inject a section
+ * with an attacker-chosen heading; everything else is ignored.
+ */
 export const SECTION_ORDER = [
 	"description",
 	"installation",
@@ -230,6 +342,14 @@ export interface PresentSection {
 	markdown: string;
 }
 
+/**
+ * Select the non-empty long-form sections off a package profile, in
+ * `SECTION_ORDER`. `profile.sections` is a lexicon-validated map of Markdown
+ * strings (or `null` when the aggregator returned a non-conforming record), so
+ * each value is narrowed to a non-whitespace string before inclusion. Empty,
+ * missing, whitespace-only, and non-string entries are dropped, so callers can
+ * suppress the whole sections UI when the result is empty.
+ */
 export function presentSections(
 	profile: { sections?: unknown } | null | undefined,
 ): PresentSection[] {
@@ -247,12 +367,23 @@ export function presentSections(
 	return out;
 }
 
+// ---------------------------------------------------------------------------
+// SBOM
+// ---------------------------------------------------------------------------
+
 export interface ReleaseSbom {
 	format?: string;
 	url?: string;
 	checksum?: string;
 }
 
+/**
+ * Narrow a release record's `sbom` field to the fields the admin renders.
+ * Returns `null` unless the value is an object carrying at least one usable
+ * field (`format` or `url`); every field is independently optional per the
+ * lexicon. `sbom` is lexicon-validated at the DiscoveryClient boundary, but the
+ * record is a publisher pass-through, so its inner shape still needs narrowing.
+ */
 export function extractSbom(value: unknown): ReleaseSbom | null {
 	if (!value || typeof value !== "object") return null;
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- narrowed to non-null object above; fields checked below
@@ -265,6 +396,14 @@ export function extractSbom(value: unknown): ReleaseSbom | null {
 	return sbom;
 }
 
+/**
+ * Validate an SBOM document URL for use in a download `href`. Returns the
+ * normalised URL only when it is an absolute `http(s)` URL; everything else
+ * (relative, `javascript:`, `data:`, non-string) returns `null`. The release
+ * record is a remote pass-through, so an unsanitised SBOM `href` would be
+ * stored XSS in the authenticated admin origin. The browser fetches the SBOM
+ * client-side on click — no server proxy, so SSRF isn't a concern here.
+ */
 export function sbomDownloadHref(value: unknown): string | null {
 	if (typeof value !== "string" || value.length === 0) return null;
 	let parsed: URL;
@@ -276,6 +415,10 @@ export function sbomDownloadHref(value: unknown): string | null {
 	if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
 	return parsed.href;
 }
+
+// ---------------------------------------------------------------------------
+// Public discovery hooks (callable by React Query)
+// ---------------------------------------------------------------------------
 
 export async function searchRegistryPackages(
 	config: RegistryClientConfig,
@@ -340,44 +483,52 @@ export async function listRegistryReleases(
 	return client.listReleases(did, slug, opts);
 }
 
+/**
+ * Derive the host environment versions (`env:emdash`, `env:astro`) the running
+ * EmDash install advertises, so a release's `requires` constraints can be
+ * evaluated client-side before offering install. Reads the already-fetched
+ * admin manifest (`version`, `astroVersion`) rather than issuing a second
+ * request. The dev-skip / astro-omit rule is shared with the server gate via
+ * `hostEnvFromVersions`.
+ */
 export function hostEnvFromManifest(manifest: AdminManifest | undefined): HostEnv {
 	return hostEnvFromVersions(manifest?.version, manifest?.astroVersion);
 }
 
-let actorResolver: import("@atcute/identity-resolver").LocalActorResolver | null = null;
-async function getActorResolver(): Promise<import("@atcute/identity-resolver").LocalActorResolver> {
-	if (actorResolver) return actorResolver;
-	const {
-		CompositeDidDocumentResolver,
-		CompositeHandleResolver,
-		DohJsonHandleResolver,
-		LocalActorResolver,
-		PlcDidDocumentResolver,
-		WebDidDocumentResolver,
-		WellKnownHandleResolver,
-	} = await import("@atcute/identity-resolver");
-	actorResolver = new LocalActorResolver({
-		handleResolver: new CompositeHandleResolver({
-			methods: {
-				dns: new DohJsonHandleResolver({ dohUrl: "https://cloudflare-dns.com/dns-query" }),
-				http: new WellKnownHandleResolver(),
-			},
-		}),
-		didDocumentResolver: new CompositeDidDocumentResolver({
-			methods: {
-				plc: new PlcDidDocumentResolver(),
-				web: new WebDidDocumentResolver(),
-			},
-		}),
-	});
-	return actorResolver;
-}
+const PUBLISHER_HANDLE_ENDPOINT = `${API_BASE}/admin/plugins/registry/publisher-handle`;
 
+/**
+ * Resolve a publisher DID to its verified handle. The server checks both
+ * directions (the DID document claims the handle, and the handle resolves
+ * back to the same DID); the browser can't, because the HTTPS check contacts
+ * whatever host the handle names.
+ *
+ * Three distinct outcomes the UI can render:
+ *
+ *   - `{ status: "ok", handle }` — verified handle, round-trip OK.
+ *   - `{ status: "invalid" }` — DID claims a handle but it conclusively
+ *     doesn't resolve back. The publisher's handle setup is broken; the
+ *     admin should see a clear "Invalid handle" indicator rather than the
+ *     raw DID.
+ *   - `{ status: "missing" }` — no handle claimed at all (no
+ *     `alsoKnownAs`), or the lookup was indeterminate (network error,
+ *     timeout).
+ *
+ * This result is an advisory display signal. Install and update trust the
+ * publisher DID and signed repository proofs rather than the mutable handle.
+ */
 export type DidHandleResolution =
 	| { status: "ok"; handle: string }
 	| { status: "invalid" }
 	| { status: "missing" };
 
+/**
+ * localStorage-backed cache for conclusive DID→handle resolutions. Bound the
+ * cache to 24 hours so the advisory display and mismatch signal are refreshed.
+ *
+ * Failures (network errors, unsupported DID method) are *not* cached --
+ * those should retry on the next render.
+ */
 const HANDLE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const HANDLE_CACHE_KEY_PREFIX = "emdash:did-handle:";
 
@@ -417,7 +568,9 @@ function writeHandleCache(did: string, resolution: DidHandleResolution): void {
 	try {
 		const entry: CachedResolution = { resolution, expiresAt: Date.now() + HANDLE_CACHE_TTL_MS };
 		localStorage.setItem(`${HANDLE_CACHE_KEY_PREFIX}${did}`, JSON.stringify(entry));
-	} catch {}
+	} catch {
+		// quota exceeded or storage disabled; drop silently
+	}
 }
 
 export async function resolveDidToHandle(did: string): Promise<DidHandleResolution> {
@@ -426,17 +579,13 @@ export async function resolveDidToHandle(did: string): Promise<DidHandleResoluti
 
 	let result: DidHandleResolution;
 	try {
-		const resolver = await getActorResolver();
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- caller's DID has the right shape
-		const resolved = await resolver.resolve(did as Did);
-		if (resolved.handle === "handle.invalid") {
-			result = { status: "invalid" };
-		} else if (resolved.handle) {
-			result = { status: "ok", handle: resolved.handle };
-		} else {
-			result = { status: "missing" };
-		}
+		const params = new URLSearchParams({ did });
+		const response = await apiFetch(`${PUBLISHER_HANDLE_ENDPOINT}?${params.toString()}`);
+		result = await parseApiResponse<DidHandleResolution>(response);
 	} catch (err) {
+		// Indeterminate lookup: don't cache, so a transient outage
+		// doesn't poison the cache for 24h. Log so a publisher
+		// debugging "why is my handle not resolving?" can see the cause.
 		console.warn(`[registry] DID->handle resolution failed for ${did}:`, err);
 		return { status: "missing" };
 	}
@@ -445,19 +594,42 @@ export async function resolveDidToHandle(did: string): Promise<DidHandleResoluti
 	return result;
 }
 
+// ---------------------------------------------------------------------------
+// Artifact proxy (server GET)
+// ---------------------------------------------------------------------------
+
 const ARTIFACT_PROXY_ENDPOINT = `${API_BASE}/admin/plugins/registry/artifact`;
 
+/** Artifact kinds the server proxy can resolve from a release record. */
 export type ArtifactKind = "icon" | "banner" | "screenshot";
 
+/**
+ * Coordinates identifying one image artifact on a release record. The browser
+ * sends these to the server proxy, which resolves the publisher-declared URL
+ * server-side from the validated release record — the raw publisher URL never
+ * leaves the server, so the client cannot coerce the proxy into fetching an
+ * undeclared URL.
+ */
 export interface ArtifactCoords {
 	did: string;
 	slug: string;
+	/** Exact approved release revision whose descriptor the proxy may serve. */
 	cid: string;
 	version?: string;
 	kind: ArtifactKind;
+	/** Required for `kind: "screenshot"`; ignored otherwise. */
 	index?: number;
 }
 
+/**
+ * Build the URL of the server-side artifact proxy for an artifact addressed by
+ * its `(did, slug, version, kind, index)` coordinates. The browser never sends
+ * the publisher's URL — the proxy resolves the *declared* URL from the release
+ * record, applies SSRF defences, enforces an image content-type allowlist, and
+ * serves the bytes back same-origin.
+ *
+ * Empty `version` (latest) and `index` (non-screenshot kinds) are omitted.
+ */
 export function artifactProxyUrl(coords: ArtifactCoords): string {
 	const params = new URLSearchParams();
 	params.set("did", coords.did);
@@ -471,11 +643,21 @@ export function artifactProxyUrl(coords: ArtifactCoords): string {
 	return `${ARTIFACT_PROXY_ENDPOINT}?${params.toString()}`;
 }
 
+/**
+ * A single image artifact lifted off a release record. Carries presentation
+ * dimensions only — the URL is resolved server-side, so the client never holds
+ * the publisher-supplied URL.
+ */
 export interface MediaArtifact {
 	width?: number;
 	height?: number;
 }
 
+/**
+ * A screenshot artifact, carrying the index into the release's raw
+ * `screenshots` array. The proxy resolves by that index, so dropped (malformed)
+ * entries must not shift the indices of the surviving ones.
+ */
 export interface ScreenshotArtifact extends MediaArtifact {
 	index: number;
 }
@@ -486,17 +668,34 @@ export interface MediaArtifacts {
 	screenshots: ScreenshotArtifact[];
 }
 
+/**
+ * Narrow one entry of a release's `artifacts` map to the fields we render.
+ * Returns `null` when the value does not carry a blob or URL source, keeping
+ * only the dimensions for layout.
+ *
+ * Records are lexicon-validated at the DiscoveryClient boundary, but
+ * `artifacts` is an aggregator pass-through, so each entry still needs
+ * shape-narrowing.
+ */
 function asMediaArtifact(value: unknown): MediaArtifact | null {
 	if (!value || typeof value !== "object") return null;
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- narrowed to non-null object above; field shapes checked below
 	const v = value as Record<string, unknown>;
-	if (typeof v.url !== "string" || v.url.length === 0) return null;
+	const hasUrl = typeof v.url === "string" && v.url.length > 0;
+	const hasBlob = Boolean(v.blob && typeof v.blob === "object");
+	if (!hasUrl && !hasBlob) return null;
 	const artifact: MediaArtifact = {};
 	if (typeof v.width === "number") artifact.width = v.width;
 	if (typeof v.height === "number") artifact.height = v.height;
 	return artifact;
 }
 
+/**
+ * Pull icon, banner, and the screenshot gallery out of a release's `artifacts`
+ * map, keeping presence and dimensions only. The lexicon types `screenshots`
+ * as an array of artifacts; entries without a usable source are dropped, and
+ * gallery order is preserved so screenshot indices line up with the proxy's.
+ */
 export function extractMediaArtifacts(artifacts: unknown): MediaArtifacts {
 	const result: MediaArtifacts = { screenshots: [] };
 	if (!artifacts || typeof artifacts !== "object") return result;
@@ -517,8 +716,60 @@ export function extractMediaArtifacts(artifacts: unknown): MediaArtifacts {
 	return result;
 }
 
-const INSTALL_ENDPOINT = `${API_BASE}/admin/plugins/registry/install`;
+// ---------------------------------------------------------------------------
+// Install (server POST)
+// ---------------------------------------------------------------------------
 
+const INSTALL_ENDPOINT = `${API_BASE}/admin/plugins/registry/install`;
+const VERIFY_ENDPOINT = `${API_BASE}/admin/plugins/registry/verify`;
+
+export async function verifyRegistryPlugin(
+	body: Pick<RegistryInstallRequest, "did" | "slug" | "version">,
+): Promise<RegistryInstallResult> {
+	const response = await apiFetch(VERIFY_ENDPOINT, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	});
+	return parseApiResponse<RegistryInstallResult>(response, i18n._(msg`Failed to verify plugin`));
+}
+
+export function registryVerificationErrorMessage(error: unknown): string | null {
+	if (!(error instanceof ApiResponseError) || error.code !== "RECORD_VERIFICATION_FAILED") {
+		return null;
+	}
+	const verificationCode = error.details?.["verificationCode"];
+	if (
+		verificationCode === "PROFILE_EXTENSION_INVALID" ||
+		verificationCode === "PROFILE_REPOSITORY_INVALID" ||
+		verificationCode === "PROFILE_POLICY_INVALID"
+	) {
+		return i18n._(
+			msg`This plugin cannot be installed because its publisher profile is missing valid verification metadata. Ask the publisher to republish it with the latest EmDash plugin CLI.`,
+		);
+	}
+	if (
+		verificationCode === "PROVENANCE_REQUIRED" ||
+		verificationCode === "PROVENANCE_UNVERIFIABLE"
+	) {
+		return i18n._(
+			msg`This plugin cannot be installed because its release provenance could not be verified. Ask the publisher to publish a new verified release.`,
+		);
+	}
+	return i18n._(
+		msg`This plugin cannot be installed because its signed publisher records failed verification. Ask the publisher to publish a corrected release.`,
+	);
+}
+
+/**
+ * Install a plugin from the registry.
+ *
+ * Posts to the EmDash server, which re-fetches the acknowledged signed
+ * records, bundle, and provenance before writing the install. Surfaces
+ * structured error codes (`RELEASE_YANKED`, `CHECKSUM_MISMATCH`,
+ * `DECLARED_ACCESS_DRIFT`, etc.) that callers map to localized
+ * messages.
+ */
 export async function installRegistryPlugin(
 	body: RegistryInstallRequest,
 ): Promise<RegistryInstallResult> {
@@ -538,35 +789,70 @@ export async function installRegistryPlugin(
 	return parseApiResponse<RegistryInstallResult>(response, i18n._(msg`Failed to install plugin`));
 }
 
+// ---------------------------------------------------------------------------
+// Lifecycle: update + uninstall
+// ---------------------------------------------------------------------------
+
 export interface RegistryUpdateOpts {
 	version?: string;
 	confirmCapabilityChanges?: boolean;
-	confirmRouteVisibilityChanges?: boolean;
+	acknowledgedPublicRoutes?: string[];
 	confirmMcpTools?: boolean;
+	acknowledgedProfileCid?: string;
+	acknowledgedReleaseCid?: string;
 }
 
 export interface RegistryUninstallOpts {
 	deleteData?: boolean;
 }
 
+/**
+ * Server-side escalation gate raised by the update endpoint when the
+ * target version widens the trust contract. Carries the diff the user
+ * needs to see in the consent dialog before the call is retried with the
+ * matching `confirm*` flag.
+ */
 export class RegistryUpdateEscalationError extends Error {
 	readonly code: "CAPABILITY_ESCALATION" | "ROUTE_VISIBILITY_ESCALATION";
 	readonly capabilityChanges: { added: string[]; removed: string[] };
 	readonly routeVisibilityChanges?: { newlyPublic: string[] };
+	readonly verification?: RegistryRecordVerificationSummary;
 	constructor(
 		code: "CAPABILITY_ESCALATION" | "ROUTE_VISIBILITY_ESCALATION",
 		message: string,
 		capabilityChanges: { added: string[]; removed: string[] },
 		routeVisibilityChanges?: { newlyPublic: string[] },
+		verification?: RegistryRecordVerificationSummary,
 	) {
 		super(message);
 		this.name = "RegistryUpdateEscalationError";
 		this.code = code;
 		this.capabilityChanges = capabilityChanges;
 		this.routeVisibilityChanges = routeVisibilityChanges;
+		this.verification = verification;
 	}
 }
 
+export class RegistryMcpConsentRequiredError extends PluginMcpConsentRequiredError {
+	constructor(
+		tools: PluginMcpConsentTool[],
+		readonly verification?: RegistryRecordVerificationSummary,
+	) {
+		super(tools);
+		this.name = "RegistryMcpConsentRequiredError";
+	}
+}
+
+/**
+ * Update a registry-source plugin to a newer version.
+ * `POST /_emdash/api/admin/plugins/registry/:id/update`
+ *
+ * Called without `confirm*` flags first, this throws
+ * `RegistryUpdateEscalationError` when the target version widens
+ * permissions; the caller renders a consent dialog populated from the
+ * error's diff, then re-calls with the matching `confirm*` flag once
+ * the user agrees.
+ */
 export async function updateRegistryPlugin(
 	pluginId: string,
 	opts: RegistryUpdateOpts = {},
@@ -592,7 +878,7 @@ export async function updateRegistryPlugin(
 	await throwResponseError(response, i18n._(msg`Failed to update plugin`));
 }
 
-function parseMcpConsent(body: unknown): PluginMcpConsentRequiredError | null {
+function parseMcpConsent(body: unknown): RegistryMcpConsentRequiredError | null {
 	if (!body || typeof body !== "object" || !("error" in body)) return null;
 	const error = body.error;
 	if (!error || typeof error !== "object" || !("code" in error)) return null;
@@ -602,7 +888,10 @@ function parseMcpConsent(body: unknown): PluginMcpConsentRequiredError | null {
 			? (error.details as { mcpTools?: PluginMcpConsentTool[] })
 			: {};
 	return details.mcpTools && details.mcpTools.length > 0
-		? new PluginMcpConsentRequiredError(details.mcpTools)
+		? new RegistryMcpConsentRequiredError(
+				details.mcpTools,
+				normaliseRegistryVerification("verification" in details ? details.verification : undefined),
+			)
 		: null;
 }
 
@@ -620,6 +909,9 @@ function parseEscalation(body: unknown): RegistryUpdateEscalationError | null {
 	const routeVisibilityChanges = normaliseRouteVisibilityChanges(
 		"routeVisibilityChanges" in details ? details.routeVisibilityChanges : undefined,
 	);
+	const verification = normaliseRegistryVerification(
+		"verification" in details ? details.verification : undefined,
+	);
 	const message =
 		"message" in error && typeof error.message === "string"
 			? error.message
@@ -629,7 +921,44 @@ function parseEscalation(body: unknown): RegistryUpdateEscalationError | null {
 		message,
 		capabilityChanges,
 		routeVisibilityChanges,
+		verification,
 	);
+}
+
+function normaliseRegistryVerification(
+	value: unknown,
+): RegistryRecordVerificationSummary | undefined {
+	if (!value || typeof value !== "object") return undefined;
+	const profileCid = Reflect.get(value, "profileCid");
+	const releaseCid = Reflect.get(value, "releaseCid");
+	const provenance = Reflect.get(value, "provenance");
+	const policy = Reflect.get(value, "policy");
+	if (
+		typeof profileCid !== "string" ||
+		typeof releaseCid !== "string" ||
+		(provenance !== "verified" && provenance !== "absent-optional") ||
+		!policy ||
+		typeof policy !== "object"
+	) {
+		return undefined;
+	}
+	const requireProvenance = Reflect.get(policy, "requireProvenance");
+	const confirmation = Reflect.get(policy, "confirmation");
+	const approvers = Reflect.get(policy, "approvers");
+	if (
+		typeof requireProvenance !== "boolean" ||
+		(confirmation !== "always" && confirmation !== "escalation-only") ||
+		!Array.isArray(approvers) ||
+		!approvers.every((approver) => typeof approver === "string")
+	) {
+		return undefined;
+	}
+	return {
+		profileCid,
+		releaseCid,
+		provenance,
+		policy: { requireProvenance, confirmation, approvers },
+	};
 }
 
 function normaliseCapabilityChanges(value: unknown): { added: string[]; removed: string[] } {
@@ -651,6 +980,14 @@ function normaliseRouteVisibilityChanges(value: unknown): { newlyPublic: string[
 	return newlyPublic.length > 0 ? { newlyPublic } : undefined;
 }
 
+/**
+ * Uninstall a registry-source plugin.
+ * `POST /_emdash/api/admin/plugins/registry/:id/uninstall`
+ *
+ * The server refuses to uninstall non-registry sources, so calling this
+ * with a marketplace or config plugin id is a no-op error rather than a
+ * destructive cross-source action.
+ */
 export async function uninstallRegistryPlugin(
 	pluginId: string,
 	opts: RegistryUninstallOpts = {},

@@ -15,7 +15,7 @@ describe("AddNewMemberDialog", () => {
 		render(<AddNewMemberDialog {...defaultProps} />);
 
 		expect(screen.getByText("Invite member")).toBeInTheDocument();
-		expect(screen.getByLabelText("Member email address")).toBeInTheDocument();
+		expect(screen.getByLabelText("Email address")).toBeInTheDocument();
 	});
 
 	it("does not render dialog content when closed", () => {
@@ -34,14 +34,14 @@ describe("AddNewMemberDialog", () => {
 	it("defaults to Member role", () => {
 		render(<AddNewMemberDialog {...defaultProps} />);
 
-		expect(screen.getByLabelText("Member role")).toBeInTheDocument();
+		expect(screen.getByLabelText("Role")).toBeInTheDocument();
 	});
 
 	it("calls handleInviteMember with email and role on submit", async () => {
 		const handleInviteMember = vi.fn();
 		render(<AddNewMemberDialog {...defaultProps} handleInviteMember={handleInviteMember} />);
 
-		const emailInput = screen.getByLabelText("Member email address");
+		const emailInput = screen.getByLabelText("Email address");
 		await userEvent.type(emailInput, "test@example.com");
 
 		await waitFor(() => {
@@ -56,7 +56,7 @@ describe("AddNewMemberDialog", () => {
 	it("shows valid styling when email is valid", async () => {
 		render(<AddNewMemberDialog {...defaultProps} />);
 
-		const emailInput = screen.getByLabelText("Member email address");
+		const emailInput = screen.getByLabelText("Email address");
 		await userEvent.type(emailInput, "valid@example.com");
 
 		await waitFor(() => {

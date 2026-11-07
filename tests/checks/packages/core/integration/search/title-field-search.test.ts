@@ -8,6 +8,11 @@ import { FTSManager } from "../../../../../../packages/core/src/search/fts-manag
 import { searchWithDb } from "../../../../../../packages/core/src/search/query.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
+/**
+ * Search results should show the same title as the content list. When a
+ * collection sets `titleField`, the result title comes from that field's
+ * column, not the physical `title` column.
+ */
 describe("search: titleField drives the result title", () => {
 	let db: Kysely<Database>;
 

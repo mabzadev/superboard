@@ -1,4 +1,9 @@
-import Database from "better-sqlite3";
+/**
+ * SQLite query-plan regression guard for the consolidated term-count query.
+ * Output correctness is covered by unit/taxonomies/term-counts; this asserts
+ * the planner drives from content_taxonomies, not from ec_*.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -6,6 +11,7 @@ import { runMigrations } from "../../../../../packages/core/src/database/migrati
 import { ContentRepository } from "../../../../../packages/core/src/database/repositories/content.js";
 import { TaxonomyRepository } from "../../../../../packages/core/src/database/repositories/taxonomy.js";
 import type { Database as DatabaseSchema } from "../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { SchemaRegistry } from "../../../../../packages/core/src/schema/registry.js";
 import { fetchVisibleTermCounts } from "../../../../../packages/core/src/taxonomies/term-counts.js";
 
@@ -14,7 +20,7 @@ interface CapturedQuery {
 	parameters: readonly unknown[];
 }
 
-let sqlite: Database.Database;
+let sqlite: Database;
 let db: Kysely<DatabaseSchema>;
 let captured: CapturedQuery[];
 
@@ -30,6 +36,7 @@ beforeEach(async () => {
 		},
 	});
 
+	// No ANALYZE: D1 never maintains sqlite_stat1.
 	await runMigrations(db);
 	const registry = new SchemaRegistry(db);
 	await registry.createCollection({ slug: "post", label: "Posts", labelSingular: "Post" });
@@ -40,6 +47,7 @@ beforeEach(async () => {
 	const content = new ContentRepository(anyDb);
 	const tax = new TaxonomyRepository(anyDb);
 
+	// Enough rows to make the two access paths visually distinct.
 	const terms = [];
 	for (let i = 0; i < 5; i++) {
 		terms.push(
@@ -62,6 +70,7 @@ afterEach(async () => {
 	await db.destroy();
 });
 
+/** Normalize application values captured from Kysely for direct driver binding. */
 function bindable(p: unknown): unknown {
 	if (typeof p === "boolean") return p ? 1 : 0;
 	if (p instanceof Date) return p.toISOString();
@@ -87,6 +96,7 @@ async function countQueryPlan(): Promise<string> {
 it("seeks the terms on a content_taxonomies index rather than probing the pivot per entry", async () => {
 	const plan = await countQueryPlan();
 
+	// The pivot must be entered on a taxonomy_id-leading index.
 	expect(plan).toMatch(/SEARCH ct USING (COVERING )?INDEX idx_content_taxonomies/);
 	expect(plan).not.toContain("sqlite_autoindex_content_taxonomies_1");
 	expect(plan).not.toContain("SCAN ct");

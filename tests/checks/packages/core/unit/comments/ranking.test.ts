@@ -21,6 +21,7 @@ describe("wilsonLowerBound", () => {
 	});
 
 	it("penalizes low-sample comments vs high-sample at the same ratio", () => {
+		// 100% positive but a tiny sample must rank below a large confident sample.
 		expect(wilsonLowerBound(1, 0)).toBeLessThan(wilsonLowerBound(100, 0));
 		expect(wilsonLowerBound(2, 0)).toBeLessThan(wilsonLowerBound(20, 0));
 	});

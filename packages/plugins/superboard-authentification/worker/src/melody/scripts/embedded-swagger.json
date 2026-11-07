@@ -6,75 +6,6 @@
   },
   "components": {
     "schemas": {
-      "AppBannersRes": {
-        "type": "object",
-        "properties": {
-          "banners": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Banner"
-            }
-          }
-        },
-        "required": [
-          "banners"
-        ]
-      },
-      "Banner": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number"
-          },
-          "type": {
-            "type": "string"
-          },
-          "text": {
-            "type": "string"
-          },
-          "isActive": {
-            "type": "boolean"
-          },
-          "locales": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "locale": {
-                  "type": "string"
-                },
-                "value": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "locale",
-                "value"
-              ]
-            }
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          },
-          "deletedAt": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "text",
-          "isActive",
-          "locales",
-          "createdAt",
-          "updatedAt",
-          "deletedAt"
-        ]
-      },
       "PostInitiateReq": {
         "type": "object",
         "properties": {
@@ -100,9 +31,6 @@
             }
           },
           "locale": {
-            "type": "string"
-          },
-          "org": {
             "type": "string"
           }
         },
@@ -244,8 +172,7 @@
               "type": "string",
               "enum": [
                 "otp",
-                "email",
-                "sms"
+                "email"
               ]
             }
           }
@@ -261,8 +188,7 @@
             "type": "string",
             "enum": [
               "otp",
-              "email",
-              "sms"
+              "email"
             ]
           }
         },
@@ -308,36 +234,6 @@
         },
         "required": [
           "couldFallbackToEmailMfa"
-        ]
-      },
-      "SmsMfaSetupReq": {
-        "type": "object",
-        "properties": {
-          "phoneNumber": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "phoneNumber"
-        ]
-      },
-      "SmsMfaConfigRes": {
-        "type": "object",
-        "properties": {
-          "allowFallbackToEmailMfa": {
-            "type": "boolean"
-          },
-          "countryCode": {
-            "type": "string"
-          },
-          "phoneNumber": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "allowFallbackToEmailMfa",
-          "countryCode",
-          "phoneNumber"
         ]
       },
       "PasskeyEnrollInfoRes": {
@@ -926,7 +822,6 @@
               "consent",
               "mfa_enroll",
               "email_mfa",
-              "sms_mfa",
               "otp_setup",
               "otp_mfa",
               "passkey_enroll"
@@ -953,7 +848,6 @@
               "consent",
               "mfa_enroll",
               "email_mfa",
-              "sms_mfa",
               "otp_setup",
               "otp_mfa",
               "passkey_enroll"
@@ -1154,49 +1048,6 @@
         },
         "required": [
           "email"
-        ]
-      },
-      "UserOrgsRes": {
-        "type": "object",
-        "properties": {
-          "orgs": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "number"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "slug": {
-                  "type": "string"
-                },
-                "companyLogoUrl": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "activeOrgSlug": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "orgs",
-          "activeOrgSlug"
-        ]
-      },
-      "PostProcessSwitchOrgReq": {
-        "type": "object",
-        "properties": {
-          "org": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "org"
         ]
       }
     }
@@ -1632,130 +1483,6 @@
         }
       }
     },
-    "/embedded-auth/v1/{sessionId}/sms-mfa-setup": {
-      "post": {
-        "summary": "send a sms mfa code to the phone number provided, this is for the first time sms mfa setup",
-        "tags": [
-          "Embedded Auth"
-        ],
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SmsMfaSetupReq"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "a new sms mfa code has been sent to the user"
-          }
-        }
-      }
-    },
-    "/embedded-auth/v1/{sessionId}/sms-mfa": {
-      "get": {
-        "summary": "get the sms mfa config, this will also send a sms mfa code to the user",
-        "tags": [
-          "Embedded Auth"
-        ],
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "the sms mfa config",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SmsMfaConfigRes"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "verify the sms mfa code",
-        "tags": [
-          "Embedded Auth"
-        ],
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MfaCodeReq"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "the sms mfa code has been verified",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthRes"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/embedded-auth/v1/{sessionId}/sms-mfa-code": {
-      "post": {
-        "summary": "send a new sms mfa code to the user",
-        "tags": [
-          "Embedded Auth"
-        ],
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "a new sms mfa code has been sent to the user"
-          }
-        }
-      }
-    },
     "/embedded-auth/v1/{sessionId}/passkey-enroll": {
       "get": {
         "summary": "get the passkey enroll options",
@@ -2003,104 +1730,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SignInWithRecoveryCodeRes"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/embedded-auth/v1/{sessionId}/switch-org": {
-      "get": {
-        "summary": "Get user orgs",
-        "tags": [
-          "Embedded Auth"
-        ],
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User orgs",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserOrgsRes"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Switch user org",
-        "tags": [
-          "Embedded Auth"
-        ],
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PostProcessSwitchOrgReq"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Next step of the auth flow",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthRes"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/embedded-auth/v1/{sessionId}/app-banners": {
-      "get": {
-        "summary": "get the app banners",
-        "tags": [
-          "Embedded Auth"
-        ],
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "the app banners",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AppBannersRes"
                 }
               }
             }

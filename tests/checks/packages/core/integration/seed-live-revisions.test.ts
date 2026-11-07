@@ -1,3 +1,12 @@
+/**
+ * Tests that `applySeed()` creates a live revision for entries seeded with
+ * `status: "published"`.
+ *
+ * Regression for #650: seeded published content was missing `live_revision_id`,
+ * causing the admin UI to show "Save & Publish" instead of "Unpublish" for
+ * content that was already supposed to be live.
+ */
+
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -75,8 +84,10 @@ describe("applySeed creates live revisions for published content", () => {
 	});
 
 	it("populates live_revision_id when updating an existing entry to 'published' via onConflict: 'update'", async () => {
+		// First pass: create as draft
 		await applySeed(db, seedWith("draft"), { includeContent: true });
 
+		// Second pass: same slug, now published
 		await applySeed(db, seedWith("published"), {
 			includeContent: true,
 			onConflict: "update",

@@ -1,3 +1,10 @@
+/**
+ * Menu translation endpoints
+ *
+ * GET  /_emdash/api/menus/:name/translations       — list translations for a menu (uses any locale row)
+ * POST /_emdash/api/menus/:name/translations       — create a new locale translation (body: { locale, label })
+ */
+
 import type { APIRoute } from "astro";
 import { z } from "zod";
 
@@ -6,6 +13,8 @@ import { handleError, requireDb, unwrapResult } from "#api/error.js";
 import { handleMenuCreate, handleMenuGet, handleMenuTranslations } from "#api/handlers/menus.js";
 import { isParseError, parseBody, parseQuery } from "#api/parse.js";
 import { localeFilterQuery } from "#api/schemas.js";
+import { menuTag } from "#cache/chrome-tags.js";
+import { invalidateRouteCache } from "#cache/route-cache.js";
 
 export const prerender = false;
 
@@ -30,6 +39,7 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 	if (isParseError(localeQ)) return localeQ;
 
 	try {
+		// Look up any menu row matching the name so we can get its translation_group.
 		const anchor = await handleMenuGet(emdash.db, name, { locale: localeQ.locale });
 		if (!anchor.success) return unwrapResult(anchor);
 		const result = await handleMenuTranslations(emdash.db, anchor.data.id);
@@ -39,7 +49,7 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 	}
 };
 
-export const POST: APIRoute = async ({ params, request, locals }) => {
+export const POST: APIRoute = async ({ params, request, locals, cache }) => {
 	const { emdash, user } = locals;
 	const name = params.name!;
 
@@ -56,6 +66,8 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		const body = await parseBody(request, createTranslationBody);
 		if (isParseError(body)) return body;
 
+		// Resolve the source menu (either by explicit locale in query, or the
+		// first matching row). Its id becomes the `translationOf` for the new row.
 		const source = await handleMenuGet(emdash.db, name, { locale: localeQ.locale });
 		if (!source.success) return unwrapResult(source);
 
@@ -65,6 +77,8 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			locale: body.locale,
 			translationOf: source.data.id,
 		});
+		if (!result.success) return unwrapResult(result, 201);
+		await invalidateRouteCache(cache, [menuTag(name)]);
 		return unwrapResult(result, 201);
 	} catch (error) {
 		return handleError(error, "Failed to create menu translation", "MENU_TRANSLATION_CREATE_ERROR");

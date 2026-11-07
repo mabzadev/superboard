@@ -95,14 +95,19 @@ describe("POST /media — server-side placeholder + dimensions", () => {
 	});
 
 	it("prefers client-sent width/height over server-derived dims (EXIF orientation safety)", async () => {
+		// Browser naturalWidth/Height apply EXIF orientation; image-size reports raw
+		// header dims (swapped for 90°/270° JPEGs). REST must honor client dims —
+		// matching confirm.ts — not the server header dims.
 		const captured: { value?: CapturedInput } = {};
 		const file = new File([JPEG_4x4], "photo.jpg", { type: "image/jpeg" });
 
 		const res = await postMedia(buildContext({ db, file, captured, width: 999, height: 999 }));
 
 		expect(res.status).toBe(201);
+		// Client dimensions win even though the server read 4×4 from the header.
 		expect(captured.value?.width).toBe(999);
 		expect(captured.value?.height).toBe(999);
+		// A blurhash is still generated from the uploaded bytes.
 		expect(captured.value?.blurhash).toBeTruthy();
 	});
 });

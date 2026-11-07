@@ -3,22 +3,16 @@ import { Context } from "hono";
 import { env } from "hono/adapter";
 import { setCookie } from "hono/cookie";
 
-import { emailService, kvService, smsService, userService } from ".";
-import {
-	adapterConfig,
-	errorConfig,
-	messageConfig,
-	routeConfig,
-	typeConfig,
-	variableConfig,
-} from "../configs";
+import { adapterConfig, errorConfig, messageConfig, routeConfig, typeConfig } from "../configs";
 import { appModel, userModel } from "../models";
 import { requestUtil, loggerUtil } from "../utils";
+import * as emailService from "./email";
+import * as kvService from "./kv";
+import * as userService from "./user";
 
 export interface MfaConfig {
 	requireEmailMfa: boolean;
 	requireOtpMfa: boolean;
-	requireSmsMfa: boolean;
 	enforceOneMfaEnrollment: string[];
 	allowEmailMfaAsBackup: boolean;
 }
@@ -27,7 +21,6 @@ const getSystemMfaConfig = (c: Context<typeConfig.Context>): MfaConfig => {
 	const {
 		EMAIL_MFA_IS_REQUIRED: requireEmailMfa,
 		OTP_MFA_IS_REQUIRED: requireOtpMfa,
-		SMS_MFA_IS_REQUIRED: requireSmsMfa,
 		ENFORCE_ONE_MFA_ENROLLMENT: enforceOneMfaEnrollment,
 		ALLOW_EMAIL_MFA_AS_BACKUP: allowEmailMfaAsBackup,
 	} = env(c);
@@ -35,7 +28,6 @@ const getSystemMfaConfig = (c: Context<typeConfig.Context>): MfaConfig => {
 	return {
 		requireEmailMfa,
 		requireOtpMfa,
-		requireSmsMfa,
 		enforceOneMfaEnrollment,
 		allowEmailMfaAsBackup,
 	};
@@ -46,7 +38,6 @@ export const getAppMfaConfig = (app: appModel.Record): MfaConfig | null => {
 		return {
 			requireEmailMfa: app.requireEmailMfa,
 			requireOtpMfa: app.requireOtpMfa,
-			requireSmsMfa: app.requireSmsMfa,
 			allowEmailMfaAsBackup: app.allowEmailMfaAsBackup,
 			enforceOneMfaEnrollment: [],
 		};
@@ -61,7 +52,6 @@ export const getAuthCodeBodyMfaConfig = (
 	return {
 		e: mfaConfig.requireEmailMfa,
 		o: mfaConfig.requireOtpMfa,
-		s: mfaConfig.requireSmsMfa,
 		b: mfaConfig.allowEmailMfaAsBackup,
 	};
 };
@@ -74,7 +64,6 @@ export const getAuthorizeMfaConfig = (
 		return {
 			requireEmailMfa: authCodeBody.mfa.e,
 			requireOtpMfa: authCodeBody.mfa.o,
-			requireSmsMfa: authCodeBody.mfa.s,
 			allowEmailMfaAsBackup: authCodeBody.mfa.b,
 			enforceOneMfaEnrollment: [],
 		};
@@ -100,23 +89,6 @@ export const allowOtpSwitchToEmailMfa = (
 	return allowFallback && notEnrolledEmail && enrolledOtp;
 };
 
-export const allowSmsSwitchToEmailMfa = (
-	c: Context<typeConfig.Context>,
-	authCodeStore: typeConfig.AuthCodeBody | typeConfig.EmbeddedSessionBodyWithUser,
-) => {
-	const {
-		requireEmailMfa: enableEmailMfa,
-		requireSmsMfa: enableSmsMfa,
-		allowEmailMfaAsBackup: allowFallback,
-	} = getAuthorizeMfaConfig(c, authCodeStore);
-
-	const notEnrolledEmail =
-		!enableEmailMfa && !authCodeStore.user.mfaTypes.includes(userModel.MfaType.Email);
-	const enrolledSms = enableSmsMfa || authCodeStore.user.mfaTypes.includes(userModel.MfaType.Sms);
-
-	return allowFallback && notEnrolledEmail && enrolledSms;
-};
-
 export const handleSendEmailMfa = async (
 	c: Context<typeConfig.Context>,
 	authCode: string,
@@ -137,11 +109,10 @@ export const handleSendEmailMfa = async (
 	const requireEmailMfa =
 		enableEmailMfa || authCodeBody.user.mfaTypes.includes(userModel.MfaType.Email);
 	const couldFallbackAsOtp = allowOtpSwitchToEmailMfa(c, authCodeBody);
-	const couldFallbackAsSms = allowSmsSwitchToEmailMfa(c, authCodeBody);
 
 	if (
 		!authCodeBody.user.email ||
-		(!requireEmailMfa && !couldFallbackAsOtp && !couldFallbackAsSms && !enablePasswordlessSignIn)
+		(!requireEmailMfa && !couldFallbackAsOtp && !enablePasswordlessSignIn)
 	) {
 		loggerUtil.triggerLogger(
 			c,
@@ -178,19 +149,15 @@ export const handleSendEmailMfa = async (
 		mfaCode = await emailService.sendMagicLinkEmail(
 			c,
 			authCodeBody.user.email,
-			authCodeBody.user.orgSlug,
 			locale,
 			magicLinkBaseUrl,
 			{ appId: authCodeBody.appId, userId: authCodeBody.user.id },
 		);
 	} else {
-		mfaCode = await emailService.sendEmailMfa(
-			c,
-			authCodeBody.user.email,
-			authCodeBody.user.orgSlug,
-			locale,
-			{ appId: authCodeBody.appId, userId: authCodeBody.user.id },
-		);
+		mfaCode = await emailService.sendEmailMfa(c, authCodeBody.user.email, locale, {
+			appId: authCodeBody.appId,
+			userId: authCodeBody.user.id,
+		});
 	}
 
 	if (mfaCode) {
@@ -211,8 +178,6 @@ export const processEmailMfa = async (
 	mfaCode: string,
 ) => {
 	const isOtpFallback = allowOtpSwitchToEmailMfa(c, authCodeStore);
-
-	const isSmsFallback = allowSmsSwitchToEmailMfa(c, authCodeStore);
 
 	const { AUTHORIZATION_CODE_EXPIRES_IN: expiresIn, MFA_CODE_VERIFY_THRESHOLD: threshold } = env(c);
 
@@ -241,7 +206,6 @@ export const processEmailMfa = async (
 		mfaCode,
 		expiresIn,
 		isOtpFallback,
-		isSmsFallback,
 	);
 
 	if (!isValid) {
@@ -352,176 +316,6 @@ export const processOtpMfa = async (
 	}
 };
 
-export const handleSmsMfaSetup = async (
-	c: Context<typeConfig.Context>,
-	authCode: string,
-	authCodeStore: typeConfig.AuthCodeBody | typeConfig.EmbeddedSessionBodyWithUser,
-	phoneNumber: string,
-	locale: typeConfig.Locale,
-) => {
-	if (authCodeStore.user.smsPhoneNumber && authCodeStore.user.smsPhoneNumberVerified) {
-		throw new errorConfig.Forbidden(messageConfig.RequestError.MfaEnrolled);
-	}
-
-	await handleSendSmsMfa(c, phoneNumber, authCode, authCodeStore, locale);
-
-	await userModel.update(c.env.DB, authCodeStore.user.id, {
-		smsPhoneNumber: phoneNumber,
-		smsPhoneNumberVerified: 0,
-	});
-};
-
-export const handleSendSmsMfa = async (
-	c: Context<typeConfig.Context>,
-	phoneNumber: string,
-	authCode: string,
-	authCodeBody: typeConfig.AuthCodeBody | typeConfig.EmbeddedSessionBodyWithUser,
-	locale: typeConfig.Locale,
-): Promise<true> => {
-	const { SMS_MFA_MESSAGE_THRESHOLD: threshold } = env(c);
-
-	const { requireSmsMfa: enableSmsMfa } = getAuthorizeMfaConfig(c, authCodeBody);
-
-	const requireSmsMfa = enableSmsMfa || authCodeBody.user.mfaTypes.includes(userModel.MfaType.Sms);
-
-	if (!requireSmsMfa) {
-		loggerUtil.triggerLogger(
-			c,
-			loggerUtil.LoggerLevel.Error,
-			messageConfig.ConfigError.NotSupposeToSendSmsMfa,
-		);
-		throw new errorConfig.Forbidden(messageConfig.ConfigError.NotSupposeToSendSmsMfa);
-	}
-
-	if (threshold) {
-		const ip = requestUtil.getRequestIP(c);
-		const attempts = await kvService.getSmsMfaMessageAttemptsByIP(
-			c.env.KV,
-			authCodeBody.user.id,
-			ip,
-		);
-		if (attempts >= threshold) {
-			loggerUtil.triggerLogger(
-				c,
-				loggerUtil.LoggerLevel.Warn,
-				messageConfig.RequestError.SmsMfaLocked,
-			);
-			throw new errorConfig.Forbidden(messageConfig.RequestError.SmsMfaLocked);
-		}
-
-		await kvService.setSmsMfaMessageAttempts(c.env.KV, authCodeBody.user.id, ip, attempts + 1);
-	}
-
-	const mfaCode = await smsService.sendSmsMfa(c, phoneNumber, locale, {
-		appId: authCodeBody.appId,
-		userId: authCodeBody.user.id,
-	});
-	if (mfaCode) {
-		await kvService.storeSmsMfaCode(c.env.KV, authCode, mfaCode);
-	}
-
-	return true;
-};
-
-export const getSmsMfaInfo = async (
-	c: Context<typeConfig.Context>,
-	authCode: string,
-	authCodeStore: typeConfig.AuthCodeBody | typeConfig.EmbeddedSessionBodyWithUser,
-	locale: typeConfig.Locale,
-) => {
-	const { requireSmsMfa: enableSmsMfa } = getAuthorizeMfaConfig(c, authCodeStore);
-
-	const requireSmsMfa = enableSmsMfa || authCodeStore.user.mfaTypes.includes(userModel.MfaType.Sms);
-	if (!requireSmsMfa) throw new errorConfig.Forbidden();
-
-	if (authCodeStore.user.smsPhoneNumber && authCodeStore.user.smsPhoneNumberVerified) {
-		await handleSendSmsMfa(c, authCodeStore.user.smsPhoneNumber, authCode, authCodeStore, locale);
-	}
-
-	const phoneNumber = authCodeStore.user.smsPhoneNumber;
-	const maskedNumber =
-		phoneNumber && authCodeStore.user.smsPhoneNumberVerified
-			? "*".repeat(phoneNumber.length - 4) + phoneNumber.slice(-4)
-			: null;
-
-	const allowFallbackToEmailMfa = allowSmsSwitchToEmailMfa(c, authCodeStore);
-
-	return {
-		allowFallbackToEmailMfa,
-		countryCode: variableConfig.SmsMfaConfig.CountryCode,
-		phoneNumber: maskedNumber,
-	};
-};
-
-export const processSmsMfa = async (
-	c: Context<typeConfig.Context>,
-	authCode: string,
-	authCodeStore: typeConfig.AuthCodeBody | typeConfig.EmbeddedSessionBodyWithUser,
-	mfaCode: string,
-) => {
-	const { AUTHORIZATION_CODE_EXPIRES_IN: expiresIn, MFA_CODE_VERIFY_THRESHOLD: threshold } = env(c);
-
-	let ip: string | undefined;
-	let failedAttempts = 0;
-	if (threshold) {
-		ip = requestUtil.getRequestIP(c);
-		failedAttempts = await kvService.getFailedMfaCodeAttemptsByIP(
-			c.env.KV,
-			authCodeStore.user.id,
-			ip,
-		);
-		if (failedAttempts >= threshold) {
-			loggerUtil.triggerLogger(
-				c,
-				loggerUtil.LoggerLevel.Warn,
-				messageConfig.RequestError.SmsMfaLocked,
-			);
-			throw new errorConfig.Forbidden(messageConfig.RequestError.SmsMfaLocked);
-		}
-	}
-
-	const isValid = await kvService.stampSmsMfaCode(c.env.KV, authCode, mfaCode, expiresIn);
-
-	if (!isValid) {
-		if (threshold) {
-			await kvService.setFailedMfaCodeAttempts(
-				c.env.KV,
-				authCodeStore.user.id,
-				ip,
-				failedAttempts + 1,
-			);
-		}
-		loggerUtil.triggerLogger(
-			c,
-			loggerUtil.LoggerLevel.Warn,
-			messageConfig.RequestError.WrongSmsMfaCode,
-		);
-		throw new errorConfig.UnAuthorized(messageConfig.RequestError.WrongMfaCode);
-	}
-
-	if (!authCodeStore.user.smsPhoneNumberVerified) {
-		await userModel.update(c.env.DB, authCodeStore.user.id, { smsPhoneNumberVerified: 1 });
-	}
-};
-
-export const handleSendSmsMfaCode = async (
-	c: Context<typeConfig.Context>,
-	authCode: string,
-	authCodeStore: typeConfig.AuthCodeBody | typeConfig.EmbeddedSessionBodyWithUser,
-	locale: typeConfig.Locale,
-) => {
-	if (!authCodeStore.user.smsPhoneNumber) {
-		loggerUtil.triggerLogger(
-			c,
-			loggerUtil.LoggerLevel.Warn,
-			messageConfig.RequestError.SmsMfaNotSetup,
-		);
-		throw new errorConfig.Forbidden(messageConfig.RequestError.SmsMfaNotSetup);
-	}
-
-	await handleSendSmsMfa(c, authCodeStore.user.smsPhoneNumber, authCode, authCodeStore, locale);
-};
-
 export const getMfaEnrollmentInfo = async (
 	c: Context<typeConfig.Context>,
 	authCodeStore: typeConfig.AuthCodeBody | typeConfig.EmbeddedSessionBodyWithUser,
@@ -580,30 +374,6 @@ export const rememberEmailMfaDevice = async (
 		});
 
 		await kvService.storeEmailMfaRememberDevice(c.env.KV, userId, deviceId, cookieValue);
-	}
-};
-
-export const rememberSmsMfaDevice = async (
-	c: Context<typeConfig.Context>,
-	rememberDevice: boolean,
-	userId: number,
-) => {
-	const { ENABLE_MFA_REMEMBER_DEVICE: enableMfaRememberDevice } = env(c);
-
-	if (rememberDevice && enableMfaRememberDevice) {
-		const deviceId = genRandomString(24);
-		const cookieValue = genRandomString(128);
-
-		const cookieKey = adapterConfig.getSmsMfaRememberDeviceCookieKey(userId);
-		setCookie(c, cookieKey, `${deviceId}-${cookieValue}`, {
-			httpOnly: true,
-			secure: true,
-			path: "/",
-			expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-			sameSite: "strict",
-		});
-
-		await kvService.storeSmsMfaRememberDevice(c.env.KV, userId, deviceId, cookieValue);
 	}
 };
 

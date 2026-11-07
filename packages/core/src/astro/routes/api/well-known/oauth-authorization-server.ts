@@ -1,3 +1,14 @@
+/**
+ * GET /.well-known/oauth-authorization-server/_emdash
+ *
+ * RFC 8414 Authorization Server Metadata. The path follows the RFC 8414
+ * convention: the issuer's pathname (/_emdash) is appended after
+ * /.well-known/oauth-authorization-server, so MCP clients can discover
+ * it automatically from the authorization_servers URL.
+ *
+ * Public, unauthenticated.
+ */
+
 import type { APIRoute } from "astro";
 // @ts-ignore - virtual module
 import virtualConfig from "virtual:emdash/config";
@@ -8,6 +19,7 @@ import { VALID_SCOPES } from "#auth/api-tokens.js";
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, locals }) => {
+	// Same fallback as oauth-protected-resource.ts (#2016).
 	const origin = getPublicOrigin(url, locals.emdash?.config ?? virtualConfig);
 	const issuer = `${origin}/_emdash`;
 

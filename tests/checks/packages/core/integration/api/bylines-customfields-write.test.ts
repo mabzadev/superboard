@@ -1,3 +1,25 @@
+/**
+ * customFields write surface on the admin bylines PUT route.
+ *
+ * Phase 4 of Discussion #1174 extends `PUT /_emdash/api/admin/bylines/{id}`
+ * to accept a `customFields` map. Per-field type validation lives in
+ * `BylineRepository.update` (Phase 3); the route is responsible for
+ * forwarding the field and mapping `EmDashValidationError` to a clean
+ * 400 `VALIDATION_ERROR`.
+ *
+ * Covers:
+ * - Round-trip: PUT writes, GET reads them back.
+ * - Unknown slug → 400 `VALIDATION_ERROR` (rejected by repository, not
+ *   leaked as a 500).
+ * - Type mismatch → 400 `VALIDATION_ERROR`.
+ * - Select-choice mismatch → 400 `VALIDATION_ERROR`.
+ * - PUT route still requires `bylines:manage` — Author can't write
+ *   custom fields on someone else's (or any) byline; missing user is
+ *   401.
+ * - Reserved-slug writes return 400 (unknown-key path; no registered
+ *   field claims a reserved slug because the registry rejects them).
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
@@ -12,6 +34,10 @@ import { BylineRepository } from "../../../../../../packages/core/src/database/r
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { BylineSchemaRegistry } from "../../../../../../packages/core/src/schema/byline-registry.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 interface BuildOpts {
 	db: Kysely<Database>;
@@ -64,14 +90,29 @@ const basePut = {
 	isGuest: true,
 };
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe("PUT /admin/bylines/{id} — customFields write surface", () => {
 	let db: Kysely<Database>;
 	let bylineId: string;
 
 	beforeEach(async () => {
+		// The field-defs cache lives on globalThis (see
+		// `field-defs-cache.ts`); across tests in the same Vitest worker
+		// it would otherwise hold stale field IDs from a previous test's
+		// in-memory DB, producing spurious FK failures when the
+		// repository writes a value row keyed by a vanished field id.
+		// The version-counter coincidentally lands at the same value
+		// (4 fields × bump-twice = 8) in each test, so the version-based
+		// invalidation doesn't fire on its own.
 		resetBylineFieldDefsCacheForTests();
 		db = await setupTestDatabase();
 
+		// Register two custom fields: one translatable (job_title), one
+		// group-shared (twitter_handle). Different types so we cover the
+		// type-validation paths.
 		const registry = new BylineSchemaRegistry(db);
 		await registry.createField({
 			slug: "job_title",
@@ -99,6 +140,9 @@ describe("PUT /admin/bylines/{id} — customFields write surface", () => {
 			validation: { options: ["bronze", "silver", "gold"] },
 		});
 
+		// Create a byline directly through the repository — the PUT
+		// route under test is for *updates*, and the create route is out
+		// of scope here.
 		const repo = new BylineRepository(db);
 		const byline = await repo.create({
 			slug: "jane-doe",
@@ -111,6 +155,10 @@ describe("PUT /admin/bylines/{id} — customFields write surface", () => {
 	afterEach(async () => {
 		await teardownTestDatabase(db);
 	});
+
+	// ===========================================
+	// Round-trip
+	// ===========================================
 
 	it("PUT writes customFields, GET reads them back", async () => {
 		const putBody = {
@@ -165,6 +213,9 @@ describe("PUT /admin/bylines/{id} — customFields write surface", () => {
 				user: adminUser,
 			}),
 		);
+		// Assert the initial write landed — otherwise the clear assertion
+		// below would pass trivially (the key is absent because the value
+		// was never written, not because the clear cleared it).
 		expect(writeRes.status).toBe(200);
 
 		const clearRes = await putById(
@@ -183,8 +234,13 @@ describe("PUT /admin/bylines/{id} — customFields write surface", () => {
 		const getJson = (await getRes.json()) as {
 			data: { customFields?: Record<string, unknown> };
 		};
+		// `null` cleared the row; the key is absent on read (Phase 3 AC).
 		expect(getJson.data.customFields).not.toHaveProperty("job_title");
 	});
+
+	// ===========================================
+	// Validation failures → 400
+	// ===========================================
 
 	it("unknown customField slug → 400 VALIDATION_ERROR", async () => {
 		const res = await putById(
@@ -203,6 +259,8 @@ describe("PUT /admin/bylines/{id} — customFields write surface", () => {
 	});
 
 	it("reserved-slug write returns 400 (no registered field has that slug)", async () => {
+		// `display_name` is reserved, so no custom field can claim it.
+		// The repo therefore treats it as an unknown key → 400.
 		const res = await putById(
 			buildContext({
 				db,
@@ -239,7 +297,7 @@ describe("PUT /admin/bylines/{id} — customFields write surface", () => {
 				db,
 				request: putReq(bylineId, {
 					...basePut,
-					customFields: { tier: "platinum" },
+					customFields: { tier: "platinum" }, // not in validation.options
 				}),
 				params: { id: bylineId },
 				user: adminUser,
@@ -247,6 +305,10 @@ describe("PUT /admin/bylines/{id} — customFields write surface", () => {
 		);
 		expect(res.status).toBe(400);
 	});
+
+	// ===========================================
+	// Auth — bylines:manage gate still applies to customFields writes
+	// ===========================================
 
 	it("returns 401 without a session", async () => {
 		const res = await putById(

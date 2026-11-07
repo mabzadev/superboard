@@ -1,3 +1,9 @@
+/**
+ * Plugin management list endpoint
+ *
+ * GET /_emdash/api/admin/plugins - List all configured plugins with state
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

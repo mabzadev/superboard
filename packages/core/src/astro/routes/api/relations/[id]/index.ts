@@ -1,3 +1,11 @@
+/**
+ * Single relation definition endpoint
+ *
+ * GET    /_emdash/api/relations/:id - Get a relation
+ * PATCH  /_emdash/api/relations/:id - Update a relation's labels
+ * DELETE /_emdash/api/relations/:id - Delete a relation
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

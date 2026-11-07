@@ -42,10 +42,10 @@ notamment `/offerings`, `/customer-info`, `/stripe/checkout` et `/stripe/portal`
 Les clés de vérification des achats restent sur `/.well-known/purchases-jwks.json`.
 
 L’authentification hébergée utilise `/v1/auth/oauth2/v1/*`,
-`/v1/auth/identity/v1/*`, `/v1/auth/embedded-auth/v1/*` et
-`/v1/auth/saml/sp/v1/*`. La découverte OIDC et ses clés sont sous
-`/v1/auth/.well-known/`. Les jetons applicatifs ES256 utilisent le jeu de clés
-`/v1/auth/.well-known/application-jwks.json`, distinct des clés OIDC hébergées.
+`/v1/auth/identity/v1/*` et `/v1/auth/embedded-auth/v1/*`. La découverte OIDC
+et ses clés sont sous `/v1/auth/.well-known/`. Les jetons applicatifs ES256
+utilisent le jeu de clés `/v1/auth/.well-known/application-jwks.json`, distinct
+des clés OIDC hébergées.
 
 Les méthodes, corps, en-têtes SDK, signatures de fournisseurs et règles
 d’autorisation des opérations restent ceux de leurs handlers. Le registre

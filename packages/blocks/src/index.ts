@@ -3,12 +3,31 @@ export type { BlockRendererProps } from "./renderer.js";
 export { renderElement } from "./render-element.js";
 export { cn, formatRelativeTime } from "./utils.js";
 
+// Builders and validation
 export { blocks, elements } from "./builders.js";
-export { validateBlocks } from "./validation.js";
+export {
+	BLOCK_RESPONSE_LIMITS,
+	isEditorDraftPatchEffect,
+	isSafePluginPagePath,
+	normalizePluginPagePath,
+	validateBlocks,
+	validateContentEditorActionResponse,
+	validateContentEditorPanelInteraction,
+	validateEditorDraftPatchEffect,
+} from "./validation.js";
 
+// Re-export all types
 export type {
+	// Composition objects
 	ConfirmDialog,
+	// Elements
 	ButtonElement,
+	LinkElement,
+	LinkTarget,
+	LinkTargetResolver,
+	NavigationElement,
+	MenuElement,
+	ActionElement,
 	TextInputElement,
 	NumberInputElement,
 	SelectElement,
@@ -22,8 +41,10 @@ export type {
 	RepeaterSubField,
 	MediaPickerElement,
 	Element,
+	// Form
 	FieldCondition,
 	FormField,
+	// Block sub-types
 	TableColumn,
 	StatItem,
 	ChartSeries,
@@ -31,6 +52,7 @@ export type {
 	TimeseriesChartConfig,
 	CustomChartConfig,
 	TabPanel,
+	// Blocks
 	HeaderBlock,
 	SectionBlock,
 	DividerBlock,
@@ -50,9 +72,20 @@ export type {
 	EmptyBlock,
 	AccordionBlock,
 	Block,
+	// Interactions
 	BlockAction,
 	FormSubmit,
 	PageLoad,
 	BlockInteraction,
+	ContentEditorPanelInteraction,
+	ContentEditorActionInvocation,
+	PluginUiContext,
+	ContentEditorActionResponse,
+	EditorDraftFieldDefinition,
+	EditorDraftInvocationReceipt,
+	EditorDraftPatchEffect,
+	EditorDraftPatchOperation,
+	EditorDraftSnapshot,
+	// Response
 	BlockResponse,
 } from "./types.js";

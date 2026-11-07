@@ -3,12 +3,7 @@ import { useMemo, useState } from "react";
 
 import useDebounce from "../hooks/useDebounce.js";
 import { useAuth } from "../melody-react.js";
-import {
-	useGetApiV1OrgsByIdUsersQuery,
-	useGetApiV1UsersQuery,
-	type User,
-	useGetApiV1OrgsByIdAllUsersQuery,
-} from "../services/auth/api.js";
+import { useGetApiV1UsersQuery, type User } from "../services/auth/api.js";
 import { configSignal } from "../signals/index.js";
 import { accessTool, routeTool } from "../tools/index.js";
 import useSignalValue from "../useSignalValue.js";
@@ -23,15 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 
 const PageSize = 20;
 
-const UserTable = ({
-	orgId,
-	loadedUsers,
-	isViewingAllUsers = false,
-}: {
-	orgId: number | null;
-	loadedUsers?: User[] | null;
-	isViewingAllUsers?: boolean;
-}) => {
+const UserTable = ({ loadedUsers }: { loadedUsers?: User[] | null }) => {
 	const t = useTranslations();
 
 	const { userInfo } = useAuth();
@@ -43,35 +30,11 @@ const UserTable = ({
 
 	const canWriteUser = accessTool.isAllowedAccess(accessTool.Access.WriteUser, userInfo?.roles);
 
-	const { data: usersData, isLoading: isUsersLoading } = useGetApiV1UsersQuery(
-		{
-			pageSize: PageSize,
-			pageNumber,
-			search: debouncedSearch || undefined,
-		},
-		{ skip: !!orgId },
-	);
-
-	const { data: orgUsersData, isLoading: isOrgUsersLoading } = useGetApiV1OrgsByIdUsersQuery(
-		{
-			id: Number(orgId),
-			pageSize: PageSize,
-			pageNumber,
-			search: debouncedSearch || undefined,
-		},
-		{ skip: !orgId || isViewingAllUsers },
-	);
-
-	const { data: orgAllUsersData } = useGetApiV1OrgsByIdAllUsersQuery(
-		{
-			id: Number(orgId),
-			pageSize: PageSize,
-			pageNumber,
-		},
-		{ skip: !orgId || !isViewingAllUsers },
-	);
-
-	const data = orgId ? (isViewingAllUsers ? orgAllUsersData : orgUsersData) : usersData;
+	const { data, isLoading: isUsersLoading } = useGetApiV1UsersQuery({
+		pageSize: PageSize,
+		pageNumber,
+		search: debouncedSearch || undefined,
+	});
 
 	const users = loadedUsers ?? data?.users ?? [];
 	const count = data?.count ?? 0;
@@ -82,16 +45,15 @@ const UserTable = ({
 		setPageNumber(page);
 	};
 
-	if (isUsersLoading || isOrgUsersLoading) {
+	if (isUsersLoading) {
 		return <LoadingPage />;
 	}
 
 	return (
 		<section>
-			{!loadedUsers && !isViewingAllUsers && (
+			{!loadedUsers && (
 				<header className="mb-6 flex items-center gap-4">
 					<Input
-						className="w-60"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder={t("users.search")}

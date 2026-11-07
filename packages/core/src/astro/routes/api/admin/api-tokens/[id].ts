@@ -1,3 +1,9 @@
+/**
+ * Single API token endpoint
+ *
+ * DELETE /_emdash/api/admin/api-tokens/:id — Revoke a token
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 
@@ -6,6 +12,9 @@ import { handleApiTokenRevoke } from "#api/handlers/api-tokens.js";
 
 export const prerender = false;
 
+/**
+ * Revoke (delete) an API token.
+ */
 export const DELETE: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 

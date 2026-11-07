@@ -24,6 +24,7 @@ import {
 	type ContentMediaUsageSnapshot,
 	loadContentMediaUsageSnapshots,
 } from "./content-snapshots.js";
+import { MediaUsageBlockResolutionError } from "./extractor.js";
 import {
 	buildContentMediaUsageSourceKey,
 	MEDIA_USAGE_CONTENT_SOURCE_VARIANTS,
@@ -40,6 +41,8 @@ export const CONTENT_MEDIA_USAGE_REPAIR_ERROR = {
 	CONTENT_USAGE_REPAIR_ERROR: "CONTENT_USAGE_REPAIR_ERROR",
 	CONTENT_USAGE_REPAIR_CONFLICT: "CONTENT_USAGE_REPAIR_CONFLICT",
 	INVALID_REPEATER_VALIDATION: "INVALID_REPEATER_VALIDATION",
+	INVALID_BLOCK_VALIDATION: "INVALID_BLOCK_VALIDATION",
+	UNSUPPORTED_BLOCK_DEFINITION: "UNSUPPORTED_BLOCK_DEFINITION",
 } as const;
 
 export type ContentMediaUsageRepairErrorCode =
@@ -232,7 +235,9 @@ async function loadContentMediaUsageCollectionRecordsSafely(
 ): Promise<ContentMediaUsageCollectionRecord[]> {
 	try {
 		return await loadContentMediaUsageCollectionRecords(db);
-	} catch {}
+	} catch {
+		// Retry once before failing; returning unpruned results can over-report deleted collections.
+	}
 
 	try {
 		return await loadContentMediaUsageCollectionRecords(db);
@@ -379,14 +384,19 @@ async function repairContentMediaUsageCollectionUnlocked(
 			execution,
 		});
 	} catch (error) {
-		if (!(error instanceof MediaUsageFieldDiscoveryError)) {
+		if (
+			!(error instanceof MediaUsageFieldDiscoveryError) &&
+			!(error instanceof MediaUsageBlockResolutionError)
+		) {
 			console.error(`[media-usage] Failed to repair collection ${collectionSlug}:`, error);
 		}
 		const completedAt = new Date().toISOString();
 		const lastErrorCode =
 			error instanceof MediaUsageFieldDiscoveryError
 				? error.code
-				: CONTENT_MEDIA_USAGE_REPAIR_ERROR.CONTENT_USAGE_REPAIR_ERROR;
+				: error instanceof MediaUsageBlockResolutionError
+					? CONTENT_MEDIA_USAGE_REPAIR_ERROR.UNSUPPORTED_BLOCK_DEFINITION
+					: CONTENT_MEDIA_USAGE_REPAIR_ERROR.CONTENT_USAGE_REPAIR_ERROR;
 		return finalizeRepairStatus(db, repo, {
 			...scope,
 			runToken,
@@ -476,6 +486,7 @@ async function repairContentSource(
 		}
 		counts.lastErrorCode = snapshotsResult.error;
 		if (snapshotsResult.snapshots) {
+			// Partial snapshot failures keep absent variants in place; the attempted source is marked below.
 			await repairSnapshotSources(repo, snapshotsResult.snapshots, observedSources, counts);
 		}
 		if (snapshotsResult.source) {

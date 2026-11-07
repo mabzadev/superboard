@@ -1,3 +1,7 @@
+/**
+ * In-memory credential store. For tests and ephemeral CLI sessions.
+ */
+
 import type { CredentialStore, Did, PublisherSession } from "./types.js";
 
 export class MemoryCredentialStore implements CredentialStore {

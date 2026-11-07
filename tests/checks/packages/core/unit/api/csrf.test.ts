@@ -91,6 +91,7 @@ describe("checkPublicCsrf", () => {
 			const request = makeRequest("POST", {
 				Origin: "https://example.com",
 			});
+			// Request URL is http://example.com — same host but different scheme
 			const response = checkPublicCsrf(request, makeUrl());
 			expect(response).not.toBeNull();
 			expect(response!.status).toBe(403);
@@ -118,6 +119,7 @@ describe("checkPublicCsrf", () => {
 			const request = makeRequest("POST", {
 				Origin: "https://mysite.example.com",
 			});
+			// Internal URL is http, public is https — proxy scenario
 			const url = new URL("http://localhost:4321/_emdash/api/comments/posts/abc");
 			expect(checkPublicCsrf(request, url, "https://mysite.example.com")).toBeNull();
 		});

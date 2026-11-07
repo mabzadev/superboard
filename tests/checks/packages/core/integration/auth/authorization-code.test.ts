@@ -1,3 +1,10 @@
+/**
+ * Integration tests for OAuth 2.1 Authorization Code + PKCE handlers.
+ *
+ * Tests the full authorization code flow lifecycle against a real
+ * in-memory SQLite database.
+ */
+
 import { computeS256Challenge, Role } from "@emdash-cms/auth";
 import { generateCodeVerifier } from "arctic";
 import type { Kysely } from "kysely";
@@ -22,6 +29,7 @@ let db: Kysely<Database>;
 beforeEach(async () => {
 	db = await setupTestDatabase();
 
+	// Create a test user
 	await db
 		.insertInto("users")
 		.values({
@@ -33,6 +41,7 @@ beforeEach(async () => {
 		})
 		.execute();
 
+	// Register OAuth clients used by tests
 	await handleOAuthClientCreate(db, {
 		id: "test-client",
 		name: "Test Client",
@@ -154,9 +163,11 @@ describe("Authorization Approval", () => {
 
 describe("Authorization Code Exchange: Full Flow", () => {
 	it("should exchange code for tokens with valid PKCE", async () => {
+		// Step 1: Generate PKCE pair
 		const codeVerifier = generateCodeVerifier();
 		const codeChallenge = computeS256Challenge(codeVerifier);
 
+		// Step 2: Get authorization code
 		const approvalResult = await handleAuthorizationApproval(db, "user-1", Role.ADMIN, {
 			response_type: "code",
 			client_id: "test-client",
@@ -172,6 +183,7 @@ describe("Authorization Code Exchange: Full Flow", () => {
 		const redirectUrl = new URL(approvalResult.data.redirect_url);
 		const code = redirectUrl.searchParams.get("code")!;
 
+		// Step 3: Exchange code for tokens
 		const exchangeResult = await handleAuthorizationCodeExchange(db, {
 			grant_type: "authorization_code",
 			code,
@@ -188,6 +200,7 @@ describe("Authorization Code Exchange: Full Flow", () => {
 		expect(exchangeResult.data.expires_in).toBe(3600);
 		expect(exchangeResult.data.scope).toBe("content:read content:write media:read");
 
+		// Step 4: Verify tokens are stored
 		const accessHash = hashApiToken(exchangeResult.data.access_token);
 		const accessRow = await db
 			.selectFrom("_emdash_oauth_tokens")
@@ -199,6 +212,7 @@ describe("Authorization Code Exchange: Full Flow", () => {
 		expect(accessRow!.user_id).toBe("user-1");
 		expect(accessRow!.client_id).toBe("test-client");
 
+		// Step 5: Authorization code is consumed (single-use)
 		const codeHash = hashApiToken(code);
 		const codeRow = await db
 			.selectFrom("_emdash_authorization_codes")
@@ -226,6 +240,7 @@ describe("Authorization Code Exchange: Full Flow", () => {
 		const redirectUrl = new URL(approvalResult.data.redirect_url);
 		const code = redirectUrl.searchParams.get("code")!;
 
+		// Use a DIFFERENT code verifier
 		const wrongVerifier = generateCodeVerifier();
 		const exchangeResult = await handleAuthorizationCodeExchange(db, {
 			grant_type: "authorization_code",
@@ -240,6 +255,7 @@ describe("Authorization Code Exchange: Full Flow", () => {
 		expect(exchangeResult.error.code).toBe("invalid_grant");
 		expect(exchangeResult.error.message).toContain("PKCE");
 
+		// Code should be deleted after failed PKCE verification
 		const codeHash = hashApiToken(code);
 		const codeRow = await db
 			.selectFrom("_emdash_authorization_codes")
@@ -317,6 +333,7 @@ describe("Authorization Code Exchange: Full Flow", () => {
 		const codeVerifier = generateCodeVerifier();
 		const codeChallenge = computeS256Challenge(codeVerifier);
 
+		// Insert an expired code directly
 		const code = generateCodeVerifier();
 		const codeHash = hashApiToken(code);
 
@@ -331,7 +348,7 @@ describe("Authorization Code Exchange: Full Flow", () => {
 				code_challenge: codeChallenge,
 				code_challenge_method: "S256",
 				resource: null,
-				expires_at: new Date(Date.now() - 1000).toISOString(),
+				expires_at: new Date(Date.now() - 1000).toISOString(), // Already expired
 			})
 			.execute();
 
@@ -367,6 +384,7 @@ describe("Authorization Code Exchange: Full Flow", () => {
 		const redirectUrl = new URL(approvalResult.data.redirect_url);
 		const code = redirectUrl.searchParams.get("code")!;
 
+		// First exchange succeeds
 		const first = await handleAuthorizationCodeExchange(db, {
 			grant_type: "authorization_code",
 			code,
@@ -376,6 +394,7 @@ describe("Authorization Code Exchange: Full Flow", () => {
 		});
 		expect(first.success).toBe(true);
 
+		// Second exchange with same code fails
 		const second = await handleAuthorizationCodeExchange(db, {
 			grant_type: "authorization_code",
 			code,
@@ -413,6 +432,7 @@ describe("cleanupExpiredAuthorizationCodes", () => {
 		const codeVerifier = generateCodeVerifier();
 		const codeChallenge = computeS256Challenge(codeVerifier);
 
+		// Insert an expired code
 		await db
 			.insertInto("_emdash_authorization_codes")
 			.values({
@@ -428,6 +448,7 @@ describe("cleanupExpiredAuthorizationCodes", () => {
 			})
 			.execute();
 
+		// Insert a valid code
 		await db
 			.insertInto("_emdash_authorization_codes")
 			.values({
@@ -446,6 +467,7 @@ describe("cleanupExpiredAuthorizationCodes", () => {
 		const deleted = await cleanupExpiredAuthorizationCodes(db);
 		expect(deleted).toBe(1);
 
+		// Valid code should remain
 		const remaining = await db.selectFrom("_emdash_authorization_codes").selectAll().execute();
 		expect(remaining).toHaveLength(1);
 		expect(remaining[0]!.code_hash).toBe("valid-hash");

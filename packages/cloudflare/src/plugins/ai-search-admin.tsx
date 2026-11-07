@@ -1,3 +1,10 @@
+/**
+ * AI Search Plugin — Admin Components
+ *
+ * Settings page with a "Sync All Content" button that triggers
+ * a full reindex of all configured collections into AI Search.
+ */
+
 import { Badge, Banner, Button, Combobox, Input, Loader } from "@cloudflare/kumo";
 import {
 	ArrowRight,
@@ -34,6 +41,10 @@ function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
 		signal.addEventListener("abort", onAbort, { once: true });
 	});
 }
+
+// =============================================================================
+// Types
+// =============================================================================
 
 interface ReindexResult {
 	jobId: string;
@@ -77,6 +88,10 @@ interface Synonym {
 	from: string;
 	to: string;
 }
+
+// =============================================================================
+// Settings Page
+// =============================================================================
 
 function SettingsPage() {
 	const syncAbortRef = React.useRef<AbortController | null>(null);
@@ -276,7 +291,9 @@ function SettingsPage() {
 				if (job && !job.done) {
 					await runSync({ jobId: job.jobId }, job.onlyMissing ? "missing" : "full");
 				}
-			} catch {}
+			} catch {
+				// A missing prior job is normal.
+			}
 		})();
 	}, [runSync]);
 
@@ -315,6 +332,7 @@ function SettingsPage() {
 		setIsSavingSynonyms(true);
 		setSynonymsSaved(false);
 		setSynonymsError(null);
+		// Drop incomplete rows before persisting.
 		const cleaned = synonyms
 			.map((s) => ({ from: s.from.trim(), to: s.to.trim() }))
 			.filter((s) => s.from && s.to);
@@ -604,6 +622,10 @@ function SettingsPage() {
 		</div>
 	);
 }
+
+// =============================================================================
+// Exports
+// =============================================================================
 
 export const pages: PluginAdminExports["pages"] = {
 	"/settings": SettingsPage,

@@ -1,3 +1,10 @@
+/**
+ * Passkey authentication (credential assertion)
+ *
+ * Based on oslo webauthn documentation:
+ * https://webauthn.oslojs.dev/examples/authentication
+ */
+
 import {
 	verifyECDSASignature,
 	p256,
@@ -22,15 +29,24 @@ import {
 
 import { generateToken } from "../tokens.js";
 import type { Credential, AuthAdapter, User } from "../types.js";
+import {
+	createContextBoundChallenge,
+	decodeChallengeContext,
+	encodeChallengeContext,
+	verifyContextBoundChallenge,
+} from "./challenge-context.js";
+import type { ChallengeContextBinding, ChallengeContextCodec } from "./challenge-context.js";
 import type {
 	AuthenticationOptions,
 	AuthenticationResponse,
 	VerifiedAuthentication,
 	ChallengeStore,
 	PasskeyConfig,
+	AtomicChallengeStore,
+	VerifiedAuthenticationWithContext,
 } from "./types.js";
 
-const CHALLENGE_TTL = 5 * 60 * 1000;
+const CHALLENGE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export type PasskeyAuthenticationErrorCode =
 	| "credential_not_found"
@@ -42,6 +58,7 @@ export type PasskeyAuthenticationErrorCode =
 	| "invalid_origin"
 	| "invalid_rp_id_hash"
 	| "user_presence_not_verified"
+	| "user_verification_not_verified"
 	| "invalid_signature_counter"
 	| "invalid_signature"
 	| "unsupported_algorithm"
@@ -90,23 +107,35 @@ function decodeAssertionSignature(signature: Uint8Array) {
 	}
 }
 
-export async function generateAuthenticationOptions(
+/**
+ * Generate authentication options for signing in with a passkey
+ */
+export async function generateAuthenticationOptions<Type extends string, Context>(
 	config: PasskeyConfig,
-	credentials: Credential[],
-	challengeStore: ChallengeStore,
+	credentials: Array<Pick<Credential, "id" | "transports">>,
+	challengeStore: Pick<ChallengeStore, "set">,
+	challengeContext?: ChallengeContextBinding<Type, Context>,
 ): Promise<AuthenticationOptions> {
-	const challenge = generateToken();
+	const serializedContext = challengeContext
+		? encodeChallengeContext(challengeContext.codec, challengeContext.value)
+		: undefined;
+	const nonce = generateToken();
+	const challenge = serializedContext
+		? createContextBoundChallenge(nonce, serializedContext)
+		: nonce;
 
+	// Store challenge for verification
 	await challengeStore.set(challenge, {
 		type: "authentication",
 		expiresAt: Date.now() + CHALLENGE_TTL,
+		...(serializedContext ? { context: serializedContext } : {}),
 	});
 
 	return {
 		challenge,
 		rpId: config.rpId,
 		timeout: 60000,
-		userVerification: "preferred",
+		userVerification: config.userVerification ?? "preferred",
 		allowCredentials:
 			credentials.length > 0
 				? credentials.map((cred) => ({
@@ -114,25 +143,53 @@ export async function generateAuthenticationOptions(
 						id: cred.id,
 						transports: cred.transports,
 					}))
-				: undefined,
+				: undefined, // Empty = allow any discoverable credential
 	};
 }
 
-export async function verifyAuthenticationResponse(
+/**
+ * Verify an authentication response
+ */
+export function verifyAuthenticationResponse<Type extends string, Context>(
 	config: PasskeyConfig,
 	response: AuthenticationResponse,
-	credential: Credential,
+	credential: Pick<Credential, "id" | "publicKey" | "algorithm" | "counter">,
+	challengeStore: AtomicChallengeStore,
+	challengeContext: ChallengeContextCodec<Type, Context>,
+): Promise<VerifiedAuthenticationWithContext<Context>>;
+export function verifyAuthenticationResponse(
+	config: PasskeyConfig,
+	response: AuthenticationResponse,
+	credential: Pick<Credential, "id" | "publicKey" | "algorithm" | "counter">,
 	challengeStore: ChallengeStore,
-): Promise<VerifiedAuthentication> {
+): Promise<VerifiedAuthentication>;
+export async function verifyAuthenticationResponse<Type extends string, Context>(
+	config: PasskeyConfig,
+	response: AuthenticationResponse,
+	credential: Pick<Credential, "id" | "publicKey" | "algorithm" | "counter">,
+	challengeStore: ChallengeStore | AtomicChallengeStore,
+	challengeContext?: ChallengeContextCodec<Type, Context>,
+): Promise<VerifiedAuthentication | VerifiedAuthenticationWithContext<Context>> {
 	const { clientDataJSON, authenticatorData, signature, clientData } =
 		decodeAuthenticationResponse(response);
 
+	// Verify client data type
 	if (clientData.type !== ClientDataType.Get) {
 		throw new PasskeyAuthenticationError("invalid_client_data_type", "Invalid client data type");
 	}
 
+	// Verify challenge - convert Uint8Array back to base64url string (no padding, matching stored format)
 	const challengeString = encodeBase64urlNoPadding(clientData.challenge);
-	const challengeData = await challengeStore.get(challengeString);
+	const consumesAtomically = isAtomicChallengeStore(challengeStore);
+	if (challengeContext && !consumesAtomically) {
+		throw new PasskeyAuthenticationError(
+			"invalid_response",
+			"Typed challenge context requires an atomic challenge store",
+		);
+	}
+	const challengeData = consumesAtomically
+		? await challengeStore.consume(challengeString)
+		: await challengeStore.get(challengeString);
 	if (!challengeData) {
 		throw new PasskeyAuthenticationError("challenge_not_found", "Challenge not found or expired");
 	}
@@ -140,12 +197,32 @@ export async function verifyAuthenticationResponse(
 		throw new PasskeyAuthenticationError("invalid_challenge_type", "Invalid challenge type");
 	}
 	if (challengeData.expiresAt < Date.now()) {
-		await challengeStore.delete(challengeString);
+		if (!consumesAtomically) await challengeStore.delete(challengeString);
 		throw new PasskeyAuthenticationError("challenge_expired", "Challenge expired");
 	}
 
-	await challengeStore.delete(challengeString);
+	// Delete challenge (single-use)
+	if (!consumesAtomically) await challengeStore.delete(challengeString);
+	let contextResult: { present: false } | { present: true; value: Context } = {
+		present: false,
+	};
+	if (challengeData.context !== undefined) {
+		if (!challengeContext) {
+			throw new PasskeyAuthenticationError(
+				"invalid_response",
+				"Challenge context decoder required",
+			);
+		}
+		verifyContextBoundChallenge(challengeString, challengeData.context);
+		contextResult = {
+			present: true,
+			value: decodeChallengeContext(challengeData.context, challengeContext),
+		};
+	} else if (challengeContext) {
+		throw new PasskeyAuthenticationError("invalid_response", "Challenge context not found");
+	}
 
+	// Verify origin against the accepted list
 	if (!config.origins.includes(clientData.origin)) {
 		throw new PasskeyAuthenticationError(
 			"invalid_origin",
@@ -153,41 +230,59 @@ export async function verifyAuthenticationResponse(
 		);
 	}
 
+	// Parse authenticator data
 	const authData = parseAuthenticationData(authenticatorData);
 
+	// Verify RP ID hash
 	if (!authData.verifyRelyingPartyIdHash(config.rpId)) {
 		throw new PasskeyAuthenticationError("invalid_rp_id_hash", "Invalid RP ID hash");
 	}
 
+	// Verify flags
 	if (!authData.userPresent) {
 		throw new PasskeyAuthenticationError(
 			"user_presence_not_verified",
 			"User presence not verified",
 		);
 	}
+	if (config.userVerification === "required" && !authData.userVerified) {
+		throw new PasskeyAuthenticationError(
+			"user_verification_not_verified",
+			"User verification not verified",
+		);
+	}
 
-	if (authData.signatureCounter !== 0 && authData.signatureCounter <= credential.counter) {
+	// Verify counter (prevent replay attacks)
+	if (
+		(authData.signatureCounter !== 0 || credential.counter !== 0) &&
+		authData.signatureCounter <= credential.counter
+	) {
 		throw new PasskeyAuthenticationError(
 			"invalid_signature_counter",
 			"Invalid signature counter - possible cloned authenticator",
 		);
 	}
 
+	// Create the message that was signed
 	const signatureMessage = createAssertionSignatureMessage(authenticatorData, clientDataJSON);
 
+	// Ensure public key is a Uint8Array (may come as Buffer from some DB drivers)
 	const publicKeyBytes =
 		credential.publicKey instanceof Uint8Array
 			? credential.publicKey
 			: new Uint8Array(credential.publicKey);
 
+	// Verify signature based on the stored algorithm
 	let signatureValid = false;
 	const hash = sha256(signatureMessage);
 
 	if (credential.algorithm === coseAlgorithmES256) {
+		// Verify ECDSA signature
 		const ecdsaPublicKey = decodeSEC1PublicKey(p256, publicKeyBytes);
 		const ecdsaSignature = decodeAssertionSignature(signature);
 		signatureValid = verifyECDSASignature(ecdsaPublicKey, hash, ecdsaSignature);
 	} else if (credential.algorithm === coseAlgorithmRS256) {
+		// Verify RSA signature
 		const rsaPublicKey = decodePKIXRSAPublicKey(publicKeyBytes);
 		signatureValid = verifyRSASSAPKCS1v15Signature(
 			rsaPublicKey,
@@ -206,27 +301,46 @@ export async function verifyAuthenticationResponse(
 		throw new PasskeyAuthenticationError("invalid_signature", "Invalid signature");
 	}
 
-	return {
+	const verified: VerifiedAuthentication = {
 		credentialId: response.id,
 		newCounter: authData.signatureCounter,
 	};
+	return !contextResult.present ? verified : { ...verified, challengeContext: contextResult.value };
 }
 
+function isAtomicChallengeStore(
+	store: ChallengeStore | AtomicChallengeStore,
+): store is AtomicChallengeStore {
+	return (
+		"atomic" in store &&
+		store.atomic === true &&
+		"consume" in store &&
+		typeof store.consume === "function"
+	);
+}
+
+/**
+ * Authenticate a user with a passkey
+ */
 export async function authenticateWithPasskey(
 	config: PasskeyConfig,
 	adapter: AuthAdapter,
 	response: AuthenticationResponse,
 	challengeStore: ChallengeStore,
 ): Promise<User> {
+	// Find the credential
 	const credential = await adapter.getCredentialById(response.id);
 	if (!credential) {
 		throw new PasskeyAuthenticationError("credential_not_found", "Credential not found");
 	}
 
+	// Verify the response
 	const verified = await verifyAuthenticationResponse(config, response, credential, challengeStore);
 
+	// Update counter
 	await adapter.updateCredentialCounter(verified.credentialId, verified.newCounter);
 
+	// Get the user
 	const user = await adapter.getUserById(credential.userId);
 	if (!user) {
 		throw new PasskeyAuthenticationError("user_not_found", "User not found");

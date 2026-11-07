@@ -1,9 +1,17 @@
+/**
+ * Admin Command Palette
+ *
+ * Quick navigation and search across the admin interface.
+ * Opens with Cmd+K (Mac) or Ctrl+K (Windows/Linux).
+ */
+
 import { CommandPalette } from "@cloudflare/kumo";
+import { isSafePluginPagePath, normalizePluginPagePath } from "@emdash-cms/blocks";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { useLingui as useLinguiContext } from "@lingui/react";
 import { useLingui } from "@lingui/react/macro";
-import { Gear, Users, MagnifyingGlass } from "@phosphor-icons/react";
+import { ArrowsLeftRight, Gear, Users, MagnifyingGlass } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import * as React from "react";
@@ -17,22 +25,39 @@ import {
 	getTaxonomyNavIcon,
 	resolveNavIcon,
 } from "./admin-navigation-icons.js";
-import { resolvePluginPageLabel } from "./Sidebar.js";
+import {
+	declaredLabelTranslator,
+	resolvePluginPageLabel,
+	visibleCollectionEntries,
+} from "./Sidebar.js";
 
+/** Subset of manifest fields used by the palette (matches `Shell` props shape). */
 type CommandPaletteManifest = {
-	collections: Record<string, { label: string; labelSingular?: string }>;
+	collections: Record<
+		string,
+		{ label: string; labelSingular?: string; icon?: string; hidden?: boolean }
+	>;
 	plugins: AdminManifest["plugins"];
+	admin?: { hiddenNavItems?: string[] };
 };
 
+// Role levels (matching @emdash-cms/auth)
 const ROLE_ADMIN = 50;
 const ROLE_EDITOR = 40;
+const ROLE_CONTRIBUTOR = 20;
 
+// Regex for replacing route params like $collection with actual values
 const ROUTE_PARAM_REGEX = /\$(\w+)/g;
 
+// Debounce delay for content search (ms)
 const SEARCH_DEBOUNCE_MS = 300;
 
+// Detect macOS for keyboard shortcut display
 const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
+/**
+ * Custom hook for debouncing a value
+ */
 function useDebouncedValue<T>(value: T, delay: number): T {
 	const [debouncedValue, setDebouncedValue] = React.useState(value);
 
@@ -117,19 +142,29 @@ export function buildNavItems(
 			icon: ADMIN_NAV_ICONS.dashboard,
 			keywords: ["home", "overview"],
 		},
+		{
+			id: "calendar",
+			title: msg`Calendar`,
+			to: "/calendar",
+			icon: ADMIN_NAV_ICONS.calendar,
+			minRole: ROLE_CONTRIBUTOR,
+			keywords: ["schedule", "scheduled", "publishing", "agenda"],
+		},
 	];
 
-	for (const [name, config] of Object.entries(manifest.collections)) {
+	// Add collection links
+	for (const [name, config] of visibleCollectionEntries(manifest.collections)) {
 		items.push({
 			id: `collection-${name}`,
 			title: config.label,
 			to: "/content/$collection",
 			params: { collection: name },
-			icon: getCollectionNavIcon(name),
+			icon: getCollectionNavIcon(name, config.icon),
 			keywords: ["content", name],
 		});
 	}
 
+	// Add core admin links
 	items.push(
 		{
 			id: "media",
@@ -221,6 +256,14 @@ export function buildNavItems(
 			keywords: ["configuration", "preferences"],
 		},
 		{
+			id: "transfer",
+			title: msg`Site Transfer`,
+			to: "/settings/transfer",
+			icon: ArrowsLeftRight,
+			minRole: ROLE_ADMIN,
+			keywords: ["export", "import", "migrate", "move", "package"],
+		},
+		{
 			id: "security",
 			title: msg`Security Settings`,
 			to: "/settings/security",
@@ -230,16 +273,20 @@ export function buildNavItems(
 		},
 	);
 
+	// Add plugin pages
 	for (const [pluginId, config] of Object.entries(manifest.plugins)) {
 		if (config.enabled === false) continue;
 		if (config.adminPages && config.adminPages.length > 0) {
 			for (const page of config.adminPages) {
+				if (!isSafePluginPagePath(page.path)) continue;
+				// Plugin page labels are translated only when the catalog has
+				// an entry for them; otherwise they render as declared.
 				const label = resolvePluginPageLabel(page.label, pluginId, translateLabel);
 
 				items.push({
 					id: `plugin-${pluginId}-${page.path}`,
 					title: label,
-					to: `/plugins/${pluginId}${page.path}`,
+					to: `/plugins/${pluginId}${normalizePluginPagePath(page.path)}`,
 					icon: resolveNavIcon(page.icon),
 					keywords: ["plugin", pluginId],
 				});
@@ -247,7 +294,10 @@ export function buildNavItems(
 		}
 	}
 
-	return items.filter((item) => !item.minRole || userRole >= item.minRole);
+	const hidden = manifest.admin?.hiddenNavItems ?? [];
+	return items.filter(
+		(item) => (!item.minRole || userRole >= item.minRole) && !hidden.includes(item.id),
+	);
 }
 
 function filterNavItems(
@@ -267,17 +317,24 @@ function filterNavItems(
 
 export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 	const { t } = useLingui();
+	// The runtime hook (the macro useLingui() omits `_`): `_` translates the
+	// dynamic plugin labels, and both it and `i18n.locale` invalidate the
+	// nav-items memo below. `i18n.locale` is the documented signal for locale
+	// switches; the `_` rebind covers catalog merges that arrive without a
+	// locale change (plugins load their catalogs asynchronously).
 	const { _: translateDynamic, i18n } = useLinguiContext();
 	const [open, setOpen] = React.useState(false);
 	const [query, setQuery] = React.useState("");
 	const navigate = useNavigate();
 
+	// Debounce the search query to avoid flickering on every keystroke
 	const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
 
 	const { data: user } = useCurrentUser();
 
 	const userRole = user?.role ?? 0;
 
+	// Search content when debounced query is long enough
 	const { data: searchResults, isFetching: isSearching } = useQuery({
 		queryKey: ["command-palette-search", debouncedQuery],
 		queryFn: () => searchContent(debouncedQuery),
@@ -285,22 +342,27 @@ export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 		staleTime: 30 * 1000,
 	});
 
+	// Show loading while waiting for debounce or API response
 	const isWaitingForDebounce = query.length >= 2 && query !== debouncedQuery;
 	const isPendingSearch = isWaitingForDebounce || isSearching;
 
+	// Build navigation items
 	const allNavItems = React.useMemo(
-		() => buildNavItems(manifest, userRole, translateDynamic),
-		[manifest, userRole, translateDynamic, i18n.locale],
+		() => buildNavItems(manifest, userRole, declaredLabelTranslator(i18n, translateDynamic)),
+		[manifest, userRole, translateDynamic, i18n, i18n.locale],
 	);
 
+	// Filter nav items based on query
 	const filteredNavItems = React.useMemo(
 		() => filterNavItems(allNavItems, query, t),
 		[allNavItems, query, t],
 	);
 
+	// Build result groups
 	const resultGroups = React.useMemo((): ResultGroup[] => {
 		const groups: ResultGroup[] = [];
 
+		// Navigation group
 		if (filteredNavItems.length > 0) {
 			groups.push({
 				id: "navigation",
@@ -321,6 +383,7 @@ export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 			});
 		}
 
+		// Content search results
 		if (searchResults?.items && searchResults.items.length > 0) {
 			const contentItems = searchResults.items.map((result) => {
 				const collectionConfig = manifest.collections[result.collection];
@@ -349,11 +412,13 @@ export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 		return groups;
 	}, [filteredNavItems, searchResults, manifest.collections, t]);
 
+	// Keyboard shortcut to open (Cmd+K / Ctrl+K)
 	useHotkeys("mod+k", (e) => {
 		e.preventDefault();
 		setOpen(true);
 	});
 
+	// Reset query when closing
 	React.useEffect(() => {
 		if (!open) {
 			setQuery("");
@@ -364,11 +429,13 @@ export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 		(item: ResultItem, options: { newTab: boolean }) => {
 			setOpen(false);
 			if (options.newTab) {
+				// Build the full URL for new tab
 				const path = item.params
 					? item.to.replace(ROUTE_PARAM_REGEX, (_, key) => item.params?.[key] ?? "")
 					: item.to;
 				window.open(`/_emdash/admin${path}`, "_blank");
 			} else {
+				// Navigate within the app
 				void navigate({
 					to: item.to as "/",
 					params: item.params,

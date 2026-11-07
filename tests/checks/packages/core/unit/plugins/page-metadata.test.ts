@@ -1,3 +1,13 @@
+/**
+ * Page Metadata Tests
+ *
+ * Tests the metadata collector for:
+ * - Resolving contributions into deduplicated metadata
+ * - HTML rendering with proper escaping
+ * - Safe JSON-LD serialization
+ * - HTML attribute escaping
+ */
+
 import { describe, it, expect, vi } from "vitest";
 
 import {
@@ -290,6 +300,8 @@ describe("safeJsonLdSerialize", () => {
 		const obj = { "@type": "Article", name: "Hello World", count: 42 };
 		const result = safeJsonLdSerialize(obj);
 
+		// The result should be parseable back to the same object
+		// (angle brackets are escaped but that's fine for JSON-LD consumers)
 		expect(result).toContain('"@type"');
 		expect(result).toContain('"Hello World"');
 		expect(result).toContain("42");

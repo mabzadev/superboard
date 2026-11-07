@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { getPasskeyConfig } from "../../../../../../packages/core/src/auth/passkey-config.js";
 
+/** URL shape from `new URL(request.url)` after trusted proxy + Astro `security.allowedDomains`. */
 function urlAfterTrustedProxy(path: string, host: string, proto: "http" | "https"): URL {
 	return new URL(path, `${proto}://${host}`);
 }
@@ -122,6 +123,7 @@ describe("passkey-config", () => {
 			const url = new URL("https://example.com:443/admin/setup?foo=bar#section");
 			const config = getPasskeyConfig(url);
 
+			// Standard https port 443 is omitted from origin
 			expect(config.origins[0]).toBe("https://example.com");
 			expect(config.rpId).toBe("example.com");
 		});
@@ -136,6 +138,7 @@ describe("passkey-config", () => {
 			expect(fromServer.rpId).toBe(fromBrowser.rpId);
 			expect(fromServer.origins[0]).toBe("http://emdash.local:8443");
 			expect(fromBrowser.origins[0]).toBe("https://emdash.local:8443");
+			// verifyRegistrationResponse requires clientData.origin === config.origins[0] (see @emdash-cms/auth/passkey)
 			expect(fromServer.origins[0]).not.toBe(fromBrowser.origins[0]);
 		});
 
@@ -188,6 +191,7 @@ describe("passkey-config", () => {
 			const url = new URL("https://preview.example.com/admin");
 			const config = getPasskeyConfig(url, undefined, undefined, ["https://example.com"]);
 
+			// rpId is preview.example.com (no siteUrl); allow apex as second origin
 			expect(config.rpId).toBe("preview.example.com");
 			expect(config.origins).toEqual(["https://preview.example.com", "https://example.com"]);
 		});

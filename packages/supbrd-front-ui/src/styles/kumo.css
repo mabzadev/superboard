@@ -118,3 +118,9 @@ div:has(> .front-select) > [id$="-label"],
 	outline: 2px solid var(--ring);
 	outline-offset: 2px;
 }
+
+[data-kumo-component="Switch"][role="switch"][aria-checked="true"],
+[data-slot="switch"][data-state="checked"] {
+	background-color: var(--color-kumo-success);
+	--tw-ring-color: var(--color-kumo-success);
+}

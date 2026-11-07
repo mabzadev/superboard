@@ -1,3 +1,9 @@
+/**
+ * Admin comment inbox
+ *
+ * GET /_emdash/api/admin/comments - List comments (filterable by status, collection, search)
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -8,6 +14,9 @@ import { commentListQuery } from "#api/schemas.js";
 
 export const prerender = false;
 
+/**
+ * List comments for moderation inbox
+ */
 export const GET: APIRoute = async ({ url, locals }) => {
 	const { emdash, user } = locals;
 

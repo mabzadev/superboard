@@ -1,12 +1,24 @@
+/**
+ * Tests for seed --on-conflict modes: skip, update, error
+ *
+ * Verifies that applySeed() correctly handles conflicts when records
+ * already exist in the database.
+ */
+
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ContentRepository } from "../../../../../packages/core/src/database/repositories/content.js";
+import { findTaxonomyStructure } from "../../../../../packages/core/src/database/repositories/taxonomy-def.js";
 import type { Database } from "../../../../../packages/core/src/database/types.js";
+import { setI18nConfig } from "../../../../../packages/core/src/i18n/config.js";
 import { applySeed } from "../../../../../packages/core/src/seed/apply.js";
 import type { SeedFile } from "../../../../../packages/core/src/seed/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../utils/test-db.js";
 
+/**
+ * Minimal seed file with one collection, one byline, one redirect, and one section
+ */
 function createTestSeed(overrides?: Partial<SeedFile>): SeedFile {
 	return {
 		version: "1",
@@ -58,6 +70,9 @@ function createTestSeed(overrides?: Partial<SeedFile>): SeedFile {
 	};
 }
 
+/**
+ * Seed file with updated values for all entities
+ */
 function createUpdatedSeed(): SeedFile {
 	return {
 		version: "1",
@@ -116,13 +131,16 @@ describe("applySeed onConflict modes", () => {
 	});
 
 	afterEach(async () => {
+		setI18nConfig(null);
 		await teardownTestDatabase(db);
 	});
 
 	describe("onConflict: skip (default)", () => {
 		it("skips existing collections", async () => {
 			const seed = createTestSeed();
+			// First apply
 			await applySeed(db, seed, { includeContent: true });
+			// Second apply with default (skip)
 			const result = await applySeed(db, seed, { includeContent: true });
 
 			expect(result.collections.created).toBe(0);
@@ -170,9 +188,152 @@ describe("applySeed onConflict modes", () => {
 			expect(result.content.updated).toBe(0);
 		});
 
+		it("applies the seed to a built-in taxonomy nobody has changed", async () => {
+			const seed = createTestSeed({
+				taxonomies: [
+					{
+						name: "tag",
+						label: "Topics",
+						labelSingular: "Topic",
+						hierarchical: false,
+						collections: ["posts"],
+					},
+					{ name: "category", label: "Sections", hierarchical: true, collections: ["posts"] },
+				],
+			});
+
+			const result = await applySeed(db, seed);
+
+			const defs = await db
+				.selectFrom("_emdash_taxonomy_defs")
+				.select(["name", "label", "label_singular"])
+				.orderBy("name")
+				.execute();
+			expect(defs).toEqual([
+				{ name: "category", label: "Sections", label_singular: null },
+				{ name: "tag", label: "Topics", label_singular: "Topic" },
+			]);
+			expect(result.taxonomies.skipped).toBe(0);
+		});
+
+		it("applies the seed's structure to a built-in taxonomy nobody has changed", async () => {
+			const seed = createTestSeed({
+				taxonomies: [
+					{ name: "tag", label: "Topics", hierarchical: true, collections: ["posts", "pages"] },
+				],
+			});
+
+			await applySeed(db, seed);
+
+			const structure = await findTaxonomyStructure(db, "tag");
+			expect(structure).toMatchObject({ hierarchical: true, collections: ["posts", "pages"] });
+		});
+
+		it("applies the seed's structure to a built-in taxonomy nobody has changed from a site in another locale", async () => {
+			setI18nConfig({ defaultLocale: "de", locales: ["de", "en"] });
+			const seed = createTestSeed({
+				taxonomies: [
+					{
+						name: "tag",
+						label: "Schlagwörter",
+						hierarchical: true,
+						collections: ["posts", "pages"],
+					},
+				],
+			});
+
+			await applySeed(db, seed);
+
+			const structure = await findTaxonomyStructure(db, "tag");
+			expect(structure).toMatchObject({ hierarchical: true, collections: ["posts", "pages"] });
+		});
+
+		it("replaces a built-in's label in its own locale after an entry in another locale changed the structure", async () => {
+			setI18nConfig({ defaultLocale: "de", locales: ["de", "en"] });
+			const seed = createTestSeed({
+				taxonomies: [
+					{
+						id: "tag:de",
+						name: "tag",
+						label: "Schlagwörter",
+						hierarchical: true,
+						collections: ["posts", "pages"],
+					},
+					{ name: "tag", label: "Topics", locale: "en", translationOf: "tag:de" },
+				],
+			});
+
+			await applySeed(db, seed);
+
+			const en = await db
+				.selectFrom("_emdash_taxonomy_defs")
+				.select("label")
+				.where("name", "=", "tag")
+				.where("locale", "=", "en")
+				.executeTakeFirst();
+			expect(en?.label).toBe("Topics");
+		});
+
+		it("applies a translation's terms with the structure its source entry writes later in the file", async () => {
+			const seed = createTestSeed({
+				taxonomies: [
+					{
+						name: "tag",
+						label: "Etiquetas",
+						locale: "es",
+						translationOf: "tag:en",
+						terms: [
+							{ slug: "noticias", label: "Noticias" },
+							{ slug: "local", label: "Local", parent: "noticias" },
+						],
+					},
+					{
+						id: "tag:en",
+						name: "tag",
+						label: "Topics",
+						hierarchical: true,
+						collections: ["posts"],
+					},
+				],
+			});
+
+			await applySeed(db, seed, { includeContent: true });
+
+			const terms = await db
+				.selectFrom("taxonomies")
+				.select(["id", "slug", "parent_id"])
+				.where("name", "=", "tag")
+				.where("locale", "=", "es")
+				.execute();
+			const parent = terms.find((term) => term.slug === "noticias");
+			expect(terms.find((term) => term.slug === "local")?.parent_id).toBe(parent?.id);
+		});
+
+		it("skips a built-in taxonomy the site has changed", async () => {
+			await db
+				.updateTable("_emdash_taxonomy_defs")
+				.set({ label: "Keywords" })
+				.where("name", "=", "tag")
+				.execute();
+			const seed = createTestSeed({
+				taxonomies: [{ name: "tag", label: "Topics", hierarchical: false, collections: ["posts"] }],
+			});
+
+			const result = await applySeed(db, seed);
+
+			const tag = await db
+				.selectFrom("_emdash_taxonomy_defs")
+				.select("label")
+				.where("name", "=", "tag")
+				.executeTakeFirstOrThrow();
+			expect(tag.label).toBe("Keywords");
+			expect(result.taxonomies.skipped).toBe(1);
+		});
+
 		it("defaults to skip when onConflict is not specified", async () => {
 			const seed = createTestSeed();
 			await applySeed(db, seed, { includeContent: true });
+			// No onConflict specified -- should default to skip
 			const result = await applySeed(db, seed, { includeContent: true });
 
 			expect(result.collections.skipped).toBe(1);
@@ -210,6 +371,7 @@ describe("applySeed onConflict modes", () => {
 			expect(result.collections.created).toBe(0);
 			expect(result.fields.updated).toBe(2);
 
+			// Verify the collection was actually updated
 			const row = await db
 				.selectFrom("_emdash_collections")
 				.selectAll()
@@ -223,6 +385,8 @@ describe("applySeed onConflict modes", () => {
 			const seed = createTestSeed();
 			await applySeed(db, seed, { includeContent: true });
 
+			// title: string (TEXT) -> slug (TEXT). Same column affinity, so the
+			// type change persists rather than being silently dropped.
 			const changed = createTestSeed();
 			changed.collections![0]!.fields![0]!.type = "slug";
 
@@ -247,6 +411,9 @@ describe("applySeed onConflict modes", () => {
 			const seed = createTestSeed();
 			await applySeed(db, seed, { includeContent: true });
 
+			// body: text (TEXT) -> portableText (JSON) changes the physical column
+			// type. Re-seeding must fail loudly rather than report success while
+			// leaving _emdash_fields.type/column_type stale.
 			const changed = createTestSeed();
 			changed.collections![0]!.fields![1]!.type = "portableText";
 
@@ -254,6 +421,7 @@ describe("applySeed onConflict modes", () => {
 				applySeed(db, changed, { includeContent: true, onConflict: "update" }),
 			).rejects.toThrow(/column type/i);
 
+			// Stored metadata is untouched (no silent rewrite).
 			const row = await db
 				.selectFrom("_emdash_fields")
 				.innerJoin("_emdash_collections", "_emdash_collections.id", "_emdash_fields.collection_id")
@@ -278,6 +446,7 @@ describe("applySeed onConflict modes", () => {
 			expect(result.bylines.updated).toBe(1);
 			expect(result.bylines.created).toBe(0);
 
+			// Verify the byline was actually updated
 			const row = await db
 				.selectFrom("_emdash_bylines")
 				.selectAll()
@@ -299,6 +468,7 @@ describe("applySeed onConflict modes", () => {
 			expect(result.redirects.updated).toBe(1);
 			expect(result.redirects.created).toBe(0);
 
+			// Verify the redirect was actually updated
 			const row = await db
 				.selectFrom("_emdash_redirects")
 				.selectAll()
@@ -320,6 +490,7 @@ describe("applySeed onConflict modes", () => {
 			expect(result.sections.updated).toBe(1);
 			expect(result.sections.created).toBe(0);
 
+			// Verify the section was actually updated
 			const row = await db
 				.selectFrom("_emdash_sections")
 				.selectAll()
@@ -342,6 +513,7 @@ describe("applySeed onConflict modes", () => {
 			expect(result.content.updated).toBe(1);
 			expect(result.content.created).toBe(0);
 
+			// Verify the content was actually updated
 			const row = await db
 				.selectFrom("ec_posts" as any)
 				.selectAll()
@@ -365,7 +537,23 @@ describe("applySeed onConflict modes", () => {
 			).rejects.toThrow('Conflict: collection "posts" already exists');
 		});
 
+		it("does not treat a built-in taxonomy nobody has changed as a conflict", async () => {
+			const seed = createTestSeed({
+				taxonomies: [{ name: "tag", label: "Topics", hierarchical: false, collections: ["posts"] }],
+			});
+
+			await applySeed(db, seed, { onConflict: "error" });
+
+			const tag = await db
+				.selectFrom("_emdash_taxonomy_defs")
+				.select("label")
+				.where("name", "=", "tag")
+				.executeTakeFirstOrThrow();
+			expect(tag.label).toBe("Topics");
+		});
+
 		it("throws on existing byline", async () => {
+			// Seed without collections (and their content) to get past those steps
 			const seed = createTestSeed({ collections: [], content: {} });
 			await applySeed(db, seed, { includeContent: true });
 
@@ -401,6 +589,7 @@ describe("applySeed onConflict modes", () => {
 		});
 
 		it("throws on existing content", async () => {
+			// First apply creates collections and content
 			const seed = createTestSeed({
 				bylines: [],
 				redirects: [],
@@ -408,6 +597,7 @@ describe("applySeed onConflict modes", () => {
 			});
 			await applySeed(db, seed, { includeContent: true });
 
+			// Second apply with only content (collections already exist, skip them)
 			const contentOnlySeed = createTestSeed({
 				collections: [],
 				bylines: [],
@@ -428,6 +618,7 @@ describe("applySeed onConflict modes", () => {
 			const seed = createTestSeed();
 			await applySeed(db, seed, { includeContent: true });
 
+			// Add a new content entry to the seed
 			const extendedSeed = createUpdatedSeed();
 			const posts = extendedSeed.content!["posts"];
 			if (!posts) throw new Error("posts missing from seed");
@@ -448,6 +639,7 @@ describe("applySeed onConflict modes", () => {
 		});
 
 		it("clears taxonomy assignments on content update when seed removes them", async () => {
+			// Seed with a taxonomy and content that has taxonomy assignments
 			const seed: SeedFile = {
 				version: "1",
 				collections: [
@@ -483,6 +675,7 @@ describe("applySeed onConflict modes", () => {
 			};
 			await applySeed(db, seed, { includeContent: true });
 
+			// Verify both terms are attached
 			const beforeRows = await db
 				.selectFrom("content_taxonomies")
 				.selectAll()
@@ -490,6 +683,7 @@ describe("applySeed onConflict modes", () => {
 				.execute();
 			expect(beforeRows).toHaveLength(2);
 
+			// Re-apply with only one taxonomy term
 			const updatedSeed: SeedFile = {
 				version: "1",
 				collections: [
@@ -529,6 +723,7 @@ describe("applySeed onConflict modes", () => {
 				onConflict: "update",
 			});
 
+			// Should only have "tech" now, not both
 			const afterRows = await db
 				.selectFrom("content_taxonomies")
 				.selectAll()
@@ -562,6 +757,7 @@ describe("applySeed onConflict modes", () => {
 			};
 			await applySeed(db, seed, { includeContent: true });
 
+			// Verify byline is attached
 			const beforeRows = await db
 				.selectFrom("_emdash_content_bylines")
 				.selectAll()
@@ -569,6 +765,7 @@ describe("applySeed onConflict modes", () => {
 				.execute();
 			expect(beforeRows).toHaveLength(1);
 
+			// Re-apply without bylines on the content entry
 			const updatedSeed: SeedFile = {
 				version: "1",
 				collections: [
@@ -586,6 +783,7 @@ describe("applySeed onConflict modes", () => {
 							slug: "hello-world",
 							status: "published",
 							data: { title: "Hello Updated" },
+							// No bylines -- should clear existing
 						},
 					],
 				},
@@ -596,6 +794,7 @@ describe("applySeed onConflict modes", () => {
 				onConflict: "update",
 			});
 
+			// Should have no bylines now
 			const afterRows = await db
 				.selectFrom("_emdash_content_bylines")
 				.selectAll()

@@ -1,15 +1,25 @@
+/**
+ * Trusted plugin API routes must receive a writable `ctx.media`.
+ *
+ * Regression: `EmDashRuntime.handlePluginApiRoute` built a `PluginRouteRegistry`
+ * without threading `storage`, so a `media:write` plugin invoked via
+ * `/_emdash/api/plugin/{id}/{route}` got a read-only (or undefined) `ctx.media`
+ * and `ctx.media.upload()` was unusable — the exact trigger in the bug report.
+ */
+
 import { randomUUID } from "node:crypto";
 
-import Database from "better-sqlite3";
 import { SqliteDialect } from "kysely";
 import { describe, expect, it, vi } from "vitest";
 
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { EmDashRuntime } from "../../../../../../packages/core/src/emdash-runtime.js";
 import type { RuntimeDependencies } from "../../../../../../packages/core/src/emdash-runtime.js";
 import { definePlugin } from "../../../../../../packages/core/src/plugins/define-plugin.js";
 import type { RouteCallerInput } from "../../../../../../packages/core/src/plugins/routes.js";
 import type { Storage } from "../../../../../../packages/core/src/storage/types.js";
 
+/** Minimal in-memory Storage backend that records uploaded keys. */
 function createFakeStorage() {
 	const uploads = new Map<string, Uint8Array>();
 	const storage: Storage = {

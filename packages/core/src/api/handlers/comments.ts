@@ -1,3 +1,9 @@
+/**
+ * Comment handlers — business logic for comment API routes.
+ *
+ * Standalone functions that return ApiResult<T>. Routes are thin wrappers.
+ */
+
 import type { Kysely } from "kysely";
 
 import { CommentRepository } from "../../database/repositories/comment.js";
@@ -5,6 +11,10 @@ import type { Comment, CommentStatus, PublicComment } from "../../database/repos
 import { InvalidCursorError } from "../../database/repositories/types.js";
 import type { Database } from "../../database/types.js";
 import type { ApiResult } from "../types.js";
+
+// ---------------------------------------------------------------------------
+// Public: List approved comments for content
+// ---------------------------------------------------------------------------
 
 export async function handleCommentList(
 	db: Kysely<Database>,
@@ -15,12 +25,15 @@ export async function handleCommentList(
 	try {
 		const repo = new CommentRepository(db);
 
+		// Get total approved count
 		const total = await repo.countByContent(collection, contentId, "approved");
 
 		let publicItems: PublicComment[];
 		let nextCursor: string | undefined;
 
 		if (options.threaded) {
+			// Threaded mode: fetch all approved comments (capped) so threading
+			// doesn't lose children that would fall on later pages.
 			const MAX_THREADED = 500;
 			const result = await repo.findByContent(collection, contentId, {
 				status: "approved",
@@ -28,6 +41,7 @@ export async function handleCommentList(
 			});
 			const threaded = CommentRepository.assembleThreads(result.items);
 			publicItems = threaded.map((c) => CommentRepository.toPublicComment(c));
+			// No cursor for threaded mode — all comments returned at once
 		} else {
 			const result = await repo.findByContent(collection, contentId, {
 				status: "approved",
@@ -63,6 +77,10 @@ export async function handleCommentList(
 		};
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Admin: Moderation inbox
+// ---------------------------------------------------------------------------
 
 export async function handleCommentInbox(
 	db: Kysely<Database>,
@@ -110,6 +128,10 @@ export async function handleCommentInbox(
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Admin: Status counts for inbox badges
+// ---------------------------------------------------------------------------
+
 export async function handleCommentCounts(
 	db: Kysely<Database>,
 ): Promise<ApiResult<Record<CommentStatus, number>>> {
@@ -128,6 +150,10 @@ export async function handleCommentCounts(
 		};
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Admin: Get single comment detail
+// ---------------------------------------------------------------------------
 
 export async function handleCommentGet(
 	db: Kysely<Database>,
@@ -156,6 +182,10 @@ export async function handleCommentGet(
 		};
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Admin: Change comment status
+// ---------------------------------------------------------------------------
 
 export async function handleCommentStatusChange(
 	db: Kysely<Database>,
@@ -186,6 +216,10 @@ export async function handleCommentStatusChange(
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Admin: Hard delete comment
+// ---------------------------------------------------------------------------
+
 export async function handleCommentDelete(
 	db: Kysely<Database>,
 	id: string,
@@ -213,6 +247,10 @@ export async function handleCommentDelete(
 		};
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Admin: Bulk operations
+// ---------------------------------------------------------------------------
 
 export async function handleCommentBulk(
 	db: Kysely<Database>,
@@ -247,25 +285,15 @@ export async function handleCommentBulk(
 	}
 }
 
-export async function checkRateLimit(
-	db: Kysely<Database>,
-	ipHash: string,
-	maxPerWindow: number = 5,
-	windowMinutes: number = 10,
-): Promise<boolean> {
-	const cutoff = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
-
-	const result = await db
-		.selectFrom("_emdash_comments")
-		.select((eb) => eb.fn.count("id").as("count"))
-		.where("ip_hash", "=", ipHash)
-		.where("created_at", ">", cutoff)
-		.executeTakeFirst();
-
-	const count = Number(result?.count ?? 0);
-	return count >= maxPerWindow;
-}
-
+/**
+ * Hash an IP address for storage (never store cleartext IPs).
+ *
+ * Uses full SHA-256 with a site-specific salt to prevent rainbow-table
+ * recovery of IPs. The salt must be provided by the caller — typically
+ * via `resolveSecretsCached(db).ipSalt` from `#config/secrets.js`. The
+ * salt is generated and persisted on first need so it's stable across
+ * requests within a deployment but unique per install.
+ */
 export async function hashIp(ip: string, salt: string): Promise<string> {
 	const data = `ip:${salt}:${ip}`;
 	const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(data));

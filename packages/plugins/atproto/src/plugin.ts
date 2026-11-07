@@ -1,3 +1,11 @@
+/**
+ * Sandbox Entry Point -- AT Protocol
+ *
+ * Canonical plugin implementation using the standard format.
+ * The bundler (tsdown) inlines all local imports from atproto.ts,
+ * bluesky.ts, and standard-site.ts into a single self-contained file.
+ */
+
 import type { PluginContext, SandboxedPlugin } from "emdash/plugin";
 
 import { getAdminPageTarget, type AdminInteraction } from "./admin-routing.js";
@@ -14,6 +22,8 @@ import {
 import { buildBskyPost } from "./bluesky.js";
 import { buildPublication, buildDocument } from "./standard-site.js";
 
+// ── Types ───────────────────────────────────────────────────────
+
 interface SyndicationRecord {
 	collection: string;
 	contentId: string;
@@ -27,6 +37,8 @@ interface SyndicationRecord {
 	errorMessage?: string;
 	retryCount?: number;
 }
+
+// ── Helpers ─────────────────────────────────────────────────────
 
 const DEFAULT_SYNDICATED_COLLECTIONS = ["posts"];
 
@@ -65,6 +77,7 @@ async function syndicateContent(
 
 	const { accessJwt, did, pdsHost } = await ensureSession(ctx);
 
+	// Upload cover image if present
 	let coverImageBlob;
 	const rawCoverImage = content.cover_image as string | undefined;
 	if (rawCoverImage) {
@@ -311,6 +324,8 @@ async function syndicatePublishedContent(
 	}
 }
 
+// ── Plugin definition ───────────────────────────────────────────
+
 export default {
 	hooks: {
 		"plugin:install": async (_event: unknown, ctx: PluginContext) => {
@@ -322,6 +337,8 @@ export default {
 				event: { content: Record<string, unknown>; collection: string; isNew: boolean },
 				ctx: PluginContext,
 			) => {
+				// With a pending draft, afterSave carries the draft's data, not the published version.
+				if (event.content.draftRevisionId) return;
 				await syndicatePublishedContent(event, ctx, { allowCreate: false });
 			},
 		},
@@ -511,6 +528,8 @@ export default {
 	},
 } satisfies SandboxedPlugin;
 
+// ── Block Kit admin helpers ─────────────────────────────────────
+
 async function buildSyncWidget(ctx: PluginContext) {
 	try {
 		const handle = await ctx.kv.get<string>("settings:handle");
@@ -663,6 +682,7 @@ async function buildStatusPage(ctx: PluginContext) {
 					{ type: "header", text: "Recent Syncs" },
 					{
 						type: "table",
+						page_action_id: "recent_syncs",
 						columns: [
 							{ key: "collection", label: "Collection", format: "text" },
 							{ key: "contentId", label: "Content", format: "code" },

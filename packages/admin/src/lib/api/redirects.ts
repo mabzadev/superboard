@@ -1,3 +1,7 @@
+/**
+ * Redirects API client
+ */
+
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -56,6 +60,9 @@ export interface RedirectListResult {
 	loopRedirectIds?: string[];
 }
 
+/**
+ * List redirects with optional filters
+ */
 export async function fetchRedirects(options?: RedirectListOptions): Promise<RedirectListResult> {
 	const params = new URLSearchParams();
 	if (options?.cursor) params.set("cursor", options.cursor);
@@ -67,27 +74,36 @@ export async function fetchRedirects(options?: RedirectListOptions): Promise<Red
 
 	const url = params.toString() ? `${API_BASE}/redirects?${params}` : `${API_BASE}/redirects`;
 	const response = await apiFetch(url);
-	return parseApiResponse<RedirectListResult>(response, "Failed to fetch redirects");
+	return parseApiResponse<RedirectListResult>(response, i18n._(msg`Failed to fetch redirects`));
 }
 
+/**
+ * Create a redirect
+ */
 export async function createRedirect(input: CreateRedirectInput): Promise<Redirect> {
 	const response = await apiFetch(`${API_BASE}/redirects`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(input),
 	});
-	return parseApiResponse<Redirect>(response, "Failed to create redirect");
+	return parseApiResponse<Redirect>(response, i18n._(msg`Failed to create redirect`));
 }
 
+/**
+ * Update a redirect
+ */
 export async function updateRedirect(id: string, input: UpdateRedirectInput): Promise<Redirect> {
 	const response = await apiFetch(`${API_BASE}/redirects/${encodeURIComponent(id)}`, {
 		method: "PUT",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(input),
 	});
-	return parseApiResponse<Redirect>(response, "Failed to update redirect");
+	return parseApiResponse<Redirect>(response, i18n._(msg`Failed to update redirect`));
 }
 
+/**
+ * Delete a redirect
+ */
 export async function deleteRedirect(id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/redirects/${encodeURIComponent(id)}`, {
 		method: "DELETE",
@@ -95,6 +111,9 @@ export async function deleteRedirect(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete redirect`));
 }
 
+/**
+ * Fetch 404 summary (grouped by path, sorted by count)
+ */
 export async function fetch404Summary(limit?: number): Promise<NotFoundSummary[]> {
 	const params = new URLSearchParams();
 	if (limit != null) params.set("limit", String(limit));
@@ -105,7 +124,7 @@ export async function fetch404Summary(limit?: number): Promise<NotFoundSummary[]
 	const response = await apiFetch(url);
 	const data = await parseApiResponse<{ items: NotFoundSummary[] }>(
 		response,
-		"Failed to fetch 404 summary",
+		i18n._(msg`Failed to fetch 404 summary`),
 	);
 	return data.items;
 }

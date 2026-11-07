@@ -8,6 +8,18 @@ import {
 	type MatchableTerm,
 } from "../../../../../packages/admin/src/lib/taxonomy-match.js";
 
+/**
+ * Tests for the admin picker matcher. The matcher is the sole gate between
+ * an editor's typed input and the "Create new term" escape hatch, so every
+ * branch has real user impact:
+ *
+ *   - accent-fold branch: `"Mexico"` must find `"México"` or editors create
+ *     a duplicate term and fragment the taxonomy.
+ *   - no-match branch: genuinely new terms must still offer Create.
+ *   - exact-match branch: governs whether Create is suppressed, so an
+ *     accent-insensitive exact match must count.
+ */
+
 const mexico: MatchableTerm = { label: "México" };
 const hongKong: MatchableTerm = { label: "Hong Kong" };
 
@@ -28,6 +40,7 @@ describe("foldForMatch", () => {
 	});
 
 	it("handles precomposed and decomposed forms identically", () => {
+		// Precomposed U+00E9 vs decomposed U+0065 U+0301 both fold to "e".
 		expect(foldForMatch("caf\u00e9")).toBe("cafe");
 		expect(foldForMatch("cafe\u0301")).toBe("cafe");
 	});
@@ -55,6 +68,9 @@ describe("termMatches", () => {
 	});
 
 	it("rejects whitespace-only input even when term labels contain spaces", () => {
+		// Regression guard: the label `"Hong Kong"` contains a space,
+		// so a naive `includes(needle)` without a whitespace guard would
+		// match a needle of `"   "` and surface every multi-word term.
 		expect(termMatches(hongKong, "   ")).toBe(false);
 		expect(termMatches(hongKong, " ")).toBe(false);
 	});

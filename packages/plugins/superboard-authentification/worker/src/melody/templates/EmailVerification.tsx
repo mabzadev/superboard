@@ -7,10 +7,9 @@ import Layout, { Branding } from './components/Layout'
 import { requestUtil } from '../utils'
 
 const EmailVerification = ({
-  serverUrl, org, branding, verificationCode, authId, locale,
+  serverUrl, branding, verificationCode, authId, locale,
 }: {
   serverUrl: string;
-  org: string;
   branding: Branding;
   verificationCode: string;
   authId: string;
@@ -56,7 +55,7 @@ const EmailVerification = ({
                 >
                   <a
                     href={`
-                      ${route}?id=${authId}&locale=${locale}&org=${org}
+                      ${route}?id=${authId}&locale=${locale}
                     `}
                     style='
                       display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: #ffffff;

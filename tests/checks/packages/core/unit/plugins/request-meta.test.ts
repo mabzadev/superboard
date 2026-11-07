@@ -1,3 +1,14 @@
+/**
+ * Request Metadata Extraction Tests
+ *
+ * Tests for extractRequestMeta():
+ * - IP resolution: CF-Connecting-IP (only with cf object), X-Forwarded-For fallback, null
+ * - IP validation: rejects non-IP values (XSS payloads, garbage)
+ * - Geo extraction from Cloudflare `cf` object on request
+ * - User agent and referer header reads (trimmed)
+ * - IPv6 support
+ */
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { _resetTrustedProxyHeadersCache } from "../../../../../../packages/core/src/auth/trusted-proxy.js";
@@ -6,6 +17,8 @@ import {
 	sanitizeHeadersForSandbox,
 } from "../../../../../../packages/core/src/plugins/request-meta.js";
 
+// Keep the env-derived trusted-header cache from leaking between tests
+// (and between this file and others in the same vitest worker).
 const ORIGINAL_TRUSTED_ENV = process.env.EMDASH_TRUSTED_PROXY_HEADERS;
 beforeEach(() => {
 	delete process.env.EMDASH_TRUSTED_PROXY_HEADERS;
@@ -20,6 +33,9 @@ afterEach(() => {
 	_resetTrustedProxyHeadersCache();
 });
 
+/**
+ * Helper to create a Request with optional headers and cf properties.
+ */
 function createRequest(
 	opts: {
 		headers?: Record<string, string>;
@@ -30,6 +46,7 @@ function createRequest(
 		headers: opts.headers,
 	});
 
+	// Attach cf object if provided (simulates Cloudflare Workers runtime)
 	if (opts.cf) {
 		(req as unknown as { cf: typeof opts.cf }).cf = opts.cf;
 	}
@@ -58,9 +75,11 @@ describe("extractRequestMeta", () => {
 					"cf-connecting-ip": "1.2.3.4",
 					"x-forwarded-for": "5.6.7.8, 9.10.11.12",
 				},
+				// No cf object — not on Cloudflare, XFF is untrusted
 			});
 
 			const meta = extractRequestMeta(req);
+			// Neither CF-Connecting-IP nor XFF should be trusted without cf object
 			expect(meta.ip).toBeNull();
 		});
 
@@ -69,6 +88,7 @@ describe("extractRequestMeta", () => {
 				headers: {
 					"cf-connecting-ip": "1.2.3.4",
 				},
+				// No cf object
 			});
 
 			const meta = extractRequestMeta(req);
@@ -92,6 +112,7 @@ describe("extractRequestMeta", () => {
 				headers: {
 					"x-forwarded-for": "5.6.7.8, 9.10.11.12",
 				},
+				// No cf object — standalone deployment, XFF is spoofable
 			});
 
 			const meta = extractRequestMeta(req);
@@ -217,6 +238,7 @@ describe("extractRequestMeta", () => {
 			});
 
 			const meta = extractRequestMeta(req);
+			// First entry is "not-an-ip" which fails validation
 			expect(meta.ip).toBeNull();
 		});
 
@@ -426,6 +448,36 @@ describe("extractRequestMeta", () => {
 			expect(result["cf-connecting-ip"]).toBe("5.6.7.8");
 		});
 
+		it("exposes only declared safe headers for declared route requests", () => {
+			const headers = new Headers({
+				"content-type": "application/json",
+				"x-webhook-signature": "sha256=abc",
+				"x-unlisted": "hidden",
+			});
+			expect(sanitizeHeadersForSandbox(headers, ["X-Webhook-Signature"])).toEqual({
+				"x-webhook-signature": "sha256=abc",
+			});
+		});
+
+		it("never exposes sensitive headers even when requested", () => {
+			const headers = new Headers({
+				authorization: "Bearer secret",
+				"cf-access-authenticated-user-email": "person@example.com",
+				"cf-access-token": "access-secret",
+				cookie: "session=secret",
+				"x-emdash-request": "1",
+			});
+			expect(
+				sanitizeHeadersForSandbox(headers, [
+					"authorization",
+					"cf-access-authenticated-user-email",
+					"cf-access-token",
+					"cookie",
+					"x-emdash-request",
+				]),
+			).toEqual({});
+		});
+
 		it("returns empty object for headers that are all sensitive", () => {
 			const headers = new Headers({
 				cookie: "session=abc",
@@ -478,6 +530,11 @@ describe("extractRequestMeta", () => {
 			});
 		});
 	});
+
+	// --------------------------------------------------------------------
+	// Trusted proxy headers — operator-declared headers for self-hosted
+	// deployments behind a reverse proxy they control.
+	// --------------------------------------------------------------------
 
 	describe("trusted proxy headers", () => {
 		it("reads the IP from a trusted header on a non-CF deployment", () => {
@@ -540,6 +597,7 @@ describe("extractRequestMeta", () => {
 		});
 
 		it("does not read from headers that are not on the trusted list", () => {
+			// "x-client-ip" is not declared trusted — must not be used.
 			const req = createRequest({
 				headers: { "x-client-ip": "203.0.113.50" },
 			});
@@ -548,6 +606,10 @@ describe("extractRequestMeta", () => {
 		});
 
 		it("CF-Connecting-IP wins over trusted headers on Cloudflare", () => {
+			// On CF, cf-connecting-ip is cryptographically trustworthy (CF edge
+			// overwrites any client-supplied value). Operator-declared trusted
+			// headers only apply as a fallback, not an override, so a wrong
+			// entry in the config can't regress CF deployments.
 			const req = createRequest({
 				headers: {
 					"cf-connecting-ip": "1.1.1.1",
@@ -580,6 +642,9 @@ describe("extractRequestMeta", () => {
 		});
 
 		it("validates a pre-resolved string[] of trusted headers", () => {
+			// Passing the array form (used by the plugin runtime with a list
+			// pre-resolved from the config) must not trust an invalid header
+			// name — headers.get() would throw a TypeError.
 			const req = createRequest({
 				headers: { "x-real-ip": "203.0.113.50" },
 			});

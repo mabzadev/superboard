@@ -1,3 +1,10 @@
+/**
+ * Media list and upload endpoint
+ *
+ * GET /_emdash/api/media - List all media
+ * POST /_emdash/api/media - Upload new media (via configured storage adapter)
+ */
+
 import * as path from "node:path";
 
 import type { APIRoute } from "astro";
@@ -8,16 +15,28 @@ import { apiError, apiSuccess, handleError, unwrapResult } from "#api/error.js";
 import { GLOBAL_UPLOAD_ALLOWLIST, resolveFieldAllowlist } from "#api/handlers/media-allowlist.js";
 import { handleMediaUsageSummaries } from "#api/handlers/media-usage.js";
 import { isParseError, parseQuery } from "#api/parse.js";
-import { DEFAULT_MAX_UPLOAD_SIZE, formatFileSize, mediaListQuery } from "#api/schemas.js";
+import {
+	DEFAULT_MAX_UPLOAD_SIZE,
+	formatFileSize,
+	mediaFolderIdSchema,
+	mediaListQuery,
+	mediaUploadDeduplicateForm,
+	mediaUploadEnsureUniqueFilenameForm,
+	mediaUploadMetadataForm,
+} from "#api/schemas.js";
 import { MediaRepository } from "#db/repositories/media.js";
 import { enrichImageMetadata } from "#media/enrich.js";
-import { matchesMimeAllowlist, normalizeMime } from "#media/mime.js";
+import { matchesMimeAllowlist, resolveUploadMimeType } from "#media/mime.js";
 import { computeContentHash } from "#utils/hash.js";
 
 import type { MediaItem } from "../../types.js";
 
 export const prerender = false;
 
+/**
+ * Add URL to media items
+ * Uses relative URLs to ensure portability across deployments
+ */
 function addUrlToMedia(item: MediaItem): MediaItem & { url: string } {
 	return {
 		...item,
@@ -25,6 +44,9 @@ function addUrlToMedia(item: MediaItem): MediaItem & { url: string } {
 	};
 }
 
+/**
+ * List media items
+ */
 export const GET: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
 
@@ -52,6 +74,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 		return unwrapResult(result);
 	}
 
+	// Add URL to each media item (relative URLs for portability)
 	const itemsWithUrl = result.data.items.map((item) => addUrlToMedia(item));
 	if (query.includeUsage !== "1") {
 		return apiSuccess({
@@ -83,6 +106,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
 	});
 };
 
+/**
+ * Upload media file
+ *
+ * Uses the configured storage adapter to store the file.
+ */
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
 
@@ -104,6 +132,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		}
 		const maxUploadSize = rawMax;
 
+		// Best-effort size check before buffering the full multipart body
 		const contentLength = request.headers.get("Content-Length");
 		if (contentLength && parseInt(contentLength, 10) > maxUploadSize) {
 			return apiError("PAYLOAD_TOO_LARGE", "Upload too large", 413);
@@ -117,6 +146,53 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			return apiError("NO_FILE", "No file provided", 400);
 		}
 
+		const deduplicateResult = mediaUploadDeduplicateForm.safeParse(
+			formData.get("deduplicate") ?? undefined,
+		);
+		if (!deduplicateResult.success) {
+			return apiError("VALIDATION_ERROR", "Invalid request data", 400, {
+				issues: deduplicateResult.error.issues.map((issue) => ({
+					path: "deduplicate",
+					message: issue.message,
+				})),
+			});
+		}
+		const ensureUniqueFilenameResult = mediaUploadEnsureUniqueFilenameForm.safeParse(
+			formData.get("ensureUniqueFilename") ?? undefined,
+		);
+		if (!ensureUniqueFilenameResult.success) {
+			return apiError("VALIDATION_ERROR", "Invalid request data", 400);
+		}
+		const folderEntry = formData.get("folderId");
+		let folderId: string | null | undefined;
+		if (folderEntry !== null) {
+			if (typeof folderEntry !== "string") {
+				return apiError("VALIDATION_ERROR", "Invalid request data", 400);
+			}
+			if (folderEntry === "unfiled") {
+				folderId = null;
+			} else {
+				const folderResult = mediaFolderIdSchema.safeParse(folderEntry);
+				if (!folderResult.success) {
+					return apiError("VALIDATION_ERROR", "Invalid request data", 400);
+				}
+				folderId = folderResult.data;
+			}
+		}
+		const metadataResult = mediaUploadMetadataForm.safeParse({
+			alt: formData.get("alt") ?? undefined,
+			caption: formData.get("caption") ?? undefined,
+		});
+		if (!metadataResult.success) {
+			return apiError("VALIDATION_ERROR", "Invalid request data", 400, {
+				issues: metadataResult.error.issues.map((issue) => ({
+					path: issue.path.join("."),
+					message: issue.message,
+				})),
+			});
+		}
+
+		// Validate file type — widen the allowlist when a field-specific list is configured
 		const fieldIdEntry = formData.get("fieldId");
 		const fieldId =
 			typeof fieldIdEntry === "string" && fieldIdEntry.length > 0 ? fieldIdEntry : null;
@@ -124,10 +200,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const fieldAllowlist = fieldId ? await resolveFieldAllowlist(emdash.db, fieldId) : null;
 		const allowlist = fieldAllowlist ?? [...GLOBAL_UPLOAD_ALLOWLIST];
 
-		if (!matchesMimeAllowlist(file.type, allowlist)) {
+		// Browsers that don't know a format (e.g. `.jxl`) may send an empty or
+		// generic type; fall back to the extension map so allowed uploads aren't
+		// rejected just because the client can't identify them.
+		const mimeType = resolveUploadMimeType(file.name, file.type);
+		if (!mimeType || !matchesMimeAllowlist(mimeType, allowlist)) {
 			return apiError("INVALID_TYPE", "File type not allowed", 400);
 		}
 
+		// Check file size before buffering
 		if (file.size > maxUploadSize) {
 			return apiError(
 				"PAYLOAD_TOO_LARGE",
@@ -136,26 +217,36 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			);
 		}
 
+		// Get file content and compute hash
 		const buffer = new Uint8Array(await file.arrayBuffer());
 		const contentHash = await computeContentHash(buffer);
 
+		// Check for existing media with same content hash (deduplication)
 		const repo = new MediaRepository(emdash.db);
-		const existing = await repo.findByContentHash(contentHash);
-		if (existing) {
-			const itemWithUrl = addUrlToMedia(existing);
-			return apiSuccess({ item: itemWithUrl, deduplicated: true });
+		if (deduplicateResult.data) {
+			const existing = await repo.findByContentHash(contentHash);
+			if (existing) {
+				const itemWithUrl = addUrlToMedia(existing);
+				return apiSuccess({ item: itemWithUrl, deduplicated: true });
+			}
 		}
+		const filename = ensureUniqueFilenameResult.data
+			? await repo.findAvailableFilename(file.name)
+			: file.name;
 
+		// Generate unique storage key
 		const id = ulid();
-		const ext = path.extname(file.name) || "";
+		const ext = path.extname(filename) || "";
 		const storageKey = `${id}${ext}`;
 
+		// Upload to storage using the configured adapter
 		await emdash.storage.upload({
 			key: storageKey,
 			body: buffer,
-			contentType: file.type,
+			contentType: mimeType,
 		});
 
+		// Get image dimensions from form data (sent by client)
 		const widthEntry = formData.get("width");
 		const widthStr = typeof widthEntry === "string" ? widthEntry : null;
 		const heightEntry = formData.get("height");
@@ -163,19 +254,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const width = widthStr ? parseInt(widthStr, 10) : undefined;
 		const height = heightStr ? parseInt(heightStr, 10) : undefined;
 
+		// Derive dimensions + LQIP placeholders via the shared helper.
+		// If the client sent a downscaled thumbnail, decode that for the blurhash
+		// (avoids OOM on large originals on memory-constrained runtimes).
 		const thumbnailEntry = formData.get("thumbnail");
 		const thumbnail = thumbnailEntry instanceof File ? thumbnailEntry : null;
-		const enriched = await enrichImageMetadata(buffer, file.type, {
+		const enriched = await enrichImageMetadata(buffer, mimeType, {
 			knownDimensions: width != null && height != null ? { width, height } : undefined,
 			placeholder: thumbnail
 				? { bytes: new Uint8Array(await thumbnail.arrayBuffer()), contentType: thumbnail.type }
 				: undefined,
 		});
 
+		// Create media record
 		const result = await emdash.handleMediaCreate({
-			filename: file.name,
-			mimeType: normalizeMime(file.type),
+			filename,
+			mimeType,
 			size: file.size,
+			alt: metadataResult.data.alt,
+			caption: metadataResult.data.caption,
+			// Client dimensions win over server header dimensions: the browser's
+			// naturalWidth/Height apply EXIF orientation, while image-size reports
+			// raw (pre-orientation) header dims — swapped for 90°/270° JPEGs.
 			width: width ?? enriched.width,
 			height: height ?? enriched.height,
 			storageKey,
@@ -183,15 +283,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			blurhash: enriched.blurhash,
 			dominantColor: enriched.dominantColor,
 			authorId: user?.id,
+			folderId,
 		});
 
 		if (!result.success) {
+			// Clean up the uploaded file on failure
 			try {
 				await emdash.storage.delete(storageKey);
-			} catch {}
+			} catch {
+				// Ignore cleanup errors
+			}
 			return unwrapResult(result);
 		}
 
+		// Add URL to the response (relative URL for portability)
 		const itemWithUrl = addUrlToMedia(result.data.item);
 
 		return apiSuccess({ item: itemWithUrl }, 201);

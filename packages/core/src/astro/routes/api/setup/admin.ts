@@ -1,3 +1,9 @@
+/**
+ * POST /_emdash/api/setup/admin
+ *
+ * Step 3 of setup: Start admin creation by returning passkey registration options
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -23,10 +29,12 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 	}
 
 	try {
+		// Check if setup is already complete
 		const options = new OptionsRepository(emdash.db);
 		const setupComplete = await options.get("emdash:setup_complete");
 		const isComplete = setupComplete === true || setupComplete === "true";
 
+		// Check if any users exist
 		const adapter = createKyselyAdapter(emdash.db);
 		const userCount = await adapter.countUsers();
 
@@ -37,22 +45,42 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 			return apiError("ADMIN_EXISTS", "Admin user already exists", 400);
 		}
 
+		// `setup_complete` with ZERO users is a recoverable half-state (a
+		// wiped/sanitised users table — e.g. a DB copied between
+		// environments). /api/setup/status already resumes the wizard at
+		// the admin step for exactly this state, so admin creation must be
+		// allowed here too — rejecting on the stale flag alone leaves the
+		// instance with no UI path to an admin account.
+
+		// Parse request body
 		const body = await parseBody(request, setupAdminBody);
 		if (isParseError(body)) return body;
 
+		// Preserve title/tagline from step 1 by reading existing setup state
+		// before we overwrite it below.
 		const existingState = await options.get<Record<string, unknown>>("emdash:setup_state");
 
+		// Mint a fresh session nonce. This binds the follow-up
+		// /setup/admin/verify call to the same browser that made this
+		// request, so an unauthenticated attacker on another host cannot
+		// substitute their own email into the setup state during the
+		// setup window. Rotates on every call so a legitimate retry
+		// always gets a working session.
 		const nonce = generateToken();
 
+		// Get passkey config
 		const url = new URL(request.url);
 		const siteName = (await options.get<string>("emdash:site_title")) ?? undefined;
 		const siteUrl = getPublicOrigin(url, emdash?.config);
 		const passkeyConfig = getPasskeyConfig(url, siteName, siteUrl);
 
+		// Generate registration options
 		const challengeStore = createChallengeStore(emdash.db);
 
+		// Create a temporary user object for registration options
+		// (not persisted until passkey is verified)
 		const tempUser = {
-			id: `setup-${Date.now()}`,
+			id: `setup-${Date.now()}`, // Temporary ID
 			email: body.email.toLowerCase(),
 			name: body.name || null,
 		};
@@ -60,10 +88,13 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 		const registrationOptions = await generateRegistrationOptions(
 			passkeyConfig,
 			tempUser,
-			[],
+			[], // No existing credentials
 			challengeStore,
 		);
 
+		// Store the nonce alongside the rest of the setup state, preserving
+		// title/tagline from step 1. The verify endpoint will constant-time
+		// compare the nonce with the incoming cookie.
 		await options.set("emdash:setup_state", {
 			...existingState,
 			step: "admin",
@@ -73,6 +104,16 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 			nonce,
 		});
 
+		// HttpOnly + SameSite=Strict + path-scoped. The cookie must not be
+		// accessible to JS (nothing in the admin UI needs to read it) and
+		// must not be sent on cross-site navigations. The /_emdash/ path
+		// scope keeps it away from user-authored frontend code.
+		//
+		// Derive `secure` from the public origin, not the internal request
+		// URL. Behind a TLS-terminating reverse proxy the internal hop is
+		// often `http:` while the browser-facing origin is `https:` —
+		// using `url.protocol` there would drop the Secure flag on a
+		// sensitive cookie over the public HTTPS connection.
 		const publicOrigin = new URL(siteUrl);
 		cookies.set(SETUP_NONCE_COOKIE, nonce, {
 			path: "/_emdash/",

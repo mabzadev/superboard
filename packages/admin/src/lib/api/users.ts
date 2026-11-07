@@ -1,3 +1,7 @@
+/**
+ * User management, passkeys, and allowed domains APIs
+ */
+
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -9,6 +13,11 @@ import {
 	type FindManyResult,
 } from "./client.js";
 
+// =============================================================================
+// User Management API
+// =============================================================================
+
+/** User list item with computed fields */
 export interface UserListItem {
 	id: string;
 	email: string;
@@ -24,6 +33,7 @@ export interface UserListItem {
 	oauthProviders: string[];
 }
 
+/** User detail with credentials and OAuth accounts */
 export interface UserDetail extends UserListItem {
 	credentials: Array<{
 		id: string;
@@ -38,12 +48,16 @@ export interface UserDetail extends UserListItem {
 	}>;
 }
 
+/** User update input */
 export interface UpdateUserInput {
 	name?: string;
 	email?: string;
 	role?: number;
 }
 
+/**
+ * Fetch users with search, filter, and pagination
+ */
 export async function fetchUsers(options?: {
 	search?: string;
 	role?: number;
@@ -58,9 +72,15 @@ export async function fetchUsers(options?: {
 
 	const url = `${API_BASE}/admin/users${params.toString() ? `?${params}` : ""}`;
 	const response = await apiFetch(url);
-	return parseApiResponse<FindManyResult<UserListItem>>(response, "Failed to fetch users");
+	return parseApiResponse<FindManyResult<UserListItem>>(
+		response,
+		i18n._(msg`Failed to fetch users`),
+	);
 }
 
+/**
+ * Fetch a single user with details
+ */
 export async function fetchUser(id: string): Promise<UserDetail> {
 	const response = await apiFetch(`${API_BASE}/admin/users/${id}`);
 
@@ -78,16 +98,25 @@ export async function fetchUser(id: string): Promise<UserDetail> {
 	return data.item;
 }
 
+/**
+ * Update a user
+ */
 export async function updateUser(id: string, input: UpdateUserInput): Promise<UserDetail> {
 	const response = await apiFetch(`${API_BASE}/admin/users/${id}`, {
 		method: "PUT",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(input),
 	});
-	const data = await parseApiResponse<{ item: UserDetail }>(response, "Failed to update user");
+	const data = await parseApiResponse<{ item: UserDetail }>(
+		response,
+		i18n._(msg`Failed to update user`),
+	);
 	return data.item;
 }
 
+/**
+ * Disable a user
+ */
 export async function disableUser(id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/admin/users/${id}/disable`, {
 		method: "POST",
@@ -95,6 +124,9 @@ export async function disableUser(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to disable user`));
 }
 
+/**
+ * Send a recovery magic link to a user
+ */
 export async function sendRecoveryLink(id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/admin/users/${id}/send-recovery`, {
 		method: "POST",
@@ -102,6 +134,9 @@ export async function sendRecoveryLink(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to send recovery link`));
 }
 
+/**
+ * Enable a user
+ */
 export async function enableUser(id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/admin/users/${id}/enable`, {
 		method: "POST",
@@ -109,27 +144,46 @@ export async function enableUser(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to enable user`));
 }
 
+/** Invite response -- includes inviteUrl when no email provider is configured */
 export interface InviteResult {
 	success: true;
 	message: string;
+	/** Present when no email provider is configured (copy-link fallback) */
 	inviteUrl?: string;
 }
 
+/**
+ * Invite a new user
+ *
+ * Uses the existing /auth/invite endpoint.
+ * When no email provider is configured, the response includes
+ * an `inviteUrl` for manual sharing.
+ */
 export async function inviteUser(email: string, role?: number): Promise<InviteResult> {
 	const response = await apiFetch(`${API_BASE}/auth/invite`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ email, role }),
 	});
-	return parseApiResponse<InviteResult>(response, "Failed to invite user");
+	return parseApiResponse<InviteResult>(response, i18n._(msg`Failed to invite user`));
 }
 
+// =============================================================================
+// Invite Accept API (for invited users completing registration)
+// =============================================================================
+
+/** Invite token verification result */
 export interface InviteVerifyResult {
 	email: string;
 	role: number;
 	roleName: string;
 }
 
+/**
+ * Validate an invite token and return the invite data.
+ *
+ * Uses custom error handling to preserve error codes for the UI.
+ */
 export async function validateInviteToken(token: string): Promise<InviteVerifyResult> {
 	const response = await apiFetch(
 		`${API_BASE}/auth/invite/accept?token=${encodeURIComponent(token)}`,
@@ -137,7 +191,7 @@ export async function validateInviteToken(token: string): Promise<InviteVerifyRe
 
 	if (!response.ok) {
 		const errorData: unknown = await response.json().catch(() => ({}));
-		let message = `Invite validation failed: ${response.statusText}`;
+		let message = i18n._(msg`Invite validation failed`);
 		let code: string | undefined;
 		if (typeof errorData === "object" && errorData !== null && "error" in errorData) {
 			const err = errorData.error;
@@ -154,6 +208,13 @@ export async function validateInviteToken(token: string): Promise<InviteVerifyRe
 	return parseApiResponse<InviteVerifyResult>(response, "Invite validation failed");
 }
 
+// =============================================================================
+// Passkey Management API
+// =============================================================================
+
+/**
+ * Passkey info returned from API
+ */
 export interface PasskeyInfo {
 	id: string;
 	name: string | null;
@@ -163,15 +224,21 @@ export interface PasskeyInfo {
 	lastUsedAt: string;
 }
 
+/**
+ * List all passkeys for the current user
+ */
 export async function fetchPasskeys(): Promise<PasskeyInfo[]> {
 	const response = await apiFetch(`${API_BASE}/auth/passkey`);
 	const data = await parseApiResponse<{ items: PasskeyInfo[] }>(
 		response,
-		"Failed to fetch passkeys",
+		i18n._(msg`Failed to fetch passkeys`),
 	);
 	return data.items;
 }
 
+/**
+ * Rename a passkey
+ */
 export async function renamePasskey(id: string, name: string): Promise<PasskeyInfo> {
 	const response = await apiFetch(`${API_BASE}/auth/passkey/${id}`, {
 		method: "PATCH",
@@ -180,11 +247,14 @@ export async function renamePasskey(id: string, name: string): Promise<PasskeyIn
 	});
 	const data = await parseApiResponse<{ passkey: PasskeyInfo }>(
 		response,
-		"Failed to rename passkey",
+		i18n._(msg`Failed to rename passkey`),
 	);
 	return data.passkey;
 }
 
+/**
+ * Delete a passkey
+ */
 export async function deletePasskey(id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/auth/passkey/${id}`, {
 		method: "DELETE",
@@ -192,6 +262,11 @@ export async function deletePasskey(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete passkey`));
 }
 
+// =============================================================================
+// Allowed Domains API (Self-Signup)
+// =============================================================================
+
+/** Allowed domain for self-signup */
 export interface AllowedDomain {
 	domain: string;
 	defaultRole: number;
@@ -200,25 +275,33 @@ export interface AllowedDomain {
 	createdAt: string;
 }
 
+/** Create allowed domain input */
 export interface CreateAllowedDomainInput {
 	domain: string;
 	defaultRole: number;
 }
 
+/** Update allowed domain input */
 export interface UpdateAllowedDomainInput {
 	enabled?: boolean;
 	defaultRole?: number;
 }
 
+/**
+ * Fetch all allowed domains
+ */
 export async function fetchAllowedDomains(): Promise<AllowedDomain[]> {
 	const response = await apiFetch(`${API_BASE}/admin/allowed-domains`);
 	const data = await parseApiResponse<{ domains: AllowedDomain[] }>(
 		response,
-		"Failed to fetch allowed domains",
+		i18n._(msg`Failed to fetch allowed domains`),
 	);
 	return data.domains;
 }
 
+/**
+ * Create an allowed domain
+ */
 export async function createAllowedDomain(input: CreateAllowedDomainInput): Promise<AllowedDomain> {
 	const response = await apiFetch(`${API_BASE}/admin/allowed-domains`, {
 		method: "POST",
@@ -227,11 +310,14 @@ export async function createAllowedDomain(input: CreateAllowedDomainInput): Prom
 	});
 	const data = await parseApiResponse<{ domain: AllowedDomain }>(
 		response,
-		"Failed to create allowed domain",
+		i18n._(msg`Failed to create allowed domain`),
 	);
 	return data.domain;
 }
 
+/**
+ * Update an allowed domain
+ */
 export async function updateAllowedDomain(
 	domain: string,
 	input: UpdateAllowedDomainInput,
@@ -246,11 +332,14 @@ export async function updateAllowedDomain(
 	);
 	const data = await parseApiResponse<{ domain: AllowedDomain }>(
 		response,
-		"Failed to update allowed domain",
+		i18n._(msg`Failed to update allowed domain`),
 	);
 	return data.domain;
 }
 
+/**
+ * Delete an allowed domain
+ */
 export async function deleteAllowedDomain(domain: string): Promise<void> {
 	const response = await apiFetch(
 		`${API_BASE}/admin/allowed-domains/${encodeURIComponent(domain)}`,
@@ -262,21 +351,38 @@ export async function deleteAllowedDomain(domain: string): Promise<void> {
 		await throwResponseError(response, i18n._(msg`Failed to delete allowed domain`));
 }
 
+// =============================================================================
+// Self-Signup API
+// =============================================================================
+
+/** Signup verification result */
 export interface SignupVerifyResult {
 	email: string;
 	role: number;
 	roleName: string;
 }
 
+/**
+ * Request signup - send verification email
+ * Always returns success to prevent enumeration
+ */
 export async function requestSignup(email: string): Promise<{ success: true; message: string }> {
 	const response = await apiFetch(`${API_BASE}/auth/signup/request`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ email }),
 	});
-	return parseApiResponse<{ success: true; message: string }>(response, "Signup request failed");
+	return parseApiResponse<{ success: true; message: string }>(
+		response,
+		i18n._(msg`Signup request failed`),
+	);
 }
 
+/**
+ * Verify signup token
+ *
+ * Uses custom error handling to preserve error codes for the UI.
+ */
 export async function verifySignupToken(token: string): Promise<SignupVerifyResult> {
 	const response = await apiFetch(
 		`${API_BASE}/auth/signup/verify?token=${encodeURIComponent(token)}`,
@@ -284,7 +390,7 @@ export async function verifySignupToken(token: string): Promise<SignupVerifyResu
 
 	if (!response.ok) {
 		const errorData: unknown = await response.json().catch(() => ({}));
-		let message = `Token verification failed: ${response.statusText}`;
+		let message = i18n._(msg`Token verification failed`);
 		let code: string | undefined;
 		if (typeof errorData === "object" && errorData !== null && "error" in errorData) {
 			const err = errorData.error;
@@ -301,6 +407,11 @@ export async function verifySignupToken(token: string): Promise<SignupVerifyResu
 	return parseApiResponse<SignupVerifyResult>(response, "Token verification failed");
 }
 
+/**
+ * Complete signup with passkey registration
+ *
+ * Uses custom error handling to preserve error codes for the UI.
+ */
 export async function completeSignup(
 	token: string,
 	credential: unknown,
@@ -317,7 +428,7 @@ export async function completeSignup(
 
 	if (!response.ok) {
 		const errorData: unknown = await response.json().catch(() => ({}));
-		let message = `Signup completion failed: ${response.statusText}`;
+		let message = i18n._(msg`Signup completion failed`);
 		let code: string | undefined;
 		if (typeof errorData === "object" && errorData !== null && "error" in errorData) {
 			const err = errorData.error;
@@ -337,11 +448,15 @@ export async function completeSignup(
 	}>(response, "Signup completion failed");
 }
 
+/**
+ * Check if any allowed domains exist (for showing signup link)
+ */
 export async function hasAllowedDomains(): Promise<boolean> {
 	try {
 		const domains = await fetchAllowedDomains();
 		return domains.some((d) => d.enabled);
 	} catch {
+		// If we can't fetch (e.g., not logged in), assume no domains
 		return false;
 	}
 }

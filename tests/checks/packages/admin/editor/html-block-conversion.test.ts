@@ -1,5 +1,19 @@
+/**
+ * HTML Block Conversion Tests (admin editor seam)
+ *
+ * Tests the Portable Text ↔ ProseMirror conversion for `htmlBlock` through
+ * the seams the admin rich-text editor actually exercises. Mirrors the core
+ * converter round-trip test against the in-file converters.
+ */
+
+import { Editor } from "@tiptap/core";
+import StarterKit from "@tiptap/starter-kit";
 import { describe, it, expect } from "vitest";
 
+import {
+	HtmlBlockExtension,
+	TopBlockDocument,
+} from "../../../../../packages/admin/src/components/editor/HtmlBlockNode";
 import {
 	_prosemirrorToPortableText as prosemirrorToPortableText,
 	_portableTextToProsemirror as portableTextToProsemirror,
@@ -69,5 +83,36 @@ describe("HTML block round-trip (admin editor seam)", () => {
 		expect(pt).toHaveLength(3);
 		expect(pt[1]!._type).toBe("htmlBlock");
 		expect((pt[1] as { html?: string }).html).toBe("<hr><p>Injected</p>");
+	});
+
+	it("preserves css, js and isolated through PT → PM → PT", () => {
+		const block = {
+			_type: "htmlBlock",
+			_key: "html004",
+			html: '<button id="go">Go</button>',
+			css: "button { color: red; }",
+			js: "document.getElementById('go').addEventListener('click', () => {});",
+			isolated: true,
+		};
+
+		const pt = prosemirrorToPortableText(portableTextToProsemirror([block]));
+
+		expect(pt).toStrictEqual([block]);
+	});
+
+	it("saves a legacy block unchanged after it loads into the editor", () => {
+		const block = { _type: "htmlBlock", _key: "html005", html: "<p>Legacy</p>" };
+		const editor = new Editor({
+			extensions: [StarterKit.configure({ document: false }), TopBlockDocument, HtmlBlockExtension],
+			content: portableTextToProsemirror([block]),
+		});
+
+		try {
+			expect(prosemirrorToPortableText(editor.getJSON())).toStrictEqual([
+				{ ...block, _key: expect.any(String) },
+			]);
+		} finally {
+			editor.destroy();
+		}
 	});
 });

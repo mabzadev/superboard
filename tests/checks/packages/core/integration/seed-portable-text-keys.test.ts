@@ -1,3 +1,10 @@
+/**
+ * Shipped seed content must satisfy the same partial validator used by
+ * content autosave. Applying each seed before validating its stored rows
+ * covers normalized media values and structured content that differs from
+ * its source JSON representation.
+ */
+
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -10,6 +17,7 @@ import { applySeed } from "../../../../../packages/core/src/seed/apply.js";
 import type { SeedFile } from "../../../../../packages/core/src/seed/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../utils/test-db.js";
 
+// `tests/integration/` -> repo root is four levels up.
 const WORKSPACE_ROOT = resolve(import.meta.dirname, "../../../../..");
 
 const TEMPLATE_SEEDS = [
@@ -28,6 +36,12 @@ function loadSeed(rel: string): SeedFile {
 	return JSON.parse(readFileSync(abs, "utf8")) as SeedFile;
 }
 
+/**
+ * Walk a seed and return every collection slug that has at least one
+ * entry, so the test can iterate dynamic `ec_*` tables without
+ * hard-coding them. Returns slugs in seed order to keep failures
+ * predictable.
+ */
 function collectionsWithContent(seed: SeedFile): string[] {
 	if (!seed.content) return [];
 	const out: string[] = [];
@@ -37,7 +51,7 @@ function collectionsWithContent(seed: SeedFile): string[] {
 	return out;
 }
 
-describe("shipped template seeds survive the autosave validator (issue #867)", () => {
+describe("shipped template seeds survive the autosave validator", () => {
 	let db: Kysely<Database>;
 
 	beforeEach(async () => {
@@ -52,6 +66,10 @@ describe("shipped template seeds survive the autosave validator (issue #867)", (
 		it(`${rel}: every seeded entry round-trips through validateContentData`, async () => {
 			const seed = loadSeed(rel);
 
+			// `includeContent: true` is what `create-emdash` setup uses.
+			// `skipMediaDownload: true` keeps the test offline -- we don't
+			// care about the actual bytes here, only the validator-relevant
+			// shape of stored entries.
 			await applySeed(db, seed, {
 				includeContent: true,
 				skipMediaDownload: true,
@@ -59,6 +77,7 @@ describe("shipped template seeds survive the autosave validator (issue #867)", (
 
 			const slugs = collectionsWithContent(seed);
 			if (slugs.length === 0) {
+				// A schema-only template still benefits from exercising applySeed.
 				return;
 			}
 
@@ -75,6 +94,10 @@ describe("shipped template seeds survive the autosave validator (issue #867)", (
 				expect(rows.length, `expected at least one row in ${tableName}`).toBeGreaterThan(0);
 
 				for (const row of rows as Array<Record<string, unknown>>) {
+					// Reconstruct the data shape the admin holds in memory:
+					// system columns + the user's field columns. We strip
+					// the obvious system columns so they don't get flagged
+					// as "unknown field" by the validator.
 					const data: Record<string, unknown> = {};
 					for (const [k, v] of Object.entries(row)) {
 						if (
@@ -96,11 +119,15 @@ describe("shipped template seeds survive the autosave validator (issue #867)", (
 						) {
 							continue;
 						}
+						// JSON-shaped columns come back as strings; parse so
+						// the validator sees the structure it expects.
 						if (typeof v === "string" && (v.startsWith("[") || v.startsWith("{"))) {
 							try {
 								data[k] = JSON.parse(v);
 								continue;
-							} catch {}
+							} catch {
+								// Fall through -- treat as plain string.
+							}
 						}
 						data[k] = v;
 					}

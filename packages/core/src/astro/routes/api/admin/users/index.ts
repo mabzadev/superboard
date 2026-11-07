@@ -1,3 +1,9 @@
+/**
+ * User management list endpoint
+ *
+ * GET /_emdash/api/admin/users - List users with search, filter, pagination
+ */
+
 import { Role } from "@emdash-cms/auth";
 import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
 import type { APIRoute } from "astro";
@@ -22,9 +28,11 @@ export const GET: APIRoute = async ({ url, locals }) => {
 	const adapter = createKyselyAdapter(emdash.db);
 
 	try {
+		// Parse query parameters
 		const query = parseQuery(url, usersListQuery);
 		if (isParseError(query)) return query;
 
+		// Fetch users
 		const result = await adapter.getUsers({
 			search: query.search,
 			role: query.role ? parseInt(query.role, 10) : undefined,
@@ -32,6 +40,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 			limit: query.limit,
 		});
 
+		// Transform dates to ISO strings for JSON serialization
 		const items = result.items.map((u) => ({
 			id: u.id,
 			email: u.email,

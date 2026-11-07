@@ -38,16 +38,20 @@ describe("Database Migrations (Integration)", () => {
 	let db: Kysely<Database>;
 
 	beforeEach(() => {
+		// Create fresh in-memory database for each test
 		db = createDatabase({ url: ":memory:" });
 	});
 
 	afterEach(async () => {
+		// Close the database connection
 		await db.destroy();
 	});
 
 	it("should create all tables from migrations", async () => {
 		await runMigrations(db);
 
+		// Verify all tables exist by querying them
+		// Note: No generic "content" table - collections create ec_* tables dynamically
 		const tables = [
 			"revisions",
 			"taxonomies",
@@ -78,6 +82,7 @@ describe("Database Migrations (Integration)", () => {
 		];
 
 		for (const table of tables) {
+			// Query table to verify it exists
 			const result = await db
 				.selectFrom(table as keyof Database)
 				.selectAll()
@@ -132,6 +137,7 @@ describe("Database Migrations (Integration)", () => {
 
 		const migrations = await db.selectFrom("_emdash_migrations").selectAll().execute();
 
+		// Should still only have the same number of migration records
 		expect(migrations).toHaveLength(MIGRATION_COUNT);
 	});
 
@@ -139,49 +145,17 @@ describe("Database Migrations (Integration)", () => {
 		await db.destroy();
 		db = await setupTestDatabaseWithCollections();
 
-		const trailing = [
-			"034_published_at_index",
-			"035_bounded_404_log",
-			"036_i18n_menus_and_taxonomies",
-			"037_credential_algorithm",
-			"038_registry_plugin_state",
-			"039_fix_fts5_triggers",
-			"040_byline_i18n",
-			"041_content_locale_list_index",
-			"042_byline_fields",
-			"043_content_references",
-			"044_comment_reactions",
-			"045_taxonomy_parent_group",
-			"046_media_usage_index",
-			"047_restore_taxonomy_parent_index",
-			"048_restore_content_taxonomies_term_index",
-			"049_taxonomies_name_locale_index",
-			"050_media_usage_index_status",
-			"051_content_taxonomies_denorm",
-			"052_media_usage_read_index",
-			"053_plugin_mcp_tools",
-			"054_media_upload_attempts",
-			"055_content_translation_group_locale_index",
-			"056_taxonomy_term_sort_order",
-			"057_collection_hidden",
-			"058_collection_sort_order",
-			"059_revision_prune_queue",
-			"060_collection_admin_config",
-			"061_media_usage_cleanup",
-			"062_media_usage_cleanup_fence",
-			"063_media_usage_incremental_work",
-			"064_fts_plain_text",
-			"065_media_usage_collection_deletion",
-			"066_media_usage_reconciliation",
-			"067_indexed_content_fields",
-			"068_content_taxonomy_entry_groups",
-			"069_collection_title_date_fields",
-			"070_collection_routable",
-			"071_restore_content_bylines_table",
-			"072_media_folders",
-			"073_media_focal_point",
-			"074_plugin_setting_versions",
-		];
+		// Kysely requires the retained migration records to form a contiguous prefix.
+		//
+		// The window starts after 043: migration 083 restructures the table 043
+		// creates, so replaying 043 against a database that has already reached 083
+		// would try to index `locale` and `translation_group`, which 083 removes.
+		// Migrations are forward-only — 043 is shipped history and is not edited to
+		// accommodate a later one — and the window has to stay contiguous, so
+		// excluding 043 also excludes everything before it.
+		const start = MIGRATION_NAMES.indexOf("044_comment_reactions");
+		expect(start).toBeGreaterThanOrEqual(0);
+		const trailing = MIGRATION_NAMES.slice(start);
 
 		await db.deleteFrom("_emdash_migrations").where("name", "in", trailing).execute();
 
@@ -208,6 +182,18 @@ describe("Database Migrations (Integration)", () => {
 	});
 
 	describe("exact migration status", () => {
+		it("registers each migration under a unique increasing sequence number", () => {
+			const upstreamNames = MIGRATION_NAMES.filter(
+				(name) => name !== "074_plugin_setting_versions",
+			);
+			const sequence = upstreamNames.map((name) => Number(name.slice(0, 3)));
+
+			expect(MIGRATION_NAMES).toEqual(MIGRATION_NAMES.toSorted());
+			expect(sequence.every(Number.isInteger)).toBe(true);
+			expect(new Set(sequence)).toHaveLength(sequence.length);
+			expect(sequence).toEqual(sequence.toSorted((left, right) => left - right));
+		});
+
 		it("exports the registered migration names in execution order", async () => {
 			await runMigrations(db);
 			const rows = await db
@@ -287,6 +273,7 @@ describe("Database Migrations (Integration)", () => {
 	it("should create schema registry tables", async () => {
 		await runMigrations(db);
 
+		// Test collections table
 		const testId = "test-collection";
 		await db
 			.insertInto("_emdash_collections")
@@ -324,6 +311,7 @@ describe("Database Migrations (Integration)", () => {
 			})
 			.execute();
 
+		// Attempting to insert duplicate slug should fail
 		await expect(
 			db
 				.insertInto("_emdash_collections")
@@ -340,6 +328,7 @@ describe("Database Migrations (Integration)", () => {
 	it("should create fields table with foreign key to collections", async () => {
 		await runMigrations(db);
 
+		// Create collection first
 		const collectionId = "collection-1";
 		await db
 			.insertInto("_emdash_collections")
@@ -351,6 +340,7 @@ describe("Database Migrations (Integration)", () => {
 			})
 			.execute();
 
+		// Create field
 		await db
 			.insertInto("_emdash_fields")
 			.values({
@@ -379,6 +369,7 @@ describe("Database Migrations (Integration)", () => {
 	it("should create revisions table with collection+entry_id", async () => {
 		await runMigrations(db);
 
+		// Create revision for a content entry
 		await db
 			.insertInto("revisions")
 			.values({
@@ -409,18 +400,19 @@ describe("Database Migrations (Integration)", () => {
 				id: "user-1",
 				email: "test@example.com",
 				name: "Test User",
-				role: 50,
+				role: 50, // ADMIN
 				email_verified: 1,
 			})
 			.execute();
 
+		// Duplicate email should fail
 		await expect(
 			db
 				.insertInto("users")
 				.values({
 					id: "user-2",
 					email: "test@example.com",
-					role: 10,
+					role: 10, // SUBSCRIBER
 					email_verified: 1,
 				})
 				.execute(),
@@ -430,6 +422,7 @@ describe("Database Migrations (Integration)", () => {
 	it("should create taxonomies table with hierarchical support", async () => {
 		await runMigrations(db);
 
+		// Create parent category
 		const parentId = "cat-parent";
 		await db
 			.insertInto("taxonomies")
@@ -441,6 +434,7 @@ describe("Database Migrations (Integration)", () => {
 			})
 			.execute();
 
+		// Create child category
 		await db
 			.insertInto("taxonomies")
 			.values({
@@ -491,13 +485,19 @@ describe("Database Migrations (Integration)", () => {
 		`.execute(db);
 		const names = new Set(indexes.rows.map((r) => r.name));
 
+		// The composite (name, locale) index is added...
 		expect(names).toContain("idx_taxonomies_name_locale");
+		// ...and it supersedes the single-column name index (leftmost prefix
+		// covers every name-only lookup), so the redundant one is dropped.
 		expect(names).not.toContain("idx_taxonomies_name");
 	});
 
 	it("plans findByName(name, locale) through the composite index instead of scanning the locale (regression for #1723)", async () => {
 		await runMigrations(db);
 
+		// One taxonomy dominates the locale; a small facet shares it. Without the
+		// composite index the planner picks idx_taxonomies_locale and reads every
+		// term in the locale to filter `name` in memory — per facet fetched.
 		for (let i = 0; i < 40; i++) {
 			await db
 				.insertInto("taxonomies")
@@ -523,6 +523,7 @@ describe("Database Migrations (Integration)", () => {
 				.execute();
 		}
 
+		// Exact query shape emitted by TaxonomyRepository.findByName(name, { locale }).
 		const plan = await sql<{ detail: string }>`
 			EXPLAIN QUERY PLAN
 			SELECT * FROM "taxonomies"
@@ -540,6 +541,7 @@ describe("Database Migrations (Integration)", () => {
 
 		const taxonomyId = "tax-1";
 
+		// Create taxonomy
 		await db
 			.insertInto("taxonomies")
 			.values({
@@ -550,6 +552,7 @@ describe("Database Migrations (Integration)", () => {
 			})
 			.execute();
 
+		// Assign taxonomy to content entry (collection + entry_id)
 		await db
 			.insertInto("content_taxonomies")
 			.values({

@@ -1,3 +1,26 @@
+/**
+ * Phase 5 of Discussion #1174.
+ *
+ * Tests for the byline-schema admin UI. Focuses on `BylineFieldEditor`
+ * — the substantive component — since it owns the acceptance criteria
+ * the PR plan calls out:
+ *
+ *  - "The type select in <BylineFieldEditor> offers exactly: string,
+ *    text, url, boolean, select."
+ *  - "The translatable toggle is present and round-trips through the API."
+ *  - Open the dialog → set type to `select` → configure choices.
+ *
+ * The kumo `Dialog` renders an inert overlay that blocks Playwright's
+ * actionability checks for clicks *inside* the dialog body (mirroring
+ * the note in `tests/components/FieldEditor.test.tsx`). We test the
+ * prop-driven shape: prefilling `field` puts the editor in edit mode
+ * with a known type, and we assert the form rendered the expected
+ * controls + values for that type. Round-tripping the toggle is covered
+ * by passing `field.translatable: false` and asserting the Switch
+ * reflects that input — proving the prop wiring without depending on a
+ * click event.
+ */
+
 import { Toast } from "@cloudflare/kumo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
@@ -7,12 +30,22 @@ import { BylineFieldEditor } from "../../../../../packages/admin/src/components/
 import type { BylineFieldDefinition } from "../../../../../packages/admin/src/lib/api/byline-fields";
 import { render } from "../utils/render.tsx";
 
+// `useCurrentUser` is the gate for the page-permission tests below.
+// Mocking the hook directly keeps the test surface small — no
+// QueryClient + apiFetch + /auth/me stub needed just to discriminate
+// between editor and admin roles.
 vi.mock("../../../../../packages/admin/src/lib/api/current-user", () => ({
 	useCurrentUser: vi.fn(),
 }));
 
+// `vi.mock` is hoisted, so any imports that depend on the mocked module
+// resolve to the mock. Import the hook AFTER the mock declaration so
+// the test can flip its return value per test case.
 const { useCurrentUser } = await import("../../../../../packages/admin/src/lib/api/current-user");
 
+// API client mock for the admin happy-path test. The editor-path test
+// short-circuits before any network call (the queries are gated by the
+// role check), so it doesn't need this; configure per-test where used.
 vi.mock("../../../../../packages/admin/src/lib/api/byline-fields", async () => {
 	const actual = await vi.importActual<
 		typeof import("../../../../../packages/admin/src/lib/api/byline-fields")
@@ -62,6 +95,9 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 	const queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
+	// `<Toast.Provider>` is normally supplied by Shell; the page calls
+	// `useKumoToastManager()` unconditionally so the test wrapper has
+	// to provide it even for the early-return access-denied path.
 	return (
 		<QueryClientProvider client={queryClient}>
 			<Toast.Provider>{children}</Toast.Provider>
@@ -87,8 +123,12 @@ describe("BylineSchemaPage — permission gate", () => {
 		);
 
 		await expect.element(screen.getByText("Access denied")).toBeInTheDocument();
+		// The page chrome — header + new-field button — must not render
+		// for users below the threshold; otherwise the gate exists in
+		// name only.
 		expect(screen.getByRole("heading", { name: "Byline schema" }).query()).toBeNull();
 		expect(screen.getByRole("button", { name: "New field" }).query()).toBeNull();
+		// List query must not have fired — `enabled` guards on the role.
 		expect(vi.mocked(listBylineFields)).not.toHaveBeenCalled();
 	});
 
@@ -204,6 +244,9 @@ describe("BylineFieldEditor", () => {
 		it("reflects a translatable=true field as a checked switch", async () => {
 			const field = makeField({ translatable: true });
 			const screen = await render(<BylineFieldEditor {...defaultProps} field={field} />);
+			// The Switch's accessible name is "Translatable"; checking
+			// `aria-checked` proves the prop wiring without needing to
+			// click (the dialog overlay would block actionability anyway).
 			const sw = screen.getByRole("switch", { name: "Translatable" });
 			await expect.element(sw).toBeChecked();
 		});
@@ -222,6 +265,8 @@ describe("BylineFieldEditor", () => {
 			);
 			const sw = screen.getByRole("switch", { name: "Translatable" });
 			await expect.element(sw).toBeDisabled();
+			// Help text surfaces the reason — admins shouldn't have to
+			// trial-and-error the API to discover why the toggle won't move.
 			await expect
 				.element(screen.getByText(/Locked because this field has stored values/))
 				.toBeInTheDocument();

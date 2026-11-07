@@ -6,6 +6,7 @@ import {
 	canActOnOwn,
 	requirePermissionOnResource,
 	PermissionError,
+	clampScopes,
 } from "../../../../../packages/auth/src/rbac.js";
 import { Role } from "../../../../../packages/auth/src/types.js";
 
@@ -59,6 +60,8 @@ describe("rbac", () => {
 			expect(hasPermission({ role: Role.AUTHOR }, "media:edit_any")).toBe(false);
 		});
 
+		// content:read_drafts gates non-published content reads and editor-only
+		// views (revisions, compare, trash, preview-url).
 		it("denies subscriber from reading drafts", () => {
 			expect(hasPermission({ role: Role.SUBSCRIBER }, "content:read_drafts")).toBe(false);
 		});
@@ -135,9 +138,31 @@ describe("rbac", () => {
 		});
 
 		it("F17: empty-string ownerId is not treated as 'owned by user with id ''", () => {
+			// A user with id="" and *:edit_own (but NOT *:edit_any) must NOT
+			// be able to edit content with ownerId="" — that ownerId means
+			// "no recorded owner" (e.g. seed-imported content), and granting
+			// edit-own would be an accidental privilege escalation.
 			const orphanedUser = { role: Role.AUTHOR, id: "" };
 			expect(canActOnOwn(orphanedUser, "", "content:edit_own", "content:edit_any")).toBe(false);
 		});
+	});
+
+	describe("site transfer", () => {
+		const transferScopes = ["transfer:export", "transfer:analyze", "transfer:execute"];
+
+		it("clampScopes keeps transfer scopes for admins", () => {
+			expect(clampScopes(["admin", ...transferScopes], Role.ADMIN)).toEqual([
+				"admin",
+				...transferScopes,
+			]);
+		});
+
+		it.each([Role.SUBSCRIBER, Role.CONTRIBUTOR, Role.AUTHOR, Role.EDITOR])(
+			"clampScopes drops transfer scopes for role %s",
+			(role) => {
+				expect(clampScopes([...transferScopes, "content:read"], role)).toEqual(["content:read"]);
+			},
+		);
 	});
 
 	describe("requirePermissionOnResource", () => {

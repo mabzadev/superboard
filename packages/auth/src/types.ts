@@ -1,3 +1,11 @@
+/**
+ * Core types for @emdash-cms/auth
+ */
+
+// ============================================================================
+// Roles & Permissions
+// ============================================================================
+
 export const Role = {
 	SUBSCRIBER: 10,
 	CONTRIBUTOR: 20,
@@ -57,6 +65,10 @@ export function roleToLevel(name: RoleName): RoleLevel {
 	return Role[name];
 }
 
+// ============================================================================
+// User
+// ============================================================================
+
 export interface User {
 	id: string;
 	email: string;
@@ -89,14 +101,18 @@ export interface UpdateUser {
 	data?: Record<string, unknown> | null;
 }
 
+// ============================================================================
+// Credentials (Passkeys)
+// ============================================================================
+
 export type AuthenticatorTransport = "usb" | "nfc" | "ble" | "internal" | "hybrid";
 export type DeviceType = "singleDevice" | "multiDevice";
 
 export interface Credential {
-	id: string;
+	id: string; // Base64url credential ID
 	userId: string;
-	publicKey: Uint8Array;
-	algorithm: number;
+	publicKey: Uint8Array; // Encoded public key (SEC1 for ECDSA, PKIX for RSA)
+	algorithm: number; // COSE algorithm identifier (e.g., -7 for ES256, -257 for RS256)
 	counter: number;
 	deviceType: DeviceType;
 	backedUp: boolean;
@@ -118,6 +134,10 @@ export interface NewCredential {
 	name?: string | null;
 }
 
+// ============================================================================
+// Sessions
+// ============================================================================
+
 export interface Session {
 	id: string;
 	userId: string;
@@ -129,17 +149,21 @@ export interface Session {
 
 export interface SessionData {
 	userId: string;
-	expiresAt: number;
+	expiresAt: number; // Unix timestamp
 }
+
+// ============================================================================
+// Auth Tokens (magic links, invites, etc.)
+// ============================================================================
 
 export type TokenType = "magic_link" | "email_verify" | "invite" | "recovery";
 
 export interface AuthToken {
-	hash: string;
-	userId: string | null;
-	email: string | null;
+	hash: string; // SHA-256 hash of the raw token
+	userId: string | null; // null for pre-user tokens (invite/signup)
+	email: string | null; // For pre-user tokens
 	type: TokenType;
-	role: RoleLevel | null;
+	role: RoleLevel | null; // For invites
 	invitedBy: string | null;
 	expiresAt: Date;
 	createdAt: Date;
@@ -155,6 +179,10 @@ export interface NewAuthToken {
 	expiresAt: Date;
 }
 
+// ============================================================================
+// OAuth Accounts
+// ============================================================================
+
 export interface OAuthAccount {
 	provider: string;
 	providerAccountId: string;
@@ -168,17 +196,25 @@ export interface NewOAuthAccount {
 	userId: string;
 }
 
+// ============================================================================
+// OAuth Connections (SSO config)
+// ============================================================================
+
 export interface OAuthConnection {
 	id: string;
 	name: string;
 	provider: "oidc" | "github" | "google";
 	clientId: string;
-	clientSecretEnc: string;
+	clientSecretEnc: string; // Encrypted
 	issuerUrl: string | null;
 	config: Record<string, unknown> | null;
 	enabled: boolean;
 	createdAt: Date;
 }
+
+// ============================================================================
+// OAuth Clients (when EmDash is provider)
+// ============================================================================
 
 export interface OAuthClient {
 	id: string;
@@ -189,6 +225,10 @@ export interface OAuthClient {
 	createdAt: Date;
 }
 
+// ============================================================================
+// Allowed Domains (self-signup)
+// ============================================================================
+
 export interface AllowedDomain {
 	domain: string;
 	defaultRole: RoleLevel;
@@ -196,12 +236,18 @@ export interface AllowedDomain {
 	createdAt: Date;
 }
 
+// ============================================================================
+// User Listing Types (for admin UI)
+// ============================================================================
+
+/** Extended user with list view computed fields */
 export interface UserListItem extends User {
 	lastLogin: Date | null;
 	credentialCount: number;
 	oauthProviders: string[];
 }
 
+/** User with full details including related data */
 export interface UserWithDetails {
 	user: User;
 	credentials: Credential[];
@@ -209,7 +255,12 @@ export interface UserWithDetails {
 	lastLogin: Date | null;
 }
 
+// ============================================================================
+// Auth Adapter Interface
+// ============================================================================
+
 export interface AuthAdapter {
+	// Users
 	getUserById(id: string): Promise<User | null>;
 	getUserByEmail(email: string): Promise<User | null>;
 	createUser(user: NewUser): Promise<User>;
@@ -217,6 +268,7 @@ export interface AuthAdapter {
 	deleteUser(id: string): Promise<void>;
 	countUsers(): Promise<number>;
 
+	// User listing and details (for admin)
 	getUsers(options?: {
 		search?: string;
 		role?: number;
@@ -226,6 +278,7 @@ export interface AuthAdapter {
 	getUserWithDetails(id: string): Promise<UserWithDetails | null>;
 	countAdmins(): Promise<number>;
 
+	// Credentials
 	getCredentialById(id: string): Promise<Credential | null>;
 	getCredentialsByUserId(userId: string): Promise<Credential[]>;
 	createCredential(credential: NewCredential): Promise<Credential>;
@@ -234,22 +287,31 @@ export interface AuthAdapter {
 	deleteCredential(id: string): Promise<void>;
 	countCredentialsByUserId(userId: string): Promise<number>;
 
+	// Auth Tokens
 	createToken(token: NewAuthToken): Promise<void>;
 	getToken(hash: string, type: TokenType): Promise<AuthToken | null>;
+	/** Atomically deletes and returns the token; concurrent callers must not both receive it. */
+	consumeToken(hash: string, type: TokenType): Promise<AuthToken | null>;
 	deleteToken(hash: string): Promise<void>;
 	deleteExpiredTokens(): Promise<void>;
 
+	// OAuth Accounts
 	getOAuthAccount(provider: string, providerAccountId: string): Promise<OAuthAccount | null>;
 	getOAuthAccountsByUserId(userId: string): Promise<OAuthAccount[]>;
 	createOAuthAccount(account: NewOAuthAccount): Promise<OAuthAccount>;
 	deleteOAuthAccount(provider: string, providerAccountId: string): Promise<void>;
 
+	// Allowed Domains
 	getAllowedDomain(domain: string): Promise<AllowedDomain | null>;
 	getAllowedDomains(): Promise<AllowedDomain[]>;
 	createAllowedDomain(domain: string, defaultRole: RoleLevel): Promise<AllowedDomain>;
 	updateAllowedDomain(domain: string, enabled: boolean, defaultRole?: RoleLevel): Promise<void>;
 	deleteAllowedDomain(domain: string): Promise<void>;
 }
+
+// ============================================================================
+// Email Adapter Interface
+// ============================================================================
 
 export interface EmailMessage {
 	to: string;
@@ -261,6 +323,10 @@ export interface EmailMessage {
 export interface EmailAdapter {
 	send(message: EmailMessage): Promise<void>;
 }
+
+// ============================================================================
+// Auth Errors
+// ============================================================================
 
 export class AuthError extends Error {
 	constructor(

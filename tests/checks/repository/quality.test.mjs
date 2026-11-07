@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -9,7 +9,7 @@ import test from "node:test";
 import { ESLint } from "eslint";
 
 import { selectChangedSources } from "../../lints/lint.mjs";
-import { parseDartDiagnostics, parseSarif } from "../../lints/native.mjs";
+import { nativeSources, parseDartDiagnostics, parseSarif } from "../../lints/native.mjs";
 import {
 	applyBaseline,
 	baselineKey,
@@ -607,4 +607,80 @@ test("a relocated migration must retain its exact bytes", (t) => {
 	assert.equal(lintMigrations("HEAD", directory).length, 1);
 	rmSync(join(directory, newPath));
 	assert.equal(lintMigrations("HEAD", directory).length, 1);
+});
+
+test("SuperBoard quality analyzers skip files that come from the pinned EmDash release", () => {
+	const upstream = new Map([["packages/core/src/index.ts", "packages/core/src/index.ts"]]);
+	assert.deepEqual(
+		qualitySources(
+			[
+				"packages/core/src/index.ts",
+				"packages/core/src/database/migrations/074_plugin_setting_versions.ts",
+				"apps/site/src/index.ts",
+			],
+			upstream,
+		),
+		[
+			"packages/core/src/database/migrations/074_plugin_setting_versions.ts",
+			"apps/site/src/index.ts",
+		],
+	);
+});
+
+test("native analyzers skip scripts that come from the pinned EmDash release", () => {
+	const upstream = new Map([
+		["scripts/emdash/sync-template-skills.sh", "scripts/sync-template-skills.sh"],
+	]);
+	assert.deepEqual(
+		nativeSources(
+			[
+				"scripts/emdash/sync-template-skills.sh",
+				"scripts/local/restart.sh",
+				"sdks/web/flows/upstream/build.sh",
+			],
+			upstream,
+		),
+		["scripts/local/restart.sh"],
+	);
+});
+
+test("published migrations may only change to the pinned EmDash version, and migration tests are not migrations", (context) => {
+	const directory = mkdtempSync(join(tmpdir(), "superboard-upstream-migration-"));
+	context.after(() => rmSync(directory, { recursive: true, force: true }));
+	const git = (...args) => execFileSync("git", args, { cwd: directory, encoding: "utf8" });
+	git("init", "-q");
+	const migration = "packages/core/src/database/migrations/017_codes.ts";
+	const migrationTest = "tests/checks/packages/core/unit/database/migrations/017_codes.test.ts";
+	for (const [path, content] of [
+		[migration, "export const version = 1;\n"],
+		[migrationTest, "export const covered = 1;\n"],
+	]) {
+		mkdirSync(dirname(join(directory, path)), { recursive: true });
+		writeFileSync(join(directory, path), content);
+	}
+	git("add", ".");
+	git(
+		"-c",
+		"user.name=Test",
+		"-c",
+		"user.email=test@example.invalid",
+		"-c",
+		"core.hooksPath=/dev/null",
+		"commit",
+		"-qm",
+		"initial",
+	);
+	const upstream = {
+		content: (path) => (path === migration ? Buffer.from("export const version = 2;\n") : null),
+	};
+
+	writeFileSync(join(directory, migration), "export const version = 2;\n");
+	writeFileSync(join(directory, migrationTest), "export const covered = 2;\n");
+	assert.deepEqual(lintMigrations("HEAD", directory, upstream), []);
+
+	writeFileSync(join(directory, migration), "export const version = 3;\n");
+	assert.deepEqual(
+		lintMigrations("HEAD", directory, upstream).map(({ filename }) => filename),
+		[migration],
+	);
 });

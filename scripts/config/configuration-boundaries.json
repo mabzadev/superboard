@@ -96,6 +96,12 @@
 			"packages/plugins/superboard-acquisition/paywalls/wrangler.jsonc",
 			"packages/plugins/superboard-monetization/products/wrangler.jsonc",
 			"packages/marketplace/wrangler.jsonc"
+		],
+		"publicIdentifiers": [
+			{
+				"value": "9188040d-6c67-4c5b-b112-36a304b66dad",
+				"owner": "Microsoft identity platform tenant for personal accounts"
+			}
 		]
 	}
 }

@@ -11,11 +11,16 @@ export interface ContentEditorPanelContext {
 }
 
 export interface ContentEditorPanelExtension {
+	/** Stable identifier, unique within this plugin's editor panels. */
 	id: string;
+	/** Host-rendered section heading. */
 	title: string;
 	component: React.ComponentType<ContentEditorPanelContext>;
+	/** Restrict this panel to selected collections. Omit to support every collection. */
 	collections?: readonly string[] | ((collection: string) => boolean);
+	/** Minimum numeric admin role required to see this panel. */
 	minRole?: number;
+	/** Lower values render first among contributed panels. */
 	order?: number;
 }
 
@@ -101,6 +106,11 @@ function appliesToCollection(
 	}
 }
 
+/**
+ * Select valid trusted-plugin panels for one saved content editor.
+ * Invalid, disabled, unauthorized, and inapplicable contributions are omitted
+ * so the host settings sidebar remains usable.
+ */
 export function resolveContentEditorPanels(
 	pluginAdmins: ContentEditorPanelRegistry,
 	collection: string,
@@ -154,6 +164,7 @@ interface ContentEditorPanelBoundaryState {
 	hasError: boolean;
 }
 
+/** Prevents one faulty trusted panel from unmounting the content editor. */
 export class ContentEditorPanelBoundary extends React.Component<
 	ContentEditorPanelBoundaryProps,
 	ContentEditorPanelBoundaryState
@@ -176,7 +187,7 @@ export class ContentEditorPanelBoundary extends React.Component<
 		if (!this.state.hasError) return this.props.children;
 
 		return (
-			<div role="alert" className="text-sm text-kumo-subtle">
+			<div role="alert" className="text-xs leading-4 text-kumo-subtle">
 				<p>
 					<Trans>Plugin panel unavailable.</Trans>
 				</p>

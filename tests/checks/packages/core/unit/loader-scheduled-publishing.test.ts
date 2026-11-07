@@ -30,6 +30,8 @@ describeEachDialect("committed scheduled publication visibility", (dialect) => {
 		await teardownForDialect(ctx);
 	});
 
+	// Bypass repo.schedule()'s past-date guard so we can simulate the
+	// "scheduled time elapsed, cron hasn't promoted to published yet" state.
 	async function scheduledPost(title: string, scheduledAt: string): Promise<string> {
 		const r = await handleContentCreate(ctx.db, "post", { data: { title }, status: "draft" });
 		const { id, slug } = r.data!.item;

@@ -49,8 +49,28 @@ function buildOptions(pds: MockPds, overrides: Partial<PublishOptions> = {}): Pu
 		manifest: buildManifest(),
 		checksum: "bciqtestchecksum",
 		url: "https://example.com/test-plugin-1.0.0.tar.gz",
+		repo: "https://github.com/example/test-plugin",
 		profile: validProfile,
 		...overrides,
+	};
+}
+
+function installableProfile() {
+	return {
+		$type: NSID.packageProfile,
+		id: `at://${TEST_DID}/${NSID.packageProfile}/test-plugin`,
+		type: "emdash-plugin",
+		license: "MIT",
+		authors: [{ name: "Original Author" }],
+		security: [{ email: "security@example.com" }],
+		slug: "test-plugin",
+		lastUpdated: "2024-01-01T00:00:00.000Z",
+		extensions: {
+			[NSID.packageProfileExtension]: {
+				$type: NSID.packageProfileExtension,
+				repository: "https://github.com/example/test-plugin",
+			},
+		},
 	};
 }
 
@@ -66,20 +86,59 @@ describe("publishRelease", () => {
 			expect(result.profileUri).toBe(`at://${TEST_DID}/${NSID.packageProfile}/test-plugin`);
 			expect(result.releaseUri).toBe(`at://${TEST_DID}/${NSID.packageRelease}/test-plugin:1.0.0`);
 
+			// Both records should be in the mock PDS.
 			expect(pds.records.size).toBe(2);
 			expect(pds.records.has(result.profileUri)).toBe(true);
 			expect(pds.records.has(result.releaseUri)).toBe(true);
+		});
+
+		it("anchors the profile to the repository with optional provenance", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+			await publishRelease(buildOptions(pds));
+
+			const profile = pds.records.get(`at://${TEST_DID}/${NSID.packageProfile}/test-plugin`);
+			expect(profile).toBeDefined();
+			expect(profile!.value).toMatchObject({
+				extensions: {
+					[NSID.packageProfileExtension]: {
+						$type: NSID.packageProfileExtension,
+						repository: "https://github.com/example/test-plugin",
+						releasePolicy: { requireProvenance: false },
+					},
+				},
+			});
+		});
+
+		it("publishes without a repository extension when no repository is configured", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+			await publishRelease(buildOptions(pds, { repo: undefined }));
+
+			const profile = pds.records.get(`at://${TEST_DID}/${NSID.packageProfile}/test-plugin`);
+			expect(profile?.value).toMatchObject({ extensions: {} });
+		});
+
+		it("rejects a non-canonical configured repository", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+
+			await expect(
+				publishRelease(buildOptions(pds, { repo: "http://github.com/example/test-plugin" })),
+			).rejects.toMatchObject({ code: "PROFILE_REPOSITORY_INVALID" });
+			expect(pds.records.size).toBe(0);
 		});
 
 		it("commits both records in a single applyWrites batch (atomic)", async () => {
 			const pds = new MockPds({ did: TEST_DID });
 			await publishRelease(buildOptions(pds));
 
+			// Atomicity contract: ONE applyWrites call, with both records as
+			// writes. Two separate putRecord calls would mean an interrupted
+			// publish could leave a profile without a release.
 			const applyWrites = pds.callsTo("com.atproto.repo.applyWrites");
 			expect(applyWrites).toHaveLength(1);
 			const body = applyWrites[0]!.body as { writes: unknown[] };
 			expect(body.writes).toHaveLength(2);
 
+			// putRecord must NOT be used for the publish path.
 			expect(pds.callsTo("com.atproto.repo.putRecord")).toHaveLength(0);
 		});
 
@@ -137,6 +196,67 @@ describe("publishRelease", () => {
 			expect(value.artifacts.package.contentType).toBe("application/gzip");
 		});
 
+		it("publishes a blob-only package artifact and derives its checksum from the CID", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+			const blob = {
+				$type: "blob" as const,
+				ref: { $link: "bafkreia6n3lf256wgzhov3k2orn2lreyllrloag5qxl467ycpppsssrt7q" },
+				mimeType: "application/gzip",
+				size: 6,
+			};
+			await publishRelease(buildOptions(pds, { url: undefined, checksum: undefined, blob }));
+
+			const release = pds.records.get(`at://${TEST_DID}/${NSID.packageRelease}/test-plugin:1.0.0`);
+			expect(release?.value).toMatchObject({
+				artifacts: {
+					package: {
+						blob,
+						checksum: "bciqb43wwlv35mnso5lwvu5c3uxcjqwxcw4an3boxz57qe667fffdh7a",
+					},
+				},
+			});
+		});
+
+		it("publishes both artifact sources when their checksum matches", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+			const blob = {
+				$type: "blob" as const,
+				ref: { $link: "bafkreia6n3lf256wgzhov3k2orn2lreyllrloag5qxl467ycpppsssrt7q" },
+				mimeType: "application/gzip",
+				size: 6,
+			};
+			await publishRelease(
+				buildOptions(pds, {
+					blob,
+					checksum: "bciqb43wwlv35mnso5lwvu5c3uxcjqwxcw4an3boxz57qe667fffdh7a",
+				}),
+			);
+
+			const release = pds.records.get(`at://${TEST_DID}/${NSID.packageRelease}/test-plugin:1.0.0`);
+			expect(release?.value).toMatchObject({
+				artifacts: { package: { blob, url: "https://example.com/test-plugin-1.0.0.tar.gz" } },
+			});
+		});
+
+		it("rejects both artifact sources when the URL bytes checksum disagrees with the blob CID", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+			await expect(
+				publishRelease(
+					buildOptions(pds, {
+						blob: {
+							$type: "blob",
+							ref: {
+								$link: "bafkreia6n3lf256wgzhov3k2orn2lreyllrloag5qxl467ycpppsssrt7q",
+							},
+							mimeType: "application/gzip",
+							size: 6,
+						},
+					}),
+				),
+			).rejects.toMatchObject({ code: "ARTIFACT_CHECKSUM_MISMATCH" });
+			expect(pds.calls).toHaveLength(0);
+		});
+
 		it("writes release-level requires into the release record when provided", async () => {
 			const pds = new MockPds({ did: TEST_DID });
 			await publishRelease(
@@ -169,6 +289,8 @@ describe("publishRelease", () => {
 				code: "PROFILE_BOOTSTRAP_MISSING_FIELD",
 			});
 			expect(pds.records.size).toBe(0);
+			// applyWrites must not have been called -- a partial write would be
+			// catastrophic for an atomic-publish promise.
 			expect(pds.callsTo("com.atproto.repo.applyWrites")).toHaveLength(0);
 		});
 
@@ -198,14 +320,9 @@ describe("publishRelease", () => {
 
 	describe("subsequent release for an existing slug", () => {
 		const wellShapedProfile = {
-			$type: NSID.packageProfile,
-			id: `at://${TEST_DID}/${NSID.packageProfile}/test-plugin`,
-			type: "emdash-plugin",
+			...installableProfile(),
 			license: "GPL-3.0-only",
-			authors: [{ name: "Original Author" }],
 			security: [{ email: "old-security@example.com" }],
-			slug: "test-plugin",
-			lastUpdated: "2024-01-01T00:00:00.000Z",
 		};
 
 		it("preserves the existing profile's identity fields and bumps lastUpdated", async () => {
@@ -223,16 +340,20 @@ describe("publishRelease", () => {
 			expect(result.releaseOverwritten).toBe(false);
 			expect(result.releaseUri).toBe(`at://${TEST_DID}/${NSID.packageRelease}/test-plugin:1.1.0`);
 
+			// Identity fields preserved -- the existing profile owns these.
 			const profileNow = pds.records.get(`at://${TEST_DID}/${NSID.packageProfile}/test-plugin`);
 			const value = profileNow!.value as Record<string, unknown> & { lastUpdated: string };
 			expect(value.license).toBe(wellShapedProfile.license);
 			expect(value.authors).toEqual(wellShapedProfile.authors);
 			expect(value.security).toEqual(wellShapedProfile.security);
+			// But lastUpdated has been bumped to a fresher timestamp.
 			expect(value.lastUpdated).not.toBe(wellShapedProfile.lastUpdated);
 			expect(new Date(value.lastUpdated).getTime()).toBeGreaterThan(
 				new Date(wellShapedProfile.lastUpdated).getTime(),
 			);
 
+			// applyWrites batch contains exactly TWO writes: profile update +
+			// release create.
 			const applyWrites = pds.callsTo("com.atproto.repo.applyWrites");
 			expect(applyWrites).toHaveLength(1);
 			const body = applyWrites[0]!.body as {
@@ -243,27 +364,99 @@ describe("publishRelease", () => {
 			expect(profileOp?.$type).toBe("com.atproto.repo.applyWrites#update");
 		});
 
-		it("does not touch a malformed existing profile (just writes the release)", async () => {
+		it("preserves existing profile extensions when publishing another release", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+			pds.seedRecord(NSID.packageProfile, "test-plugin", {
+				...wellShapedProfile,
+				extensions: {
+					"example.com/other": { retained: true },
+					[NSID.packageProfileExtension]: {
+						$type: NSID.packageProfileExtension,
+						repository: "https://github.com/example/test-plugin",
+					},
+				},
+			});
+
+			await publishRelease(buildOptions(pds, { manifest: buildManifest({ version: "1.1.0" }) }));
+
+			const profile = pds.records.get(`at://${TEST_DID}/${NSID.packageProfile}/test-plugin`);
+			expect(profile?.value).toMatchObject({
+				extensions: {
+					"example.com/other": { retained: true },
+					[NSID.packageProfileExtension]: {
+						repository: "https://github.com/example/test-plugin",
+					},
+				},
+			});
+		});
+
+		it("adds optional-provenance metadata to an older profile", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+			const { extensions: _extensions, ...olderProfile } = wellShapedProfile;
+			pds.seedRecord(NSID.packageProfile, "test-plugin", olderProfile);
+
+			await publishRelease(buildOptions(pds, { manifest: buildManifest({ version: "1.1.0" }) }));
+
+			const profile = pds.records.get(`at://${TEST_DID}/${NSID.packageProfile}/test-plugin`);
+			expect(profile?.value).toMatchObject({
+				extensions: {
+					[NSID.packageProfileExtension]: {
+						repository: "https://github.com/example/test-plugin",
+						releasePolicy: { requireProvenance: false },
+					},
+				},
+			});
+		});
+
+		it("refuses a manual release when the signed profile requires provenance", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+			pds.seedRecord(NSID.packageProfile, "test-plugin", {
+				...wellShapedProfile,
+				extensions: {
+					[NSID.packageProfileExtension]: {
+						$type: NSID.packageProfileExtension,
+						repository: "https://github.com/example/test-plugin",
+						releasePolicy: { requireProvenance: true },
+					},
+				},
+			});
+
+			await expect(publishRelease(buildOptions(pds))).rejects.toMatchObject({
+				code: "PROFILE_PROVENANCE_REQUIRED",
+			});
+		});
+
+		it("does not overwrite malformed profile extension data", async () => {
+			const pds = new MockPds({ did: TEST_DID });
+			pds.seedRecord(NSID.packageProfile, "test-plugin", {
+				...wellShapedProfile,
+				extensions: "invalid",
+			});
+
+			await expect(publishRelease(buildOptions(pds))).rejects.toMatchObject({
+				code: "PROFILE_EXTENSION_INVALID",
+			});
+		});
+
+		it("refuses to publish against a malformed existing profile", async () => {
 			const pds = new MockPds({ did: TEST_DID });
 			pds.seedRecord(NSID.packageProfile, "test-plugin", { incomplete: true });
 
-			const result = await publishRelease(buildOptions(pds));
-			expect(result.profileCreated).toBe(false);
-
-			const applyWrites = pds.callsTo("com.atproto.repo.applyWrites");
-			const body = applyWrites[0]!.body as {
-				writes: Array<{ collection: string }>;
-			};
-			expect(body.writes).toHaveLength(1);
-			expect(body.writes[0]?.collection).toBe(NSID.packageRelease);
+			await expect(publishRelease(buildOptions(pds))).rejects.toMatchObject({
+				code: "PROFILE_INVALID",
+			});
+			expect(pds.callsTo("com.atproto.repo.applyWrites")).toHaveLength(0);
 		});
 
 		it("reads existing profile and release in parallel before deciding", async () => {
+			// Verifies the API issues both lookups; the actual order is
+			// implementation detail (we use Promise.all). Two getRecord calls.
 			const pds = new MockPds({ did: TEST_DID });
 			pds.seedRecord(NSID.packageProfile, "test-plugin", wellShapedProfile);
 			await publishRelease(buildOptions(pds));
 			const reads = pds.callsTo("com.atproto.repo.getRecord");
 			expect(reads).toHaveLength(2);
+			// Reads check both rkeys: slug (profile) and slug:version (release).
 			const rkeys = reads
 				.map((c) => new URL(c.pathname, "http://mock.test").searchParams.get("rkey"))
 				.toSorted((a, b) => (a ?? "").localeCompare(b ?? ""));
@@ -272,7 +465,7 @@ describe("publishRelease", () => {
 
 		it("reports profile fields that were ignored when reusing an existing profile", async () => {
 			const pds = new MockPds({ did: TEST_DID });
-			pds.seedRecord(NSID.packageProfile, "test-plugin", {});
+			pds.seedRecord(NSID.packageProfile, "test-plugin", installableProfile());
 
 			const result = await publishRelease(
 				buildOptions(pds, {
@@ -294,7 +487,7 @@ describe("publishRelease", () => {
 
 		it("reports an empty ignoredProfileFields when profile is undefined", async () => {
 			const pds = new MockPds({ did: TEST_DID });
-			pds.seedRecord(NSID.packageProfile, "test-plugin", {});
+			pds.seedRecord(NSID.packageProfile, "test-plugin", installableProfile());
 
 			const result = await publishRelease(buildOptions(pds, { profile: undefined }));
 			expect(result.profileCreated).toBe(false);
@@ -305,7 +498,7 @@ describe("publishRelease", () => {
 	describe("re-publishing an existing version", () => {
 		it("refuses by default and preserves the original record bytes", async () => {
 			const pds = new MockPds({ did: TEST_DID });
-			pds.seedRecord(NSID.packageProfile, "test-plugin", {});
+			pds.seedRecord(NSID.packageProfile, "test-plugin", installableProfile());
 			const original = pds.seedRecord(NSID.packageRelease, "test-plugin:1.0.0", {
 				artifacts: { package: { url: "https://old.example.com/old.tar.gz" } },
 			});
@@ -315,15 +508,18 @@ describe("publishRelease", () => {
 				code: "RELEASE_ALREADY_PUBLISHED",
 			});
 
+			// Original bytes preserved (content-derived CID is identical for
+			// identical bytes).
 			const releaseNow = pds.records.get(original.uri);
 			expect(releaseNow?.cid).toBe(original.cid);
 			expect(releaseNow?.value).toEqual(original.value);
+			// applyWrites must not have been called -- the refusal is upstream.
 			expect(pds.callsTo("com.atproto.repo.applyWrites")).toHaveLength(0);
 		});
 
 		it("includes slug and version in the error detail", async () => {
 			const pds = new MockPds({ did: TEST_DID });
-			pds.seedRecord(NSID.packageProfile, "test-plugin", {});
+			pds.seedRecord(NSID.packageProfile, "test-plugin", installableProfile());
 			pds.seedRecord(NSID.packageRelease, "test-plugin:1.0.0", {});
 
 			let caught: unknown;
@@ -341,7 +537,7 @@ describe("publishRelease", () => {
 
 		it("overwrites the release record when allowOverwrite is true", async () => {
 			const pds = new MockPds({ did: TEST_DID });
-			pds.seedRecord(NSID.packageProfile, "test-plugin", {});
+			pds.seedRecord(NSID.packageProfile, "test-plugin", installableProfile());
 			const original = pds.seedRecord(NSID.packageRelease, "test-plugin:1.0.0", {
 				artifacts: { package: { url: "https://old.example.com/old.tar.gz" } },
 			});
@@ -355,6 +551,8 @@ describe("publishRelease", () => {
 
 			expect(result.releaseOverwritten).toBe(true);
 
+			// Compare content directly. Mock CIDs are content-derived, so we
+			// don't lean on counter increments.
 			const releaseNow = pds.records.get(original.uri);
 			expect(releaseNow?.value).not.toEqual(original.value);
 			const value = releaseNow!.value as { artifacts: { package: { url: string } } };
@@ -363,7 +561,7 @@ describe("publishRelease", () => {
 
 		it("issues an update operation (not create) when overwriting", async () => {
 			const pds = new MockPds({ did: TEST_DID });
-			pds.seedRecord(NSID.packageProfile, "test-plugin", {});
+			pds.seedRecord(NSID.packageProfile, "test-plugin", installableProfile());
 			pds.seedRecord(NSID.packageRelease, "test-plugin:1.0.0", {});
 
 			await publishRelease(buildOptions(pds, { allowOverwrite: true }));
@@ -450,6 +648,9 @@ describe("publishRelease", () => {
 		}
 
 		it("carries every facet, including hook registrations, when derived from a legacy bundle", async () => {
+			// A bundle with no declaredAccess (a pre-migration tarball) whose hook
+			// capabilities must still reach the record so the consent dialog can
+			// show them.
 			const pds = new MockPds({ did: TEST_DID });
 			await publishRelease(
 				buildOptions(pds, {
@@ -498,6 +699,7 @@ describe("publishRelease", () => {
 		it("rejects scoped names whose translated slug starts with a non-letter", async () => {
 			const pds = new MockPds({ did: TEST_DID });
 			const opts = buildOptions(pds, {
+				// `@/plugin` translates to `-plugin`, which doesn't start with a letter.
 				manifest: buildManifest({ id: "@/plugin" }),
 			});
 			await expect(publishRelease(opts)).rejects.toMatchObject({
@@ -625,7 +827,7 @@ describe("publishRelease", () => {
 
 		it("reports structured field names as ignored on a subsequent publish", async () => {
 			const pds = new MockPds({ did: TEST_DID });
-			pds.seedRecord(NSID.packageProfile, "test-plugin", {});
+			pds.seedRecord(NSID.packageProfile, "test-plugin", installableProfile());
 			const result = await publishRelease(
 				buildOptions(pds, {
 					profile: undefined,
@@ -660,7 +862,23 @@ describe("publishRelease", () => {
 
 		it("omits repo from the release record when not provided", async () => {
 			const pds = new MockPds({ did: TEST_DID });
-			await publishRelease(buildOptions(pds));
+			pds.seedRecord(NSID.packageProfile, "test-plugin", {
+				$type: NSID.packageProfile,
+				id: `at://${TEST_DID}/${NSID.packageProfile}/test-plugin`,
+				type: "emdash-plugin",
+				license: "MIT",
+				authors: [{ name: "Alice" }],
+				security: [{ email: "security@example.com" }],
+				slug: "test-plugin",
+				lastUpdated: "2026-01-01T00:00:00.000Z",
+				extensions: {
+					[NSID.packageProfileExtension]: {
+						$type: NSID.packageProfileExtension,
+						repository: "https://github.com/example/test-plugin",
+					},
+				},
+			});
+			await publishRelease(buildOptions(pds, { repo: undefined }));
 			const release = pds.records.get(`at://${TEST_DID}/${NSID.packageRelease}/test-plugin:1.0.0`);
 			expect("repo" in (release!.value as Record<string, unknown>)).toBe(false);
 		});

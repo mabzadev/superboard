@@ -22,6 +22,10 @@ import type {
 } from "../../../../../../packages/core/src/plugins/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function defaultSettings(
 	overrides: Partial<CollectionCommentSettings> = {},
 ): CollectionCommentSettings {
@@ -41,6 +45,10 @@ const defaultInput = {
 	authorEmail: "jane@example.com",
 	body: "Great post!",
 };
+
+// ---------------------------------------------------------------------------
+// Group 1: Service with mocked CommentHookRunner
+// ---------------------------------------------------------------------------
 
 describe("Comment Service with CommentHookRunner", () => {
 	let db: Kysely<Database>;
@@ -138,7 +146,8 @@ describe("Comment Service with CommentHookRunner", () => {
 			db,
 			created!.comment.id,
 			"spam",
-			{ id: "admin-1", name: "Admin" },
+			"approved",
+			{ source: "admin", userId: "admin-1", name: "Admin" },
 			hooks,
 		);
 
@@ -150,6 +159,7 @@ describe("Comment Service with CommentHookRunner", () => {
 		expect(event.previousStatus).toBe("approved");
 		expect(event.newStatus).toBe("spam");
 		expect(event.moderator.id).toBe("admin-1");
+		expect(event.origin).toEqual({ source: "admin", userId: "admin-1" });
 	});
 
 	it("moderateComment returns null for non-existent id", async () => {
@@ -159,14 +169,75 @@ describe("Comment Service with CommentHookRunner", () => {
 			db,
 			"nonexistent",
 			"approved",
-			{ id: "admin-1", name: "Admin" },
+			"pending",
+			{ source: "admin", userId: "admin-1", name: "Admin" },
 			hooks,
 		);
 
 		expect(result).toBeNull();
 		expect(hooks.fireAfterModerate).not.toHaveBeenCalled();
 	});
+
+	it("rejects nested moderation of the same comment without blocking concurrent callers", async () => {
+		const created = await createComment(db, defaultInput, defaultSettings(), makeHookRunner());
+		const id = created!.comment.id;
+		const nestedErrors: unknown[] = [];
+		const hooks = makeHookRunner({
+			fireAfterModerate: vi.fn(async () => {
+				try {
+					await moderateComment(
+						db,
+						id,
+						"spam",
+						"pending",
+						{ source: "plugin", pluginId: "moderator" },
+						makeHookRunner(),
+					);
+				} catch (error) {
+					nestedErrors.push(error);
+				}
+			}),
+		});
+
+		await moderateComment(
+			db,
+			id,
+			"pending",
+			"approved",
+			{ source: "plugin", pluginId: "moderator" },
+			hooks,
+		);
+		expect(nestedErrors).toHaveLength(1);
+		expect(nestedErrors[0]).toEqual(
+			expect.objectContaining({ message: "Recursive comment moderation is not allowed" }),
+		);
+
+		const attempts = await Promise.allSettled([
+			moderateComment(
+				db,
+				id,
+				"approved",
+				"pending",
+				{ source: "plugin", pluginId: "first" },
+				makeHookRunner(),
+			),
+			moderateComment(
+				db,
+				id,
+				"spam",
+				"pending",
+				{ source: "plugin", pluginId: "second" },
+				makeHookRunner(),
+			),
+		]);
+		expect(attempts.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+		expect(attempts.filter((result) => result.status === "rejected")).toHaveLength(1);
+	});
 });
+
+// ---------------------------------------------------------------------------
+// Group 2: Built-in moderator unit tests
+// ---------------------------------------------------------------------------
 
 describe("Built-in Default Comment Moderator", () => {
 	const ctx = {} as PluginContext;
@@ -275,6 +346,10 @@ describe("Built-in Default Comment Moderator", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Group 3: Real HookPipeline integration
+// ---------------------------------------------------------------------------
+
 describe("Comment Hooks with HookPipeline", () => {
 	let pipelineDb: Kysely<Database>;
 
@@ -345,6 +420,7 @@ describe("Comment Hooks with HookPipeline", () => {
 
 		const pipeline = createHookPipeline([plugin], { db: pipelineDb });
 
+		// Auto-select the sole provider
 		await resolveExclusiveHooks({
 			pipeline,
 			isActive: () => true,
@@ -406,6 +482,7 @@ describe("Comment Hooks with HookPipeline", () => {
 		const selection = pipeline.getExclusiveSelection("comment:moderate");
 		expect(selection).toBe(DEFAULT_COMMENT_MODERATOR_PLUGIN_ID);
 
+		// Verify it actually works
 		const moderateEvent: CommentModerateEvent = {
 			comment: {
 				collection: "post",

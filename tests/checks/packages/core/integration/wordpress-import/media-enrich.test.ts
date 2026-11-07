@@ -10,7 +10,7 @@ const { JPEG } = vi.hoisted(() => ({
 	),
 }));
 
-vi.mock("#import/ssrf.js", () => ({
+vi.mock("../../../../../../packages/core/src/import/ssrf.js", () => ({
 	validateExternalUrl: () => {},
 	SsrfError: class SsrfError extends Error {},
 	ssrfSafeFetch: async () =>

@@ -3,9 +3,17 @@ import { z } from "zod";
 import { isSafeHref } from "../../utils/url.js";
 import { localeCode } from "./common.js";
 
+// ---------------------------------------------------------------------------
+// Menus: Input schemas
+// ---------------------------------------------------------------------------
+
+/**
+ * Allowed menu item types. `custom` uses `customUrl`; the others resolve a URL
+ * from `referenceCollection` + `referenceId` (a translation_group id).
+ */
 export const menuItemTypeEnum = z.enum(["custom", "page", "post", "taxonomy", "collection"]);
 
-const safeHref = z
+export const safeHref = z
 	.string()
 	.trim()
 	.refine(
@@ -18,6 +26,8 @@ export const createMenuBody = z
 		name: z.string().min(1),
 		label: z.string().min(1),
 		locale: localeCode.optional(),
+		/** When set, clones the items from the source menu. The new menu joins
+		 * the source's translation_group. */
 		translationOf: z.string().min(1).optional(),
 	})
 	.strict()
@@ -70,6 +80,14 @@ export const reorderMenuItemsBody = z
 		),
 	})
 	.meta({ id: "ReorderMenuItemsBody" });
+
+// ---------------------------------------------------------------------------
+// Menus: Response schemas
+//
+// All responses are camelCase to align with the rest of the EmDash REST API
+// (content, taxonomies, redirects, etc.). The DB columns are snake_case;
+// handlers hydrate rows into the shapes below before returning.
+// ---------------------------------------------------------------------------
 
 export const menuSchema = z
 	.object({

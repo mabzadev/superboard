@@ -1,11 +1,23 @@
+import { Permissions } from "@emdash-cms/auth";
+import {
+	isJsonPostRouteContract,
+	PLUGIN_CAPABILITIES,
+	PLUGIN_ROUTE_BODY_MODES,
+	PLUGIN_ROUTE_MAX_BODY_BYTES,
+	PLUGIN_ROUTE_MAX_DECLARED_HEADERS,
+	PLUGIN_ROUTE_METHODS,
+	PLUGIN_ROUTE_RESPONSE_MODES,
+} from "@emdash-cms/plugin-types";
 import type { Context, Next } from "hono";
 import { Hono } from "hono";
 import { SignJWT, jwtVerify } from "jose";
 import { createGzipDecoder, unpackTar } from "modern-tar";
 import { z } from "zod";
 
+/** Matches http(s) scheme at start of URL */
 const HTTP_SCHEME_RE = /^https?:\/\//i;
 
+/** Validates that a URL string uses http or https scheme. Rejects javascript:/data: URI XSS vectors. */
 const httpUrl = z
 	.string()
 	.url()
@@ -27,9 +39,13 @@ import {
 import type { AuthorRow } from "../db/types.js";
 import type { AuditParams } from "../workflows/audit.js";
 
+// ── Types ───────────────────────────────────────────────────────
+
 type AuthEnv = { Bindings: Env; Variables: { author: AuthorRow; isSeedAuth: boolean } };
 
 export const authorRoutes = new Hono<AuthEnv>();
+
+// ── Auth: shared GitHub → JWT logic ─────────────────────────────
 
 interface GitHubUser {
 	id: number;
@@ -39,6 +55,10 @@ interface GitHubUser {
 	avatar_url: string;
 }
 
+/**
+ * Given a GitHub access token, fetch the user, find-or-create author,
+ * and return a marketplace JWT. Shared by code exchange and device flow.
+ */
 async function authenticateWithGitHubToken(
 	githubAccessToken: string,
 	env: Env,
@@ -73,7 +93,7 @@ async function authenticateWithGitHubToken(
 		sub: author.id,
 		githubId,
 		iat: now,
-		exp: now + 86400 * 30,
+		exp: now + 86400 * 30, // 30 days
 	};
 
 	const token = await signJwt(payload, env.GITHUB_CLIENT_SECRET);
@@ -87,6 +107,8 @@ async function authenticateWithGitHubToken(
 		},
 	};
 }
+
+// ── Auth: GitHub OAuth code exchange (web flow) ─────────────────
 
 const githubAuthSchema = z.object({
 	code: z.string().min(1),
@@ -105,6 +127,7 @@ authorRoutes.post("/auth/github", async (c) => {
 	}
 
 	try {
+		// Exchange code for GitHub access token
 		const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
 			method: "POST",
 			headers: {
@@ -140,6 +163,8 @@ authorRoutes.post("/auth/github", async (c) => {
 	}
 });
 
+// ── Auth: GitHub device flow (CLI) ──────────────────────────────
+
 const githubDeviceAuthSchema = z.object({
 	access_token: z.string().min(1),
 });
@@ -168,6 +193,13 @@ authorRoutes.post("/auth/github/device", async (c) => {
 	}
 });
 
+// ── Auth middleware for all routes below ─────────────────────────
+
+/**
+ * Timing-safe comparison of two strings.
+ * Hashes both values to a fixed length before comparing, so neither
+ * the length nor the content of the secret leaks via timing.
+ */
 async function timingSafeEqual(a: string, b: string): Promise<boolean> {
 	const encoder = new TextEncoder();
 	const [hashA, hashB] = await Promise.all([
@@ -186,6 +218,8 @@ async function authMiddleware(c: Context<AuthEnv>, next: Next): Promise<Response
 
 	const token = header.slice(7);
 
+	// Seed token auth -- trusted publisher for CI seeding.
+	// Bypasses GitHub OAuth; resolves to a system author.
 	if (c.env.SEED_TOKEN && (await timingSafeEqual(token, c.env.SEED_TOKEN))) {
 		const author = await findOrCreateSystemAuthor(c.env.DB);
 		c.set("author", author);
@@ -193,12 +227,14 @@ async function authMiddleware(c: Context<AuthEnv>, next: Next): Promise<Response
 		return next();
 	}
 
+	// Standard JWT auth
 	try {
 		const payload = await verifyJwt(token, c.env.GITHUB_CLIENT_SECRET);
 		if (!payload || typeof payload.sub !== "string") {
 			return c.json({ error: "Invalid token" }, 401);
 		}
 
+		// Verify author still exists
 		const author = await c.env.DB.prepare("SELECT * FROM authors WHERE id = ?")
 			.bind(payload.sub)
 			.first<AuthorRow>();
@@ -215,35 +251,15 @@ async function authMiddleware(c: Context<AuthEnv>, next: Next): Promise<Response
 	}
 }
 
+// Apply auth middleware to author-only methods (POST/PUT) on /plugins/*
+// Using method-specific middleware avoids blocking public GET routes (icons, etc.)
+// that share the /plugins/* path when mounted on the same prefix.
 authorRoutes.post("/plugins/*", authMiddleware);
 authorRoutes.put("/plugins/*", authMiddleware);
 
-const VALID_CAPABILITIES = [
-	"network:request",
-	"network:request:unrestricted",
-	"content:read",
-	"content:write",
-	"taxonomies:read",
-	"media:read",
-	"media:write",
-	"users:read",
-	"email:send",
-	"hooks.email-transport:register",
-	"hooks.email-events:register",
-	"hooks.page-fragments:register",
-	"network:fetch",
-	"network:fetch:any",
-	"read:content",
-	"write:content",
-	"read:media",
-	"write:media",
-	"read:users",
-	"email:provide",
-	"email:intercept",
-	"page:inject",
-] as const;
+// ── POST /plugins — Register new plugin ─────────────────────────
 
-const createPluginSchema = z.object({
+export const createPluginSchema = z.object({
 	id: z
 		.string()
 		.min(1)
@@ -257,7 +273,7 @@ const createPluginSchema = z.object({
 	repositoryUrl: httpUrl.optional(),
 	homepageUrl: httpUrl.optional(),
 	license: z.string().max(64).optional(),
-	capabilities: z.array(z.enum(VALID_CAPABILITIES)).min(1),
+	capabilities: z.array(z.enum(PLUGIN_CAPABILITIES)).min(1),
 	keywords: z.array(z.string().max(50)).max(20).optional(),
 });
 
@@ -276,6 +292,7 @@ authorRoutes.post("/plugins", async (c) => {
 	}
 
 	try {
+		// Check if plugin ID already exists
 		const existing = await getPlugin(c.env.DB, body.id);
 		if (existing) {
 			return c.json({ error: "Plugin ID already exists" }, 409);
@@ -300,14 +317,19 @@ authorRoutes.post("/plugins", async (c) => {
 	}
 });
 
+// ── POST /plugins/:id/versions — Publish version ────────────────
+
 authorRoutes.post("/plugins/:id/versions", async (c) => {
 	const author = c.get("author");
 	const isSeed = c.get("isSeedAuth") === true;
 	const pluginId = c.req.param("id");
 
 	try {
+		// Verify plugin exists and author owns it.
+		// Seed auth: auto-register the plugin if it doesn't exist, skip ownership check.
 		let plugin = await getPlugin(c.env.DB, pluginId);
 		if (!plugin && isSeed) {
+			// Auto-register for seed -- we'll update capabilities after manifest parse
 			plugin = await createPlugin(c.env.DB, {
 				id: pluginId,
 				name: pluginId,
@@ -317,9 +339,12 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 		} else if (!plugin) {
 			return c.json({ error: "Plugin not found" }, 404);
 		} else if (plugin.author_id !== author.id) {
+			// Ownership check applies to both seed and normal auth.
+			// Seed can only publish to plugins it created (system author).
 			return c.json({ error: "Not authorized to publish to this plugin" }, 403);
 		}
 
+		// Parse multipart form
 		const formData = await c.req.formData();
 		const bundleFile = formData.get("bundle");
 		if (!bundleFile || !(bundleFile instanceof File)) {
@@ -334,6 +359,7 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			return c.json({ error: `Bundle exceeds ${MAX_BUNDLE_BYTES} byte limit` }, 413);
 		}
 
+		// Extract tarball contents
 		let files: Map<string, Uint8Array>;
 		try {
 			files = await extractTarball(bundleData);
@@ -347,6 +373,7 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			);
 		}
 
+		// Read manifest
 		const manifestData = files.get("manifest.json");
 		if (!manifestData) {
 			return c.json({ error: "Bundle must contain manifest.json" }, 400);
@@ -359,6 +386,7 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			return c.json({ error: "Invalid manifest.json" }, 400);
 		}
 
+		// Validate manifest
 		const manifestResult = manifestSchema.safeParse(manifest);
 		if (!manifestResult.success) {
 			const issues = manifestResult.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`);
@@ -382,6 +410,7 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			);
 		}
 
+		// Validate semver > latest published version (skip for seed -- seed is idempotent)
 		if (!isSeed) {
 			const latestVersion = await getLatestVersion(c.env.DB, pluginId);
 			if (latestVersion) {
@@ -397,11 +426,15 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			}
 		}
 
+		// Check for duplicate version.
+		// Seed: allow re-publishing the same version (idempotent upsert).
+		// Normal: reject duplicate versions.
 		const existingVersion = await getPluginVersion(c.env.DB, pluginId, validManifest.version);
 		if (existingVersion && !isSeed) {
 			return c.json({ error: "Version already exists" }, 409);
 		}
 
+		// Detect capability escalation
 		const currentCaps = safeJsonParse<string[]>(plugin.capabilities, []);
 		const newCaps = validManifest.capabilities;
 		const escalated = newCaps.filter((cap) => !currentCaps.includes(cap));
@@ -409,16 +442,19 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			console.warn(`Capability escalation for ${pluginId}: ${escalated.join(", ")}`);
 		}
 
+		// Compute SHA-256 checksum
 		const hashBuffer = await crypto.subtle.digest("SHA-256", bundleData);
 		const checksum = Array.from(new Uint8Array(hashBuffer), (b) =>
 			b.toString(16).padStart(2, "0"),
 		).join("");
 
+		// Store tarball in R2
 		const bundleKey = `${pluginId}/${validManifest.version}.tar.gz`;
 		await c.env.R2.put(bundleKey, bundleData, {
 			httpMetadata: { contentType: "application/gzip" },
 		});
 
+		// Store extracted icon in R2
 		const iconData = files.get("icon.png");
 		const hasIcon = !!iconData;
 		if (iconData) {
@@ -427,6 +463,7 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			});
 		}
 
+		// Store screenshots in R2
 		const screenshotEntries = [...files.entries()].filter(([path]) =>
 			path.startsWith("screenshots/"),
 		);
@@ -436,12 +473,15 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			});
 		}
 
+		// Read optional files
 		const readmeBytes = files.get("README.md");
 		const readme = readmeBytes ? new TextDecoder().decode(readmeBytes) : undefined;
 		const changelog = validManifest.changelog;
 
+		// Create or update version row
 		let versionRow;
 		if (existingVersion && isSeed) {
+			// Re-seed: update existing version with new bundle data
 			await updateVersionForReseed(c.env.DB, existingVersion.id, {
 				bundleKey,
 				bundleSize: bundleData.byteLength,
@@ -466,15 +506,19 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 				hasIcon,
 				screenshotCount: screenshotEntries.length,
 				capabilities: validManifest.capabilities,
+				// Seed: publish immediately. Normal: pending audit.
 				status: isSeed ? "published" : "pending",
 			});
 		}
 
+		// Update plugin metadata with latest version info
 		await updatePlugin(c.env.DB, pluginId, {
 			capabilities: validManifest.capabilities,
 			hasIcon,
 		});
 
+		// Seed: skip audit, return 201 (published immediately).
+		// Normal: dispatch audit Workflow, return 202 (pending).
 		if (isSeed) {
 			return c.json(
 				{
@@ -488,8 +532,10 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			);
 		}
 
+		// Check if tarball contains images (for Workflow to know whether to run image audit)
 		const hasImages = hasIcon || [...files.keys()].some((path) => path.startsWith("screenshots/"));
 
+		// Dispatch audit Workflow asynchronously
 		const workflowParams: AuditParams = {
 			pluginId,
 			version: validManifest.version,
@@ -510,6 +556,7 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			params: workflowParams,
 		});
 
+		// Store Workflow instance ID on version row
 		await setVersionWorkflowId(c.env.DB, versionRow.id, instance.id);
 
 		return c.json(
@@ -528,6 +575,8 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 		return c.json({ error: "Internal server error" }, 500);
 	}
 });
+
+// ── PUT /plugins/:id — Update plugin metadata ───────────────────
 
 const updatePluginSchema = z.object({
 	name: z.string().min(1).max(100).optional(),
@@ -576,6 +625,8 @@ authorRoutes.put("/plugins/:id", async (c) => {
 	}
 });
 
+// ── POST /plugins/:id/versions/:version/retry-audit — Re-run audit ──
+
 authorRoutes.post("/plugins/:id/versions/:version/retry-audit", async (c) => {
 	const author = c.get("author");
 	const pluginId = c.req.param("id");
@@ -591,6 +642,7 @@ authorRoutes.post("/plugins/:id/versions/:version/retry-audit", async (c) => {
 		const versionRow = await getPluginVersion(c.env.DB, pluginId, version);
 		if (!versionRow) return c.json({ error: "Version not found" }, 404);
 
+		// Only allow retry for pending or rejected versions
 		if (versionRow.status !== "pending" && versionRow.status !== "rejected") {
 			return c.json(
 				{ error: `Cannot retry audit for version with status "${versionRow.status}"` },
@@ -598,8 +650,10 @@ authorRoutes.post("/plugins/:id/versions/:version/retry-audit", async (c) => {
 			);
 		}
 
+		// Check if tarball has images
 		const hasImages = versionRow.has_icon === 1 || versionRow.screenshot_count > 0;
 
+		// Parse capabilities from JSON
 		const capabilities = safeJsonParse<string[]>(versionRow.capabilities, []);
 
 		const workflowParams: AuditParams = {
@@ -633,6 +687,8 @@ authorRoutes.post("/plugins/:id/versions/:version/retry-audit", async (c) => {
 	}
 });
 
+// ── Regex constants (hoisted for lint) ──────────────────────────
+
 const RE_SEMVER_FULL = /^(\d+)\.(\d+)\.(\d+)$/;
 const RE_LEADING_DOT_SLASH = /^\.\//;
 const RE_LEADING_PACKAGE = /^package\//;
@@ -642,6 +698,7 @@ const MAX_DECOMPRESSED_BYTES = 50 * 1024 * 1024;
 const MAX_TAR_FILES = 200;
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
+/** Read an entire ReadableStream into a single Uint8Array, aborting if it exceeds `limit` bytes. */
 async function collectStream(
 	stream: ReadableStream<Uint8Array>,
 	limit: number,
@@ -671,6 +728,8 @@ async function collectStream(
 	return result;
 }
 
+// ── JWT helpers (HMAC-SHA256) ────────────────────────────────────
+
 async function signJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
 	const key = new TextEncoder().encode(secret);
 	return new SignJWT(payload)
@@ -690,6 +749,9 @@ async function verifyJwt(token: string, secret: string): Promise<Record<string, 
 	}
 }
 
+// ── Manifest validation ─────────────────────────────────────────
+
+/** Must stay in sync with HOOK_NAMES in packages/core/src/plugins/manifest-schema.ts */
 const VALID_HOOKS = [
 	"plugin:install",
 	"plugin:activate",
@@ -711,6 +773,8 @@ const VALID_HOOKS = [
 	"comment:moderate",
 	"comment:afterCreate",
 	"comment:afterModerate",
+	"byline:afterSave",
+	"byline:afterDelete",
 	"page:metadata",
 	"page:fragments",
 ] as const;
@@ -720,6 +784,7 @@ const storageCollectionSchema = z.object({
 	uniqueIndexes: z.array(z.union([z.string(), z.array(z.string())])).optional(),
 });
 
+/** Hook entry: plain string or structured object with metadata */
 const hookEntrySchema = z.union([
 	z.enum(VALID_HOOKS),
 	z.object({
@@ -730,46 +795,316 @@ const hookEntrySchema = z.union([
 	}),
 ]);
 
+/** Route entry: plain string or structured object with metadata */
 const routeNamePattern = /^[a-zA-Z0-9][a-zA-Z0-9_\-/]*$/;
+const headerNamePattern = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+const forbiddenRequestHeaders = new Set([
+	"authorization",
+	"cookie",
+	"cf-access-client-id",
+	"cf-access-client-secret",
+	"cf-access-jwt-assertion",
+	"proxy-authorization",
+	"set-cookie",
+	"x-emdash-request",
+]);
+const declaredHeadersSchema = z
+	.array(z.string().min(1).max(128).regex(headerNamePattern, "Invalid HTTP header name"))
+	.max(PLUGIN_ROUTE_MAX_DECLARED_HEADERS)
+	.superRefine((headers, ctx) => {
+		const seen = new Set<string>();
+		for (const [index, header] of headers.entries()) {
+			const normalized = header.toLowerCase();
+			if (forbiddenRequestHeaders.has(normalized) || normalized.startsWith("cf-access-")) {
+				ctx.addIssue({
+					code: "custom",
+					message: `Header "${header}" cannot be exposed to a sandboxed route`,
+					path: [index],
+				});
+			}
+			if (seen.has(normalized)) {
+				ctx.addIssue({
+					code: "custom",
+					message: `Header "${header}" is declared more than once`,
+					path: [index],
+				});
+			}
+			seen.add(normalized);
+		}
+	});
+const routeRequestSchema = z
+	.object({
+		body: z.enum(PLUGIN_ROUTE_BODY_MODES),
+		maxBytes: z.number().int().positive().max(PLUGIN_ROUTE_MAX_BODY_BYTES).optional(),
+		headers: declaredHeadersSchema.optional(),
+	})
+	.superRefine((request, ctx) => {
+		if (request.body === "none" && request.maxBytes !== undefined) {
+			ctx.addIssue({
+				code: "custom",
+				message: "maxBytes cannot be set when request.body is none",
+				path: ["maxBytes"],
+			});
+		}
+	});
 const routeEntrySchema = z.union([
 	z.string().min(1).regex(routeNamePattern, "Route name must be a safe path segment"),
-	z.object({
-		name: z.string().min(1).regex(routeNamePattern, "Route name must be a safe path segment"),
-		public: z.boolean().optional(),
-	}),
+	z
+		.object({
+			name: z.string().min(1).regex(routeNamePattern, "Route name must be a safe path segment"),
+			methods: z
+				.array(z.enum(PLUGIN_ROUTE_METHODS))
+				.min(1)
+				.max(PLUGIN_ROUTE_METHODS.length)
+				.optional(),
+			request: routeRequestSchema.optional(),
+			response: z.enum(PLUGIN_ROUTE_RESPONSE_MODES).optional(),
+			public: z.boolean().optional(),
+			permission: z
+				.string()
+				.refine((permission) => Object.hasOwn(Permissions, permission))
+				.optional(),
+			cacheControl: z.string().min(1).optional(),
+		})
+		.superRefine((route, ctx) => {
+			if (route.methods && new Set(route.methods).size !== route.methods.length) {
+				ctx.addIssue({ code: "custom", message: "Route methods must not contain duplicates" });
+			}
+		}),
 ]);
 
-export const manifestSchema = z.object({
-	id: z.string().min(1),
-	version: z.string().regex(RE_SEMVER_FULL, "Must be valid semver"),
-	capabilities: z.array(z.enum(VALID_CAPABILITIES)),
-	allowedHosts: z.array(z.string()).default([]),
-	storage: z.record(z.string(), storageCollectionSchema).default({}),
-	hooks: z.array(hookEntrySchema).default([]),
-	routes: z.array(routeEntrySchema).default([]),
-	admin: z
-		.object({
-			entry: z.string().optional(),
-			settingsSchema: z.record(z.string(), z.unknown()).optional(),
-			pages: z
-				.array(z.object({ path: z.string(), label: z.string(), icon: z.string().optional() }))
-				.optional(),
-			widgets: z
-				.array(
-					z.object({
-						id: z.string(),
-						size: z.enum(["full", "half", "third"]).optional(),
-						title: z.string().optional(),
-					}),
-				)
-				.optional(),
-		})
-		.default({}),
-	name: z.string().min(1).max(100).optional(),
-	description: z.string().max(200).optional(),
-	minEmDashVersion: z.string().optional(),
-	changelog: z.string().optional(),
+const pluginJsonSchema = z.record(z.string(), z.unknown());
+const mcpToolNamePattern = /^[a-zA-Z0-9_-]+$/;
+const pluginMcpConfigSchema = z.object({
+	tools: z.array(
+		z.object({
+			name: z.string().min(1).max(64).regex(mcpToolNamePattern, "Invalid MCP tool name"),
+			description: z.string().min(1),
+			route: z.string().min(1).regex(routeNamePattern, "Route name must be a safe path segment"),
+			permission: z.string().refine((permission) => Object.hasOwn(Permissions, permission)),
+			destructive: z.boolean(),
+			inputSchema: pluginJsonSchema,
+			outputSchema: pluginJsonSchema.optional(),
+		}),
+	),
 });
+
+const editorExtensionIdSchema = z
+	.string()
+	.min(1)
+	.max(64)
+	.regex(/^[a-z][a-z0-9_-]*$/, "Editor extension id must be a lowercase slug");
+const editorCollectionsSchema = z
+	.array(
+		z
+			.string()
+			.max(63)
+			.regex(/^[a-z][a-z0-9_]*$/, "Invalid collection slug"),
+	)
+	.max(64)
+	.refine((collections) => new Set(collections).size === collections.length, {
+		message: "Editor extension collections must be unique",
+	});
+const editorDraftFieldSelectorSchema = z
+	.object({
+		fields: z
+			.array(
+				z
+					.string()
+					.max(63)
+					.regex(/^[a-z][a-z0-9_]*$/, "Invalid field slug"),
+			)
+			.max(32)
+			.refine((fields) => new Set(fields).size === fields.length, {
+				message: "Editor draft fields must be unique",
+			})
+			.optional(),
+		translatable: z.literal(true).optional(),
+	})
+	.refine((selector) => (selector.fields?.length ?? 0) > 0 || selector.translatable === true, {
+		message: "Editor draft selector must include fields or translatable",
+	});
+const editorDraftAccessSchema = z
+	.object({
+		read: editorDraftFieldSelectorSchema.optional(),
+		patch: editorDraftFieldSelectorSchema.optional(),
+	})
+	.refine((access) => access.read !== undefined || access.patch !== undefined, {
+		message: "Editor draft access must include read or patch",
+	});
+const editorPanelSchema = z
+	.object({
+		id: editorExtensionIdSchema,
+		title: z.string().min(1).max(128),
+		route: z.string().min(1).max(128).regex(routeNamePattern),
+		collections: editorCollectionsSchema.optional(),
+		order: z.number().int().min(-1_000).max(1_000).optional(),
+		draft: editorDraftAccessSchema.optional(),
+	})
+	.refine(
+		(extension) => extension.draft === undefined || (extension.collections?.length ?? 0) > 0,
+		{
+			message: "Editor draft access requires explicit collection scope",
+			path: ["collections"],
+		},
+	);
+const editorActionSchema = z
+	.object({
+		id: editorExtensionIdSchema,
+		label: z.string().min(1).max(128),
+		route: z.string().min(1).max(128).regex(routeNamePattern),
+		placement: z.enum(["toolbar", "overflow"]),
+		collections: editorCollectionsSchema.optional(),
+		style: z.enum(["default", "danger"]).optional(),
+		confirm: z
+			.object({
+				title: z.string().min(1).max(128),
+				text: z.string().min(1).max(1_024),
+				confirm: z.string().min(1).max(64),
+				deny: z.string().min(1).max(64),
+				style: z.literal("danger").optional(),
+			})
+			.optional(),
+		draft: editorDraftAccessSchema.optional(),
+	})
+	.refine((action) => action.style !== "danger" || action.confirm !== undefined, {
+		message: "Danger editor actions require confirmation",
+		path: ["confirm"],
+	})
+	.refine(
+		(extension) => extension.draft === undefined || (extension.collections?.length ?? 0) > 0,
+		{
+			message: "Editor draft access requires explicit collection scope",
+			path: ["collections"],
+		},
+	);
+
+export const manifestSchema = z
+	.object({
+		// Core PluginManifest fields
+		id: z.string().min(1),
+		version: z.string().regex(RE_SEMVER_FULL, "Must be valid semver"),
+		capabilities: z.array(z.enum(PLUGIN_CAPABILITIES)),
+		allowedHosts: z.array(z.string()).default([]),
+		storage: z.record(z.string(), storageCollectionSchema).default({}),
+		hooks: z.array(hookEntrySchema).default([]),
+		routes: z.array(routeEntrySchema).default([]),
+		mcp: pluginMcpConfigSchema.optional(),
+		admin: z
+			.object({
+				entry: z.string().optional(),
+				settingsSchema: z.record(z.string(), z.unknown()).optional(),
+				pages: z
+					.array(z.object({ path: z.string(), label: z.string(), icon: z.string().optional() }))
+					.optional(),
+				widgets: z
+					.array(
+						z.object({
+							id: z.string(),
+							size: z.enum(["full", "half", "third"]).optional(),
+							title: z.string().optional(),
+						}),
+					)
+					.optional(),
+				editorPanels: z.array(editorPanelSchema).max(32).optional(),
+				editorActions: z.array(editorActionSchema).max(32).optional(),
+			})
+			.default({}),
+		// Marketplace publishing extras (not part of core PluginManifest)
+		name: z.string().min(1).max(100).optional(),
+		description: z.string().max(200).optional(),
+		minEmDashVersion: z.string().optional(),
+		changelog: z.string().optional(),
+	})
+	.superRefine((manifest, ctx) => {
+		const seenRoutes = new Set<string>();
+		for (const [index, route] of manifest.routes.entries()) {
+			const name = typeof route === "string" ? route : route.name;
+			if (seenRoutes.has(name)) {
+				ctx.addIssue({
+					code: "custom",
+					message: `Route "${name}" must be declared exactly once`,
+					path: ["routes", index],
+				});
+			}
+			seenRoutes.add(name);
+		}
+
+		for (const [kind, extensions] of [
+			["editorPanels", manifest.admin.editorPanels],
+			["editorActions", manifest.admin.editorActions],
+		] as const) {
+			const seen = new Set<string>();
+			for (const [index, extension] of (extensions ?? []).entries()) {
+				if (seen.has(extension.id)) {
+					ctx.addIssue({
+						code: "custom",
+						message: `Duplicate ${kind} id`,
+						path: ["admin", kind, index, "id"],
+					});
+				}
+				seen.add(extension.id);
+				const matches = manifest.routes.filter(
+					(route) => (typeof route === "string" ? route : route.name) === extension.route,
+				);
+				if (
+					matches.length !== 1 ||
+					matches.some(
+						(route) =>
+							typeof route !== "string" &&
+							(route.public === true || !isJsonPostRouteContract(route)),
+					)
+				) {
+					ctx.addIssue({
+						code: "custom",
+						message:
+							"Editor extension must reference exactly one private POST-compatible JSON route",
+						path: ["admin", kind, index, "route"],
+					});
+				}
+			}
+		}
+
+		for (const [index, tool] of (manifest.mcp?.tools ?? []).entries()) {
+			const route = manifest.routes.find(
+				(candidate) => (typeof candidate === "string" ? candidate : candidate.name) === tool.route,
+			);
+			if (
+				typeof route === "string" ||
+				route === undefined ||
+				route.public === true ||
+				route.permission !== tool.permission ||
+				!isJsonPostRouteContract(route)
+			) {
+				ctx.addIssue({
+					code: "custom",
+					message: "MCP tools must reference a private POST-compatible JSON route",
+					path: ["mcp", "tools", index, "route"],
+				});
+			}
+		}
+
+		if ((manifest.admin.pages?.length ?? 0) > 0 || (manifest.admin.widgets?.length ?? 0) > 0) {
+			const routeIndex = manifest.routes.findIndex(
+				(route) => (typeof route === "string" ? route : route.name) === "admin",
+			);
+			const route = manifest.routes[routeIndex];
+			if (
+				routeIndex >= 0 &&
+				typeof route !== "string" &&
+				route !== undefined &&
+				(route.public === true || !isJsonPostRouteContract(route))
+			) {
+				ctx.addIssue({
+					code: "custom",
+					message: "Block Kit admin routes must be private POST-compatible JSON routes",
+					path: ["routes", routeIndex],
+				});
+			}
+		}
+	});
+
+// ── Semver comparison (simplified) ──────────────────────────────
 
 function parseSemver(v: string): [number, number, number] | null {
 	const match = v.match(RE_SEMVER_FULL);
@@ -787,7 +1122,14 @@ function isNewerVersion(current: string, next: string): boolean {
 	return n[2] > c[2];
 }
 
+// ── Tarball extraction ──────────────────────────────────────────
+
 async function extractTarball(data: ArrayBuffer): Promise<Map<string, Uint8Array>> {
+	// Decompress fully into memory first, then parse the tar.
+	// Passing a pipeThrough() stream directly to unpackTar causes a backpressure
+	// deadlock in workerd: the tar decoder's body-stream pull() needs more
+	// decompressed data, but the upstream pipe is stalled waiting for the
+	// decoder's writable side to drain — a circular dependency.
 	const decompressed = await collectStream(
 		new Response(data).body!.pipeThrough(createGzipDecoder()),
 		MAX_DECOMPRESSED_BYTES,
@@ -809,6 +1151,7 @@ async function extractTarball(data: ArrayBuffer): Promise<Map<string, Uint8Array
 		},
 		map: (header) => ({
 			...header,
+			// Strip leading "./" or "package/" prefix common in npm tarballs
 			name: header.name.replace(RE_LEADING_DOT_SLASH, "").replace(RE_LEADING_PACKAGE, ""),
 		}),
 	});
@@ -821,6 +1164,8 @@ async function extractTarball(data: ArrayBuffer): Promise<Map<string, Uint8Array
 	}
 	return files;
 }
+
+// ── Helpers ─────────────────────────────────────────────────────
 
 function safeJsonParse<T>(value: string | null, fallback: T): T {
 	if (!value) return fallback;

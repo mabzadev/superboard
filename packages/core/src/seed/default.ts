@@ -1,3 +1,10 @@
+/**
+ * Default seed applied when no user seed file exists.
+ *
+ * Provides the baseline schema every EmDash site needs:
+ * posts, pages, categories, and tags.
+ */
+
 import type { SeedFile } from "./types.js";
 
 export const defaultSeed: SeedFile = {

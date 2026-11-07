@@ -1,3 +1,7 @@
+/**
+ * Plugin management APIs
+ */
+
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -14,10 +18,12 @@ export interface PluginInfo {
 	hasAdminPages: boolean;
 	hasDashboardWidgets: boolean;
 	hasHooks: boolean;
+	/** True when the plugin declares `admin.settingsSchema` (auto-generated settings form) */
 	hasSettings: boolean;
 	installedAt?: string;
 	activatedAt?: string;
 	deactivatedAt?: string;
+	/** Plugin source: 'config' (declared in astro.config), 'marketplace', or 'registry' */
 	source?: "config" | "marketplace" | "registry";
 	lifecycleManaged?: boolean;
 	lifecycleEnablePath?: string;
@@ -25,14 +31,21 @@ export interface PluginInfo {
 	configurationWhileDisabled?: boolean;
 	configurationId?: string;
 	lifecycleLocked?: boolean;
+	/** Installed marketplace version (set when source = 'marketplace') */
 	marketplaceVersion?: string;
+	/** Publisher DID, for registry-source plugins. */
 	registryPublisherDid?: string;
+	/** Publisher slug, for registry-source plugins. */
 	registrySlug?: string;
+	/** Description of what the plugin does */
 	description?: string;
+	/** URL to the plugin icon (marketplace plugins use the icon proxy) */
 	iconUrl?: string;
+	/** Absent when talking to an older core that predates plugin MCP tools. */
 	mcpToolsEnabled?: boolean;
 	mcpTools?: Array<{
 		name: string;
+		mcpName?: string;
 		description: string;
 		route: string;
 		permission: string;
@@ -40,6 +53,9 @@ export interface PluginInfo {
 	}>;
 }
 
+/**
+ * Fetch all plugins
+ */
 export async function fetchPlugins(): Promise<PluginInfo[]> {
 	const response = await apiFetch(`${API_BASE}/admin/plugins`);
 	const result = await parseApiResponse<{ items: PluginInfo[] }>(
@@ -49,6 +65,9 @@ export async function fetchPlugins(): Promise<PluginInfo[]> {
 	return result.items;
 }
 
+/**
+ * Fetch a single plugin
+ */
 export async function fetchPlugin(pluginId: string): Promise<PluginInfo> {
 	const response = await apiFetch(`${API_BASE}/admin/plugins/${pluginId}`);
 	if (!response.ok) {
@@ -63,6 +82,8 @@ export async function fetchPlugin(pluginId: string): Promise<PluginInfo> {
 	);
 	return result.item;
 }
+
+// ── Plugin settings (auto-generated from settingsSchema) ─────────
 
 interface BaseSettingField {
 	label: string;
@@ -84,10 +105,15 @@ export type SettingField =
 
 export interface PluginSettingsResponse {
 	schema: Record<string, SettingField>;
+	/** Current values; secret fields are never included (see secretsSet) */
 	values: Record<string, unknown>;
+	/** For secret fields: whether a value is currently stored */
 	secretsSet: Record<string, boolean>;
 }
 
+/**
+ * Fetch a plugin's settings schema and current values
+ */
 export async function fetchPluginSettings(pluginId: string): Promise<PluginSettingsResponse> {
 	const response = await apiFetch(`${API_BASE}/admin/plugins/${pluginId}/settings`);
 	return parseApiResponse<PluginSettingsResponse>(
@@ -96,6 +122,10 @@ export async function fetchPluginSettings(pluginId: string): Promise<PluginSetti
 	);
 }
 
+/**
+ * Update a plugin's settings. Only keys present in `values` are written;
+ * `null` clears a stored value (reverting to the schema default).
+ */
 export async function updatePluginSettings(
 	pluginId: string,
 	values: Record<string, unknown>,
@@ -111,6 +141,9 @@ export async function updatePluginSettings(
 	);
 }
 
+/**
+ * Enable a plugin
+ */
 export async function enablePlugin(plugin: PluginInfo): Promise<PluginInfo> {
 	const path =
 		plugin.lifecycleManaged && plugin.lifecycleEnablePath
@@ -132,6 +165,9 @@ export async function enablePlugin(plugin: PluginInfo): Promise<PluginInfo> {
 	return result.item;
 }
 
+/**
+ * Disable a plugin
+ */
 export async function disablePlugin(plugin: PluginInfo): Promise<PluginInfo> {
 	const path =
 		plugin.lifecycleManaged && plugin.lifecycleDisablePath

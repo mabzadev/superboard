@@ -1,3 +1,11 @@
+/**
+ * Programmatic media upload handler (MCP `media_upload` tool).
+ *
+ * Accepts file bytes as base64, then runs the same pipeline as the multipart
+ * REST upload route: allowlist + size validation, content-hash deduplication,
+ * storage upload, image metadata enrichment, and record creation.
+ */
+
 import * as path from "node:path";
 
 import type { Kysely } from "kysely";
@@ -6,8 +14,7 @@ import { ulid } from "ulidx";
 import { MediaRepository, type MediaItem } from "../../database/repositories/media.js";
 import type { Database } from "../../database/types.js";
 import { enrichImageMetadata } from "../../media/enrich.js";
-import { matchesMimeAllowlist, normalizeMime } from "../../media/mime.js";
-import { SsrfError, ssrfSafeFetch } from "../../security/ssrf.js";
+import { matchesMimeAllowlist, normalizeMime, resolveUploadMimeType } from "../../media/mime.js";
 import type { Storage } from "../../storage/types.js";
 import { decodeBase64Bytes } from "../../utils/base64.js";
 import { computeContentHash } from "../../utils/hash.js";
@@ -16,12 +23,18 @@ import type { ApiResult } from "../types.js";
 import { GLOBAL_UPLOAD_ALLOWLIST } from "./media-allowlist.js";
 
 export interface MediaUploadInput {
+	/** Original filename (e.g. 'logo.png'); the extension is kept on the storage key. */
 	filename: string;
-	base64?: string;
-	url?: string;
-	contentType?: string;
+	/** Base64-encoded file contents. */
+	base64: string;
+	/** MIME type of the decoded bytes. */
+	contentType: string;
+	/** Alt text stored on the media record. */
 	alt?: string;
+	/** Caption stored on the media record. */
+	caption?: string;
 	authorId?: string;
+	/** Upload size limit in bytes (defaults to DEFAULT_MAX_UPLOAD_SIZE). */
 	maxUploadSize?: number;
 }
 
@@ -30,80 +43,59 @@ export type MediaUploadResult = ApiResult<{
 	deduplicated?: boolean;
 }>;
 
+export interface MediaUploadHooks {
+	beforeUpload?(file: {
+		name: string;
+		type: string;
+		size: number;
+	}): Promise<{ name: string; type: string; size: number }>;
+}
+
 function fail(code: string, message: string): MediaUploadResult {
 	return { success: false, error: { code, message } };
 }
 
+/** Same relative-URL shape the REST media routes return. */
 function withUrl(item: MediaItem): MediaItem & { url: string } {
 	return { ...item, url: `/_emdash/api/media/file/${item.storageKey}` };
 }
 
-function bareMime(headerValue: string): string {
-	return (headerValue.split(";")[0] ?? "").trim();
-}
-
+/** Decode the file bytes after rejecting an oversized encoded payload. */
 async function acquireBytes(
 	input: MediaUploadInput,
 	maxUploadSize: number,
 ): Promise<{ bytes: Uint8Array; mimeType: string } | MediaUploadResult> {
-	if (input.base64) {
-		if (!input.contentType) {
-			return fail("VALIDATION_ERROR", "contentType is required when uploading base64 data");
-		}
-		if ((input.base64.length * 3) / 4 > maxUploadSize) {
-			return fail(
-				"PAYLOAD_TOO_LARGE",
-				`File exceeds maximum size of ${formatFileSize(maxUploadSize)}`,
-			);
-		}
-		try {
-			return { bytes: decodeBase64Bytes(input.base64), mimeType: input.contentType };
-		} catch {
-			return fail("VALIDATION_ERROR", "Invalid base64 data");
-		}
-	}
-
-	const url = input.url;
-	if (!url) {
-		return fail("VALIDATION_ERROR", "Provide exactly one of 'base64' or 'url'");
-	}
-	let response: Response;
-	try {
-		response = await ssrfSafeFetch(url, { headers: { accept: "*/*" } });
-	} catch (error) {
-		if (error instanceof SsrfError) {
-			return fail("VALIDATION_ERROR", `URL not allowed: ${error.message}`);
-		}
-		return fail("FETCH_ERROR", "Failed to fetch file from URL");
-	}
-	if (!response.ok) {
-		return fail("FETCH_ERROR", `Failed to fetch file from URL (HTTP ${response.status})`);
-	}
-
-	const contentLength = response.headers.get("Content-Length");
-	if (contentLength && parseInt(contentLength, 10) > maxUploadSize) {
+	// Cheap size precheck on the encoded string (decoded size is ~3/4 of
+	// the base64 length) before allocating the decoded buffer.
+	if ((input.base64.length * 3) / 4 > maxUploadSize) {
 		return fail(
 			"PAYLOAD_TOO_LARGE",
 			`File exceeds maximum size of ${formatFileSize(maxUploadSize)}`,
 		);
 	}
-
-	const mimeType = input.contentType ?? bareMime(response.headers.get("Content-Type") ?? "");
-	if (!mimeType) {
-		return fail("VALIDATION_ERROR", "Could not determine MIME type — pass contentType explicitly");
+	try {
+		return { bytes: decodeBase64Bytes(input.base64), mimeType: input.contentType };
+	} catch {
+		return fail("VALIDATION_ERROR", "Invalid base64 data");
 	}
-
-	const bytes = new Uint8Array(await response.arrayBuffer());
-	return { bytes, mimeType };
 }
 
+/**
+ * Upload a media file from base64 data.
+ *
+ * Mirrors the REST `POST /_emdash/api/media` route: global MIME allowlist,
+ * size limit, content-hash dedupe (returns the existing item with
+ * `deduplicated: true`), storage upload with cleanup on failure, and
+ * image metadata enrichment (dimensions, blurhash, dominant color).
+ */
 export async function handleMediaUpload(
 	db: Kysely<Database>,
 	storage: Storage,
 	input: MediaUploadInput,
+	hooks: MediaUploadHooks = {},
 ): Promise<MediaUploadResult> {
-	if (!input.base64 === !input.url) {
-		return fail("VALIDATION_ERROR", "Provide exactly one of 'base64' or 'url'");
+	if (!input.base64 || !input.contentType) {
+		return fail("VALIDATION_ERROR", "base64 and contentType are required");
 	}
 
 	const rawMax = input.maxUploadSize ?? DEFAULT_MAX_UPLOAD_SIZE;
@@ -115,10 +107,20 @@ export async function handleMediaUpload(
 	if ("success" in acquired) return acquired;
 	const { bytes } = acquired;
 
-	if (!CONTENT_TYPE_RE.test(acquired.mimeType)) {
+	let filename = input.filename;
+	// Resolve from the supplied content type where possible, but fall back to
+	// the filename extension so callers that can't identify a format such as
+	// JPEG XL (e.g. empty or generic `application/octet-stream`) still work.
+	let mimeType = resolveUploadMimeType(filename, acquired.mimeType);
+	let size = bytes.byteLength;
+
+	// Re-validate the resolved type here: the resolved value is either the
+	// client-supplied type (parameters already stripped) or a value from the
+	// internal extension map, so a crafted Content-Type with header injection
+	// cannot reach the storage backend or the file-serving response.
+	if (!CONTENT_TYPE_RE.test(mimeType)) {
 		return fail("VALIDATION_ERROR", "Invalid content type");
 	}
-	const mimeType = normalizeMime(acquired.mimeType);
 
 	if (!matchesMimeAllowlist(mimeType, GLOBAL_UPLOAD_ALLOWLIST)) {
 		return fail("INVALID_TYPE", "File type not allowed");
@@ -128,6 +130,22 @@ export async function handleMediaUpload(
 	}
 
 	try {
+		if (hooks.beforeUpload) {
+			const processed = await hooks.beforeUpload({
+				name: filename,
+				type: mimeType,
+				size: bytes.byteLength,
+			});
+			filename = processed.name;
+			mimeType = normalizeMime(processed.type);
+			size = processed.size;
+			if (!CONTENT_TYPE_RE.test(processed.type)) {
+				return fail("VALIDATION_ERROR", "Invalid content type");
+			}
+			if (!matchesMimeAllowlist(mimeType, GLOBAL_UPLOAD_ALLOWLIST)) {
+				return fail("INVALID_TYPE", "File type not allowed");
+			}
+		}
 		const contentHash = await computeContentHash(bytes);
 		const repo = new MediaRepository(db);
 
@@ -136,18 +154,19 @@ export async function handleMediaUpload(
 			return { success: true, data: { item: withUrl(existing), deduplicated: true } };
 		}
 
-		const storageKey = `${ulid()}${path.extname(input.filename)}`;
+		const storageKey = `${ulid()}${path.extname(filename)}`;
 		await storage.upload({ key: storageKey, body: bytes, contentType: mimeType });
 
 		try {
 			const enriched = await enrichImageMetadata(bytes, mimeType);
 			const item = await repo.create({
-				filename: input.filename,
+				filename,
 				mimeType,
-				size: bytes.byteLength,
+				size,
 				width: enriched.width,
 				height: enriched.height,
 				alt: input.alt,
+				caption: input.caption,
 				storageKey,
 				contentHash,
 				blurhash: enriched.blurhash,
@@ -156,9 +175,12 @@ export async function handleMediaUpload(
 			});
 			return { success: true, data: { item: withUrl(item) } };
 		} catch (error) {
+			// Don't leave an orphaned object in storage when record creation fails
 			try {
 				await storage.delete(storageKey);
-			} catch {}
+			} catch {
+				// Ignore cleanup errors
+			}
 			throw error;
 		}
 	} catch {

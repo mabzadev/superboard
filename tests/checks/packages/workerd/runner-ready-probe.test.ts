@@ -1,3 +1,12 @@
+/**
+ * Readiness Probe Tests
+ *
+ * Regression coverage for the multi-plugin readiness probe. The original
+ * implementation only probed the first plugin, so a downstream plugin
+ * failing to bind would still be reported as ready, leaving subsequent
+ * hook invocations to hang or hit ECONNREFUSED.
+ */
+
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -24,6 +33,7 @@ function makeServer(behavior: Behavior): Promise<FakeServer> {
 			}
 		});
 		if (behavior === "down") {
+			// Listen briefly to get a free port, then close so nothing is on it.
 			server.listen(0, "127.0.0.1", () => {
 				const port = (server.address() as AddressInfo).port;
 				server.close(() => resolve({ port, close: async () => {} }));

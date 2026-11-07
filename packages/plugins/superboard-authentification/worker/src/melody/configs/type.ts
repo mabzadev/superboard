@@ -5,8 +5,9 @@ import { BlankSchema } from "hono/types";
 import { typeConfig } from ".";
 import { oauthDto } from "../dtos";
 import { userModel } from "../models";
+import type { Locale } from "./primitives";
 
-export type Locale = "en" | "fr";
+export type { Locale, Match, Pagination, Search, Sort, WhereIn } from "./primitives";
 
 export type Bindings = {
 	DB: D1Database;
@@ -18,7 +19,6 @@ export type Bindings = {
 	IDENTITY_REALM: string;
 	ENVIRONMENT: string;
 	DEV_EMAIL_RECEIVER: string;
-	DEV_SMS_RECEIVER: string;
 	SENDGRID_API_KEY: string;
 	SENDGRID_SENDER_ADDRESS: string;
 	BREVO_API_KEY: string;
@@ -29,12 +29,6 @@ export type Bindings = {
 	RESEND_SENDER_ADDRESS: string;
 	POSTMARK_API_KEY: string;
 	POSTMARK_SENDER_ADDRESS: string;
-	SMS_MFA_IS_REQUIRED: boolean;
-	SMS_MFA_MESSAGE_THRESHOLD: number;
-	SMS_TRANSPORT?: "twilio" | "capture";
-	TWILIO_ACCOUNT_ID: string;
-	TWILIO_AUTH_TOKEN: string;
-	TWILIO_SENDER_NUMBER: string;
 	AUTHORIZATION_CODE_EXPIRES_IN: number;
 	SPA_ACCESS_TOKEN_EXPIRES_IN: number;
 	S2S_ACCESS_TOKEN_EXPIRES_IN: number;
@@ -80,26 +74,17 @@ export type Bindings = {
 	ENABLE_LOCALE_SELECTOR: boolean;
 	TERMS_LINK: string;
 	PRIVACY_POLICY_LINK: string;
-	ENABLE_ORG: boolean;
-	ALLOW_USER_SWITCH_ORG_ON_SIGN_IN: boolean;
 	ENABLE_USER_ATTRIBUTE: boolean;
 	ENABLE_EMAIL_LOG: boolean;
-	ENABLE_SMS_LOG: boolean;
 	ENABLE_SIGN_IN_LOG: boolean;
 	LOG_LEVEL: "silent" | "info" | "warn" | "error";
-	FACEBOOK_AUTH_CLIENT_ID: string;
-	FACEBOOK_AUTH_CLIENT_SECRET: string;
 	GITHUB_AUTH_CLIENT_ID: string;
 	GITHUB_AUTH_CLIENT_SECRET: string;
 	GITHUB_AUTH_APP_NAME: string;
-	DISCORD_AUTH_CLIENT_ID: string;
-	DISCORD_AUTH_CLIENT_SECRET: string;
 	APPLE_AUTH_CLIENT_ID: string;
 	APPLE_AUTH_CLIENT_SECRET: string;
 	OIDC_AUTH_PROVIDERS: string[] | undefined;
 	EMBEDDED_AUTH_ORIGINS: string[];
-	ENABLE_SAML_SSO_AS_SP: boolean;
-	ENABLE_APP_BANNER: boolean;
 	EMAIL_PROVIDER_NAME: string;
 	PG_CONNECTION_STRING: string;
 	REDIS_CONNECTION_STRING: string;
@@ -120,7 +105,6 @@ export type App = Hono<Context, BlankSchema, "/">;
 export interface AuthCodeBodyMfaConfig {
 	e: boolean;
 	o: boolean;
-	s: boolean;
 	b: boolean;
 }
 
@@ -142,7 +126,6 @@ export interface EmbeddedSessionBody {
 	isFullyAuthorized?: boolean;
 	isSecured?: boolean;
 	mfa?: AuthCodeBodyMfaConfig;
-	samlRequestId?: string;
 }
 
 export interface EmbeddedSessionBodyWithUser {
@@ -153,7 +136,6 @@ export interface EmbeddedSessionBodyWithUser {
 	isFullyAuthorized?: boolean;
 	isSecured?: boolean;
 	mfa?: AuthCodeBodyMfaConfig;
-	samlRequestId?: string;
 }
 
 export interface AccessTokenBody {
@@ -180,28 +162,4 @@ export interface RefreshTokenBody {
 	roles: string[];
 	expiredAt: number;
 	impersonatedBy?: string;
-}
-
-export interface Pagination {
-	pageSize: number;
-	pageNumber: number;
-}
-
-export interface Search {
-	column: string;
-	value: string;
-}
-
-export interface Match {
-	column: string;
-	value: string;
-}
-
-export interface WhereIn {
-	values: number[];
-}
-
-export interface Sort {
-	column: string;
-	order: "ASC" | "DESC";
 }

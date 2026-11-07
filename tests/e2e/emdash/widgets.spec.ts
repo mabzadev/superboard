@@ -1,5 +1,15 @@
+/**
+ * Widgets E2E Tests
+ *
+ * Tests widget area management at /widgets.
+ * Covers creating widget areas, adding widgets, and deleting areas.
+ *
+ * The fixture starts with no widget areas, so tests create their own.
+ */
+
 import { test, expect } from "../../fixtures/emdash-browser";
 
+// API helper
 function apiHeaders(token: string, baseUrl: string) {
 	return {
 		"Content-Type": "application/json",
@@ -25,16 +35,20 @@ test.describe("Widgets", () => {
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Should show the page title
 			await expect(page.locator("h1").first()).toContainText("Widgets");
 
+			// Should show the "Add Widget Area" button
 			await expect(page.getByRole("button", { name: "Add Widget Area" })).toBeVisible();
 
+			// Should show the available widgets palette
 			await expect(page.locator("h2", { hasText: "Available Widgets" })).toBeVisible({
 				timeout: 10000,
 			});
 		});
 
 		test("shows empty state when no widget areas exist", async ({ admin, page }) => {
+			// Clean up any existing areas first
 			const res = await fetch(`${baseUrl}/_emdash/api/widget-areas`, { headers });
 			if (res.ok) {
 				const data: any = await res.json();
@@ -51,6 +65,7 @@ test.describe("Widgets", () => {
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Should show empty state
 			await expect(page.locator("text=No widget areas yet")).toBeVisible({ timeout: 10000 });
 		});
 
@@ -59,6 +74,7 @@ test.describe("Widgets", () => {
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Should show Content Block and Menu in the palette
 			await expect(page.locator("text=Content Block").first()).toBeVisible({ timeout: 10000 });
 			await expect(page.locator("text=Menu").first()).toBeVisible();
 		});
@@ -70,14 +86,18 @@ test.describe("Widgets", () => {
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Click "Add Widget Area"
 			await page.getByRole("button", { name: "Add Widget Area" }).click();
 
+			// Dialog should appear
 			const dialog = page.getByRole("dialog", { name: "Create Widget Area" });
 			await expect(dialog).toBeVisible({ timeout: 5000 });
 
+			// Should have Name, Label, Description fields
 			await expect(dialog.getByLabel("Name")).toBeVisible();
 			await expect(dialog.getByLabel("Label")).toBeVisible();
 
+			// Cancel should close the dialog
 			await dialog.getByRole("button", { name: "Cancel" }).click();
 			await expect(dialog).not.toBeVisible({ timeout: 5000 });
 		});
@@ -90,21 +110,27 @@ test.describe("Widgets", () => {
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Open create dialog
 			await page.getByRole("button", { name: "Add Widget Area" }).click();
 
 			const dialog = page.getByRole("dialog", { name: "Create Widget Area" });
 			await expect(dialog).toBeVisible({ timeout: 5000 });
 
+			// Fill form
 			await dialog.getByLabel("Name").fill(areaName);
 			await dialog.getByLabel("Label").fill(areaLabel);
 			await dialog.getByLabel("Description").fill("Area for E2E testing");
 
+			// Submit
 			await dialog.getByRole("button", { name: "Create" }).click();
 
+			// Dialog should close
 			await expect(dialog).not.toBeVisible({ timeout: 10000 });
 
+			// New area should appear in the list
 			await expect(page.locator("h3", { hasText: areaLabel })).toBeVisible({ timeout: 10000 });
 
+			// Clean up via API
 			await fetch(`${baseUrl}/_emdash/api/widget-areas/${areaName}`, {
 				method: "DELETE",
 				headers,
@@ -117,28 +143,34 @@ test.describe("Widgets", () => {
 			const areaName = `e2e-widget-${Date.now()}`;
 			const areaLabel = "Widget Test Area";
 
+			// Create area via API
 			await fetch(`${baseUrl}/_emdash/api/widget-areas`, {
 				method: "POST",
 				headers,
 				body: JSON.stringify({ name: areaName, label: areaLabel }),
 			});
 
+			// Add a content widget via API
 			await fetch(`${baseUrl}/_emdash/api/widget-areas/${areaName}/widgets`, {
 				method: "POST",
 				headers,
 				body: JSON.stringify({ type: "content", title: "Test Content Widget" }),
 			});
 
+			// Navigate to widgets page
 			await admin.goto("/widgets");
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Area should be visible
 			await expect(page.locator("h3", { hasText: areaLabel })).toBeVisible({ timeout: 10000 });
 
+			// Widget should be visible in the area
 			await expect(page.locator("text=Test Content Widget").first()).toBeVisible({
 				timeout: 10000,
 			});
 
+			// Clean up
 			await fetch(`${baseUrl}/_emdash/api/widget-areas/${areaName}`, {
 				method: "DELETE",
 				headers,
@@ -149,6 +181,7 @@ test.describe("Widgets", () => {
 			const areaName = `e2e-del-widget-${Date.now()}`;
 			const areaLabel = "Delete Widget Area";
 
+			// Create area and widget via API
 			await fetch(`${baseUrl}/_emdash/api/widget-areas`, {
 				method: "POST",
 				headers,
@@ -163,22 +196,31 @@ test.describe("Widgets", () => {
 			const widgetData: any = await widgetRes.json();
 			const widgetTitle = widgetData.data?.widget?.title ?? "Widget To Delete";
 
+			// Navigate to widgets page
 			await admin.goto("/widgets");
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Widget should be visible
 			await expect(page.locator(`text=${widgetTitle}`).first()).toBeVisible({ timeout: 10000 });
 
+			// Click the delete button on the widget
 			const deleteButton = page.getByRole("button", { name: `Delete ${widgetTitle}` });
 			if (await deleteButton.isVisible({ timeout: 3000 }).catch(() => false)) {
 				await deleteButton.click();
+
+				const dialog = page.getByRole("dialog", { name: "Delete widget?" });
+				await dialog.getByRole("button", { name: "Delete" }).click();
+				await expect(dialog).not.toBeVisible();
 				await admin.waitForLoading();
 
+				// Widget should disappear
 				await expect(page.locator(`text=${widgetTitle}`).first()).not.toBeVisible({
 					timeout: 10000,
 				});
 			}
 
+			// Clean up area
 			await fetch(`${baseUrl}/_emdash/api/widget-areas/${areaName}`, {
 				method: "DELETE",
 				headers,
@@ -191,6 +233,7 @@ test.describe("Widgets", () => {
 			const areaName = `e2e-del-area-${Date.now()}`;
 			const areaLabel = "Area To Delete";
 
+			// Create area via API
 			await fetch(`${baseUrl}/_emdash/api/widget-areas`, {
 				method: "POST",
 				headers,
@@ -201,18 +244,23 @@ test.describe("Widgets", () => {
 			await admin.waitForShell();
 			await admin.waitForLoading();
 
+			// Area should be visible
 			await expect(page.locator("h3", { hasText: areaLabel })).toBeVisible({ timeout: 10000 });
 
+			// Click the delete button on the area header
 			const deleteAreaButton = page.getByRole("button", {
 				name: `Delete ${areaLabel} widget area`,
 			});
 			await deleteAreaButton.click();
 
+			// ConfirmDialog should appear
 			const confirmDialog = page.getByRole("dialog", { name: "Delete Widget Area" });
 			await expect(confirmDialog).toBeVisible({ timeout: 5000 });
 
+			// Confirm deletion
 			await confirmDialog.getByRole("button", { name: "Delete" }).click();
 
+			// Area should disappear
 			await expect(page.locator("h3", { hasText: areaLabel })).not.toBeVisible({
 				timeout: 10000,
 			});
@@ -222,6 +270,7 @@ test.describe("Widgets", () => {
 			const areaName = `e2e-keep-area-${Date.now()}`;
 			const areaLabel = "Area To Keep";
 
+			// Create area via API
 			await fetch(`${baseUrl}/_emdash/api/widget-areas`, {
 				method: "POST",
 				headers,
@@ -234,17 +283,23 @@ test.describe("Widgets", () => {
 
 			await expect(page.locator("h3", { hasText: areaLabel })).toBeVisible({ timeout: 10000 });
 
+			// Click delete
 			await page.getByRole("button", { name: `Delete ${areaLabel} widget area` }).click();
 
+			// Dialog appears
 			const confirmDialog = page.getByRole("dialog", { name: "Delete Widget Area" });
 			await expect(confirmDialog).toBeVisible({ timeout: 5000 });
 
+			// Cancel
 			await confirmDialog.getByRole("button", { name: "Cancel" }).click();
 
+			// Dialog closes
 			await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
 
+			// Area should still be there
 			await expect(page.locator("h3", { hasText: areaLabel })).toBeVisible();
 
+			// Clean up
 			await fetch(`${baseUrl}/_emdash/api/widget-areas/${areaName}`, {
 				method: "DELETE",
 				headers,

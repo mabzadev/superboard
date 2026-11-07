@@ -8,6 +8,7 @@ interface __BaseEnv_Env {
 	SUPERBOARD_WORKER_VERSION: WorkerVersionMetadata;
 	ENVIRONMENT: string;
 	API_DOMAIN: string;
+	AUTH_DOMAIN: string;
 	SDK_DOMAIN: string;
 	CREDENTIAL_KEY_SCOPE: string;
 	BILLING_RELEASE_STALE_MINUTES: string;
@@ -37,7 +38,31 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "API_DOMAIN" | "SDK_DOMAIN" | "CREDENTIAL_KEY_SCOPE" | "BILLING_RELEASE_STALE_MINUTES" | "BILLING_CATALOG_STALE_HOURS" | "BILLING_QUEUE_NAME" | "BILLING_DLQ_NAME" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "SUPERBOARD_RELEASE" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "APPLE_ROOT_CERTIFICATES_B64" | "INTERNAL_API_TOKEN" | "PURCHASES_SIGNING_KEYSET" | "STORE_CREDENTIALS_ACTIVE_KEY_VERSION" | "STORE_CREDENTIALS_ENCRYPTION_KEYS" | "SUPERBOARD_ENTITLEMENT_WEBHOOK_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "API_DOMAIN" | "AUTH_DOMAIN" | "SDK_DOMAIN" | "CREDENTIAL_KEY_SCOPE" | "BILLING_RELEASE_STALE_MINUTES" | "BILLING_CATALOG_STALE_HOURS" | "BILLING_QUEUE_NAME" | "BILLING_DLQ_NAME" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "SUPERBOARD_RELEASE" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "APPLE_ROOT_CERTIFICATES_B64" | "INTERNAL_API_TOKEN" | "PURCHASES_SIGNING_KEYSET" | "STORE_CREDENTIALS_ACTIVE_KEY_VERSION" | "STORE_CREDENTIALS_ENCRYPTION_KEYS" | "SUPERBOARD_ENTITLEMENT_WEBHOOK_SECRET">> {}
+}
+declare module "*.txt" {
+	const value: string;
+	export default value;
+}
+declare module "*.html" {
+	const value: string;
+	export default value;
+}
+declare module "*.sql" {
+	const value: string;
+	export default value;
+}
+declare module "*.bin" {
+	const value: ArrayBuffer;
+	export default value;
+}
+declare module "*.wasm" {
+	const value: WebAssembly.Module;
+	export default value;
+}
+declare module "*.wasm?module" {
+	const value: WebAssembly.Module;
+	export default value;
 }
 
 // Secret bindings are generated from the declarative service or target registry.

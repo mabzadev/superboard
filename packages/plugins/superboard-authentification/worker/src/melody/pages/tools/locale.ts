@@ -260,11 +260,6 @@ export const mfaEnroll = Object.freeze({
     fr: 'Authentificateur',
     zh: '验证器APP',
   },
-  sms: {
-    en: 'SMS',
-    fr: 'message texte',
-    zh: '短信',
-  },
 })
 
 export const otpMfa = Object.freeze({
@@ -539,11 +534,6 @@ export const signIn = Object.freeze({
     fr: 'Se connecter avec GitHub',
     zh: '使用 GitHub 登录',
   },
-  discordSignIn: {
-    en: 'Log in with Discord',
-    fr: 'Se connecter avec Discord',
-    zh: '使用 Discord 登录',
-  },
   oidcSignIn: {
     en: 'Log in with ',
     fr: 'Se connecter avec ',
@@ -667,54 +657,6 @@ export const recoveryCodeSignIn = Object.freeze({
   },
 })
 
-export const smsMfa = Object.freeze({
-  title: {
-    en: 'SMS Verification',
-    fr: 'Vérification par SMS',
-    zh: '短信验证',
-  },
-  phoneNumber: {
-    en: 'Phone Number',
-    fr: 'Numéro de téléphone',
-    zh: '手机号',
-  },
-  code: {
-    en: 'Verification Code',
-    fr: 'Code de vérification',
-    zh: '验证码',
-  },
-  sendCode: {
-    en: 'Send code',
-    fr: 'Envoyer le code',
-    zh: '发送验证码',
-  },
-  verify: {
-    en: 'Verify',
-    fr: 'Vérifier',
-    zh: '验证',
-  },
-  resend: {
-    en: 'Resend a new code',
-    fr: 'Renvoyer un nouveau code',
-    zh: '重新发送验证码',
-  },
-  resent: {
-    en: 'New code sent.',
-    fr: 'Nouveau code envoyé.',
-    zh: '新验证码已发送。',
-  },
-  switchToEmail: {
-    en: 'Receive MFA Code by Email',
-    fr: 'Recevoir le code MFA par e-mail',
-    zh: '通过邮箱接收验证码',
-  },
-  rememberDevice: {
-    en: 'Remember this device for 30 days.',
-    fr: 'Se souvenir de ce dispositif pour 30 jours.',
-    zh: '记住此设备30天。',
-  },
-})
-
 export const updateInfo = Object.freeze({
   title: {
     en: 'Update your info',
@@ -814,29 +756,6 @@ export const verifyEmail = Object.freeze({
   },
 })
 
-export const switchOrg = Object.freeze({
-  title: {
-    en: 'Switch Organization',
-    fr: 'Changer d\'organisation',
-    zh: '切换组织',
-  },
-  confirm: {
-    en: 'Confirm',
-    fr: 'Confirmer',
-    zh: '确认',
-  },
-  success: {
-    en: 'Organization changed successfully!',
-    fr: 'Organisation changée avec succès !',
-    zh: '组织切换成功！',
-  },
-  redirect: {
-    en: 'Redirect back',
-    fr: 'Rediriger en arrière',
-    zh: '返回',
-  },
-})
-
 export const requestError = Object.freeze({
   authFailed: {
     en: 'Authentication Failed.',
@@ -877,11 +796,6 @@ export const requestError = Object.freeze({
     en: 'Too many failed OTP verification attempts. Please try again after 30 minutes.',
     fr: 'Nombre trop élevé de tentatives échouées de vérification OTP. Veuillez réessayer dans 30 minutes.',
     zh: '验证失败次数过多。请在 30 分钟后重试。',
-  },
-  smsMfaLocked: {
-    en: 'Too many SMS verification attempts. Please try again after 30 minutes.',
-    fr: 'Trop de tentatives de vérification par SMS. Veuillez réessayer dans 30 minutes.',
-    zh: '短信验证失败次数过多。请在 30 分钟后重试。',
   },
   emailMfaLocked: {
     en: 'Too many email verification attempts. Please try again after 30 minutes.',
@@ -960,16 +874,6 @@ export const validateError = Object.freeze({
     en: 'Password must be at least 8 characters, contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
     fr: 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.',
     zh: '密码必须至少包含 8 个字符，至少包含一个大写字母、一个小写字母、一个数字和一个特殊字符。',
-  },
-  phoneNumberIsRequired: {
-    en: 'Phone number is required!',
-    fr: 'Le numéro de téléphone est requis !',
-    zh: '手机号是必填项！',
-  },
-  wrongPhoneFormat: {
-    en: 'the format must be a number up to fifteen digits in length starting with a ‘+’ with country code.',
-    fr: 'Le format doit être un numéro de maximum quinze chiffres commençant par un ‘+’ avec l’indicatif du pays.',
-    zh: '格式必须为以 ‘+’ 开头，最多十五位的数字，包含国家代码。',
   },
   emailIsRequired: {
     en: 'Email is required!',

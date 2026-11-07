@@ -2,8 +2,8 @@
   "schema_version": 1,
   "target": "mabza-development",
   "environment": "local",
-  "target_artifact_checksum": "sha256:781a7d4891e82c414ab483743ad424ffdfef416e66af98ff39cb986d500db6fe",
-  "target_graph_checksum": "sha256:715b1def8c8d3be279ba0c5ebbc3d10bd9457afeed13deb5b9484cfcbf228fef",
+  "target_artifact_checksum": "sha256:a8fe8f40d1d60653ca40fbac4f2aaa89377f105ade979b858d4c96d78ec82527",
+  "target_graph_checksum": "sha256:a8fbaf23ba7bf6e14a9be766253403f457b3febf671e44d5064ee234822cee2f",
   "active_plugin_ids": [
     "superboard-analytics",
     "superboard-audit",
@@ -25,24 +25,24 @@
     "superboard-user"
   ],
   "manifest_artifact_checksums": {
-    "superboard-analytics": "sha256:546279bdbbb7cd576cd9eae8125c1d880262069c722251edd454bd06c877fd7c",
-    "superboard-audit": "sha256:c3a68ef9022be8f50f162805131e6099827aad93d68bb3d302672a4d37d1e149",
-    "superboard-billing": "sha256:e254e012e2d848929e69fd7b663d25fe9c1cb5c5dc3281b001452704a776d15d",
-    "superboard-content": "sha256:8962b912507ba877b56e4cb6b7a268b5297eb8fcdc48337a89ba5c003e536bb6",
-    "superboard-dynamic-links": "sha256:5bec7b3d33e8b2b2f81b065b1f47c2b66509f73d07d0f5017de21e3d5775b287",
-    "superboard-email": "sha256:214927d81b2e7df5e5c98e64755ee6b9b5742919cbd24a11813910fcd41cacf0",
-    "superboard-files": "sha256:bdfeb5d3481ad899dd2a0b6c91a4941935d2c85e85ef2573d0717bf7bcb33935",
-    "superboard-flows": "sha256:a39a920a8d0910f3a9a9d3f4d7cdbfa9c4897f9449fb43c2242afb9b878fc473",
-    "superboard-gateway": "sha256:60cfdb5160ed115aa0048b969c3e0aa15cc515eb532977cb45b7ec5cb66a6854",
-    "superboard-marketing": "sha256:535c1b1aaad0bef38994340dd0cf03dabff62725010f91b51b7e830aa1c60f4c",
-    "superboard-mcp": "sha256:665bc94575be169365530dff89f7abffa507f0519fbb2e4c8203b3d37aba9261",
-    "superboard-observability": "sha256:d13dc5b6ee394eb63e9d5c4efc849f2f9d6728dac50caf921e7414f4bc7a02ca",
-    "superboard-onboardings": "sha256:c6ce200fc69196aa9daac8b6133be76960ec19b904917ae0258d052c2bcb0a64",
-    "superboard-paywalls": "sha256:54f9084309a4be7c7516b806767f6e76f179db4edf65c8c336ac54923b4434b5",
-    "superboard-products": "sha256:0d4fe5bd8c355da3c4f034f21b5cd16ff643d6b0bb507991006b35da6fd6d475",
-    "superboard-settings": "sha256:4ac205db9cdfd3afa1702a159ce95170a92e6e2a64552d90541ba0187205aa92",
-    "superboard-support": "sha256:3c2dcb3019e868982ffc3aae06dced1b0bcd5832cb9c402af0560bf7a357051c",
-    "superboard-user": "sha256:c6dbbf70b3899245b2f3132901f6d4b01fba8464164068706649804b06289906"
+    "superboard-analytics": "sha256:17e8f9a6dc4ed7495e9c1fa222cae9de79b0b51921143dcfd0fe1d6835f3b8c4",
+    "superboard-audit": "sha256:2942552be1c9742705cf4c549f27e5047ef8b19f1ea3950d098d1c024471347b",
+    "superboard-billing": "sha256:07ce82a806bc2bf26bde3edca2744a71e3a70ca8927564ab9e5e79f440fe9ef7",
+    "superboard-content": "sha256:3a96925f2b52709c2d70d2cdc727318c1e78880ab7a3ff75e1ce391741a1f6c6",
+    "superboard-dynamic-links": "sha256:3583095899dc8c7ef2a7c67042e89d1cb81793a05821d4ede5f903d631e22856",
+    "superboard-email": "sha256:a881da27a27ded3c000813ab62d693905216e3173e88134ecf649ad8f5c28309",
+    "superboard-files": "sha256:5de78ec74700cc1d5c282336e514f5c2f481db037a05a0cd4bbbf78ef98e53c5",
+    "superboard-flows": "sha256:f4a3248f1e27e37d6ba91ede55c6f269824dd95fab9b695373d30de26317a6a5",
+    "superboard-gateway": "sha256:8961c991f51ec5f7927bf06e71fccfc86a474af1f64ebdd4b18202a8c9255de0",
+    "superboard-marketing": "sha256:b897e873d76345cc7e6ae0603e14e538c8db95e62300a3c149c1c1917f74eb5e",
+    "superboard-mcp": "sha256:6dbf09066a84469d94c79e0437e75cd41c534e546b34d00c5e7f9af89aa80598",
+    "superboard-observability": "sha256:392c13e2d66385fbf9393662a2d0e2f0ecb4f4c755cb6dea9ec580ff88b6ab66",
+    "superboard-onboardings": "sha256:28d833403c5f9e26b63c302a512b7338f1037a7e78bf0771d38fc86d535992b8",
+    "superboard-paywalls": "sha256:653dd9605959a9a99e99d55b91e3280f9d8c1592e670d10886200c522f626db8",
+    "superboard-products": "sha256:37bd69e2cfeba96992f539140e712e1febc097dd3daed80d66b1f7d5ace6d4fc",
+    "superboard-settings": "sha256:b766f841a2a60f9d1345f9c9b3debe79c7cd62a3422a227bef1d43db690fe540",
+    "superboard-support": "sha256:4027fddb9ee5b073fa2a58e3a3f87ec3d92b41f353ecfdf4575c1702dc1cb80d",
+    "superboard-user": "sha256:ee2289125e6158227f17bb350b26ad0516d9c5aabd47b6866ff3e381f896d81c"
   },
   "verification_key": {
     "key_ops": [
@@ -50,8 +50,8 @@
     ],
     "ext": true,
     "kty": "EC",
-    "x": "0FuMM4oTXA7EJRwYCrO8jgc0dADYt8Jq3eUeBwA0hQQ",
-    "y": "6RzWgLdQTVausC-QXIeLKYMfDEtaC91Df7P7BedUwfY",
+    "x": "YjnJuZC_uk1FXOG05HPmrJ2gV5WLpH0KDAKNFODket8",
+    "y": "mpdxavw8Oy5FTBfnwr6J7sVC-a_uj2pFAPG36ExAkPY",
     "crv": "P-256",
     "kid": "issue-70-parity"
   },
@@ -7345,109 +7345,109 @@
           "version": "0.1.0"
         },
         {
-          "artifact_checksum": "sha256:546279bdbbb7cd576cd9eae8125c1d880262069c722251edd454bd06c877fd7c",
+          "artifact_checksum": "sha256:17e8f9a6dc4ed7495e9c1fa222cae9de79b0b51921143dcfd0fe1d6835f3b8c4",
           "native": false,
           "plugin_id": "superboard-analytics",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:c3a68ef9022be8f50f162805131e6099827aad93d68bb3d302672a4d37d1e149",
+          "artifact_checksum": "sha256:2942552be1c9742705cf4c549f27e5047ef8b19f1ea3950d098d1c024471347b",
           "native": false,
           "plugin_id": "superboard-audit",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:e254e012e2d848929e69fd7b663d25fe9c1cb5c5dc3281b001452704a776d15d",
+          "artifact_checksum": "sha256:07ce82a806bc2bf26bde3edca2744a71e3a70ca8927564ab9e5e79f440fe9ef7",
           "native": false,
           "plugin_id": "superboard-billing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:8962b912507ba877b56e4cb6b7a268b5297eb8fcdc48337a89ba5c003e536bb6",
+          "artifact_checksum": "sha256:3a96925f2b52709c2d70d2cdc727318c1e78880ab7a3ff75e1ce391741a1f6c6",
           "native": false,
           "plugin_id": "superboard-content",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:5bec7b3d33e8b2b2f81b065b1f47c2b66509f73d07d0f5017de21e3d5775b287",
+          "artifact_checksum": "sha256:3583095899dc8c7ef2a7c67042e89d1cb81793a05821d4ede5f903d631e22856",
           "native": false,
           "plugin_id": "superboard-dynamic-links",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:214927d81b2e7df5e5c98e64755ee6b9b5742919cbd24a11813910fcd41cacf0",
+          "artifact_checksum": "sha256:a881da27a27ded3c000813ab62d693905216e3173e88134ecf649ad8f5c28309",
           "native": false,
           "plugin_id": "superboard-email",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:bdfeb5d3481ad899dd2a0b6c91a4941935d2c85e85ef2573d0717bf7bcb33935",
+          "artifact_checksum": "sha256:5de78ec74700cc1d5c282336e514f5c2f481db037a05a0cd4bbbf78ef98e53c5",
           "native": false,
           "plugin_id": "superboard-files",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:a39a920a8d0910f3a9a9d3f4d7cdbfa9c4897f9449fb43c2242afb9b878fc473",
+          "artifact_checksum": "sha256:f4a3248f1e27e37d6ba91ede55c6f269824dd95fab9b695373d30de26317a6a5",
           "native": false,
           "plugin_id": "superboard-flows",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:60cfdb5160ed115aa0048b969c3e0aa15cc515eb532977cb45b7ec5cb66a6854",
+          "artifact_checksum": "sha256:8961c991f51ec5f7927bf06e71fccfc86a474af1f64ebdd4b18202a8c9255de0",
           "native": false,
           "plugin_id": "superboard-gateway",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:535c1b1aaad0bef38994340dd0cf03dabff62725010f91b51b7e830aa1c60f4c",
+          "artifact_checksum": "sha256:b897e873d76345cc7e6ae0603e14e538c8db95e62300a3c149c1c1917f74eb5e",
           "native": false,
           "plugin_id": "superboard-marketing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:665bc94575be169365530dff89f7abffa507f0519fbb2e4c8203b3d37aba9261",
+          "artifact_checksum": "sha256:6dbf09066a84469d94c79e0437e75cd41c534e546b34d00c5e7f9af89aa80598",
           "native": false,
           "plugin_id": "superboard-mcp",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:d13dc5b6ee394eb63e9d5c4efc849f2f9d6728dac50caf921e7414f4bc7a02ca",
+          "artifact_checksum": "sha256:392c13e2d66385fbf9393662a2d0e2f0ecb4f4c755cb6dea9ec580ff88b6ab66",
           "native": false,
           "plugin_id": "superboard-observability",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:c6ce200fc69196aa9daac8b6133be76960ec19b904917ae0258d052c2bcb0a64",
+          "artifact_checksum": "sha256:28d833403c5f9e26b63c302a512b7338f1037a7e78bf0771d38fc86d535992b8",
           "native": false,
           "plugin_id": "superboard-onboardings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:54f9084309a4be7c7516b806767f6e76f179db4edf65c8c336ac54923b4434b5",
+          "artifact_checksum": "sha256:653dd9605959a9a99e99d55b91e3280f9d8c1592e670d10886200c522f626db8",
           "native": false,
           "plugin_id": "superboard-paywalls",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:0d4fe5bd8c355da3c4f034f21b5cd16ff643d6b0bb507991006b35da6fd6d475",
+          "artifact_checksum": "sha256:37bd69e2cfeba96992f539140e712e1febc097dd3daed80d66b1f7d5ace6d4fc",
           "native": false,
           "plugin_id": "superboard-products",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:4ac205db9cdfd3afa1702a159ce95170a92e6e2a64552d90541ba0187205aa92",
+          "artifact_checksum": "sha256:b766f841a2a60f9d1345f9c9b3debe79c7cd62a3422a227bef1d43db690fe540",
           "native": false,
           "plugin_id": "superboard-settings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:3c2dcb3019e868982ffc3aae06dced1b0bcd5832cb9c402af0560bf7a357051c",
+          "artifact_checksum": "sha256:4027fddb9ee5b073fa2a58e3a3f87ec3d92b41f353ecfdf4575c1702dc1cb80d",
           "native": false,
           "plugin_id": "superboard-support",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:c6dbbf70b3899245b2f3132901f6d4b01fba8464164068706649804b06289906",
+          "artifact_checksum": "sha256:ee2289125e6158227f17bb350b26ad0516d9c5aabd47b6866ff3e381f896d81c",
           "native": false,
           "plugin_id": "superboard-user",
           "version": "1.4.0"
@@ -7571,23 +7571,9 @@
                 "route_id": "superboard.auth_settings"
               },
               {
-                "href": "/auth/settings?tab=organizations&lang=en",
-                "label": "Organizations",
-                "order": 6,
-                "permission": "users.read",
-                "route_id": "superboard.auth_settings"
-              },
-              {
                 "href": "/auth/settings?lang=en&tab=logs",
                 "label": "Logs",
                 "order": 7,
-                "permission": "users.read",
-                "route_id": "superboard.auth_settings"
-              },
-              {
-                "href": "/auth/settings?tab=login&section=sso&lang=en",
-                "label": "SAML SSO",
-                "order": 8,
                 "permission": "users.read",
                 "route_id": "superboard.auth_settings"
               },
@@ -8205,12 +8191,12 @@
           {
             "page_id": "page.superboard_identity_by_lang_apps_banners_by_id",
             "root_renderer_id": "superboard-user.renderer.admin_surface",
-            "title": "Identity · Banner"
+            "title": "Identity · Applications"
           },
           {
             "page_id": "page.superboard_identity_by_lang_apps_banners_new",
             "root_renderer_id": "superboard-user.renderer.admin_surface",
-            "title": "Identity · New banner"
+            "title": "Identity · Applications"
           },
           {
             "page_id": "page.superboard_identity_by_lang_apps_by_id",
@@ -8235,22 +8221,22 @@
           {
             "page_id": "page.superboard_identity_by_lang_logs_sms_by_id",
             "root_renderer_id": "superboard-user.renderer.admin_surface",
-            "title": "Identity · SMS log"
+            "title": "Identity · Logs"
           },
           {
             "page_id": "page.superboard_identity_by_lang_orgs",
             "root_renderer_id": "superboard-user.renderer.admin_surface",
-            "title": "Identity · Organizations"
+            "title": "Identity · Access control"
           },
           {
             "page_id": "page.superboard_identity_by_lang_orgs_by_id",
             "root_renderer_id": "superboard-user.renderer.admin_surface",
-            "title": "Identity · Organization"
+            "title": "Identity · Access control"
           },
           {
             "page_id": "page.superboard_identity_by_lang_orgs_new",
             "root_renderer_id": "superboard-user.renderer.admin_surface",
-            "title": "Identity · New organization"
+            "title": "Identity · Access control"
           },
           {
             "page_id": "page.superboard_identity_by_lang_roles",
@@ -8270,17 +8256,17 @@
           {
             "page_id": "page.superboard_identity_by_lang_saml",
             "root_renderer_id": "superboard-user.renderer.admin_surface",
-            "title": "Identity · SAML"
+            "title": "Identity · Sign-in settings"
           },
           {
             "page_id": "page.superboard_identity_by_lang_saml_by_id",
             "root_renderer_id": "superboard-user.renderer.admin_surface",
-            "title": "Identity · SAML connection"
+            "title": "Identity · Sign-in settings"
           },
           {
             "page_id": "page.superboard_identity_by_lang_saml_new",
             "root_renderer_id": "superboard-user.renderer.admin_surface",
-            "title": "Identity · New SAML connection"
+            "title": "Identity · Sign-in settings"
           },
           {
             "page_id": "page.superboard_identity_by_lang_scopes",
@@ -9027,8 +9013,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9056,8 +9042,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9085,8 +9071,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9114,8 +9100,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9143,8 +9129,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9172,8 +9158,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9201,8 +9187,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9230,8 +9216,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9259,8 +9245,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9288,8 +9274,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9317,8 +9303,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9346,8 +9332,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9375,8 +9361,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9404,8 +9390,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9433,8 +9419,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9462,8 +9448,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9491,8 +9477,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9520,8 +9506,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9547,8 +9533,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9574,8 +9560,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:2da5cabe6d9320ae65a0ef7e7cc5cb529720b9e585b94f158e3e2b70d296ff19",
-          "build_id": "5KD0X0JT1RE044S7QSZTQJGDW6",
+          "build_checksum": "sha256:d99770522117313835d796ab9d345040cd33e0828f35d7df698911f1168e7387",
+          "build_id": "5AWZZV7VSTKTFEHBE6CRHXP05S",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9607,11 +9593,11 @@
       },
       "schema_version": "1.0.0"
     },
-    "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+    "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "PoYqkr-AK35fvm3z8oMYMC9PCVSQ9CsQ8DBqPMpPk7zG-inXx1k6whm5U2tx4KFAVFmBaUziPFomwCx9VmubQQ"
+      "value": "06snOyJu98HDQheK_b9dF5iGOPCkxVf_4a1uPcqtmeaKKdjyGYyhmcPrW6ioI9CYZtvXkVlXYDVfCGju6GxFqg"
     },
     "validation_receipts": [
       {
@@ -9621,9 +9607,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "schema validation passed",
-        "receipt_checksum": "sha256:f9e181ef69c4f8de0225ba88b636a86dc25831bd6b2b8c9b6c07e67fd00e34ec"
+        "receipt_checksum": "sha256:18369a94f3fd070fbb119667b2f521ee13ada264932718f318a942bcb74f9129"
       },
       {
         "receipt_id": "01J00000000000000000007004:normalization",
@@ -9632,9 +9618,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "normalization validation passed",
-        "receipt_checksum": "sha256:cfcc8d79d0efe234d5bd66af6eb81ebde1e3b48a017a419753005fac6cada10a"
+        "receipt_checksum": "sha256:02699008b3e364b05476375214d56a0f8f64030e3875ab10ff7392777c1373da"
       },
       {
         "receipt_id": "01J00000000000000000007004:identity",
@@ -9643,9 +9629,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "identity validation passed",
-        "receipt_checksum": "sha256:97fec72f4978e40c421b0fe0137f99d6d8f14177b405a5b484d92d884c85cf45"
+        "receipt_checksum": "sha256:9593453770b8294dee8a7dc3094772d2181115c23d2c25c68cad3a6343603b9d"
       },
       {
         "receipt_id": "01J00000000000000000007004:reference_graph",
@@ -9654,9 +9640,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "reference_graph validation passed",
-        "receipt_checksum": "sha256:14a1a4882ec1edae8891372233d24672634977302f90f8066b29fd9494d26e17"
+        "receipt_checksum": "sha256:b4167eed2b1bb6c5d4062e31bd57d23960f3e3bf65f32148079b160ae8a362e6"
       },
       {
         "receipt_id": "01J00000000000000000007004:routing",
@@ -9665,9 +9651,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "routing validation passed",
-        "receipt_checksum": "sha256:16df26bd7730772fff4c5591ea92c2163c9769149a786ad42011c9b434d2d7ee"
+        "receipt_checksum": "sha256:4afd0091d899ec570069de368419ab5bef5d48832fde6de5fa9d76ef42a4e003"
       },
       {
         "receipt_id": "01J00000000000000000007004:renderer_compatibility",
@@ -9676,9 +9662,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "renderer_compatibility validation passed",
-        "receipt_checksum": "sha256:dabb84f8d96eed9b3bc5ca0b6b6f1ff8b26f595936d735c185e38d347e6cc06a"
+        "receipt_checksum": "sha256:3c8de2e1c14308e8e4273ef2b9f4717c4535b76885c515cdf82ab04ec051ddca"
       },
       {
         "receipt_id": "01J00000000000000000007004:actions_data_sources",
@@ -9687,9 +9673,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "actions_data_sources validation passed",
-        "receipt_checksum": "sha256:d1f8d04445b4977f6d670ef52f257b1bda3c983deb67e8dedcd5a7a2dcae83fe"
+        "receipt_checksum": "sha256:c22638810435a30f77ae6acd5d8cb68940f5a29d620664056da33e4e95c0ac60"
       },
       {
         "receipt_id": "01J00000000000000000007004:permissions_security",
@@ -9698,9 +9684,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "permissions_security validation passed",
-        "receipt_checksum": "sha256:e6478e4062315d5d6b5b1c7bb4859c92ad15d33e03d98bb939a33a83672d0da4"
+        "receipt_checksum": "sha256:bf8b268217a72322523f0e59b0565a0c1e69a1a6f7bcf40c39d1da50cceb7bbf"
       },
       {
         "receipt_id": "01J00000000000000000007004:translations_media",
@@ -9709,9 +9695,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "translations_media validation passed",
-        "receipt_checksum": "sha256:32c63d82227ec278f56bdac8fca737d01dd4bc787e373ca5372d035bc96578b7"
+        "receipt_checksum": "sha256:3b093243f81c2d4646cc5e0a0f51d17a407b0ed8e1d1ab3189b840f510b2cfb0"
       },
       {
         "receipt_id": "01J00000000000000000007004:plugins_stores_workers",
@@ -9720,9 +9706,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "plugins_stores_workers validation passed",
-        "receipt_checksum": "sha256:347f72282945888d1784f17e161e75ca1b4370633e16e0b09b22985fe23d8638"
+        "receipt_checksum": "sha256:6bcba995fac8e09c8e0b5b5b4893a2f634a3ec06af697b8dc540d79dc927885e"
       },
       {
         "receipt_id": "01J00000000000000000007004:migrations",
@@ -9731,9 +9717,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "migrations validation passed",
-        "receipt_checksum": "sha256:aec66dbf9f112e93c675d2ee229e5bbbb42eb08b3f542a90d0253d5f364ccb2c"
+        "receipt_checksum": "sha256:235311d175c79087c38d07359d0b0ef2af1040f53d2c23358cecde19fadac87a"
       },
       {
         "receipt_id": "01J00000000000000000007004:rollback_readiness",
@@ -9742,9 +9728,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "rollback_readiness validation passed",
-        "receipt_checksum": "sha256:0fff522b9d480dca58a8159a9c7dc070570632630dc9a79807ad9f09336f12a3"
+        "receipt_checksum": "sha256:fa4f7a01ded968e15aab75ca97c8fffa19fbc1a1afa936c6a9ba885564857233"
       },
       {
         "receipt_id": "01J00000000000000000007004:integrity",
@@ -9753,12 +9739,12 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:c55e9808c0451d07f038e9c16a85be5a91bb7891b61edf8f28c2890c551007a0",
+        "content_checksum": "sha256:7c48828945ee063011014efbeefd0b0934abb553f3aaf810040fc8715ec3e9ac",
         "message": "integrity validation passed",
-        "receipt_checksum": "sha256:ef6328a946aed5a918455ff458bda3fe2d7860720de3576775e822def2d297a3"
+        "receipt_checksum": "sha256:91fa4dbeb251fc0ab35069c7ab397293bf851ff522a41a6444066954b195d12e"
       }
     ],
-    "validation_set_checksum": "sha256:53ef7c9baf0a14a8b02da75d9c8f0877f1c7bc999c6ccdbcb0ca5d3fae7c0180",
+    "validation_set_checksum": "sha256:3f393580b5e3b8462e3d715c9d8972277b565a7a2e88c50a68caff1861ef3d8c",
     "verification_status": "verified"
   }
 }

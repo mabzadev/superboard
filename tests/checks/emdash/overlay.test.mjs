@@ -387,3 +387,52 @@ void test("removed upstream commands do not return through composed script alias
 	assert.equal(result.scripts["site:test"], "site-test");
 	assert.equal(result.scripts.build, "build-packages");
 });
+
+void test("SuperBoard overrides replace the upstream override for the same package", () => {
+	const upstream =
+		'trustPolicyExclude:\n  - vite@6.4.1\nallowBuilds:\n  esbuild: true\npackages:\n  - packages/*\n  - infra/*\ncatalog:\n  vitest: 4.1.10\noverrides:\n  # Keep runner and vitest on one release.\n  "@vitest/runner": 4.1.10\n  # Slow selectors in 2.2.27.\n  nwsapi: "2.2.25"\npatchedDependencies:\n  image-size@2.0.2: patches/image-size.patch\n';
+	const compatibility = {
+		eslintImportResolverTypescript: "4.4.5",
+		allowBuilds: {},
+		additionalOverrides: { "@vitest/runner": "4.1.12" },
+		patchedDependencies: {},
+		trustPolicyExclude: [],
+		virtualStoreType: "project",
+		verifyDepsBeforeRun: "warn",
+		hoistPattern: ["*"],
+		resolvePeersFromWorkspaceRoot: false,
+		dedupePeerDependents: false,
+		packageExtensions: {},
+		supportedArchitectures: { os: ["current"], cpu: ["x64"] },
+	};
+	const rendered = renderPnpmWorkspace(upstream, overlay, compatibility);
+	const workspace = parse(rendered);
+	assert.equal(workspace.overrides["@vitest/runner"], "4.1.12");
+	assert.equal(workspace.overrides.nwsapi, "2.2.25");
+	assert.ok(rendered.includes("# Slow selectors in 2.2.27."));
+	assert.ok(!rendered.includes("# Keep runner and vitest on one release."));
+});
+
+void test("upstream supported architectures merge into SuperBoard's instead of repeating the key", () => {
+	const upstream =
+		'verifyDepsBeforeRun: error\n# Worker bundles resolve WASM targets.\nsupportedArchitectures:\n  cpu:\n    - current\n    - wasm32\ntrustPolicyExclude:\n  - vite@6.4.1\nallowBuilds:\n  esbuild: true\npackages:\n  - packages/*\n  - infra/*\ncatalog:\n  vitest: 4.1.10\noverrides:\n  nwsapi: "2.2.25"\npatchedDependencies:\n  image-size@2.0.2: patches/image-size.patch\n';
+	const compatibility = {
+		eslintImportResolverTypescript: "4.4.5",
+		allowBuilds: {},
+		additionalOverrides: {},
+		patchedDependencies: {},
+		trustPolicyExclude: [],
+		virtualStoreType: "project",
+		verifyDepsBeforeRun: "warn",
+		hoistPattern: ["*"],
+		resolvePeersFromWorkspaceRoot: false,
+		dedupePeerDependents: false,
+		packageExtensions: {},
+		supportedArchitectures: { os: ["current", "darwin", "linux"], cpu: ["x64", "arm64"] },
+	};
+	const workspace = parse(renderPnpmWorkspace(upstream, overlay, compatibility));
+	assert.deepEqual(workspace.supportedArchitectures, {
+		os: ["current", "darwin", "linux"],
+		cpu: ["x64", "arm64", "current", "wasm32"],
+	});
+});

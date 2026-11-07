@@ -16,6 +16,7 @@ describe("Passkey Management", () => {
 		db = await setupTestDatabase();
 		adapter = createKyselyAdapter(db);
 
+		// Create a test user
 		testUser = await adapter.createUser({
 			email: "test@example.com",
 			name: "Test User",
@@ -27,6 +28,7 @@ describe("Passkey Management", () => {
 		await teardownTestDatabase(db);
 	});
 
+	// Helper to create a test credential
 	async function createTestCredential(userId: string, name?: string): Promise<Credential> {
 		const credentialId = `cred-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 		return adapter.createCredential({
@@ -187,16 +189,20 @@ describe("Passkey Management", () => {
 
 	describe("Passkey Management Flow", () => {
 		it("should support full CRUD flow", async () => {
+			// Create passkeys
 			const passkey1 = await createTestCredential(testUser.id, "MacBook");
 			const passkey2 = await createTestCredential(testUser.id, "iPhone");
 
+			// List passkeys
 			let passkeys = await adapter.getCredentialsByUserId(testUser.id);
 			expect(passkeys).toHaveLength(2);
 
+			// Rename a passkey
 			await adapter.updateCredentialName(passkey1.id, "MacBook Pro M3");
 			const renamed = await adapter.getCredentialById(passkey1.id);
 			expect(renamed?.name).toBe("MacBook Pro M3");
 
+			// Delete a passkey (not the last one)
 			const countBefore = await adapter.countCredentialsByUserId(testUser.id);
 			expect(countBefore).toBe(2);
 
@@ -205,18 +211,24 @@ describe("Passkey Management", () => {
 			const countAfter = await adapter.countCredentialsByUserId(testUser.id);
 			expect(countAfter).toBe(1);
 
+			// Verify only one remains
 			passkeys = await adapter.getCredentialsByUserId(testUser.id);
 			expect(passkeys).toHaveLength(1);
 			expect(passkeys[0].name).toBe("MacBook Pro M3");
 		});
 
 		it("should enforce 'cannot delete last passkey' in application logic", async () => {
+			// Create a single passkey
 			const passkey = await createTestCredential(testUser.id, "Only Passkey");
 
+			// Check count before deletion attempt
 			const count = await adapter.countCredentialsByUserId(testUser.id);
 			expect(count).toBe(1);
 
+			// Application should check count and prevent deletion
+			// The adapter itself doesn't enforce this - it's the API layer's job
 			if (count <= 1) {
+				// Don't delete - this is what the API should do
 				const stillExists = await adapter.getCredentialById(passkey.id);
 				expect(stillExists).not.toBeNull();
 			}
@@ -255,6 +267,7 @@ describe("Passkey Management", () => {
 			const credential = await createTestCredential(testUser.id);
 			const originalLastUsed = credential.lastUsedAt;
 
+			// Small delay to ensure time difference
 			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			await adapter.updateCredentialCounter(credential.id, 1);

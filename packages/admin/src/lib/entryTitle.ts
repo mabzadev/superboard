@@ -1,3 +1,8 @@
+/**
+ * The title to show for a content entry. Uses the collection's `titleField`
+ * if set and non-empty, otherwise falls back to `title → name → slug → id`.
+ * Shared so every surface (list, picker, editor) shows the same title.
+ */
 export function getEntryTitle(
 	item: { data: Record<string, unknown>; slug: string | null; id: string },
 	titleField?: string,

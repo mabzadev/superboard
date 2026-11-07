@@ -1,4 +1,4 @@
-import type { PluginContext } from "emdash";
+import { definePlugin, type PluginContext, type PluginDefinition } from "emdash";
 import type { EmailDeliverEvent } from "emdash/plugin";
 import { describe, it, expect, vi } from "vitest";
 
@@ -28,6 +28,9 @@ function fakeEnv(sendImpl?: () => Promise<{ messageId?: string }>) {
 
 describe("cloudflareEmail()", () => {
 	it("returns a descriptor with a bundlable entrypoint (not an in-process definition)", () => {
+		// The astro integration rejects `plugins: []` entries without an
+		// `entrypoint` (#1721), so the documented usage must produce a
+		// descriptor the integration can statically import at build time.
 		const descriptor = cloudflareEmail({ from: "cms@mails.example.com" });
 		expect(descriptor.id).toBe("cloudflare-email");
 		expect(descriptor.entrypoint).toBe("@emdash-cms/cloudflare/plugins/cloudflare-email");
@@ -41,6 +44,13 @@ describe("cloudflareEmail()", () => {
 		expect(() =>
 			cloudflareEmail({ from: { email: "not-an-address" } } as CloudflareEmailConfig),
 		).toThrow(/config\.from is required/);
+	});
+
+	it("cannot be wrapped in definePlugin(), which would drop its hooks", () => {
+		const descriptor = cloudflareEmail({ from: "cms@mails.example.com" });
+		expect(() => definePlugin(descriptor as unknown as PluginDefinition)).toThrow(
+			/plugin descriptor for "cloudflare-email"/,
+		);
 	});
 });
 
@@ -60,10 +70,15 @@ describe("createPlugin()", () => {
 
 	it("round-trips the descriptor options the virtual plugins module passes back", async () => {
 		const descriptor = cloudflareEmail({ from: "cms@mails.example.com" });
+		// Simulate what the generated virtual:emdash/plugins module does:
+		// `createPlugin(descriptor.options)`.
 		const plugin = createPlugin(descriptor.options as CloudflareEmailConfig);
 		const hook = plugin.hooks["email:deliver"];
 		expect(hook).toBeDefined();
 
+		// The handler resolves the env via cloudflare:workers, which is not
+		// available in vitest — assert it fails with the runtime-guard error
+		// rather than a config error, proving the wiring is intact.
 		await expect(hook?.handler(event, fakeCtx())).rejects.toThrow(
 			/cloudflare:workers is not available/,
 		);
@@ -121,6 +136,26 @@ describe("createCloudflareEmailDeliver()", () => {
 		);
 
 		expect(send).toHaveBeenCalledWith(expect.objectContaining({ html: "<p>Click here</p>" }));
+	});
+
+	it("passes cc through and prefers the message's replyTo over the configured one", async () => {
+		const { env, send } = fakeEnv();
+		const deliver = createCloudflareEmailDeliver(
+			{ from: "cms@mails.example.com", replyTo: "hello@example.com" },
+			async () => env,
+		);
+
+		await deliver(
+			{
+				message: { ...message, cc: ["team@example.com"], replyTo: "visitor@example.com" },
+				source: "forms",
+			},
+			fakeCtx(),
+		);
+
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({ cc: ["team@example.com"], replyTo: "visitor@example.com" }),
+		);
 	});
 
 	it("resolves the binding by its configured name", async () => {

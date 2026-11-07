@@ -18,6 +18,7 @@ describe("metaPlayback", () => {
 	});
 
 	it("returns undefined for a plain uploaded file, which is playable directly", () => {
+		// This is what keeps locally stored video on the plain `src` path.
 		expect(metaPlayback({ size: 1024 })).toBeUndefined();
 		expect(metaPlayback(undefined)).toBeUndefined();
 	});
@@ -25,6 +26,7 @@ describe("metaPlayback", () => {
 
 describe("providerItemToMediaItem", () => {
 	it("falls back to meta.size when the provider reports no top-level size", () => {
+		// Regression: Stream items displayed "0 B" because only `item.size` was read.
 		const result = providerItemToMediaItem("cloudflare-stream", {
 			id: "6a4677c7694f6e2e4270540231dd47ff",
 			filename: "webinar.mp4",
@@ -34,6 +36,27 @@ describe("providerItemToMediaItem", () => {
 		} as never);
 
 		expect(result.size).toBe(75431883);
+		// `meta` must survive the mapping or the detail panel cannot find playback.
 		expect(metaPlayback(result.meta)).toEqual({ hls: STREAM_HLS });
+	});
+
+	it("maps provider captions and preserves the legacy meta fallback", () => {
+		const firstClass = providerItemToMediaItem("cloudflare-images", {
+			id: "image-1",
+			filename: "image.jpg",
+			mimeType: "image/jpeg",
+			caption: "First-class caption",
+			meta: { caption: "Old caption" },
+		});
+		const legacy = providerItemToMediaItem("cloudflare-images", {
+			id: "image-2",
+			filename: "image-2.jpg",
+			mimeType: "image/jpeg",
+			meta: { caption: "Legacy caption" },
+		});
+
+		expect(firstClass.caption).toBe("First-class caption");
+		expect(firstClass.meta?.caption).toBe("First-class caption");
+		expect(legacy.caption).toBe("Legacy caption");
 	});
 });

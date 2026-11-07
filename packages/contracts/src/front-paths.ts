@@ -55,7 +55,7 @@ const authenticationTabs: Readonly<Record<string, readonly [string, string, stri
 	"/auth/orgs": ["settings", "organizations"],
 	"/auth/user-attributes": ["settings", "fields"],
 	"/auth/logs": ["settings", "logs"],
-	"/auth/saml": ["settings", "login", "sso"],
+	"/auth/saml": ["settings", "login"],
 	"/auth/account-policies": ["settings", "security", "policies"],
 	"/auth/access-key": ["settings", "security", "keys"],
 };
@@ -86,17 +86,20 @@ const workspaceTabs: Readonly<Record<string, string>> = {
 const authenticationEditors: Readonly<Record<string, readonly [string, string, string, string?]>> =
 	{
 		"/auth/apps": ["settings", "apps", "apps"],
-		"/auth/apps/banners": ["settings", "apps", "banners"],
 		"/auth/roles": ["settings", "roles", "roles"],
 		"/auth/scopes": ["settings", "permissions", "scopes"],
-		"/auth/orgs": ["settings", "organizations", "orgs"],
 		"/auth/user-attributes": ["settings", "fields", "fields"],
-		"/auth/saml": ["settings", "login", "saml", "sso"],
 		"/auth/directory/users": ["users", "accounts", "users", "directory"],
 		"/auth/logs/email": ["settings", "logs", "email"],
-		"/auth/logs/sms": ["settings", "logs", "sms"],
 		"/auth/logs/sign-in": ["settings", "logs", "sign-in"],
 	};
+
+const retiredAuthenticationRecords: Readonly<Record<string, readonly [string, string]>> = {
+	"/auth/apps/banners": ["settings", "apps"],
+	"/auth/orgs": ["settings", "organizations"],
+	"/auth/logs/sms": ["settings", "logs"],
+	"/auth/saml": ["settings", "login"],
+};
 
 export function canonicalFrontPath(path: string): string {
 	const exact = exactPaths[path];
@@ -120,13 +123,16 @@ export function canonicalFrontHref(href: string): string {
 	const url = new URL(href, "https://superboard.invalid");
 	const canonical = canonicalFrontPath(url.pathname.replace(/\/$/u, "") || "/");
 	const authentication = authenticationTabs[canonical];
-	const editor = authenticationEditors[canonical.slice(0, canonical.lastIndexOf("/"))];
+	const collection = canonical.slice(0, canonical.lastIndexOf("/"));
+	const retired = retiredAuthenticationRecords[collection];
+	const editor = retired ? undefined : authenticationEditors[collection];
 	const account = canonical === "/auth/account" || canonical === "/auth/profile";
 	const duplicateRegistration = canonical === "/auth/register/with-email";
 	const workspace = workspaceTabs[canonical];
 	if (
 		canonical === url.pathname &&
 		!authentication &&
+		!retired &&
 		!editor &&
 		!account &&
 		!duplicateRegistration &&
@@ -139,6 +145,10 @@ export function canonicalFrontHref(href: string): string {
 		url.pathname = `/auth/${authentication[0]}`;
 		url.searchParams.set("tab", authentication[1]);
 		if (authentication[2]) url.searchParams.set("section", authentication[2]);
+	}
+	if (retired) {
+		url.pathname = `/auth/${retired[0]}`;
+		url.searchParams.set("tab", retired[1]);
 	}
 	if (editor) {
 		url.pathname = `/auth/${editor[0]}`;

@@ -5,5 +5,6 @@ export default defineConfig({
 	format: ["esm"],
 	dts: true,
 	clean: true,
-	external: ["better-sqlite3", "miniflare"],
+	// miniflare is a devDependency, dynamically imported at runtime
+	external: ["miniflare"],
 });

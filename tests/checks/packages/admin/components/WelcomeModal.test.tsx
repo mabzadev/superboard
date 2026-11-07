@@ -3,7 +3,12 @@ import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { WelcomeModal } from "../../../../../packages/admin/src/components/WelcomeModal";
+import { AdminBrandingProvider } from "../../../../../packages/admin/src/lib/admin-branding-context";
 import { render } from "../utils/render";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const WELCOME_MESSAGE_REGEX = /Welcome to EmDash, Alice!/;
 const ADMIN_TEXT_REGEX = /As an administrator, you can invite other users/;
@@ -94,6 +99,7 @@ describe("WelcomeModal", () => {
 		);
 		const button = screen.getByText("Get Started").element().closest("button")!;
 		button.click();
+		// The mutation resolves and calls onClose
 		await vi.waitFor(() => {
 			expect(onClose).toHaveBeenCalled();
 		});
@@ -114,8 +120,36 @@ describe("WelcomeModal", () => {
 				<WelcomeModal open={true} onClose={noop} userRole={40} />
 			</QueryWrapper>,
 		);
+		// Check that the admin invite text is NOT present
 		expect(screen.container.textContent).not.toContain(
 			"As an administrator, you can invite other users",
 		);
+	});
+
+	it("shows the configured admin logo instead of the EmDash icon", async () => {
+		const screen = await render(
+			<AdminBrandingProvider adminBranding={{ logo: "/brand.svg", siteName: "Acme" }}>
+				<QueryWrapper>
+					<WelcomeModal open={true} onClose={noop} userRole={50} />
+				</QueryWrapper>
+			</AdminBrandingProvider>,
+		);
+		const logo = screen.getByRole("img", { name: "Acme" });
+		await expect.element(logo).toBeInTheDocument();
+		await expect.element(logo).toHaveAttribute("src", "/brand.svg");
+	});
+
+	it.each([
+		{ userName: "Alice Smith", title: "Welcome to Acme, Alice!" },
+		{ userName: undefined, title: "Welcome to Acme!" },
+	])("welcomes the user to the configured site name: $title", async ({ userName, title }) => {
+		const screen = await render(
+			<AdminBrandingProvider adminBranding={{ siteName: "Acme" }}>
+				<QueryWrapper>
+					<WelcomeModal open={true} onClose={noop} userName={userName} userRole={30} />
+				</QueryWrapper>
+			</AdminBrandingProvider>,
+		);
+		await expect.element(screen.getByRole("heading", { name: title })).toBeInTheDocument();
 	});
 });

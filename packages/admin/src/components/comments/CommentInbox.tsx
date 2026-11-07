@@ -1,7 +1,21 @@
-import { Badge, Button, Checkbox, Select, Tabs } from "@cloudflare/kumo";
+/**
+ * Comment moderation inbox.
+ *
+ * Status tabs (Pending, Approved, Spam, Trash), search, collection filter,
+ * table with row actions, bulk selection, and detail slide-over.
+ */
+
+import { Badge, Button, Checkbox, Select } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
-import { Check, Trash, Warning } from "@phosphor-icons/react";
+import {
+	Check,
+	CheckCircle,
+	ClockCountdown,
+	ShieldWarning,
+	Trash,
+	Warning,
+} from "@phosphor-icons/react";
 import * as React from "react";
 
 import type {
@@ -10,12 +24,17 @@ import type {
 	CommentStatus,
 	BulkAction,
 } from "../../lib/api/comments.js";
-import { cn } from "../../lib/utils.js";
+import { cn, formatDate } from "../../lib/utils.js";
 import { ADMIN_NAV_ICONS } from "../admin-navigation-icons.js";
 import { CaretNext, CaretPrev } from "../ArrowIcons.js";
 import { ConfirmDialog } from "../ConfirmDialog.js";
-import { TableToolbar, TableToolbarSearch } from "../TableToolbar.js";
+import { PageHeader } from "../PageHeader.js";
+import { TableToolbarSearch } from "../TableToolbar.js";
 import { CommentDetail } from "./CommentDetail.js";
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
 
 export interface CommentInboxProps {
 	comments: AdminComment[];
@@ -39,7 +58,20 @@ export interface CommentInboxProps {
 	onDeleteErrorReset: () => void;
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 const PAGE_SIZE = 20;
+const STATUS_TAB_CLASS_NAME = "flex-1 justify-center text-xs sm:flex-none sm:text-sm";
+const STATUS_TAB_ICON_CLASS_NAME = "size-3.5 shrink-0 sm:size-4";
+const STATUS_TAB_LABEL_CLASS_NAME = "flex items-center gap-1 sm:gap-1.5";
+const STATUS_TAB_RENDER = (
+	<button
+		type="button"
+		style={{ paddingInline: "clamp(0.1875rem, calc(10vw - 1.8125rem), 0.625rem)" }}
+	/>
+);
 
 export function CommentInbox({
 	comments,
@@ -64,12 +96,15 @@ export function CommentInbox({
 }: CommentInboxProps) {
 	const { t } = useLingui();
 
+	// Selection state
 	const [selected, setSelected] = React.useState<Set<string>>(new Set());
 	const [detailComment, setDetailComment] = React.useState<AdminComment | null>(null);
 	const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
+	// Pagination (client-side within loaded data)
 	const [page, setPage] = React.useState(0);
 
+	// Reset selection and page when status tab or filters change
 	React.useEffect(() => {
 		setSelected(new Set());
 		setPage(0);
@@ -80,6 +115,7 @@ export function CommentInbox({
 	const totalPages = Math.max(1, Math.ceil(comments.length / PAGE_SIZE));
 	const paginatedComments = comments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
+	// Bulk select
 	const allOnPageSelected =
 		paginatedComments.length > 0 && paginatedComments.every((c) => selected.has(c.id));
 
@@ -112,50 +148,88 @@ export function CommentInbox({
 		void onBulkAction([...selected], action).then(clearSelection);
 	};
 
+	// Collection filter items
 	const collectionItems: Record<string, string> = { "": t`All collections` };
 	for (const [slug, config] of Object.entries(collections)) {
 		collectionItems[slug] = config.label;
 	}
 
-	const total = counts.pending + counts.approved + counts.spam + counts.trash;
+	const searchPlaceholder = t`Search comments...`;
 
 	return (
-		<div className="space-y-4">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-3">
-					<ADMIN_NAV_ICONS.comments className="h-6 w-6" />
-					<h1 className="text-2xl font-semibold leading-tight">{t`Comments`}</h1>
-					{total > 0 && (
-						<span className="text-sm text-kumo-subtle tabular-nums">
-							{plural(total, { one: "# total", other: "# total" })}
-						</span>
-					)}
-				</div>
-			</div>
-
-			<Tabs
-				variant="underline"
+		<div className="space-y-6">
+			<PageHeader
+				title={t`Comments`}
+				description={t`Review and moderate comments across your content.`}
 				value={activeStatus}
 				onValueChange={(v) => {
 					if (v === "pending" || v === "approved" || v === "spam" || v === "trash") {
 						onStatusChange(v);
 					}
 				}}
+				tools={
+					<>
+						<TableToolbarSearch
+							size="base"
+							placeholder={searchPlaceholder}
+							aria-label={t`Search comments`}
+							value={searchQuery}
+							onChange={(e) => onSearchChange(e.target.value)}
+						/>
+						{Object.keys(collections).length > 1 && (
+							<Select
+								className="w-full sm:w-auto"
+								value={collectionFilter}
+								onValueChange={(v) => onCollectionFilterChange(v ?? "")}
+								items={collectionItems}
+								aria-label={t`Filter by collection`}
+							/>
+						)}
+					</>
+				}
 				tabs={[
 					{
 						value: "pending",
+						className: STATUS_TAB_CLASS_NAME,
+						render: STATUS_TAB_RENDER,
 						label: (
-							<span className="flex items-center gap-2">
+							<span className={STATUS_TAB_LABEL_CLASS_NAME}>
+								<ClockCountdown
+									className={STATUS_TAB_ICON_CLASS_NAME}
+									weight={activeStatus === "pending" ? "fill" : "regular"}
+									aria-hidden="true"
+								/>
 								{t`Pending`}
 								{counts.pending > 0 && <Badge variant="secondary">{counts.pending}</Badge>}
 							</span>
 						),
 					},
-					{ value: "approved", label: t`Approved` },
+					{
+						value: "approved",
+						className: STATUS_TAB_CLASS_NAME,
+						render: STATUS_TAB_RENDER,
+						label: (
+							<span className={STATUS_TAB_LABEL_CLASS_NAME}>
+								<CheckCircle
+									className={STATUS_TAB_ICON_CLASS_NAME}
+									weight={activeStatus === "approved" ? "fill" : "regular"}
+									aria-hidden="true"
+								/>
+								{t`Approved`}
+							</span>
+						),
+					},
 					{
 						value: "spam",
+						className: STATUS_TAB_CLASS_NAME,
+						render: STATUS_TAB_RENDER,
 						label: (
-							<span className="flex items-center gap-2">
+							<span className={STATUS_TAB_LABEL_CLASS_NAME}>
+								<ShieldWarning
+									className={STATUS_TAB_ICON_CLASS_NAME}
+									weight={activeStatus === "spam" ? "fill" : "regular"}
+									aria-hidden="true"
+								/>
 								{t`Spam`}
 								{counts.spam > 0 && <Badge variant="secondary">{counts.spam}</Badge>}
 							</span>
@@ -163,8 +237,15 @@ export function CommentInbox({
 					},
 					{
 						value: "trash",
+						className: STATUS_TAB_CLASS_NAME,
+						render: STATUS_TAB_RENDER,
 						label: (
-							<span className="flex items-center gap-2">
+							<span className={STATUS_TAB_LABEL_CLASS_NAME}>
+								<Trash
+									className={STATUS_TAB_ICON_CLASS_NAME}
+									weight={activeStatus === "trash" ? "fill" : "regular"}
+									aria-hidden="true"
+								/>
 								{t`Trash`}
 								{counts.trash > 0 && <Badge variant="secondary">{counts.trash}</Badge>}
 							</span>
@@ -173,24 +254,7 @@ export function CommentInbox({
 				]}
 			/>
 
-			<TableToolbar>
-				<TableToolbarSearch
-					placeholder={t`Search comments...`}
-					aria-label={t`Search comments`}
-					value={searchQuery}
-					onChange={(e) => onSearchChange(e.target.value)}
-				/>
-				{Object.keys(collections).length > 1 && (
-					<Select
-						size="sm"
-						value={collectionFilter}
-						onValueChange={(v) => onCollectionFilterChange(v ?? "")}
-						items={collectionItems}
-						aria-label={t`Filter by collection`}
-					/>
-				)}
-			</TableToolbar>
-
+			{/* Bulk action bar */}
 			{selected.size > 0 && (
 				<div className="flex items-center gap-3 rounded-lg border bg-kumo-tint/50 px-4 py-2">
 					<span className="text-sm font-medium">
@@ -240,49 +304,42 @@ export function CommentInbox({
 				</div>
 			)}
 
-			<div className="rounded-md border bg-kumo-base overflow-x-auto">
-				<table className="w-full">
-					<thead>
-						<tr className="border-b bg-kumo-tint/50">
-							<th scope="col" className="w-10 px-3 py-3">
-								<Checkbox
-									checked={allOnPageSelected}
-									onCheckedChange={toggleAll}
-									aria-label={t`Select all`}
-								/>
-							</th>
-							<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
-								{t`Author`}
-							</th>
-							<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
-								{t`Comment`}
-							</th>
-							<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
-								{t`Content`}
-							</th>
-							<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
-								{t`Date`}
-							</th>
-							<th scope="col" className="px-4 py-3 text-end text-sm font-medium">
-								{t`Actions`}
-							</th>
-						</tr>
-					</thead>
-					<tbody className="divide-y divide-kumo-line">
-						{isLoading && comments.length === 0 ? (
-							<tr>
-								<td colSpan={6} className="px-4 py-8 text-center text-kumo-subtle">
-									{t`Loading comments...`}
-								</td>
+			{/* Table */}
+			{isLoading && comments.length === 0 ? (
+				<div className="py-12 text-center text-kumo-subtle">{t`Loading comments...`}</div>
+			) : paginatedComments.length === 0 ? (
+				<EmptyState status={activeStatus} hasFilters={Boolean(searchQuery || collectionFilter)} />
+			) : (
+				<div className="overflow-x-auto rounded-lg border bg-kumo-base">
+					<table className="w-full">
+						<thead>
+							<tr className="border-b bg-kumo-tint/50">
+								<th scope="col" className="w-10 px-3 py-3">
+									<Checkbox
+										checked={allOnPageSelected}
+										onCheckedChange={toggleAll}
+										aria-label={t`Select all`}
+									/>
+								</th>
+								<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
+									{t`Author`}
+								</th>
+								<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
+									{t`Comment`}
+								</th>
+								<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
+									{t`Content`}
+								</th>
+								<th scope="col" className="px-4 py-3 text-start text-sm font-medium">
+									{t`Date`}
+								</th>
+								<th scope="col" className="px-4 py-3 text-end text-sm font-medium">
+									{t`Actions`}
+								</th>
 							</tr>
-						) : paginatedComments.length === 0 ? (
-							<tr>
-								<td colSpan={6} className="px-4 py-8 text-center text-kumo-subtle">
-									<EmptyState status={activeStatus} hasSearch={!!searchQuery} />
-								</td>
-							</tr>
-						) : (
-							paginatedComments.map((comment) => (
+						</thead>
+						<tbody className="divide-y divide-kumo-line">
+							{paginatedComments.map((comment) => (
 								<CommentRow
 									key={comment.id}
 									comment={comment}
@@ -299,12 +356,13 @@ export function CommentInbox({
 									isAdmin={isAdmin}
 									isStatusPending={isStatusPending}
 								/>
-							))
-						)}
-					</tbody>
-				</table>
-			</div>
+							))}
+						</tbody>
+					</table>
+				</div>
+			)}
 
+			{/* Pagination */}
 			{(totalPages > 1 || nextCursor) && (
 				<div className="flex items-center justify-between">
 					<span className="text-sm text-kumo-subtle">
@@ -343,6 +401,7 @@ export function CommentInbox({
 				</div>
 			)}
 
+			{/* Detail slide-over */}
 			{detailComment && (
 				<CommentDetail
 					comment={detailComment}
@@ -361,6 +420,7 @@ export function CommentInbox({
 				/>
 			)}
 
+			{/* Delete confirmation */}
 			<ConfirmDialog
 				open={!!deleteId}
 				onClose={() => {
@@ -383,6 +443,10 @@ export function CommentInbox({
 	);
 }
 
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
 interface CommentRowProps {
 	comment: AdminComment;
 	isSelected: boolean;
@@ -404,7 +468,7 @@ function CommentRow({
 	isAdmin,
 	isStatusPending,
 }: CommentRowProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 	const date = new Date(comment.createdAt);
 	const excerpt = comment.body.length > 120 ? comment.body.slice(0, 120) + "..." : comment.body;
 
@@ -438,7 +502,7 @@ function CommentRow({
 				</div>
 			</td>
 			<td className="px-4 py-3 text-sm text-kumo-subtle whitespace-nowrap">
-				{date.toLocaleDateString()}
+				<bdi>{formatDate(date, i18n.locale)}</bdi>
 			</td>
 			<td className="px-4 py-3 text-end">
 				<div className="flex items-center justify-end gap-1">
@@ -496,12 +560,8 @@ function CommentRow({
 	);
 }
 
-function EmptyState({ status, hasSearch }: { status: CommentStatus; hasSearch: boolean }) {
+function EmptyState({ status, hasFilters }: { status: CommentStatus; hasFilters: boolean }) {
 	const { t } = useLingui();
-
-	if (hasSearch) {
-		return <p>{t`No comments match your search.`}</p>;
-	}
 
 	const messages: Record<CommentStatus, string> = {
 		pending: t`No comments awaiting moderation.`,
@@ -510,5 +570,17 @@ function EmptyState({ status, hasSearch }: { status: CommentStatus; hasSearch: b
 		trash: t`Trash is empty.`,
 	};
 
-	return <p>{messages[status]}</p>;
+	return (
+		<div className="py-10 text-center text-kumo-subtle">
+			<ADMIN_NAV_ICONS.comments size={40} className="mx-auto mb-3 opacity-30" />
+			<p className="text-base font-medium">
+				{hasFilters ? t`No comments match your filters.` : messages[status]}
+			</p>
+			<p className="mt-1 text-sm">
+				{hasFilters
+					? t`Try a different search or collection filter.`
+					: t`Comments with this status will appear here.`}
+			</p>
+		</div>
+	);
 }

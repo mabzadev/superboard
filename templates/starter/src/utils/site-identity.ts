@@ -1,3 +1,4 @@
+/** Resolved media reference from getSiteSettings() */
 export interface MediaReference {
 	mediaId: string;
 	alt?: string;

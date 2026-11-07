@@ -1,3 +1,9 @@
+/**
+ * emdash init
+ *
+ * Initialize database from template config in package.json
+ */
+
 import { readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -41,11 +47,13 @@ async function readPackageJson(cwd: string): Promise<PackageJson | null> {
 async function runSqlFile(db: ReturnType<typeof createDatabase>, filePath: string): Promise<void> {
 	const contents = await readFile(filePath, "utf-8");
 
+	// Remove single-line comments
 	const withoutComments = contents
 		.split("\n")
 		.filter((line) => !line.trim().startsWith("--"))
 		.join("\n");
 
+	// Split on semicolons, filter empty statements
 	const statements = withoutComments
 		.split(";")
 		.map((s) => s.trim())
@@ -56,14 +64,19 @@ async function runSqlFile(db: ReturnType<typeof createDatabase>, filePath: strin
 	}
 }
 
+/**
+ * Check if database has already been initialized with template schema
+ */
 async function isAlreadyInitialized(db: ReturnType<typeof createDatabase>): Promise<boolean> {
 	try {
+		// Use raw SQL since this runs on an untyped database connection
 		const result = await sql<{
 			count: number;
 		}>`SELECT COUNT(id) as count FROM _emdash_collections`.execute(db);
 		const row = result.rows[0];
 		return row ? row.count > 0 : false;
 	} catch {
+		// Table doesn't exist yet
 		return false;
 	}
 }
@@ -96,6 +109,7 @@ export const initCommand = defineCommand({
 		const cwd = resolve(args.cwd);
 		consola.start("Initializing EmDash...");
 
+		// 1. Read package.json
 		const pkg = await readPackageJson(cwd);
 		if (!pkg) {
 			consola.error("No package.json found in", cwd);
@@ -109,11 +123,13 @@ export const initCommand = defineCommand({
 			consola.info(`Template: ${config.label}`);
 		}
 
+		// 2. Create/connect to database
 		const dbPath = resolve(cwd, args.database);
 		consola.info(`Database: ${dbPath}`);
 
 		const db = createDatabase({ url: `file:${dbPath}` });
 
+		// 3. Run core migrations (always run - they're idempotent)
 		consola.start("Running migrations...");
 		try {
 			const { applied } = await runMigrations(db);
@@ -131,6 +147,7 @@ export const initCommand = defineCommand({
 			process.exit(1);
 		}
 
+		// 4. Check if already initialized (has collections)
 		const alreadyInitialized = await isAlreadyInitialized(db);
 		if (alreadyInitialized && !args.force) {
 			await db.destroy();
@@ -142,6 +159,7 @@ export const initCommand = defineCommand({
 			consola.warn("Re-initializing (--force)...");
 		}
 
+		// 5. Run template schema.sql if present
 		if (config?.schema) {
 			const schemaPath = resolve(cwd, config.schema);
 			if (await fileExists(schemaPath)) {
@@ -158,6 +176,10 @@ export const initCommand = defineCommand({
 				consola.warn(`Schema file not found: ${config.schema}`);
 			}
 		}
+
+		// 6. JSON seed files are now handled by `emdash seed` command
+		// The bootstrap script runs `emdash init && emdash seed`
+		// Legacy SQL seed files (seed.sql) could be handled here if needed
 
 		await db.destroy();
 		consola.success("EmDash initialized successfully!");

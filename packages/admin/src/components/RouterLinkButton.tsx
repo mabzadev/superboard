@@ -1,3 +1,28 @@
+/**
+ * Router-aware anchor styled as a Kumo button.
+ *
+ * Wraps TanStack Router's `Link` so it routes client-side, but matches the
+ * Kumo `Button` API surface for `variant` / `size` / `shape` / `icon`. Use
+ * this anywhere you'd reach for `<Link><Button>...</Button></Link>` (which
+ * is invalid HTML — renders `<a><button>`).
+ *
+ * Inherits TanStack Router's typed `to` / `params` / `search` / `preload`
+ * props by spreading them through to the underlying `<Link>`.
+ *
+ * @example
+ * ```tsx
+ * <RouterLinkButton to="/settings" variant="ghost" shape="square"
+ *   aria-label={t`Back to settings`} icon={<ArrowPrev />} />
+ *
+ * <RouterLinkButton to="/posts/$id" params={{ id }} variant="primary">
+ *   {t`Edit post`}
+ * </RouterLinkButton>
+ * ```
+ *
+ * For external links (or anything that needs `target="_blank"`), use Kumo's
+ * `LinkButton` directly with `external`.
+ */
+
 import { type LinkButtonProps, buttonVariants } from "@cloudflare/kumo";
 import { type Icon } from "@phosphor-icons/react";
 import { Link, type LinkProps } from "@tanstack/react-router";

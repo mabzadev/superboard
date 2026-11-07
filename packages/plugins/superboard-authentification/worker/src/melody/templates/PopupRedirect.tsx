@@ -19,7 +19,6 @@ const PopupRedirect = ({
                   state: "${queryDto.state}",
                   code: "${code}",
                   locale: "${queryDto.locale}",
-                  org: "${queryDto.org ?? ''}",
                   redirectUri: "${queryDto.redirectUri}",
                 }, "${queryDto.redirectUri}");
               }

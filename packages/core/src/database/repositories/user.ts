@@ -7,8 +7,13 @@ import { encodeCursor, decodeCursor, type FindManyResult } from "./types.js";
 
 type UserRow = Selectable<UserTable>;
 
+/**
+ * Valid role levels matching the database schema.
+ * 10=subscriber, 20=contributor, 30=author, 40=editor, 50=admin
+ */
 export type UserRole = 10 | 20 | 30 | 40 | 50;
 
+/** String role names for convenience APIs */
 export type UserRoleName = "subscriber" | "contributor" | "author" | "editor" | "admin";
 
 export interface User {
@@ -37,9 +42,15 @@ export interface UpdateUserInput {
 	data?: Record<string, unknown>;
 }
 
+/**
+ * User repository for CRUD operations
+ */
 export class UserRepository {
 	constructor(private db: Kysely<Database>) {}
 
+	/**
+	 * Create a new user
+	 */
 	async create(input: CreateUserInput): Promise<User> {
 		const id = ulid();
 
@@ -62,6 +73,9 @@ export class UserRepository {
 		return user;
 	}
 
+	/**
+	 * Find user by ID
+	 */
 	async findById(id: string): Promise<User | null> {
 		const row = await this.db
 			.selectFrom("users")
@@ -72,6 +86,11 @@ export class UserRepository {
 		return row ? this.rowToUser(row) : null;
 	}
 
+	/**
+	 * Batch-resolve users by ID. Returns only the users that exist; missing
+	 * IDs are silently dropped. Chunked at `SQL_BATCH_SIZE` to stay within
+	 * D1's bind-parameter limit.
+	 */
 	async findByIds(ids: string[]): Promise<User[]> {
 		const unique = [...new Set(ids)].filter((id) => id.length > 0);
 		if (unique.length === 0) return [];
@@ -84,6 +103,9 @@ export class UserRepository {
 		return out;
 	}
 
+	/**
+	 * Find user by email (case-insensitive)
+	 */
 	async findByEmail(email: string): Promise<User | null> {
 		const row = await this.db
 			.selectFrom("users")
@@ -94,6 +116,9 @@ export class UserRepository {
 		return row ? this.rowToUser(row) : null;
 	}
 
+	/**
+	 * List all users with cursor-based pagination
+	 */
 	async findMany(
 		options: {
 			role?: UserRole | UserRoleName;
@@ -136,6 +161,9 @@ export class UserRepository {
 		return result;
 	}
 
+	/**
+	 * Update a user
+	 */
 	async update(id: string, input: UpdateUserInput): Promise<User | null> {
 		const existing = await this.findById(id);
 		if (!existing) return null;
@@ -153,12 +181,18 @@ export class UserRepository {
 		return this.findById(id);
 	}
 
+	/**
+	 * Delete a user
+	 */
 	async delete(id: string): Promise<boolean> {
 		const result = await this.db.deleteFrom("users").where("id", "=", id).executeTakeFirst();
 
 		return (result.numDeletedRows ?? 0) > 0;
 	}
 
+	/**
+	 * Count users
+	 */
 	async count(role?: UserRole | UserRoleName): Promise<number> {
 		let query = this.db.selectFrom("users").select((eb) => eb.fn.count("id").as("count"));
 
@@ -170,6 +204,9 @@ export class UserRepository {
 		return Number(result?.count || 0);
 	}
 
+	/**
+	 * Check if email exists
+	 */
 	async emailExists(email: string): Promise<boolean> {
 		const row = await this.db
 			.selectFrom("users")
@@ -180,6 +217,9 @@ export class UserRepository {
 		return !!row;
 	}
 
+	/**
+	 * Convert database row to User object
+	 */
 	private rowToUser(row: UserRow): User {
 		return {
 			id: row.id,
@@ -193,6 +233,7 @@ export class UserRepository {
 		};
 	}
 
+	/** Map of role name strings to numeric levels */
 	private static readonly ROLE_NAME_TO_LEVEL: Record<UserRoleName, UserRole> = {
 		subscriber: 10,
 		contributor: 20,
@@ -201,8 +242,13 @@ export class UserRepository {
 		admin: 50,
 	};
 
+	/** Valid numeric role levels */
 	private static readonly VALID_LEVELS = new Set<number>([10, 20, 30, 40, 50]);
 
+	/**
+	 * Resolve a role name or number to a valid numeric UserRole.
+	 * Accepts both string names ("admin") and numeric levels (50).
+	 */
 	static resolveRole(role: UserRole | UserRoleName): UserRole {
 		if (typeof role === "string") {
 			const level = UserRepository.ROLE_NAME_TO_LEVEL[role];
@@ -217,6 +263,10 @@ export class UserRepository {
 		return role;
 	}
 
+	/**
+	 * Convert a raw DB integer to a typed UserRole.
+	 * Falls back to subscriber (10) for unknown values.
+	 */
 	private static toRole(level: number): UserRole {
 		if (UserRepository.VALID_LEVELS.has(level)) return level as UserRole;
 		return 10;

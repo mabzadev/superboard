@@ -1,33 +1,69 @@
+/**
+ * Database-backed rate limiter.
+ *
+ * Uses a `_emdash_rate_limits` table with composite primary key (key, window).
+ * Each call to `checkRateLimit` atomically upserts a counter and returns
+ * whether the request is within the allowed limit.
+ *
+ * Key format: `{subject}:{endpoint}` — limits are per-subject, per-endpoint.
+ * The subject is the client IP (or a salted IP hash) on unauthenticated
+ * endpoints, and the user ID on endpoints that require a session.
+ * Window format: ISO timestamp truncated to the window size.
+ */
+
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 
+import { after } from "../after.js";
 import { apiError } from "../api/error.js";
 import type { Database } from "../database/types.js";
 
+/** Loose validation for IPv4 and IPv6 addresses. */
 const IP_PATTERN = /^[\da-fA-F.:]+$/;
 
+/**
+ * Result of a rate limit check.
+ */
 export interface RateLimitResult {
+	/** Whether the request is allowed (within limit). */
 	allowed: boolean;
+	/** Current request count in this window. */
 	count: number;
+	/** Maximum requests allowed in this window. */
 	limit: number;
 }
 
+/**
+ * Check (and increment) the rate limit for a given subject + endpoint.
+ *
+ * If `subject` is null (for example, no trusted IP available), rate limiting
+ * is skipped and the request is allowed. There's no meaningful key to rate
+ * limit on when the subject is unknown.
+ *
+ * Returns whether the request is allowed. The counter is always
+ * incremented — even when the limit is exceeded — so that repeated
+ * abuse doesn't reset the window.
+ *
+ * Piggybacks cleanup of expired entries with a 1% probability
+ * to prevent unbounded table growth.
+ */
 export async function checkRateLimit(
 	db: Kysely<Database>,
-	ip: string | null,
+	subject: string | null,
 	endpoint: string,
 	maxRequests: number,
 	windowSeconds: number,
 ): Promise<RateLimitResult> {
-	if (!ip) {
+	if (!subject) {
 		return { allowed: true, count: 0, limit: maxRequests };
 	}
 
 	const windowStart = new Date(
 		Math.floor(Date.now() / (windowSeconds * 1000)) * windowSeconds * 1000,
 	).toISOString();
-	const key = `${ip}:${endpoint}`;
+	const key = `${subject}:${endpoint}`;
 
+	// Atomic upsert: insert or increment, return current count
 	const result = await sql<{ count: number }>`
 		INSERT INTO _emdash_rate_limits (key, "window", count)
 		VALUES (${key}, ${windowStart}, 1)
@@ -38,8 +74,15 @@ export async function checkRateLimit(
 
 	const count = result.rows[0]?.count ?? 1;
 
+	// Piggyback cleanup: 1% chance per request to clean expired entries
 	if (Math.random() < 0.01) {
-		cleanupExpiredRateLimits(db).catch(() => {});
+		after(async () => {
+			try {
+				await cleanupExpiredRateLimits(db);
+			} catch (error) {
+				console.error("[rate-limit] failed to delete expired entries:", error);
+			}
+		});
 	}
 
 	return {
@@ -49,17 +92,44 @@ export async function checkRateLimit(
 	};
 }
 
+/**
+ * Build a 429 Too Many Requests response with standard headers.
+ */
 export function rateLimitResponse(retryAfterSeconds: number): Response {
 	const response = apiError("RATE_LIMITED", "Too many requests. Please try again later.", 429);
 	response.headers.set("Retry-After", String(retryAfterSeconds));
 	return response;
 }
 
+/**
+ * Extract client IP from a Request.
+ *
+ * Resolution order:
+ * 1. `CF-Connecting-IP` — trusted only when the Cloudflare `cf` object is
+ *    present. CF edge overwrites any client-supplied value, so this is the
+ *    cryptographically trustworthy path on Workers. Operator-declared
+ *    trusted headers cannot override it.
+ * 2. `X-Forwarded-For` (first entry) — trusted only when the `cf` object
+ *    is present (CF sets this reliably).
+ * 3. Operator-declared trusted proxy headers (ordered list) — used as a
+ *    fallback for non-CF deployments behind a reverse proxy the operator
+ *    controls. Also applies as a fill-in on CF when the CF headers are
+ *    absent (e.g. internal cron handlers).
+ * 4. `null` — no trusted IP available. Callers must handle this gracefully
+ *    (e.g. skip rate limiting).
+ *
+ * Pass `trustedHeaders` from `getTrustedProxyHeaders(emdash.config)` so
+ * self-hosted non-CF deployments can opt into reading a specific header.
+ *
+ * Aligned with `extractRequestMeta` in `plugins/request-meta.ts`.
+ */
 export function getClientIp(request: Request, trustedHeaders: string[] = []): string | null {
 	const headers = request.headers;
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- CF Workers runtime shape
 	const cf = (request as unknown as { cf?: Record<string, unknown> }).cf;
 
+	// On Cloudflare, prefer the cryptographically trustworthy headers. An
+	// attacker can't spoof these — the CF edge strips/overwrites them.
 	if (cf) {
 		const cfIp = headers.get("cf-connecting-ip")?.trim();
 		if (cfIp && IP_PATTERN.test(cfIp)) {
@@ -75,6 +145,8 @@ export function getClientIp(request: Request, trustedHeaders: string[] = []): st
 		}
 	}
 
+	// Fall through to operator-declared trusted headers. On CF this fills
+	// in when the CF headers are absent; off-CF it's the primary source.
 	for (const name of trustedHeaders) {
 		const value = readIpFromHeader(headers, name);
 		if (value) return value;
@@ -83,6 +155,10 @@ export function getClientIp(request: Request, trustedHeaders: string[] = []): st
 	return null;
 }
 
+/**
+ * Read an IP from an operator-declared trusted header. XFF-style headers
+ * are parsed as comma-separated lists and the first entry is used.
+ */
 function readIpFromHeader(headers: Headers, name: string): string | null {
 	const value = headers.get(name);
 	if (!value) return null;
@@ -96,6 +172,12 @@ function readIpFromHeader(headers: Headers, name: string): string | null {
 	return IP_PATTERN.test(trimmed) ? trimmed : null;
 }
 
+/**
+ * Delete expired rate limit entries.
+ *
+ * Entries with a window timestamp older than `maxAgeSeconds` are removed.
+ * Safe to call periodically (e.g., from cron cleanup or on-request piggyback).
+ */
 export async function cleanupExpiredRateLimits(
 	db: Kysely<Database>,
 	maxAgeSeconds = 3600,

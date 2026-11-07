@@ -14,12 +14,6 @@ logRoutes.delete(`${BaseRoute}/email`, authMiddleware.s2sRoot, logHandler.delete
 
 logRoutes.get(`${BaseRoute}/email/:id`, authMiddleware.s2sRoot, logHandler.getEmailLog);
 
-logRoutes.get(`${BaseRoute}/sms`, authMiddleware.s2sRoot, logHandler.getSmsLogs);
-
-logRoutes.delete(`${BaseRoute}/sms`, authMiddleware.s2sRoot, logHandler.deleteSmsLogs);
-
-logRoutes.get(`${BaseRoute}/sms/:id`, authMiddleware.s2sRoot, logHandler.getSmsLog);
-
 logRoutes.get(`${BaseRoute}/sign-in`, authMiddleware.s2sRoot, logHandler.getSignInLogs);
 
 logRoutes.delete(`${BaseRoute}/sign-in`, authMiddleware.s2sRoot, logHandler.deleteSignInLogs);

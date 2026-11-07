@@ -5,6 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BlockRenderer } from "../../../../packages/blocks/src/renderer.js";
 import type { Block, BlockInteraction } from "../../../../packages/blocks/src/types.js";
 
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
+// Shared between the Collapsible.* mocks so DefaultTrigger / DefaultPanel can
+// react to open state set on Collapsible.Root.
 const CollapsibleContext = React.createContext<{
 	open?: boolean;
 	onOpenChange?: (next: boolean) => void;
@@ -15,6 +19,19 @@ vi.mock("@cloudflare/kumo", () => ({
 		<button onClick={onClick} data-variant={variant} type={type || "button"}>
 			{children}
 		</button>
+	),
+	Link: Object.assign(({ children, ...props }: any) => <a {...props}>{children}</a>, {
+		ExternalIcon: () => <span data-testid="external-link-icon" />,
+	}),
+	LinkButton: ({ children, external, variant, ...props }: any) => (
+		<a
+			{...props}
+			data-variant={variant}
+			target={external ? "_blank" : undefined}
+			rel={external ? "noopener noreferrer" : undefined}
+		>
+			{children}
+		</a>
 	),
 	Badge: ({ children }: any) => <span data-testid="badge">{children}</span>,
 	Input: ({ label, value, defaultValue, onChange, onBlur, placeholder, type, min, max }: any) => (
@@ -162,7 +179,17 @@ vi.mock("@cloudflare/kumo", () => ({
 			</label>
 		),
 	},
+	DropdownMenu: Object.assign(({ children }: any) => <div>{children}</div>, {
+		Trigger: ({ render: trigger }: any) => trigger,
+		Content: ({ children }: any) => <div role="menu">{children}</div>,
+		Item: ({ children, onClick }: any) => (
+			<button type="button" role="menuitem" onClick={onClick}>
+				{children}
+			</button>
+		),
+	}),
 	Collapsible: Object.assign(
+		// `Collapsible` is also `Collapsible.Root` in Kumo 2.x.
 		({ children, open, onOpenChange, ...rest }: any) => (
 			<div data-testid="collapsible" data-open={open ? "true" : "false"} {...rest}>
 				<CollapsibleContext.Provider value={{ open, onOpenChange }}>
@@ -255,6 +282,7 @@ vi.mock("echarts/renderers", () => ({
 vi.mock("@phosphor-icons/react", () => ({
 	ArrowUp: () => <span data-testid="arrow-up" />,
 	ArrowDown: () => <span data-testid="arrow-down" />,
+	CaretDown: () => <span data-testid="caret-down" />,
 	Minus: () => <span data-testid="minus" />,
 	Info: () => <span data-testid="icon-info" />,
 	Warning: () => <span data-testid="icon-warning" />,
@@ -264,10 +292,25 @@ vi.mock("@phosphor-icons/react", () => ({
 
 afterEach(cleanup);
 
-function renderBlocks(blocks: Block[], onAction?: (i: BlockInteraction) => void) {
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function renderBlocks(
+	blocks: Block[],
+	onAction?: (i: BlockInteraction) => void,
+	resolveLinkTarget?: (
+		target: import("../../../../packages/blocks/src/types.js").LinkTarget,
+	) => string | null,
+) {
 	const handler = onAction ?? vi.fn();
-	return { ...render(<BlockRenderer blocks={blocks} onAction={handler} />), onAction: handler };
+	return {
+		...render(
+			<BlockRenderer blocks={blocks} onAction={handler} resolveLinkTarget={resolveLinkTarget} />,
+		),
+		onAction: handler,
+	};
 }
+
+// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("BlockRenderer", () => {
 	it("header block renders h2 with text", () => {
@@ -291,6 +334,67 @@ describe("BlockRenderer", () => {
 		]);
 		expect(screen.getByText("Webhook endpoint")).toBeTruthy();
 		expect(screen.getByText("Edit")).toBeTruthy();
+	});
+
+	it("renders host-resolved internal and external navigation without dispatching actions", () => {
+		const onAction = vi.fn();
+		renderBlocks(
+			[
+				{
+					type: "actions",
+					elements: [
+						{
+							type: "link",
+							label: "Edit article",
+							target: { kind: "content", collection: "posts", id: "post-1" },
+							appearance: "primary",
+						},
+						{
+							type: "link",
+							label: "Service status",
+							target: { kind: "external", url: "https://status.example.com" },
+						},
+					],
+				},
+			],
+			onAction,
+			(target) =>
+				target.kind === "content"
+					? `/_emdash/admin/content/${target.collection}/${target.id}`
+					: target.kind === "external"
+						? target.url
+						: null,
+		);
+
+		const internal = screen.getByRole("link", { name: "Edit article" });
+		expect(internal.getAttribute("href")).toBe("/_emdash/admin/content/posts/post-1");
+		expect(internal.getAttribute("target")).toBeNull();
+		const external = screen.getByRole("link", { name: /Service status/ });
+		expect(external.getAttribute("target")).toBe("_blank");
+		expect(external.getAttribute("rel")).toBe("noopener noreferrer");
+
+		fireEvent.keyDown(internal, { key: "Enter" });
+		expect(onAction).not.toHaveBeenCalled();
+	});
+
+	it("fails closed when the host does not resolve a link target", () => {
+		renderBlocks(
+			[
+				{
+					type: "actions",
+					elements: [
+						{
+							type: "link",
+							label: "Unknown page",
+							target: { kind: "plugin-page", path: "/missing" },
+						},
+					],
+				},
+			],
+			undefined,
+			() => null,
+		);
+		expect(screen.queryByRole("link")).toBeNull();
 	});
 
 	it("divider block renders hr", () => {
@@ -342,6 +446,61 @@ describe("BlockRenderer", () => {
 		expect(screen.getByText("Role")).toBeTruthy();
 		expect(screen.getByText("Alice")).toBeTruthy();
 		expect(screen.getByText("Admin")).toBeTruthy();
+	});
+
+	it("table element cells render row actions that dispatch with the chosen value", () => {
+		const onAction = vi.fn();
+		renderBlocks(
+			[
+				{
+					type: "table",
+					page_action_id: "page",
+					columns: [
+						{ key: "title", label: "Title" },
+						{ key: "action", label: "Actions", format: "element" },
+					],
+					rows: [
+						{
+							title: "Hello",
+							action: {
+								type: "menu",
+								action_id: "translate",
+								label: "Translate",
+								items: [
+									{ label: "French", value: "fr|post-1" },
+									{ label: "Italian", value: "it|post-1" },
+								],
+							},
+						},
+						{
+							title: "About",
+							action: {
+								type: "link",
+								label: "Open",
+								target: { kind: "content", collection: "pages", id: "page-1" },
+							},
+						},
+						{ title: "Empty" },
+					],
+				},
+			],
+			onAction,
+			(target) =>
+				target.kind === "content"
+					? `/_emdash/admin/content/${target.collection}/${target.id}`
+					: null,
+		);
+
+		fireEvent.click(screen.getByRole("menuitem", { name: "Italian" }));
+		expect(onAction).toHaveBeenCalledWith({
+			type: "block_action",
+			action_id: "translate",
+			value: "it|post-1",
+		});
+		expect(screen.getByRole("link", { name: "Open" }).getAttribute("href")).toBe(
+			"/_emdash/admin/content/pages/page-1",
+		);
+		expect(screen.getByText("Empty").closest("tr")?.lastElementChild?.textContent).toBe("");
 	});
 
 	it("table block shows empty_text when rows empty", () => {
@@ -455,6 +614,7 @@ describe("BlockRenderer", () => {
 			onAction,
 		);
 
+		// Submit the form
 		const submitBtn = screen.getByText("Save");
 		fireEvent.click(submitBtn);
 
@@ -676,13 +836,16 @@ describe("BlockRenderer", () => {
 			onAction,
 		);
 
+		// Initially no dialog
 		expect(screen.queryByTestId("dialog-root")).toBeNull();
 
+		// Click button — dialog appears
 		fireEvent.click(screen.getByText("Delete"));
 		expect(screen.getByTestId("dialog-root")).toBeTruthy();
 		expect(screen.getByText("Delete item?")).toBeTruthy();
 		expect(screen.getByText("This cannot be undone.")).toBeTruthy();
 
+		// Click confirm — fires action
 		fireEvent.click(screen.getByText("Yes, delete"));
 		expect(onAction).toHaveBeenCalledWith({
 			type: "block_action",

@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AdminBrandingProvider } from "../../../../../packages/admin/src/lib/admin-branding-context";
 import { render } from "../utils/render.tsx";
 
+// Mock router — provide a token so the page reaches the "register" step
 const mockUseSearch = vi.fn().mockReturnValue({ token: "valid-invite-token" });
 
 vi.mock("@tanstack/react-router", async () => {
@@ -14,6 +15,7 @@ vi.mock("@tanstack/react-router", async () => {
 	};
 });
 
+// Mock API
 const mockValidateInviteToken = vi.fn().mockResolvedValue({
 	email: "invitee@example.com",
 	role: 30,
@@ -28,11 +30,13 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	};
 });
 
+// Mock WebAuthn so PasskeyRegistration doesn't bail out
 Object.defineProperty(window, "PublicKeyCredential", {
 	value: function PublicKeyCredential() {},
 	writable: true,
 });
 
+// Import after mocks
 const { InviteAcceptPage } =
 	await import("../../../../../packages/admin/src/components/InviteAcceptPage");
 
@@ -47,6 +51,9 @@ describe("InviteAcceptPage", () => {
 		});
 	});
 
+	// Regression test for #639 / PR #705: the invite-accept page must reflect
+	// the configured admin.logo/siteName (white-label branding), not the
+	// stock hardcoded EmDash mark — same as LoginPage/SignupPage.
 	it("renders the configured admin logo/site name instead of the stock mark", async () => {
 		const screen = await render(
 			<AdminBrandingProvider

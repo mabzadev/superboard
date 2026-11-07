@@ -9,17 +9,16 @@ const logsUrl = /\/identity\/fr\/logs\/?$/;
 type IdentityFixture = {
 	authId: string;
 	emailLogId: string;
-	smsLogId: string;
 	signInLogId: string;
 };
 function fixture(): IdentityFixture {
 	const path = process.env.SUPERBOARD_IDENTITY_E2E_FIXTURE;
 	if (!path)
 		throw new Error(
-			"SUPERBOARD_IDENTITY_E2E_FIXTURE must identify persisted native signup, email, SMS and sign-in fixtures.",
+			"SUPERBOARD_IDENTITY_E2E_FIXTURE must identify persisted native signup, email and sign-in fixtures.",
 		);
 	const value = JSON.parse(readFileSync(path, "utf8"));
-	for (const name of ["authId", "emailLogId", "smsLogId", "signInLogId"])
+	for (const name of ["authId", "emailLogId", "signInLogId"])
 		if (typeof value[name] !== "string" || !value[name])
 			throw new Error(`Identity fixture is missing ${name}`);
 	return value;
@@ -42,14 +41,14 @@ test("the native user detail resolves its identity, translates passkeys and canc
 	await expect(page.locator("main")).toContainText(authId);
 	await expect(page.locator("main")).toContainText(user.email);
 	await ready(page, `/identity/fr/users/${authId}`);
-	await expect(page.getByRole("cell", { name: "Clé d’accès", exact: true })).toBeVisible();
+	await expect(page.locator("main").getByText("Clé d’accès", { exact: true })).toBeVisible();
 	await expect(page.getByTestId("firstNameInput")).toHaveValue(user.firstName ?? "");
 	await page.getByRole("button", { name: "Supprimer", exact: true }).click();
 	await expect(page.getByRole("alertdialog")).toContainText(user.email);
 	await page.getByRole("button", { name: "Annuler", exact: true }).click();
 	await expect(page.getByRole("alertdialog")).toHaveCount(0);
 	await page.reload();
-	await expect(page.getByRole("cell", { name: "Clé d’accès", exact: true })).toBeVisible();
+	await expect(page.locator("main").getByText("Clé d’accès", { exact: true })).toBeVisible();
 	await page.locator("main").getByText("Utilisateurs", { exact: true }).first().click();
 	await expect(page).toHaveURL(usersUrl);
 	await page.goBack();
@@ -72,12 +71,12 @@ test("the native user detail resolves its identity, translates passkeys and canc
 	);
 });
 
-for (const kind of ["email", "sms", "sign-in"] as const) {
+for (const kind of ["email", "sign-in"] as const) {
 	test(`${kind} log detail displays its persisted record in English and French`, async ({
 		authenticatedPage: page,
 	}) => {
 		const ids = fixture();
-		const id = kind === "email" ? ids.emailLogId : kind === "sms" ? ids.smsLogId : ids.signInLogId;
+		const id = kind === "email" ? ids.emailLogId : ids.signInLogId;
 		const ref = await projectRef(page);
 		const value = await siteApi(
 			page.request,
@@ -91,7 +90,7 @@ for (const kind of ["email", "sms", "sign-in"] as const) {
 			await ready(page, `/identity/${lang}/logs/${kind}/${id}`);
 			const main = page.locator("main");
 			await expect(main).toContainText(log.createdAt);
-			if (kind === "email" || kind === "sms") {
+			if (kind === "email") {
 				await expect(main).toContainText(log.receiver);
 				await expect(main).toContainText(log.response);
 			} else {

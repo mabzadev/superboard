@@ -1,3 +1,16 @@
+/**
+ * Server-side Turnstile enforcement on
+ * POST /_emdash/api/comments/:collection/:contentId (issue #1589).
+ *
+ * The form widget submits a `turnstileToken`, but the route previously
+ * never verified it — a bot POSTing directly to the API bypassed
+ * Turnstile entirely. When a secret key is configured
+ * (EMDASH_TURNSTILE_SECRET_KEY / TURNSTILE_SECRET_KEY), the route must
+ * verify the token via Cloudflare's siteverify before persisting, and
+ * reject submissions without a valid token. Without a configured secret
+ * the behavior is unchanged (backward compatible).
+ */
+
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -45,6 +58,7 @@ const VALID_BODY = {
 	body: "Nice post!",
 };
 
+/** Stub global fetch for the siteverify call; returns the spy. */
 function stubSiteverify(success: boolean) {
 	const fetchSpy = vi.fn(async () =>
 		Response.json(success ? { success: true } : { success: false, "error-codes": ["bad-token"] }),
@@ -96,8 +110,24 @@ describe("POST /comments — Turnstile verification", () => {
 		const res = await postComment(buildContext(db, buildRequest(VALID_BODY)));
 
 		expect(res.status).toBe(403);
+		// No siteverify subrequest for a missing token
 		expect(fetchSpy).not.toHaveBeenCalled();
 		expect(await commentCount()).toBe(0);
+	});
+
+	it("does not count rejected submissions toward the shared rate limit", async () => {
+		vi.stubEnv("EMDASH_TURNSTILE_SECRET_KEY", "test-secret");
+		stubSiteverify(true);
+
+		for (let i = 0; i < 25; i++) {
+			const rejected = await postComment(buildContext(db, buildRequest(VALID_BODY)));
+			expect(rejected.status).toBe(403);
+		}
+
+		const res = await postComment(
+			buildContext(db, buildRequest({ ...VALID_BODY, turnstileToken: "good-token" })),
+		);
+		expect(res.status).toBe(201);
 	});
 
 	it("rejects a submission whose token fails siteverify", async () => {
@@ -123,6 +153,7 @@ describe("POST /comments — Turnstile verification", () => {
 
 		expect(res.status).toBe(201);
 		expect(fetchSpy).toHaveBeenCalledOnce();
+		// The secret and token must reach siteverify
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- shape fixed by the code under test
 		const [url, init] = fetchSpy.mock.calls[0] as unknown as [string, { body: string }];
 		expect(url).toBe("https://challenges.cloudflare.com/turnstile/v0/siteverify");

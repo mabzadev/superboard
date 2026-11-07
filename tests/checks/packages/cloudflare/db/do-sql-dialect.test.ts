@@ -48,6 +48,8 @@ describe("DOSqlDriver", () => {
 		await driver.acquireConnection();
 		await driver.acquireConnection();
 
+		// The driver never caches: a DO stub is a per-request I/O object, so the
+		// cross-request-cached singleton dialect would otherwise reuse a stale stub.
 		expect(resolveStub).toHaveBeenCalledTimes(2);
 	});
 
@@ -55,6 +57,7 @@ describe("DOSqlDriver", () => {
 		const queryFn = vi.fn().mockResolvedValue({ rows: [] });
 		const stub = { query: queryFn, batchQuery: vi.fn() } as unknown as EmDashDBStub;
 		const make = vi.fn(() => stub);
+		// Mirrors createRequestScopedDb: a per-request closure memoizes the stub.
 		let cached: EmDashDBStub | undefined;
 		const resolveStub = () => (cached ??= make());
 		const driver = new DOSqlDialect({ resolveStub }).createDriver();
@@ -109,6 +112,7 @@ describe("DOSqlConnection", () => {
 		expect(queryFn).toHaveBeenLastCalledWith("SELECT * FROM posts", [], { bookmark: "bm-123" });
 
 		await conn.executeQuery(CompiledQuery.raw("INSERT INTO posts (id) VALUES (?)", ["1"]));
+		// Writes never carry the read bookmark.
 		expect(queryFn).toHaveBeenLastCalledWith("INSERT INTO posts (id) VALUES (?)", ["1"], undefined);
 	});
 
@@ -124,6 +128,9 @@ describe("DOSqlConnection", () => {
 	});
 
 	it("read-after-write: a read uses the fresh write bookmark, not the stale cookie one", async () => {
+		// Simulates create() then findById() in one request: the write mints a
+		// new bookmark; the follow-up read must wait for THAT, not the request's
+		// initial cookie bookmark, or it would miss the row on a lagging replica.
 		const queryFn = vi
 			.fn()
 			.mockResolvedValueOnce({ rows: [], changes: 1, bookmark: "bm-after-write" })

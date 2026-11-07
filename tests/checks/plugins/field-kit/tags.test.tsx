@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Tags } from "../../../../packages/plugins/field-kit/src/widgets/tags";
 
+// ── Kumo mocks ──────────────────────────────────────────────────────────────
 vi.mock("@cloudflare/kumo", () => ({
 	Badge: ({ children }: any) => <span data-testid="badge">{children}</span>,
 	Button: ({ children, onClick, icon, "aria-label": ariaLabel }: any) => (
@@ -20,6 +21,8 @@ vi.mock("@phosphor-icons/react", () => ({
 
 afterEach(() => cleanup());
 
+// An <input> with a `list` attribute has role="combobox"; without it, "textbox".
+// Both are the same HTML element in our widget; query by id for consistency.
 function findInput(id = "tags"): HTMLInputElement | null {
 	return document.querySelector(`input#${id}`);
 }
@@ -28,6 +31,7 @@ describe("Tags widget", () => {
 	it("renders existing tags as chips", () => {
 		render(<Tags value={["a", "b", "c"]} onChange={() => {}} label="Tags" id="tags" />);
 		const badges = screen.getAllByTestId("badge");
+		// each badge renders tag + mocked remove icon; check the tag text is present
 		expect(badges).toHaveLength(3);
 		expect(badges[0]!.textContent).toContain("a");
 		expect(badges[1]!.textContent).toContain("b");
@@ -65,6 +69,7 @@ describe("Tags widget", () => {
 		render(
 			<Tags value={["a", "b"]} onChange={onChange} label="Tags" id="tags" options={{ max: 2 }} />,
 		);
+		// input is hidden when at limit
 		expect(findInput()).toBeNull();
 	});
 

@@ -1,9 +1,16 @@
+/**
+ * OAuth state store
+ *
+ * Stores OAuth state in the auth_challenges table with automatic expiration.
+ * Uses the existing table but with type="oauth" to distinguish from WebAuthn challenges.
+ */
+
 import type { StateStore, OAuthState } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 
 import type { Database } from "../database/types.js";
 
-const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 export function createOAuthStateStore(db: Kysely<Database>): StateStore {
 	return {
@@ -41,7 +48,9 @@ export function createOAuthStateStore(db: Kysely<Database>): StateStore {
 
 			const expiresAt = new Date(row.expires_at).getTime();
 
+			// Check expiration
 			if (expiresAt < Date.now()) {
+				// Expired, delete and return null
 				await this.delete(state);
 				return null;
 			}

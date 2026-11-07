@@ -95,6 +95,7 @@ export interface EmailServiceMessage {
 	subject: string;
 	text?: string | null;
 	html?: string | null;
+	fromName?: string | null;
 	replyTo?: string | null;
 	headers?: Record<string, string>;
 	projectId?: number | null;

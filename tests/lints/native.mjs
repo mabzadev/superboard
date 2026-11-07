@@ -3,6 +3,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { upstreamFiles } from "../../scripts/emdash/upstream-files.mjs";
 import { applyBaseline, captureBaseline } from "./quality.mjs";
 import { diagnostic, maintainedFile, trackedFiles } from "./repository.mjs";
 
@@ -61,12 +62,19 @@ export function parseSarif(report) {
 	);
 }
 
+export function nativeSources(paths, upstreamPaths = new Map()) {
+	return paths.filter(
+		(path) =>
+			!upstreamPaths.has(path) &&
+			maintainedFile(path) &&
+			!path.startsWith("sdks/web/flows/upstream/"),
+	);
+}
+
 export function lintNative(group) {
 	const diagnostics = [];
 	try {
-		const paths = trackedFiles(root)
-			.filter(maintainedFile)
-			.filter((path) => !path.startsWith("sdks/web/flows/upstream/"));
+		const paths = nativeSources(trackedFiles(root), upstreamFiles(root)?.paths);
 		if (group === "automation") {
 			const workflows = paths.filter((path) => /^\.github\/workflows\/.*\.ya?ml$/u.test(path));
 			if (!workflows.length) throw new Error("No workflows were selected");

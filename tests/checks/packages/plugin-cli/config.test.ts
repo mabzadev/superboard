@@ -9,6 +9,7 @@ const ORIGINAL_ENV = process.env["EMDASH_REGISTRY_URL"];
 
 describe("resolveAggregatorUrl", () => {
 	afterEach(() => {
+		// Restore the env var if a test mutated it.
 		if (ORIGINAL_ENV === undefined) {
 			delete process.env["EMDASH_REGISTRY_URL"];
 		} else {

@@ -1,3 +1,12 @@
+/**
+ * Plugin settings route (#341): registration, authorization, and the
+ * secret-masking contract at the HTTP boundary.
+ *
+ * Reading settings can reveal plugin configuration and updating can
+ * change plugin behaviour, so both methods require `plugins:manage`
+ * (admin), not just `plugins:read` (editor).
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,6 +16,8 @@ import {
 	GET as settingsGet,
 	PUT as settingsPut,
 } from "../../../../../../packages/core/src/astro/routes/api/admin/plugins/[id]/settings.js";
+import { generateEncryptionKey } from "../../../../../../packages/core/src/config/secrets.js";
+import { OptionsRepository } from "../../../../../../packages/core/src/database/repositories/options.js";
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import type {
 	ResolvedPlugin,
@@ -44,10 +55,12 @@ describe("plugin settings route", () => {
 	let db: Kysely<Database>;
 
 	beforeEach(async () => {
+		vi.stubEnv("EMDASH_ENCRYPTION_KEY", generateEncryptionKey());
 		db = await setupTestDatabase();
 	});
 
 	afterEach(async () => {
+		vi.unstubAllEnvs();
 		await teardownTestDatabase(db);
 	});
 
@@ -103,6 +116,9 @@ describe("plugin settings route", () => {
 	});
 
 	it("GET resolves a runtime-installed (marketplace) plugin via the runtime schema fallback", async () => {
+		// The plugin is not in configuredPlugins/sandboxedPluginEntries, so the
+		// static lookup misses and the route must fall back to
+		// getRuntimePluginSettingsSchema — the fix for runtime-installed plugins.
 		const runtimeLocals = {
 			emdash: {
 				db,
@@ -153,6 +169,10 @@ describe("plugin settings route", () => {
 		};
 		expect(body.values.siteKey).toBe("abc");
 		expect(body.secretsSet).toEqual({ secretKey: true });
+		// The secret round-trips into encrypted storage but never back to the client.
 		expect("secretKey" in body.values).toBe(false);
+		const stored = await new OptionsRepository(db).get("plugin:emdash-forms:settings:secretKey");
+		expect(stored).toMatchObject({ v: 1, kid: expect.any(String) });
+		expect(JSON.stringify(stored)).not.toContain("shh");
 	});
 });

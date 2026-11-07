@@ -1,3 +1,7 @@
+/**
+ * OAuth consumer - "Login with X" functionality
+ */
+
 import { sha256 } from "@oslojs/crypto/sha2";
 import { encodeBase64urlNoPadding } from "@oslojs/encoding";
 import { z } from "zod";
@@ -7,7 +11,14 @@ import { hashToken } from "../tokens.js";
 import type { AuthAdapter, User, RoleLevel } from "../types.js";
 import { github, fetchGitHubEmail } from "./providers/github.js";
 import { google } from "./providers/google.js";
-import type { OAuthProvider, OAuthConfig, OAuthProfile, OAuthState } from "./types.js";
+import { createMicrosoftProvider } from "./providers/microsoft.js";
+import type {
+	MicrosoftOAuthConfig,
+	OAuthProvider,
+	OAuthConfig,
+	OAuthProfile,
+	OAuthState,
+} from "./types.js";
 
 export { github, google };
 
@@ -16,15 +27,23 @@ export interface OAuthConsumerConfig {
 	providers: {
 		github?: OAuthConfig;
 		google?: OAuthConfig;
+		microsoft?: MicrosoftOAuthConfig;
 	};
+	/**
+	 * Check if self-signup is allowed for this email domain
+	 */
 	canSelfSignup?: (email: string) => Promise<{ allowed: boolean; role: RoleLevel } | null>;
 }
 
+/**
+ * Generate an OAuth authorization URL
+ */
 export async function createAuthorizationUrl(
 	config: OAuthConsumerConfig,
-	providerName: "github" | "google",
+	providerName: "github" | "google" | "microsoft",
 	stateStore: StateStore,
 	options?: {
+		/** When set, this flow accepts an invite and the callback completes it. */
 		inviteToken?: string;
 	},
 ): Promise<{ url: string; state: string }> {
@@ -33,23 +52,28 @@ export async function createAuthorizationUrl(
 		throw new Error(`OAuth provider ${providerName} not configured`);
 	}
 
-	const provider = getProvider(providerName);
+	const provider = getProvider(providerName, config);
 	const state = generateState();
+	const nonce = provider.verifyIdToken ? generateState() : undefined;
 	const redirectUri = new URL(
 		`/_emdash/api/auth/oauth/${providerName}/callback`,
 		config.baseUrl,
 	).toString();
 
+	// Generate PKCE code verifier for providers that support it
 	const codeVerifier = generateCodeVerifier();
 	const codeChallenge = await generateCodeChallenge(codeVerifier);
 
+	// Store state for verification
 	await stateStore.set(state, {
 		provider: providerName,
 		redirectUri,
 		codeVerifier,
+		...(nonce ? { nonce } : {}),
 		...(options?.inviteToken ? { inviteToken: options.inviteToken } : {}),
 	});
 
+	// Build authorization URL
 	const url = new URL(provider.authorizeUrl);
 	url.searchParams.set("client_id", providerConfig.clientId);
 	url.searchParams.set("redirect_uri", redirectUri);
@@ -57,16 +81,24 @@ export async function createAuthorizationUrl(
 	url.searchParams.set("scope", provider.scopes.join(" "));
 	url.searchParams.set("state", state);
 
+	// PKCE for all providers (GitHub has supported S256 since 2021)
 	url.searchParams.set("code_challenge", codeChallenge);
 	url.searchParams.set("code_challenge_method", "S256");
+
+	if (nonce) {
+		url.searchParams.set("nonce", nonce);
+	}
 
 	return { url: url.toString(), state };
 }
 
+/**
+ * Handle OAuth callback
+ */
 export async function handleOAuthCallback(
 	config: OAuthConsumerConfig,
 	adapter: AuthAdapter,
-	providerName: "github" | "google",
+	providerName: "github" | "google" | "microsoft",
 	code: string,
 	state: string,
 	stateStore: StateStore,
@@ -76,15 +108,18 @@ export async function handleOAuthCallback(
 		throw new Error(`OAuth provider ${providerName} not configured`);
 	}
 
+	// Verify state
 	const storedState = await stateStore.get(state);
 	if (!storedState || storedState.provider !== providerName) {
 		throw new OAuthError("invalid_state", "Invalid OAuth state");
 	}
 
+	// Delete state (single-use)
 	await stateStore.delete(state);
 
-	const provider = getProvider(providerName);
+	const provider = getProvider(providerName, config);
 
+	// Exchange code for tokens
 	const tokens = await exchangeCode(
 		provider,
 		providerConfig,
@@ -93,15 +128,30 @@ export async function handleOAuthCallback(
 		storedState.codeVerifier,
 	);
 
-	const profile = await fetchProfile(provider, tokens.accessToken, providerName);
+	const profile = provider.verifyIdToken
+		? await profileFromIdToken(provider, tokens.idToken, storedState.nonce)
+		: await fetchProfile(provider, tokens.accessToken, providerName);
 
+	// When the flow carried an invite token, complete the invite instead of
+	// applying the self-signup policy.
 	if (storedState.inviteToken) {
 		return acceptInviteViaOAuth(adapter, providerName, profile, storedState.inviteToken);
 	}
 
-	return findOrCreateOAuthUser(adapter, providerName, profile, config.canSelfSignup);
+	// Find or create user
+	return findOrCreateOAuthUser(adapter, providerName, profile, config.canSelfSignup, {
+		requireVerifiedEmail: provider.requireVerifiedEmailForSignup,
+	});
 }
 
+/**
+ * Complete an invite using an OAuth identity.
+ *
+ * The invite is only accepted when the provider has verified the email AND it
+ * matches the invited address (case-insensitive), so a login for a different
+ * account cannot consume someone else's invite. On success the user is created
+ * with the invited role and the OAuth account is linked.
+ */
 export async function acceptInviteViaOAuth(
 	adapter: AuthAdapter,
 	providerName: string,
@@ -132,12 +182,16 @@ export async function acceptInviteViaOAuth(
 		);
 	}
 
+	// Already linked (e.g. a retried callback): consume the invite and return.
 	const existingAccount = await adapter.getOAuthAccount(providerName, profile.id);
 	if (existingAccount) {
 		const user = await adapter.getUserById(existingAccount.userId);
 		if (!user) {
 			throw new OAuthError("user_not_found", "Linked user not found");
 		}
+		// The linked user must actually own the invited email; otherwise a
+		// provider identity whose EmDash email was changed after linking could
+		// consume an invite issued to someone else.
 		if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
 			throw new OAuthError(
 				"invite_email_mismatch",
@@ -148,6 +202,9 @@ export async function acceptInviteViaOAuth(
 		return user;
 	}
 
+	// The invited email already belongs to a user (invite already accepted, or a
+	// pre-existing account): link the OAuth account and consume the invite rather
+	// than failing, so the single-use token cannot be replayed.
 	const existingUser = await adapter.getUserByEmail(profile.email);
 	if (existingUser) {
 		await adapter.createOAuthAccount({
@@ -159,6 +216,7 @@ export async function acceptInviteViaOAuth(
 		return existingUser;
 	}
 
+	// Consume the invite: create the user with the invited role, then link.
 	const user = await completeInvite(adapter, inviteToken, {
 		name: profile.name ?? undefined,
 		avatarUrl: profile.avatarUrl ?? undefined,
@@ -171,6 +229,9 @@ export async function acceptInviteViaOAuth(
 	return user;
 }
 
+/**
+ * Exchange authorization code for tokens
+ */
 async function exchangeCode(
 	provider: OAuthProvider,
 	config: OAuthConfig,
@@ -218,6 +279,9 @@ async function exchangeCode(
 	};
 }
 
+/**
+ * Fetch user profile from OAuth provider
+ */
 async function fetchProfile(
 	provider: OAuthProvider,
 	accessToken: string,
@@ -242,6 +306,7 @@ async function fetchProfile(
 	const data = await response.json();
 	const profile = provider.parseProfile(data);
 
+	// GitHub may not return email in main profile
 	if (providerName === "github" && !profile.email) {
 		profile.email = await fetchGitHubEmail(accessToken);
 	}
@@ -249,16 +314,53 @@ async function fetchProfile(
 	return profile;
 }
 
+/**
+ * Read the user profile from a verified ID token
+ */
+async function profileFromIdToken(
+	provider: OAuthProvider,
+	idToken: string | undefined,
+	nonce: string | undefined,
+): Promise<OAuthProfile> {
+	if (!provider.verifyIdToken || !idToken || !nonce) {
+		throw new OAuthError("id_token_invalid", "Missing ID token or nonce");
+	}
+	try {
+		return provider.parseProfile(await provider.verifyIdToken(idToken, nonce));
+	} catch (error) {
+		throw new OAuthError(
+			"id_token_invalid",
+			error instanceof Error ? error.message : "Invalid ID token",
+		);
+	}
+}
+
+/**
+ * Signup policy callback.
+ * Return `{ allowed: true, role }` to permit signup, or `null` to deny.
+ */
 export type CanSelfSignup = (
 	email: string,
 ) => Promise<{ allowed: boolean; role: RoleLevel } | null>;
 
+/**
+ * Find existing user or create new one (with auto-linking).
+ *
+ * Shared across all OAuth providers (GitHub, Google, AT Protocol, etc.).
+ * The provider-specific token exchange happens before this function is called;
+ * this function only deals with the EmDash user record.
+ */
 export async function findOrCreateOAuthUser(
 	adapter: AuthAdapter,
 	providerName: string,
 	profile: OAuthProfile,
 	canSelfSignup?: CanSelfSignup,
+	options?: {
+		/** Refuse self-signup when the provider has not verified the email */
+		requireVerifiedEmail?: boolean;
+	},
 ): Promise<User> {
+	// Check if OAuth account already linked
 	const existingAccount = await adapter.getOAuthAccount(providerName, profile.id);
 	if (existingAccount) {
 		const user = await adapter.getUserById(existingAccount.userId);
@@ -268,6 +370,9 @@ export async function findOrCreateOAuthUser(
 		return user;
 	}
 
+	// Check if user with this email exists (auto-link)
+	// Only auto-link when the provider has verified the email to prevent
+	// account takeover via unverified email on a third-party provider
 	const existingUser = await adapter.getUserByEmail(profile.email);
 	if (existingUser) {
 		if (!profile.emailVerified) {
@@ -284,9 +389,17 @@ export async function findOrCreateOAuthUser(
 		return existingUser;
 	}
 
+	// Check if self-signup is allowed
 	if (canSelfSignup) {
 		const signup = await canSelfSignup(profile.email);
 		if (signup?.allowed) {
+			if (options?.requireVerifiedEmail && !profile.emailVerified) {
+				throw new OAuthError(
+					"signup_not_allowed",
+					"Cannot sign up: email not verified by provider",
+				);
+			}
+			// Create new user
 			const user = await adapter.createUser({
 				email: profile.email,
 				name: profile.name,
@@ -295,6 +408,7 @@ export async function findOrCreateOAuthUser(
 				emailVerified: profile.emailVerified,
 			});
 
+			// Link OAuth account
 			await adapter.createOAuthAccount({
 				provider: providerName,
 				providerAccountId: profile.id,
@@ -308,15 +422,32 @@ export async function findOrCreateOAuthUser(
 	throw new OAuthError("signup_not_allowed", "Self-signup not allowed for this email domain");
 }
 
-function getProvider(name: "github" | "google"): OAuthProvider {
+function getProvider(
+	name: "github" | "google" | "microsoft",
+	config: OAuthConsumerConfig,
+): OAuthProvider {
 	switch (name) {
 		case "github":
 			return github;
 		case "google":
 			return google;
+		case "microsoft": {
+			const microsoftConfig = config.providers.microsoft;
+			if (!microsoftConfig) {
+				throw new Error("OAuth provider microsoft not configured");
+			}
+			return createMicrosoftProvider(microsoftConfig);
+		}
 	}
 }
 
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Generate a random state string for OAuth CSRF protection
+ */
 function generateState(): string {
 	const bytes = new Uint8Array(32);
 	crypto.getRandomValues(bytes);
@@ -335,11 +466,19 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 	return encodeBase64urlNoPadding(hash);
 }
 
+// ============================================================================
+// State storage interface
+// ============================================================================
+
 export interface StateStore {
 	set(state: string, data: OAuthState): Promise<void>;
 	get(state: string): Promise<OAuthState | null>;
 	delete(state: string): Promise<void>;
 }
+
+// ============================================================================
+// Errors
+// ============================================================================
 
 export class OAuthError extends Error {
 	constructor(
@@ -351,7 +490,8 @@ export class OAuthError extends Error {
 			| "signup_not_allowed"
 			| "invite_invalid"
 			| "invite_email_mismatch"
-			| "invite_email_unverified",
+			| "invite_email_unverified"
+			| "id_token_invalid",
 		message: string,
 	) {
 		super(message);

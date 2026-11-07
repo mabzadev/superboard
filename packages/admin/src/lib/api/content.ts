@@ -1,3 +1,7 @@
+/**
+ * Content CRUD and revision APIs
+ */
+
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -9,7 +13,11 @@ import {
 	throwResponseError,
 	type FindManyResult,
 } from "./client.js";
+import type { EntryRef } from "./relations.js";
 
+/**
+ * Derive draft status from a content item's revision pointers
+ */
 export function getDraftStatus(
 	item: ContentItem,
 ): "unpublished" | "published" | "published_with_changes" {
@@ -19,6 +27,7 @@ export function getDraftStatus(
 	return "published";
 }
 
+/** SEO metadata for a content item */
 export interface ContentSeo {
 	title: string | null;
 	description: string | null;
@@ -51,6 +60,19 @@ export interface ContentItem {
 	liveRevisionId: string | null;
 	draftRevisionId: string | null;
 	seo?: ContentSeo;
+	/**
+	 * First page of reference-field edges, keyed by field slug.
+	 * Only present when the server opts into hydration (the editor GET route).
+	 * Each field's entries are stored solely in `_emdash_content_references`;
+	 * the admin sends the desired id lists back in the `references` save key.
+	 */
+	references?: Record<string, { children: EntryRef[]; nextCursor?: string }>;
+	/**
+	 * Opaque optimistic-concurrency token returned by the content API on
+	 * reads. Echo it back on writes so the server can reject a save that is
+	 * based on a stale read (#2121). Undefined if the server didn't send one.
+	 */
+	_rev?: string;
 }
 
 export interface CreateContentInput {
@@ -61,6 +83,8 @@ export interface CreateContentInput {
 	bylines?: BylineCreditInput[];
 	locale?: string;
 	translationOf?: string;
+	/** Reference-field edges to write atomically, keyed by field slug. */
+	references?: Record<string, string[]>;
 }
 
 export interface TranslationSummary {
@@ -76,14 +100,21 @@ export interface TranslationsResponse {
 	translations: TranslationSummary[];
 }
 
+/**
+ * Fetch translations for a content item
+ */
 export async function fetchTranslations(
 	collection: string,
 	id: string,
 ): Promise<TranslationsResponse> {
 	const response = await apiFetch(`${API_BASE}/content/${collection}/${id}/translations`);
-	return parseApiResponse<TranslationsResponse>(response, "Failed to fetch translations");
+	return parseApiResponse<TranslationsResponse>(
+		response,
+		i18n._(msg`Failed to fetch translations`),
+	);
 }
 
+/** Input for updating SEO fields on content */
 export interface ContentSeoInput {
 	title?: string | null;
 	description?: string | null;
@@ -99,42 +130,81 @@ export interface UpdateContentInput {
 	publishedAt?: string | null;
 	authorId?: string | null;
 	bylines?: BylineCreditInput[];
+	/** Skip revision creation (used by autosave) */
 	skipRevision?: boolean;
 	seo?: ContentSeoInput;
+	/** Reference-field edges to replace atomically, keyed by field slug. */
+	references?: Record<string, string[]>;
+	/**
+	 * Optimistic-concurrency token from the last read. When present, the
+	 * server rejects the write with 409 if the entry changed since that read,
+	 * preventing a stale editor from silently overwriting a newer draft
+	 * (#2121). Omit for a blind write (backwards-compatible).
+	 */
+	_rev?: string;
 }
 
+/**
+ * Trashed content item with deletion timestamp
+ */
 export interface TrashedContentItem extends ContentItem {
 	deletedAt: string;
 }
 
+/**
+ * Preview URL response
+ */
 export interface PreviewUrlResponse {
 	url: string;
 	expiresAt: number;
 }
 
+/**
+ * Fetch content list
+ */
+/** Timestamp column a content-list date range can target. */
 export type ContentDateField = "createdAt" | "updatedAt" | "publishedAt";
 
 export async function fetchContentList(
 	collection: string,
 	options?: {
 		cursor?: string;
+		/** 1-based page number; use instead of `cursor` for numbered pages with a `total`. */
+		page?: number;
 		limit?: number;
 		status?: string;
 		locale?: string;
+		/** Field name to order by, matching the server's whitelist. */
 		orderBy?: string;
+		/** Sort direction; defaults to "desc" on the server. */
 		order?: "asc" | "desc";
+		/** Search across display fields, slug, and searchable custom fields. */
 		search?: string;
+		/** Filter to entries authored by this user (the `author_id` column). */
 		authorId?: string;
+		/** Which timestamp column the `dateFrom`/`dateTo` range applies to. */
 		dateField?: ContentDateField;
+		/** Inclusive lower bound (ISO date or datetime). Requires `dateField`. */
 		dateFrom?: string;
+		/** Inclusive upper bound (ISO date or datetime). Requires `dateField`. */
 		dateTo?: string;
+		/**
+		 * Byline ids (translation groups) to match; an entry matches if it is
+		 * credited to any of them. Ignored when `bylinesNone` is set.
+		 */
 		bylines?: string[];
+		/** Match entries with no byline instead of a specific one. */
 		bylinesNone?: boolean;
+		/**
+		 * Count the byline inferred from an entry's author when it has no
+		 * explicit credit. Off by default: the filter matches real credits.
+		 */
 		includeInferredBylines?: boolean;
 	},
 ): Promise<FindManyResult<ContentItem>> {
 	const params = new URLSearchParams();
 	if (options?.cursor) params.set("cursor", options.cursor);
+	if (options?.page !== undefined) params.set("page", String(options.page));
 	if (options?.limit) params.set("limit", String(options.limit));
 	if (options?.status) params.set("status", options.status);
 	if (options?.locale) params.set("locale", options.locale);
@@ -142,11 +212,15 @@ export async function fetchContentList(
 	if (options?.order) params.set("order", options.order);
 	if (options?.search) params.set("q", options.search);
 	if (options?.authorId) params.set("authorId", options.authorId);
+	// A date range is only meaningful with a target field; send all three
+	// together so the server doesn't reject a half-specified filter.
 	if (options?.dateField && (options.dateFrom || options.dateTo)) {
 		params.set("dateField", options.dateField);
 		if (options.dateFrom) params.set("dateFrom", options.dateFrom);
 		if (options.dateTo) params.set("dateTo", options.dateTo);
 	}
+	// `none` is the server's sentinel for "no byline assigned"; it takes
+	// precedence over a stale selection so the two can't be sent together.
 	if (options?.bylinesNone) {
 		params.set("bylines", "none");
 	} else if (options?.bylines && options.bylines.length > 0) {
@@ -158,9 +232,13 @@ export async function fetchContentList(
 
 	const url = `${API_BASE}/content/${collection}${params.toString() ? `?${params}` : ""}`;
 	const response = await apiFetch(url);
-	return parseApiResponse<FindManyResult<ContentItem>>(response, "Failed to fetch content");
+	return parseApiResponse<FindManyResult<ContentItem>>(
+		response,
+		i18n._(msg`Failed to fetch content`),
+	);
 }
 
+/** A distinct content author, for the admin author filter. */
 export interface ContentAuthor {
 	id: string;
 	name: string | null;
@@ -168,15 +246,23 @@ export interface ContentAuthor {
 	avatarUrl: string | null;
 }
 
+/**
+ * Fetch the distinct authors of a collection's content. Gated on
+ * `content:read`, so unlike the user-management API it's available to any
+ * editor. Returns only users who have authored at least one live entry.
+ */
 export async function fetchContentAuthors(collection: string): Promise<ContentAuthor[]> {
 	const response = await apiFetch(`${API_BASE}/content/${collection}/authors`);
 	const data = await parseApiResponse<{ items: ContentAuthor[] }>(
 		response,
-		"Failed to fetch content authors",
+		i18n._(msg`Failed to fetch content authors`),
 	);
 	return data.items;
 }
 
+/**
+ * Fetch single content item
+ */
 export async function fetchContent(
 	collection: string,
 	id: string,
@@ -186,10 +272,18 @@ export async function fetchContent(
 	if (options?.locale) params.set("locale", options.locale);
 	const query = params.toString() ? `?${params}` : "";
 	const response = await apiFetch(`${API_BASE}/content/${collection}/${id}${query}`);
-	const data = await parseApiResponse<{ item: ContentItem }>(response, "Failed to fetch content");
-	return data.item;
+	const data = await parseApiResponse<{ item: ContentItem; _rev?: string }>(
+		response,
+		i18n._(msg`Failed to fetch content`),
+	);
+	// The server returns `_rev` at the envelope level, not inside `item`.
+	// Lift it onto the item so the editor can echo it back on save (#2121).
+	return { ...data.item, _rev: data._rev };
 }
 
+/**
+ * Create content
+ */
 export async function createContent(
 	collection: string,
 	input: Omit<CreateContentInput, "type">,
@@ -204,12 +298,19 @@ export async function createContent(
 			bylines: input.bylines,
 			locale: input.locale,
 			translationOf: input.translationOf,
+			references: input.references,
 		}),
 	});
-	const data = await parseApiResponse<{ item: ContentItem }>(response, "Failed to create content");
-	return data.item;
+	const data = await parseApiResponse<{ item: ContentItem; _rev?: string }>(
+		response,
+		i18n._(msg`Failed to create content`),
+	);
+	return { ...data.item, _rev: data._rev };
 }
 
+/**
+ * Update content
+ */
 export async function updateContent(
 	collection: string,
 	id: string,
@@ -224,10 +325,16 @@ export async function updateContent(
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(input),
 	});
-	const data = await parseApiResponse<{ item: ContentItem }>(response, "Failed to update content");
-	return data.item;
+	const data = await parseApiResponse<{ item: ContentItem; _rev?: string }>(
+		response,
+		i18n._(msg`Failed to update content`),
+	);
+	return { ...data.item, _rev: data._rev };
 }
 
+/**
+ * Delete content (moves to trash)
+ */
 export async function deleteContent(
 	collection: string,
 	id: string,
@@ -242,25 +349,36 @@ export async function deleteContent(
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete content`));
 }
 
+/**
+ * Fetch trashed content list
+ */
 export async function fetchTrashedContent(
 	collection: string,
 	options?: {
 		cursor?: string;
+		/** 1-based page number; use instead of `cursor` for numbered pages with a `total`. */
+		page?: number;
 		limit?: number;
+		locale?: string;
 	},
 ): Promise<FindManyResult<TrashedContentItem>> {
 	const params = new URLSearchParams();
 	if (options?.cursor) params.set("cursor", options.cursor);
+	if (options?.page !== undefined) params.set("page", String(options.page));
 	if (options?.limit) params.set("limit", String(options.limit));
+	if (options?.locale) params.set("locale", options.locale);
 
 	const url = `${API_BASE}/content/${collection}/trash${params.toString() ? `?${params}` : ""}`;
 	const response = await apiFetch(url);
 	return parseApiResponse<FindManyResult<TrashedContentItem>>(
 		response,
-		"Failed to fetch trashed content",
+		i18n._(msg`Failed to fetch trashed content`),
 	);
 }
 
+/**
+ * Restore content from trash
+ */
 export async function restoreContent(collection: string, id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/content/${collection}/${id}/restore`, {
 		method: "POST",
@@ -268,6 +386,9 @@ export async function restoreContent(collection: string, id: string): Promise<vo
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to restore content`));
 }
 
+/**
+ * Permanently delete content (cannot be undone)
+ */
 export async function permanentDeleteContent(collection: string, id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/content/${collection}/${id}/permanent`, {
 		method: "DELETE",
@@ -276,17 +397,23 @@ export async function permanentDeleteContent(collection: string, id: string): Pr
 		await throwResponseError(response, i18n._(msg`Failed to permanently delete content`));
 }
 
+/**
+ * Duplicate content (creates a draft copy)
+ */
 export async function duplicateContent(collection: string, id: string): Promise<ContentItem> {
 	const response = await apiFetch(`${API_BASE}/content/${collection}/${id}/duplicate`, {
 		method: "POST",
 	});
 	const data = await parseApiResponse<{ item: ContentItem }>(
 		response,
-		"Failed to duplicate content",
+		i18n._(msg`Failed to duplicate content`),
 	);
 	return data.item;
 }
 
+/**
+ * Schedule content for future publishing
+ */
 export async function scheduleContent(
 	collection: string,
 	id: string,
@@ -301,13 +428,16 @@ export async function scheduleContent(
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ scheduledAt }),
 	});
-	const data = await parseApiResponse<{ item: ContentItem }>(
+	const data = await parseApiResponse<{ item: ContentItem; _rev?: string }>(
 		response,
-		"Failed to schedule content",
+		i18n._(msg`Failed to schedule content`),
 	);
-	return data.item;
+	return { ...data.item, _rev: data._rev };
 }
 
+/**
+ * Unschedule content (revert to draft)
+ */
 export async function unscheduleContent(
 	collection: string,
 	id: string,
@@ -319,13 +449,21 @@ export async function unscheduleContent(
 	const response = await apiFetch(`${API_BASE}/content/${collection}/${id}/schedule${query}`, {
 		method: "DELETE",
 	});
-	const data = await parseApiResponse<{ item: ContentItem }>(
+	const data = await parseApiResponse<{ item: ContentItem; _rev?: string }>(
 		response,
-		"Failed to unschedule content",
+		i18n._(msg`Failed to unschedule content`),
 	);
-	return data.item;
+	return { ...data.item, _rev: data._rev };
 }
 
+/**
+ * Get a preview URL for content
+ *
+ * Returns a signed URL that allows viewing draft content.
+ * Returns null if the EmDash runtime isn't initialized on the server
+ * (responds with NOT_CONFIGURED). The preview secret itself no longer
+ * needs to be set explicitly — it auto-generates on first use.
+ */
 export async function getPreviewUrl(
 	collection: string,
 	id: string,
@@ -342,6 +480,7 @@ export async function getPreviewUrl(
 		});
 
 		if (response.status === 500) {
+			// Preview not configured — check error code without consuming body for parseApiResponse
 			const body: unknown = await response.json().catch(() => ({}));
 			if (
 				typeof body === "object" &&
@@ -354,48 +493,70 @@ export async function getPreviewUrl(
 			) {
 				return null;
 			}
+			// Some other 500 error
 			throw new Error("Failed to get preview URL");
 		}
 
 		return parseApiResponse<PreviewUrlResponse>(response, "Failed to get preview URL");
 	} catch {
+		// If preview endpoint doesn't exist or fails, return null
 		return null;
 	}
 }
 
+// =============================================================================
+// Publishing (Draft Revisions)
+// =============================================================================
+
+/**
+ * Publish content - promotes current draft to live
+ */
 export async function publishContent(
 	collection: string,
 	id: string,
-	options?: { locale?: string },
+	options?: { locale?: string; _rev?: string },
 ): Promise<ContentItem> {
 	const params = new URLSearchParams();
 	if (options?.locale) params.set("locale", options.locale);
 	const query = params.toString() ? `?${params}` : "";
 	const response = await apiFetch(`${API_BASE}/content/${collection}/${id}/publish${query}`, {
 		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ _rev: options?._rev }),
 	});
-	const data = await parseApiResponse<{ item: ContentItem }>(response, "Failed to publish content");
-	return data.item;
+	const data = await parseApiResponse<{ item: ContentItem; _rev?: string }>(
+		response,
+		i18n._(msg`Failed to publish content`),
+	);
+	return { ...data.item, _rev: data._rev };
 }
 
+/**
+ * Unpublish content - removes from public, preserves draft
+ */
 export async function unpublishContent(
 	collection: string,
 	id: string,
-	options?: { locale?: string },
+	options?: { locale?: string; _rev?: string },
 ): Promise<ContentItem> {
 	const params = new URLSearchParams();
 	if (options?.locale) params.set("locale", options.locale);
 	const query = params.toString() ? `?${params}` : "";
 	const response = await apiFetch(`${API_BASE}/content/${collection}/${id}/unpublish${query}`, {
 		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ _rev: options?._rev }),
 	});
-	const data = await parseApiResponse<{ item: ContentItem }>(
+	const data = await parseApiResponse<{ item: ContentItem; _rev?: string }>(
 		response,
-		"Failed to unpublish content",
+		i18n._(msg`Failed to unpublish content`),
 	);
-	return data.item;
+	return { ...data.item, _rev: data._rev };
 }
 
+/**
+ * Discard draft changes - reverts to live version
+ */
 export async function discardDraft(
 	collection: string,
 	id: string,
@@ -407,10 +568,16 @@ export async function discardDraft(
 	const response = await apiFetch(`${API_BASE}/content/${collection}/${id}/discard-draft${query}`, {
 		method: "POST",
 	});
-	const data = await parseApiResponse<{ item: ContentItem }>(response, "Failed to discard draft");
-	return data.item;
+	const data = await parseApiResponse<{ item: ContentItem; _rev?: string }>(
+		response,
+		i18n._(msg`Failed to discard draft`),
+	);
+	return { ...data.item, _rev: data._rev };
 }
 
+/**
+ * Compare live and draft revisions
+ */
 export async function compareRevisions(
 	collection: string,
 	id: string,
@@ -424,8 +591,12 @@ export async function compareRevisions(
 		hasChanges: boolean;
 		live: Record<string, unknown> | null;
 		draft: Record<string, unknown> | null;
-	}>(response, "Failed to compare revisions");
+	}>(response, i18n._(msg`Failed to compare revisions`));
 }
+
+// =============================================================================
+// Revision API
+// =============================================================================
 
 export interface Revision {
 	id: string;
@@ -436,24 +607,41 @@ export interface Revision {
 	createdAt: string;
 }
 
+export interface RevisionAuthor {
+	id: string;
+	/** `null` when the account has no display name. */
+	name: string | null;
+}
+
+export interface RevisionListItem extends Revision {
+	/** `null` when no author was recorded or the account no longer exists. */
+	author: RevisionAuthor | null;
+}
+
 export interface RevisionListResponse {
-	items: Revision[];
+	items: RevisionListItem[];
 	total: number;
 }
 
+/**
+ * Fetch revisions for a content item
+ */
 export async function fetchRevisions(
 	collection: string,
 	entryId: string,
-	options?: { limit?: number },
+	options?: { limit?: number; signal?: AbortSignal },
 ): Promise<RevisionListResponse> {
 	const params = new URLSearchParams();
 	if (options?.limit) params.set("limit", String(options.limit));
 
 	const url = `${API_BASE}/content/${collection}/${entryId}/revisions${params.toString() ? `?${params}` : ""}`;
-	const response = await apiFetch(url);
-	return parseApiResponse<RevisionListResponse>(response, "Failed to fetch revisions");
+	const response = await apiFetch(url, { signal: options?.signal });
+	return parseApiResponse<RevisionListResponse>(response, i18n._(msg`Failed to fetch revisions`));
 }
 
+/**
+ * Get a specific revision
+ */
 export async function fetchRevision(revisionId: string): Promise<Revision> {
 	const response = await apiFetch(`${API_BASE}/revisions/${revisionId}`);
 
@@ -471,6 +659,9 @@ export async function fetchRevision(revisionId: string): Promise<Revision> {
 	return data.item;
 }
 
+/**
+ * Restore a revision (updates content to this revision's data)
+ */
 export async function restoreRevision(revisionId: string): Promise<ContentItem> {
 	const response = await apiFetch(`${API_BASE}/revisions/${revisionId}/restore`, {
 		method: "POST",
@@ -483,9 +674,9 @@ export async function restoreRevision(revisionId: string): Promise<ContentItem> 
 		await throwResponseError(response, i18n._(msg`Failed to restore revision`));
 	}
 
-	const data = await parseApiResponse<{ item: ContentItem }>(
+	const data = await parseApiResponse<{ item: ContentItem; _rev?: string }>(
 		response,
 		i18n._(msg`Failed to restore revision`),
 	);
-	return data.item;
+	return { ...data.item, _rev: data._rev };
 }

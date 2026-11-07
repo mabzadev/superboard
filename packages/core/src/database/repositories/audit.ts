@@ -15,7 +15,16 @@ export type AuditAction =
 	| "password_change"
 	| "settings_update"
 	| "schema_change"
-	| "plugin_tool_invoke";
+	| "plugin_tool_invoke"
+	| "transfer_export_create"
+	| "transfer_import_create"
+	| "transfer_import_execute"
+	| "transfer_import_cancel"
+	| "transfer_import_abandon"
+	| "transfer_import_complete"
+	| "transfer_import_fail"
+	| "transfer_approval_approve"
+	| "transfer_approval_deny";
 
 export type AuditStatus = "success" | "failure" | "denied";
 
@@ -47,15 +56,24 @@ export interface AuditLogQuery {
 	resourceType?: string;
 	resourceId?: string;
 	status?: AuditStatus;
-	since?: string;
-	until?: string;
+	since?: string; // ISO date
+	until?: string; // ISO date
 	limit?: number;
 	cursor?: string;
 }
 
+/**
+ * Audit repository for logging system events
+ *
+ * Tracks user actions for security, debugging, and compliance.
+ * All mutations should create an audit log entry.
+ */
 export class AuditRepository {
 	constructor(private db: Kysely<Database>) {}
 
+	/**
+	 * Create an audit log entry
+	 */
 	async log(input: CreateAuditLogInput): Promise<AuditLog> {
 		const id = ulid();
 
@@ -79,6 +97,9 @@ export class AuditRepository {
 		return log;
 	}
 
+	/**
+	 * Find audit log by ID
+	 */
 	async findById(id: string): Promise<AuditLog | null> {
 		const row = await this.db
 			.selectFrom("audit_logs")
@@ -89,6 +110,9 @@ export class AuditRepository {
 		return row ? this.rowToAuditLog(row) : null;
 	}
 
+	/**
+	 * Query audit logs with filters and cursor-based pagination
+	 */
 	async findMany(query: AuditLogQuery = {}): Promise<FindManyResult<AuditLog>> {
 		const limit = Math.min(Math.max(1, query.limit || 50), 100);
 
@@ -149,6 +173,9 @@ export class AuditRepository {
 		return result;
 	}
 
+	/**
+	 * Get all logs for a specific resource
+	 */
 	async findByResource(
 		resourceType: string,
 		resourceId: string,
@@ -169,6 +196,9 @@ export class AuditRepository {
 		return rows.map((row) => this.rowToAuditLog(row));
 	}
 
+	/**
+	 * Get all logs for a specific user
+	 */
 	async findByActor(
 		actorId: string,
 		options: { limit?: number; since?: string } = {},
@@ -191,6 +221,9 @@ export class AuditRepository {
 		return rows.map((row) => this.rowToAuditLog(row));
 	}
 
+	/**
+	 * Count logs matching a query
+	 */
 	async count(query: Omit<AuditLogQuery, "limit" | "cursor"> = {}): Promise<number> {
 		let q = this.db.selectFrom("audit_logs").select((eb) => eb.fn.count("id").as("count"));
 
@@ -226,6 +259,9 @@ export class AuditRepository {
 		return Number(result?.count || 0);
 	}
 
+	/**
+	 * Delete old audit logs (for retention policy)
+	 */
 	async deleteOlderThan(date: string): Promise<number> {
 		const result = await this.db
 			.deleteFrom("audit_logs")
@@ -235,6 +271,9 @@ export class AuditRepository {
 		return Number(result.numDeletedRows ?? 0);
 	}
 
+	/**
+	 * Convert database row to AuditLog object
+	 */
 	private rowToAuditLog(row: {
 		id: string;
 		timestamp: string;

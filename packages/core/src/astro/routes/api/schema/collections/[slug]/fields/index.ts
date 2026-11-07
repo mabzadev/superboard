@@ -1,3 +1,10 @@
+/**
+ * Schema fields list and create endpoints
+ *
+ * GET  /_emdash/api/schema/collections/{slug}/fields - List fields
+ * POST /_emdash/api/schema/collections/{slug}/fields - Create field
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

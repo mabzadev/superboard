@@ -1,26 +1,65 @@
 /// <reference types="astro/client" />
+/**
+ * Query functions for EmDash content
+ *
+ * These wrap Astro's getLiveCollection/getLiveEntry with type filtering.
+ * Use these instead of calling Astro's functions directly.
+ *
+ * Error handling follows Astro's pattern - returns { entries/entry, error }
+ * so callers can gracefully handle errors (including 404s).
+ *
+ * Preview mode is handled implicitly via ALS request context —
+ * no parameters needed. The middleware verifies the preview token
+ * and sets the context; query functions read it automatically.
+ *
+ * The triple-slash directive above pulls in the ambient declaration for
+ * `astro:content` (used by the dynamic imports below) so this source
+ * file typechecks even when reached transitively by a sibling package
+ * whose tsconfig doesn't list `astro/client` in `compilerOptions.types`.
+ *
+ * Note: the directive is stripped from the compiled output (`dist/*`)
+ * by tsdown, so it does not propagate to downstream consumers of the
+ * published package. Consumers are Astro sites and already provide their
+ * own `astro/client` ambient surface anyway, so the runtime dynamic
+ * import resolves there at typecheck time without our help.
+ */
 
-import { encodeCursor } from "./database/repositories/types.js";
-import { getFallbackChain, getI18nConfig, isI18nEnabled } from "./i18n/config.js";
+import type { ContentSeo } from "./database/repositories/types.js";
 import {
+	getFallbackChain,
+	getI18nConfig,
+	getLocaleCandidates,
+	isI18nEnabled,
+	resolveConfiguredLocale,
+} from "./i18n/config.js";
+import { resolveLocale } from "./i18n/resolve.js";
+import {
+	creditFromFoldedAuthorByline,
 	creditsFromFoldedBylines,
 	CURSOR_RAW_VALUES,
+	encodeSortCursor,
+	FOLDED_AUTHOR_BYLINE,
 	FOLDED_BYLINES,
 	FOLDED_BYLINES_EXIST,
 	FOLDED_TERMS,
+	loadPublishedDates,
 	type WhereRange,
 	type WhereValue,
 } from "./loader.js";
 import {
 	cachedQuery,
+	contentCacheNamespaces,
 	contentNamespaces,
 	invalidateSchemaObjectCache,
 } from "./object-cache/index.js";
+import { primeSeoPanel } from "./page/seo-panel.js";
+import type { ReferenceQuery, ReferenceSelection } from "./references/types.js";
 import { requestCached } from "./request-cache.js";
 import { getRequestContext } from "./request-context.js";
+import { resetRegisteredCollectionsCache } from "./schema/collection-slugs-cache.js";
 import { compileUrlPattern } from "./schema/url-pattern.js";
 import type { TaxonomyTerm } from "./taxonomies/types.js";
-import { isMissingTableError } from "./utils/db-errors.js";
+import { isMissingColumnError, isMissingTableError } from "./utils/db-errors.js";
 import {
 	createEditable,
 	createNoop,
@@ -28,83 +67,356 @@ import {
 	type EditableOptions,
 } from "./visual-editing/editable.js";
 
+/**
+ * Collection type registry for type-safe queries.
+ *
+ * This interface is extended by the generated emdash-env.d.ts file
+ * to provide type inference for collection names and their data shapes.
+ *
+ * @example
+ * ```ts
+ * // In emdash-env.d.ts (generated):
+ * declare module "emdash" {
+ *   interface EmDashCollections {
+ *     posts: { title: string; content: PortableTextBlock[]; };
+ *     pages: { title: string; body: PortableTextBlock[]; };
+ *   }
+ * }
+ *
+ * // Then in your code:
+ * const { entries } = await getEmDashCollection("posts");
+ * // entries[0].data.title is typed as string
+ * ```
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface EmDashCollections {}
 
+/**
+ * Helper type to infer the data type for a collection.
+ * Returns the registered type if known, otherwise falls back to Record<string, unknown>.
+ */
 export type InferCollectionData<T extends string> = T extends keyof EmDashCollections
 	? EmDashCollections[T]
 	: Record<string, unknown>;
 
+/**
+ * Reference type registry, the counterpart to {@link EmDashCollections}.
+ *
+ * Extended by the generated emdash-env.d.ts for every collection that has at
+ * least one reference field bound to a relation, so a selection resolves to the
+ * target collection's own interface.
+ *
+ * @example
+ * ```ts
+ * // In emdash-env.d.ts (generated):
+ * declare module "emdash" {
+ *   interface EmDashCollectionReferences {
+ *     posts: { author: ReferencePage<Author>; related_posts: ReferencePage<Post> };
+ *   }
+ * }
+ *
+ * // Then in your code:
+ * const { entry } = await getEmDashEntry("posts", slug, { references: { author: true } });
+ * // entry.references.author.entries[0].data.name is typed as string
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface EmDashCollectionReferences {}
+
+/**
+ * Helper type to infer the reference shapes for a collection.
+ * Returns the registered type if known, otherwise falls back to one
+ * un-narrowed page per field slug.
+ */
+export type InferCollectionReferences<T extends string> = T extends keyof EmDashCollectionReferences
+	? EmDashCollectionReferences[T]
+	: ReferencePages;
+
+/**
+ * What `getEmDashEntry`'s `references` option accepts for a collection: any
+ * subset of its reference fields, or any field slug at all for a collection
+ * with no generated entry.
+ */
+export type SelectableReferences<T extends string> = Partial<
+	Record<keyof InferCollectionReferences<T> & string, ReferenceQuery>
+>;
+
+/**
+ * The `references` a selection produces: one page per field it named, and no
+ * key for a field it did not, so a render reads `entry.references.author`
+ * without a second optional check.
+ */
+export type SelectedReferences<T extends string, S> = Pick<
+	InferCollectionReferences<T>,
+	Extract<keyof S, keyof InferCollectionReferences<T>>
+>;
+
+/**
+ * Sort direction
+ */
 export type SortDirection = "asc" | "desc";
 
+/**
+ * Order by specification - field name to direction
+ * @example { created_at: "desc" } - Sort by created_at descending
+ * @example { title: "asc" } - Sort by title ascending
+ * @example { published_at: "desc", title: "asc" } - Multi-field sort
+ */
 export type OrderBySpec = Record<string, SortDirection>;
 
 export type { WhereRange, WhereValue };
+export type { ReferenceQuery, ReferenceSelection };
 
+/**
+ * Fields shared by every collection query, independent of pagination mode.
+ *
+ * Cursor and offset pagination are mutually exclusive, so they live on the
+ * `CursorCollectionFilter` / `OffsetCollectionFilter` variants rather than
+ * here. Use the {@link CollectionFilter} union for any value that may be
+ * either.
+ */
 export interface CollectionFilterBase {
 	status?: "draft" | "published" | "archived";
 	limit?: number;
+	/**
+	 * Filter by field values, taxonomy terms, byline credits, or ranges.
+	 *
+	 * Taxonomy names are detected automatically and filtered via JOIN.
+	 * The reserved `byline` key filters by byline credit (any credit, not
+	 * just the primary one) via the `_emdash_content_bylines` junction
+	 * table; its value is one or more byline translation groups. This
+	 * matches co-authored entries, which `primary_byline_id` alone misses.
+	 * Other keys are treated as column filters on the content table.
+	 *
+	 * @example { category: 'news' } - Filter by taxonomy term
+	 * @example { category: ['news', 'featured'] } - Filter by multiple terms (OR)
+	 * @example { byline: '01HXYZ...' } - Entries credited to a byline (any position)
+	 * @example { byline: ['01HXYZ...', '01HABC...'] } - Credited to any of these bylines (OR)
+	 * @example { series: 'main' } - Exact match on a content field
+	 * @example { published_at: { gte: '2024-01-01', lt: '2025-01-01' } } - Date range
+	 */
 	where?: Record<string, WhereValue>;
+	/**
+	 * Order results by field(s)
+	 * @default { created_at: "desc" }
+	 * @example { created_at: "desc" } - Sort by created_at descending (default)
+	 * @example { title: "asc" } - Sort by title ascending
+	 * @example { published_at: "desc", title: "asc" } - Multi-field sort
+	 */
 	orderBy?: OrderBySpec;
+	/**
+	 * Filter by locale. When set, only returns entries in this locale.
+	 * Only relevant when i18n is configured.
+	 * @example "en" — English entries only
+	 * @example "fr" — French entries only
+	 */
 	locale?: string;
 }
 
+/** Keyset-paginated query filter. Cannot also carry an `offset`. */
 export interface CursorCollectionFilter extends CollectionFilterBase {
+	/**
+	 * Opaque cursor for keyset pagination.
+	 * Pass the `nextCursor` value from a previous result to fetch the next page.
+	 * @example
+	 * ```ts
+	 * const cursor = Astro.url.searchParams.get("cursor") ?? undefined;
+	 * const { entries, nextCursor } = await getEmDashCollection("posts", {
+	 *   limit: 10,
+	 *   cursor,
+	 * });
+	 * ```
+	 */
 	cursor?: string;
 	offset?: never;
 }
 
+/** Offset-paginated query filter. Cannot also carry a `cursor`. */
 export interface OffsetCollectionFilter extends CollectionFilterBase {
+	/**
+	 * Skip this many entries before returning results (offset pagination).
+	 *
+	 * Use with `limit` to render numbered archive routes like `/page/2`
+	 * without walking cursors or over-fetching from the start:
+	 *
+	 * ```ts
+	 * const perPage = 20;
+	 * const { entries, hasMore } = await getEmDashCollection("posts", {
+	 *   limit: perPage,
+	 *   offset: (page - 1) * perPage,
+	 *   orderBy: { published_at: "desc" },
+	 * });
+	 * ```
+	 *
+	 * Only a positive integer applies.
+	 */
 	offset?: number;
 	cursor?: never;
 }
 
+/**
+ * Filter for `getEmDashCollection`.
+ *
+ * A union of the cursor and offset pagination variants: supplying both
+ * `cursor` and `offset` is a compile-time error, since they are mutually
+ * exclusive ways to express "the next page" (cursor wins at runtime).
+ */
 export type CollectionFilter = CursorCollectionFilter | OffsetCollectionFilter;
 
-export interface ContentEntry<T = Record<string, unknown>> {
+export interface ContentEntry<T = Record<string, unknown>, R = ReferencePages> {
 	id: string;
 	data: T;
+	/**
+	 * One page of each reference field the caller opted into, by field slug.
+	 * Absent unless `references` was passed to {@link getEmDashEntry}.
+	 */
+	references?: R;
+	/** Visual editing annotations. Spread onto elements: {...entry.edit.title} */
 	edit: EditProxy;
 }
 
+/**
+ * One page of a reference field's selection: the entries it points at, in the
+ * order the editor chose, plus the cursor for the next page when the field
+ * holds more than the limit asked for.
+ */
+export interface ReferencePage<T = Record<string, unknown>> {
+	entries: ContentEntry<T>[];
+	nextCursor?: string;
+}
+
+/** The un-narrowed shape of `entry.references` — one page per field slug. */
+export type ReferencePages = Record<string, ReferencePage>;
+
+/** A reference page with the error channel the standalone query returns. */
+export interface ReferenceResult<T = Record<string, unknown>> extends ReferencePage<T> {
+	/** Set only for actual errors; an unknown field or entry is an empty page. */
+	error?: Error;
+	/**
+	 * The rows this page read, for a route that caches the page it renders.
+	 * `getEmDashEntry({ references })` folds the first page's hint into the
+	 * entry's; a route that walks past it has to tag what it reads itself.
+	 */
+	cacheHint?: CacheHint;
+}
+
+/** Cache hint returned by the content loader for route caching */
 export interface CacheHint {
 	tags?: string[];
 	lastModified?: Date;
 }
 
-export interface CollectionResult<T> {
-	entries: ContentEntry<T>[];
-	error?: Error;
+interface PublishedDatesResult {
+	dates: Date[];
 	cacheHint: CacheHint;
+	error?: Error;
+}
+
+/** @internal Publication dates for the Archives widget. */
+export async function getPublishedDates(
+	type: string,
+	options?: { locale?: string },
+): Promise<PublishedDatesResult> {
+	const locale = effectiveLocaleKey(options) || undefined;
+	const key = `publishedDates:v2:${JSON.stringify([type, locale])}`;
+	try {
+		return await requestCached(key, () =>
+			cachedQuery<PublishedDatesResult>({
+				namespace: contentCacheNamespaces(type),
+				key,
+				load: async () => {
+					const rows = await loadPublishedDates(type, locale);
+					const dates: Date[] = [];
+					for (const row of rows) {
+						if (row.published_at) {
+							const date = new Date(row.published_at);
+							if (!Number.isNaN(date.getTime())) dates.push(date);
+						}
+					}
+					return { dates, cacheHint: { tags: [type] } };
+				},
+			}),
+		);
+	} catch (error) {
+		return {
+			dates: [],
+			cacheHint: {},
+			error:
+				isMissingTableError(error) || isMissingColumnError(error)
+					? undefined
+					: error instanceof Error
+						? error
+						: new Error("Failed to load publication dates"),
+		};
+	}
+}
+
+/**
+ * Result from getEmDashCollection
+ */
+export interface CollectionResult<T> {
+	/** The entries (empty array if error or none found) */
+	entries: ContentEntry<T>[];
+	/** Error if the query failed */
+	error?: Error;
+	/** Cache hint for route caching (pass to Astro.cache.set()) */
+	cacheHint: CacheHint;
+	/**
+	 * Opaque cursor for the next page.
+	 * Undefined when there are no more results.
+	 * Pass this as `cursor` in the next query to get the next page.
+	 */
 	nextCursor?: string;
+	/**
+	 * Whether more entries exist beyond this page. Set whenever `limit` is
+	 * provided (cursor or offset pagination), so numbered archive routes can
+	 * render a "next page" link without computing a total count.
+	 */
 	hasMore?: boolean;
 }
 
-export interface EntryResult<T> {
-	entry: ContentEntry<T> | null;
+/**
+ * Result from getEmDashEntry
+ */
+export interface EntryResult<T, R = ReferencePages> {
+	/** The entry, or null if not found */
+	entry: ContentEntry<T, R> | null;
+	/** Error if the query failed (not set for "not found", only for actual errors) */
 	error?: Error;
+	/** Whether we're in preview mode (valid token was provided) */
 	isPreview: boolean;
+	/** Set when a fallback locale was used instead of the requested locale */
 	fallbackLocale?: string;
+	/** Cache hint for route caching (pass to Astro.cache.set()) */
 	cacheHint: CacheHint;
 }
 
 const COLLECTION_NAME = "_emdash";
 
+/** Symbol key for edit metadata on PT arrays — avoids collision with user data */
 const EMDASH_EDIT = Symbol.for("__emdash");
 
+/** Edit metadata attached to PT arrays in edit mode */
 export interface EditFieldMeta {
 	collection: string;
 	id: string;
 	field: string;
 }
 
+/** Type guard for EditFieldMeta */
 function isEditFieldMeta(value: unknown): value is EditFieldMeta {
 	if (typeof value !== "object" || value === null) return false;
 	if (!("collection" in value) || !("id" in value) || !("field" in value)) return false;
+	// After `in` checks, TS narrows to Record<"collection" | "id" | "field", unknown>
 	const { collection, id, field } = value;
 	return typeof collection === "string" && typeof id === "string" && typeof field === "string";
 }
 
+/**
+ * Read edit metadata from a value (returns undefined if not tagged).
+ * Uses Object.getOwnPropertyDescriptor to access Symbol-keyed property
+ * without an unsafe type assertion.
+ */
 export function getEditMeta(value: unknown): EditFieldMeta | undefined {
 	if (value && typeof value === "object") {
 		const desc = Object.getOwnPropertyDescriptor(value, EMDASH_EDIT);
@@ -116,15 +428,57 @@ export function getEditMeta(value: unknown): EditFieldMeta | undefined {
 	return undefined;
 }
 
-function tagEditableFields(data: Record<string, unknown>, collection: string, id: string): void {
+/** Slugs of a collection's Portable Text fields; empty when they can't be read. */
+function getPortableTextFieldSlugs(collection: string): Promise<ReadonlySet<string>> {
+	return requestCached(`portable-text-fields:${collection}`, async () => {
+		try {
+			const { getDb } = await import("./loader.js");
+			const db = await getDb();
+			const rows = await db
+				.selectFrom("_emdash_fields as f")
+				.innerJoin("_emdash_collections as c", "c.id", "f.collection_id")
+				.select("f.slug")
+				.where("c.slug", "=", collection)
+				.where("f.type", "=", "portableText")
+				.execute();
+			return new Set(rows.map((row) => row.slug));
+		} catch (error) {
+			if (!isMissingTableError(error)) {
+				const msg = error instanceof Error ? error.message : String(error);
+				console.warn("[emdash] Failed to load Portable Text fields:", msg);
+			}
+			return new Set<string>();
+		}
+	});
+}
+
+/**
+ * Tag PT-like arrays in entry data with edit metadata (non-enumerable).
+ * A PT array is identified by: is an array, first element has _type property.
+ * An empty one is identified by its field being in `portableTextFields`, and
+ * a missing or blank one becomes an empty array, so the page can still render
+ * an editor for it.
+ */
+function tagEditableFields(
+	data: Record<string, unknown>,
+	collection: string,
+	id: string,
+	portableTextFields: ReadonlySet<string> = new Set(),
+): void {
+	for (const field of portableTextFields) {
+		const value = data[field];
+		if (value == null || (typeof value === "string" && !value.trim())) {
+			data[field] = [];
+		}
+	}
 	for (const [field, value] of Object.entries(data)) {
-		if (
-			Array.isArray(value) &&
-			value.length > 0 &&
-			value[0] &&
-			typeof value[0] === "object" &&
-			"_type" in value[0]
-		) {
+		if (!Array.isArray(value)) continue;
+		const first: unknown = value[0];
+		const isPortableText =
+			value.length === 0
+				? portableTextFields.has(field)
+				: typeof first === "object" && first !== null && "_type" in first;
+		if (isPortableText) {
 			Object.defineProperty(value, EMDASH_EDIT, {
 				value: { collection, id, field } satisfies EditFieldMeta,
 				enumerable: false,
@@ -134,24 +488,29 @@ function tagEditableFields(data: Record<string, unknown>, collection: string, id
 	}
 }
 
+/** Safely read a string field from a Record, with optional fallback */
 function dataStr(data: Record<string, unknown>, key: string, fallback = ""): string {
 	const val = data[key];
 	return typeof val === "string" ? val : fallback;
 }
 
+/** Type guard for Record<string, unknown> */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Extract data as Record from an Astro entry (which is any-typed) */
 function entryData(entry: { data?: unknown }): Record<string, unknown> {
 	return isRecord(entry.data) ? entry.data : {};
 }
 
+/** Extract the database ID from entry data (data.id is the ULID, entry.id is the slug) */
 function entryDatabaseId(entry: { id: string; data?: unknown }): string {
 	const d = entryData(entry);
 	return dataStr(d, "id") || entry.id;
 }
 
+/** Extract edit options from entry data for the proxy */
 function entryEditOptions(entry: { data?: unknown }): EditableOptions {
 	const data = entryData(entry);
 	const status = dataStr(data, "status", "draft");
@@ -178,19 +537,70 @@ function canExposeRevisionMetadata(
 	return ctx.preview.id === dbId || ctx.preview.id === entry.id;
 }
 
+/**
+ * Get all entries of a content type
+ *
+ * Returns { entries, error } for graceful error handling.
+ *
+ * When emdash-env.d.ts is generated, the collection name will be
+ * type-checked and the return type will be inferred automatically.
+ *
+ * @example
+ * ```ts
+ * import { getEmDashCollection } from "emdash";
+ *
+ * const { entries: posts, error } = await getEmDashCollection("posts");
+ * if (error) {
+ *   console.error("Failed to load posts:", error);
+ *   return;
+ * }
+ * // posts[0].data.title is typed (if emdash-env.d.ts exists)
+ *
+ * // With filters
+ * const { entries: drafts } = await getEmDashCollection("posts", { status: "draft" });
+ * ```
+ */
 export async function getEmDashCollection<T extends string, D = InferCollectionData<T>>(
 	type: T,
 	filter?: CollectionFilter,
 ): Promise<CollectionResult<D>> {
+	// Cache per (type, filter) within a single request. Edit mode and
+	// preview are request-scoped and stable, so they don't need to be
+	// part of the key. Widgets and layouts frequently request the same
+	// collection shape as the page itself (e.g. a "recent posts" list
+	// appears on the home page AND in the sidebar) — caching collapses
+	// those duplicate queries, along with the bylines and taxonomy-term
+	// hydration each call would otherwise re-do.
+	//
+	// Bucket small limits to a shared minimum so a page with several
+	// "recent N posts" widgets at slightly different limits (e.g. a
+	// post-detail page asking for 4 in the body and 5 in the sidebar)
+	// shares one fetch + hydration round-trip rather than running two.
+	// Cursor-paginated calls are exempt: their limit is part of the
+	// pagination contract.
 	const bucketed = bucketFilter(filter);
+
+	// Preview and edit-mode requests skip `loadCollectionCached`. That path
+	// reduces every entry to a JSON snapshot (`entrySnapshot`) and rebuilds it
+	// with `reviveEntry`, which cannot carry the `edit` proxy and re-attaches
+	// the no-op — so annotations spread as `{...entry.edit.title}` would render
+	// nothing on list pages. `getEmDashEntry` has the same bypass for the same
+	// reason (see its `serveDrafts` branch). The request-scoped cache still
+	// collapses duplicate queries within the render.
+	const ctx = getRequestContext();
+	const serveDrafts = ctx?.editMode === true || ctx?.preview !== undefined;
+
 	const cached = await requestCached(collectionCacheKey(type, bucketed.fetchFilter), () =>
-		loadCollectionCached<T, D>(type, bucketed.fetchFilter),
+		serveDrafts
+			? getEmDashCollectionUncached<T, D>(type, bucketed.fetchFilter)
+			: loadCollectionCached<T, D>(type, bucketed.fetchFilter),
 	);
 	return bucketed.requestedLimit === undefined
 		? cached
 		: sliceCollectionResult(cached, bucketed.requestedLimit, filter?.orderBy);
 }
 
+/** Shape of a cached collection snapshot (entries reduced to JSON-safe form). */
 interface CachedCollectionValue {
 	entries: unknown[];
 	nextCursor?: string;
@@ -198,13 +608,20 @@ interface CachedCollectionValue {
 	cacheHint: CacheHint;
 }
 
+/**
+ * Distributed (L2) read-through around {@link getEmDashCollectionUncached}.
+ *
+ * Caches a JSON-safe snapshot keyed by collection + filter + effective locale,
+ * folding the shared `bylines`/`taxonomies` epochs into the key so renaming an
+ * author or term invalidates affected lists. Errors are never cached.
+ */
 async function loadCollectionCached<T extends string, D = InferCollectionData<T>>(
 	type: T,
 	filter?: CollectionFilter,
 ): Promise<CollectionResult<D>> {
 	const snapshot = await cachedQuery<ContentSnapshot<CachedCollectionValue>>({
 		namespace: contentNamespaces(type),
-		key: `collection:${collectionCacheKey(type, filter)}|loc=${effectiveLocaleKey(filter)}`,
+		key: `collection:v2:${collectionCacheKey(type, filter)}|loc=${effectiveLocaleKey(filter)}`,
 		load: async () => {
 			const result = await getEmDashCollectionUncached<T, D>(type, filter);
 			if (result.error) {
@@ -238,13 +655,23 @@ async function loadCollectionCached<T extends string, D = InferCollectionData<T>
 	};
 }
 
+/**
+ * Threshold for limit bucketing. Page templates routinely render small
+ * "recent posts" widgets at limits 3-8; rounding those up to a single
+ * shared bucket lets one fetch satisfy several widgets within a request.
+ * Above this, the requested limit is honoured exactly — bucketing limit:50
+ * to limit:64 would waste hydration work for callers fetching real pages.
+ */
 const BUCKET_LIMIT_THRESHOLD = 10;
 
 interface BucketedFilter {
+	/** Filter to pass to the loader (with limit possibly raised). */
 	fetchFilter: CollectionFilter | undefined;
+	/** Original limit; defined only when bucketing was applied. */
 	requestedLimit: number | undefined;
 }
 
+/** @internal exported for unit tests; not part of the public API. */
 export function bucketFilter(filter: CollectionFilter | undefined): BucketedFilter {
 	const limit = filter?.limit;
 	if (
@@ -252,6 +679,8 @@ export function bucketFilter(filter: CollectionFilter | undefined): BucketedFilt
 		limit >= BUCKET_LIMIT_THRESHOLD ||
 		limit <= 0 ||
 		filter?.cursor !== undefined ||
+		// Offset paginates a deliberate page window; its limit is part of the
+		// pagination contract, so don't round it up the way "recent N" widgets get.
 		filter?.offset !== undefined
 	) {
 		return { fetchFilter: filter, requestedLimit: undefined };
@@ -262,6 +691,15 @@ export function bucketFilter(filter: CollectionFilter | undefined): BucketedFilt
 	};
 }
 
+/**
+ * Slice a cached bucketed result down to the originally-requested limit
+ * and recompute `nextCursor` from the row that would have been the
+ * over-fetch detector for that limit. When truncation is needed, returns
+ * a shallow-copied result with a new `entries` array; otherwise returns
+ * the cached result unchanged (including error results and results
+ * already within the requested limit).
+ */
+/** @internal exported for unit tests; not part of the public API. */
 export function sliceCollectionResult<D>(
 	cached: CollectionResult<D>,
 	limit: number,
@@ -270,11 +708,16 @@ export function sliceCollectionResult<D>(
 	if (cached.error) return cached;
 	if (cached.entries.length <= limit) return cached;
 	const sliced = cached.entries.slice(0, limit);
+	// Mirror the loader's encoding: cursor points at the last returned row,
+	// so "next page" picks up at the row immediately after it. See
+	// buildCursorCondition in loader.ts — it filters strictly past this row.
 	const lastEntry = sliced.at(-1);
 	const nextCursor = lastEntry ? encodeEntryCursor(lastEntry, orderBy) : undefined;
+	// Truncating to the requested limit means at least one more entry existed.
 	return { ...cached, entries: sliced, nextCursor, hasMore: true };
 }
 
+/** Map of database column names to camelCase keys present on entry.data. */
 const ENTRY_DATA_KEY_MAP: Record<string, string> = {
 	created_at: "createdAt",
 	updated_at: "updatedAt",
@@ -284,8 +727,16 @@ const ENTRY_DATA_KEY_MAP: Record<string, string> = {
 	primary_byline_id: "primaryBylineId",
 };
 
+// Mirror loader.ts FIELD_NAME_PATTERN. Kept in sync intentionally — diverging
+// would let the encoder accept a field name the loader's getPrimarySort then
+// rejected, producing a cursor that paginates against a different column.
 const FIELD_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
+/**
+ * Encode a `nextCursor` from a content entry, as the loader encodes one from
+ * the entry's row. Reads the sort column's raw DB value the loader stashed via
+ * CURSOR_RAW_VALUES, since `entry.data` can't reproduce it for every column.
+ */
 function encodeEntryCursor<D>(
 	entry: ContentEntry<D>,
 	orderBy: OrderBySpec | undefined,
@@ -294,6 +745,7 @@ function encodeEntryCursor<D>(
 	const id = dataStr(data, "id");
 	if (!id) return undefined;
 
+	// Match loader.ts getPrimarySort: take the first valid field, default to created_at.
 	let dbField = "created_at";
 	if (orderBy) {
 		for (const field of Object.keys(orderBy)) {
@@ -304,25 +756,24 @@ function encodeEntryCursor<D>(
 		}
 	}
 
-	const rawDateValuesRaw = Reflect.get(data, CURSOR_RAW_VALUES);
-	if (rawDateValuesRaw !== null && typeof rawDateValuesRaw === "object") {
-		const raw = Reflect.get(rawDateValuesRaw, dbField);
-		if (typeof raw === "string") return encodeCursor(raw, id);
+	const rawValues = Reflect.get(data, CURSOR_RAW_VALUES);
+	if (rawValues !== null && typeof rawValues === "object" && Object.hasOwn(rawValues, dbField)) {
+		return encodeSortCursor(dbField, Reflect.get(rawValues, dbField), id);
 	}
 
-	const dataKey = ENTRY_DATA_KEY_MAP[dbField] ?? dbField;
-	const value = data[dataKey];
-	let orderValue: string;
-	if (value instanceof Date) {
-		orderValue = value.toISOString();
-	} else if (typeof value === "string" || typeof value === "number") {
-		orderValue = String(value);
-	} else {
-		orderValue = "";
-	}
-	return encodeCursor(orderValue, id);
+	// Entries from a cache snapshot written by an earlier version have no stashed sort value.
+	return encodeSortCursor(dbField, data[ENTRY_DATA_KEY_MAP[dbField] ?? dbField], id);
 }
 
+/**
+ * Build a canonical cache key for `getEmDashCollection`.
+ *
+ * `JSON.stringify` is insertion-order-sensitive, so two callers passing
+ * semantically identical filters with different key orders would miss
+ * the cache. We fix the top-level field order and sort `where` keys
+ * (order there is irrelevant), while preserving `orderBy` key order
+ * because that's the sort priority.
+ */
 function collectionCacheKey(type: string, filter?: CollectionFilter): string {
 	if (!filter) return `collection:${type}:`;
 	const parts = [
@@ -332,7 +783,7 @@ function collectionCacheKey(type: string, filter?: CollectionFilter): string {
 		filter.offset ?? "",
 		filter.where ? stableStringify(filter.where) : "",
 		filter.orderBy ? JSON.stringify(filter.orderBy) : "",
-		filter.locale ?? "",
+		filter.locale === undefined ? "" : resolveConfiguredLocale(filter.locale),
 	];
 	return `collection:${type}:${parts.join("|")}`;
 }
@@ -355,29 +806,37 @@ function stableOrder(value: Record<string, unknown>): Record<string, unknown> {
 	return ordered;
 }
 
+// ── Object-cache (L2) serialization for content reads ───────────────────────
+//
+// Content entries can't be stored verbatim: each carries a non-serializable
+// `edit` proxy (a function) and a non-enumerable `CURSOR_RAW_VALUES` symbol on
+// `data` (raw date strings used to reproduce the loader's pagination cursor).
+// We reduce each entry to a JSON-safe snapshot before caching — copying the
+// cursor-raw values into an enumerable field and dropping `edit` — then rebuild
+// the symbol and re-attach a no-op `edit` on the way out. The object cache's
+// codec preserves `Date` instances, so timestamps survive the round-trip.
+//
+// L2 is only consulted for anonymous, non-preview, non-edit requests (see
+// `shouldBypass` in object-cache), where `edit` is always the no-op variant —
+// so dropping and recreating it is lossless.
+
+/** Enumerable field carrying the {@link CURSOR_RAW_VALUES} payload in snapshots. */
 const CURSOR_RAW_FIELD = "__emdashCursorRaw";
 
+/** Result wrapper distinguishing a cached error from a cacheable success. */
 type ContentSnapshot<S> =
 	| { ok: true; value: S }
 	| { ok: false; error?: Error; cacheHint: CacheHint };
 
-function entrySnapshot<D>(entry: ContentEntry<D>): Record<string, unknown> {
-	const data = entryData(entry);
+function dataSnapshot(data: Record<string, unknown>): Record<string, unknown> {
 	const rawCursor = Reflect.get(data, CURSOR_RAW_VALUES);
-	const { edit: _edit, ...rest } = entry as ContentEntry<D> & { edit?: unknown };
-	return {
-		...rest,
-		data: { ...data, [CURSOR_RAW_FIELD]: rawCursor ?? {} },
-	};
+	return { ...data, [CURSOR_RAW_FIELD]: rawCursor ?? {} };
 }
 
-function reviveEntry<D>(raw: unknown): ContentEntry<D> {
-	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- snapshot shape produced by entrySnapshot
-	const entry = raw as Record<string, unknown>;
-	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- snapshot `data` is always a record
-	const data: Record<string, unknown> = { ...(entry.data as Record<string, unknown>) };
-	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- snapshot field written by entrySnapshot
-	const rawCursor = (data[CURSOR_RAW_FIELD] as Record<string, string> | undefined) ?? {};
+function reviveData(raw: Record<string, unknown>): Record<string, unknown> {
+	const data: Record<string, unknown> = { ...raw };
+	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- snapshot field written by dataSnapshot
+	const rawCursor = (data[CURSOR_RAW_FIELD] as Record<string, unknown> | undefined) ?? {};
 	delete data[CURSOR_RAW_FIELD];
 	Object.defineProperty(data, CURSOR_RAW_VALUES, {
 		value: rawCursor,
@@ -385,36 +844,110 @@ function reviveEntry<D>(raw: unknown): ContentEntry<D> {
 		configurable: false,
 		writable: false,
 	});
-	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- rebuilt to the ContentEntry shape with a no-op edit proxy
-	return { ...entry, data, edit: createNoop() } as ContentEntry<D>;
+	return data;
 }
 
+function entrySnapshot<D>(entry: ContentEntry<D>): Record<string, unknown> {
+	// Drop the `edit` function; copy enumerable data + the cursor-raw values.
+	const { edit: _edit, references, ...rest } = entry as ContentEntry<D> & { edit?: unknown };
+	return {
+		...rest,
+		data: dataSnapshot(entryData(entry)),
+		...(references ? { references: referencesSnapshot(references) } : {}),
+	};
+}
+
+function referencesSnapshot(references: ReferencePages): Record<string, unknown> {
+	const snapshot: Record<string, unknown> = {};
+	for (const [field, page] of Object.entries(references)) {
+		snapshot[field] = {
+			entries: page.entries.map((child) => ({
+				id: child.id,
+				data: dataSnapshot(entryData(child)),
+			})),
+			...(page.nextCursor === undefined ? {} : { nextCursor: page.nextCursor }),
+		};
+	}
+	return snapshot;
+}
+
+/**
+ * Rebuild the reference pages a snapshot carried.
+ *
+ * Every child comes back with a no-op `edit` proxy and no revision metadata,
+ * which is lossless: the object cache is bypassed for edit-mode and preview
+ * requests, so a snapshot is only ever written — and read back — by a render
+ * that had neither to begin with.
+ */
+function reviveReferences(raw: unknown): ReferencePages | undefined {
+	if (!isRecord(raw)) return undefined;
+	const references: ReferencePages = {};
+	for (const [field, page] of Object.entries(raw)) {
+		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- page shape produced by referencesSnapshot
+		const snapshot = page as { entries: Record<string, unknown>[]; nextCursor?: string };
+		references[field] = {
+			entries: snapshot.entries.map((child) => ({
+				// eslint-disable-next-line typescript/no-unsafe-type-assertion -- snapshot ids are always strings
+				id: child.id as string,
+				// eslint-disable-next-line typescript/no-unsafe-type-assertion -- snapshot `data` is always a record
+				data: reviveData(child.data as Record<string, unknown>),
+				edit: createNoop(),
+			})),
+			...(snapshot.nextCursor === undefined ? {} : { nextCursor: snapshot.nextCursor }),
+		};
+	}
+	return references;
+}
+
+function reviveEntry<D>(raw: unknown): ContentEntry<D> {
+	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- snapshot shape produced by entrySnapshot
+	const entry = raw as Record<string, unknown>;
+	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- snapshot `data` is always a record
+	const data = reviveData(entry.data as Record<string, unknown>);
+	const references = reviveReferences(entry.references);
+	const revived = {
+		...entry,
+		data,
+		...(references ? { references } : {}),
+		edit: createNoop(),
+	};
+	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- rebuilt to the ContentEntry shape with a no-op edit proxy
+	return revived as ContentEntry<D>;
+}
+
+/** Resolve the effective locale used by content reads, for the L2 cache key. */
 function effectiveLocaleKey(filter?: { locale?: string }): string {
-	const ctx = getRequestContext();
-	const i18nConfig = getI18nConfig();
-	return (
-		filter?.locale ?? ctx?.locale ?? (isI18nEnabled() ? i18nConfig!.defaultLocale : undefined) ?? ""
-	);
+	return resolveLocale(filter?.locale) ?? "";
 }
 
 async function getEmDashCollectionUncached<T extends string, D = InferCollectionData<T>>(
 	type: T,
 	filter?: CollectionFilter,
 ): Promise<CollectionResult<D>> {
+	// Dynamic import to avoid build-time issues
 	const { getLiveCollection } = await import("astro:content");
 
+	// Resolve locale: explicit filter > ALS context > defaultLocale (when i18n enabled)
+	// Without this, queries return all locale rows, producing broken IDs
 	const ctx = getRequestContext();
-	const i18nConfig = getI18nConfig();
-	const resolvedLocale =
-		filter?.locale ?? ctx?.locale ?? (isI18nEnabled() ? i18nConfig!.defaultLocale : undefined);
+	const resolvedLocale = resolveLocale(filter?.locale);
 
 	const requestedLimit = filter?.limit;
+	// cursor and offset are mutually exclusive on the loader filter union, so
+	// spread only the one in play (cursor wins) rather than emitting both keys.
 	const pageParam =
 		filter?.cursor !== undefined
 			? { cursor: filter.cursor }
 			: filter?.offset !== undefined
 				? { offset: filter.offset }
 				: {};
+	// Same draft access as `getEmDashEntry`: editors see every entry's draft,
+	// a preview token only the draft of the entry it was issued for.
+	const draftRevisions = ctx?.editMode
+		? "all"
+		: ctx?.preview?.collection === type
+			? { id: ctx.preview.id }
+			: undefined;
 	const result = await getLiveCollection(COLLECTION_NAME, {
 		type,
 		status: filter?.status,
@@ -423,6 +956,7 @@ async function getEmDashCollectionUncached<T extends string, D = InferCollection
 		where: filter?.where,
 		orderBy: filter?.orderBy,
 		locale: resolvedLocale,
+		draftRevisions,
 	});
 
 	const { entries, error, cacheHint } = result;
@@ -434,13 +968,17 @@ async function getEmDashCollectionUncached<T extends string, D = InferCollection
 	const hasMore = requestedLimit != null && requestedLimit > 0 && entries.length > requestedLimit;
 	const pageEntries = hasMore ? entries.slice(0, requestedLimit) : entries;
 	const nextCursor = hasMore ? encodeEntryCursor(pageEntries.at(-1), filter?.orderBy) : undefined;
+	// `hasMore` is only meaningful when a limit bounds the page; otherwise the
+	// query returned everything and there is no "next page" to report.
 	const hasMoreResult = requestedLimit != null && requestedLimit > 0 ? hasMore : undefined;
 
 	const isEditMode = ctx?.editMode ?? false;
+	const portableTextFields =
+		isEditMode && pageEntries.length > 0 ? await getPortableTextFieldSlugs(type) : undefined;
 	const entriesWithEdit = pageEntries.map((entry: ContentEntry<D>) => {
 		const dbId = entryDatabaseId(entry);
 		if (isEditMode) {
-			tagEditableFields(entryData(entry), type, dbId);
+			tagEditableFields(entryData(entry), type, dbId, portableTextFields);
 		}
 		if (!canExposeRevisionMetadata(entry, type)) {
 			stripRevisionMetadata(entry);
@@ -451,8 +989,13 @@ async function getEmDashCollectionUncached<T extends string, D = InferCollection
 		};
 	});
 
+	// Eagerly hydrate bylines and taxonomy terms for all entries in parallel.
+	// Both are independent queries, so running them concurrently halves the
+	// round-trip cost on remote databases (D1 replicas, etc.).
 	await Promise.all([
 		hydrateEntryBylines(type, entriesWithEdit),
+		// Use the content query locale as the preferred term locale; hydration
+		// falls back only to the configured default when a group lacks that variant.
 		hydrateEntryTerms(type, entriesWithEdit, resolvedLocale),
 	]);
 
@@ -464,25 +1007,199 @@ async function getEmDashCollectionUncached<T extends string, D = InferCollection
 	};
 }
 
-export async function getEmDashEntry<T extends string, D = InferCollectionData<T>>(
+/**
+ * Get a single entry by type and ID/slug
+ *
+ * Returns { entry, error, isPreview } for graceful error handling.
+ * - entry is null if not found (not an error)
+ * - error is set only for actual errors (db issues, etc.)
+ *
+ * Preview mode is detected automatically from request context (ALS).
+ * When the URL has a valid `_preview` token, the middleware sets preview
+ * context and this function serves draft revision data if available.
+ *
+ * @example
+ * ```ts
+ * import { getEmDashEntry } from "emdash";
+ *
+ * // Simple usage — preview just works via middleware
+ * const { entry: post, isPreview, error } = await getEmDashEntry("posts", "my-slug");
+ * if (!post) return Astro.rewrite("/404");
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Opt into reference fields, by field slug
+ * const { entry: post } = await getEmDashEntry("posts", slug, {
+ *   references: { author: true, related_posts: { limit: 6 } },
+ * });
+ * const author = post?.references?.author.entries[0];
+ * ```
+ */
+export async function getEmDashEntry<
+	T extends string,
+	D = InferCollectionData<T>,
+	S extends SelectableReferences<T> = {},
+>(
 	type: T,
 	id: string,
-	options?: { locale?: string },
+	options?: { locale?: string; references?: S },
+): Promise<EntryResult<D, SelectedReferences<T, S>>> {
+	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- the resolver returns one page per field the selection named, which is what SelectedReferences picks out
+	return resolveEmDashEntry<T, D>(type, id, options) as Promise<
+		EntryResult<D, SelectedReferences<T, S>>
+	>;
+}
+
+/**
+ * Attach one page of each selected reference field to a resolved entry, and
+ * report the cache hint its children contribute.
+ *
+ * An entry with no translation group predates i18n and has no links; there is
+ * nothing to resolve, and `references` stays absent rather than becoming an
+ * empty object that reads as "this entry references nothing".
+ */
+async function attachReferences<D>(
+	type: string,
+	entry: ContentEntry<D>,
+	options: {
+		selection: ReferenceSelection;
+		/**
+		 * Whether this render may see drafts. It decides both whether a pending
+		 * selection replaces the published one and whether an unpublished target
+		 * resolves at all — a preview token that did not match served this entry
+		 * as public, and its children have to stay just as invisible.
+		 */
+		serveDrafts: boolean;
+		/** Read before `stripRevisionMetadata` removes it from a public render's data. */
+		draftRevisionId?: string;
+	},
+): Promise<CacheHint> {
+	const data = entryData(entry);
+	const entryGroup = dataStr(data, "translationGroup");
+	if (!entryGroup) return {};
+
+	const { resolveReferencePages } = await import("./references/resolve.js");
+	const pages = await resolveReferencePages({
+		collection: type,
+		entryGroup,
+		locale: dataStr(data, "locale") || null,
+		draftRevisionId: options.draftRevisionId,
+		serveDrafts: options.serveDrafts,
+		selection: options.selection,
+	});
+
+	const references: ReferencePages = {};
+	const tags: string[] = [];
+	for (const [field, page] of Object.entries(pages)) {
+		for (const child of page.entries) {
+			tags.push(...child.cacheHint.tags);
+		}
+		references[field] = {
+			entries: page.entries.map((child) => wrapReferencedEntry(page.collection, child)),
+			...(page.nextCursor === undefined ? {} : { nextCursor: page.nextCursor }),
+		};
+	}
+	entry.references = references;
+	return { tags };
+}
+
+/**
+ * Fold the children's cache hint into the entry's own.
+ *
+ * A render that shows a referenced entry has read that row, so the route's tags
+ * have to name it. Without this the route cache's
+ * `invalidate({ tags: [collection, id] })` on a child write would never reach
+ * the pages that render the child.
+ */
+function mergeCacheHints(base: CacheHint, extra: CacheHint): CacheHint {
+	if (!extra.tags?.length && !extra.lastModified) return base;
+	const tags = [...new Set([...(base.tags ?? []), ...(extra.tags ?? [])])];
+	const newest =
+		base.lastModified && extra.lastModified
+			? base.lastModified > extra.lastModified
+				? base.lastModified
+				: extra.lastModified
+			: (base.lastModified ?? extra.lastModified);
+	return {
+		...(tags.length > 0 ? { tags } : {}),
+		...(newest ? { lastModified: newest } : {}),
+	};
+}
+
+/**
+ * The object-cache namespaces a selection's targets live in.
+ *
+ * Without them a cached parent snapshot would outlive a write to the entries it
+ * points at. Byline and taxonomy namespaces are deliberately absent: referenced
+ * entries are loaded without either hydration. The targets are sorted so two
+ * callers that name the same fields in a different order share one snapshot.
+ */
+async function referenceTargetNamespaces(
+	collection: string,
+	selection: ReferenceSelection,
+): Promise<string[]> {
+	const { getReferenceFieldMap } = await import("./references/field-map.js");
+	const fieldMap = await getReferenceFieldMap(collection);
+	const targets = new Set<string>();
+	for (const [slug, query] of Object.entries(selection)) {
+		if (query === undefined) continue;
+		const binding = fieldMap.get(slug);
+		if (binding) targets.add(binding.targetCollection);
+	}
+	return [...targets].toSorted().flatMap((target) => [...contentCacheNamespaces(target)]);
+}
+
+/**
+ * Wrap a referenced entry the way the collection paths wrap their own: an edit
+ * proxy in edit mode, revision metadata stripped for anyone who may not see it.
+ *
+ * The proxy is scoped to the *referenced* entry's collection and row, so
+ * clicking through from a card opens the entry the card is about.
+ */
+function wrapReferencedEntry<D = Record<string, unknown>>(
+	collection: string,
+	child: { id: string; data: Record<string, unknown> },
+): ContentEntry<D> {
+	const isEditMode = getRequestContext()?.editMode ?? false;
+	const dbId = entryDatabaseId(child);
+	if (isEditMode) tagEditableFields(child.data, collection, dbId);
+	if (!canExposeRevisionMetadata(child, collection)) stripRevisionMetadata(child);
+	return {
+		id: child.id,
+		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- row data is shaped by the target collection, which only generated types know
+		data: child.data as D,
+		edit: isEditMode ? createEditable(collection, dbId, entryEditOptions(child)) : createNoop(),
+	};
+}
+
+async function resolveEmDashEntry<T extends string, D = InferCollectionData<T>>(
+	type: T,
+	id: string,
+	options?: { locale?: string; references?: ReferenceSelection },
 ): Promise<EntryResult<D>> {
+	// Dynamic import to avoid build-time issues
 	const { getLiveEntry } = await import("astro:content");
 
+	// Check ALS for preview and edit mode context
 	const ctx = getRequestContext();
 	const preview = ctx?.preview;
 	const isEditMode = ctx?.editMode ?? false;
 	const isPreviewMode = !!preview && preview.collection === type;
+	// Edit mode implies preview — editors should see draft content
 	const serveDrafts = isPreviewMode || isEditMode;
 
-	const requestedLocale = options?.locale ?? ctx?.locale;
+	// Resolve locale: explicit option > ALS context > undefined (no filter)
+	const rawLocale = options?.locale ?? ctx?.locale;
+	const requestedLocale = rawLocale === undefined ? undefined : resolveConfiguredLocale(rawLocale);
+	const references = options?.references;
+	const portableTextFields = isEditMode ? await getPortableTextFieldSlugs(type) : undefined;
 
+	/** Wrap a raw Astro entry with edit proxy, tagging editable fields if needed */
 	function wrapEntry(raw: ContentEntry<D>): ContentEntry<D> {
 		const dbId = entryDatabaseId(raw);
 		if (isEditMode) {
-			tagEditableFields(entryData(raw), type, dbId);
+			tagEditableFields(entryData(raw), type, dbId, portableTextFields);
 		}
 		return {
 			...raw,
@@ -490,34 +1207,54 @@ export async function getEmDashEntry<T extends string, D = InferCollectionData<T
 		};
 	}
 
+	/** Check if an entry has completed publication. */
 	function isVisible(entry: ContentEntry<D>): boolean {
 		return dataStr(entryData(entry), "status") === "published";
 	}
 
+	// Build the fallback chain: [requestedLocale, fallback1, ..., defaultLocale]
+	// When i18n is disabled or no locale requested, just use a single-element chain
 	const localeChain =
 		requestedLocale && isI18nEnabled() ? getFallbackChain(requestedLocale) : [requestedLocale];
 
+	/** Return a successful EntryResult with bylines, taxonomy terms and references hydrated */
 	async function successResult(
 		wrapped: ContentEntry<D>,
 		opts: { isPreview: boolean; fallbackLocale?: string; cacheHint: CacheHint },
 	): Promise<EntryResult<D>> {
+		// Read the draft pointer before stripping it: a public render drops it
+		// from `data`, and a staged selection is resolved from it.
+		const draftRevisionId = dataStr(entryData(wrapped), "draftRevisionId") || undefined;
 		if (!opts.isPreview) stripRevisionMetadata(wrapped);
+		// No-i18n callers use the legacy wildcard cache key. The query path still
+		// resolves against the stored content-row locale when this is undefined.
 		const termLocale = isI18nEnabled()
 			? dataStr(entryData(wrapped), "locale") || undefined
 			: undefined;
-		await Promise.all([
+		// References resolve alongside bylines and terms rather than after the
+		// entry returns: all three are independent reads, and running them
+		// together keeps an opted-in render to one extra round of queries.
+		const [, , referenceHint] = await Promise.all([
 			hydrateEntryBylines(type, [wrapped]),
 			hydrateEntryTerms(type, [wrapped], termLocale),
+			references
+				? attachReferences(type, wrapped, {
+						selection: references,
+						serveDrafts: opts.isPreview,
+						draftRevisionId,
+					})
+				: Promise.resolve<CacheHint>({}),
 		]);
 		return {
 			entry: wrapped,
 			isPreview: opts.isPreview,
 			fallbackLocale: opts.fallbackLocale,
-			cacheHint: opts.cacheHint,
+			cacheHint: mergeCacheHints(opts.cacheHint, referenceHint),
 		};
 	}
 
 	if (serveDrafts) {
+		// Draft mode: try each locale in the fallback chain
 		for (let i = 0; i < localeChain.length; i++) {
 			const locale = localeChain[i];
 			const fallbackLocale = i > 0 ? locale : undefined;
@@ -533,14 +1270,19 @@ export async function getEmDashEntry<T extends string, D = InferCollectionData<T
 			});
 
 			if (baseError) {
+				// Astro reports a missing entry as an error; try the next locale.
+				if (baseError.name === "LiveEntryNotFoundError") continue;
 				return { entry: null, error: baseError, isPreview: serveDrafts, cacheHint: {} };
 			}
 
-			if (!baseEntry) continue;
+			if (!baseEntry) continue; // Try next locale in chain
 
+			// Preview tokens are item-scoped: verify the resolved entry matches.
+			// Edit mode (authenticated editors) has collection-wide draft access.
 			if (isPreviewMode && !isEditMode) {
 				const dbId = entryDatabaseId(baseEntry);
 				if (preview.id !== dbId && preview.id !== id) {
+					// Token doesn't match — serve only if publicly visible, without draft access
 					if (isVisible(baseEntry)) {
 						return successResult(wrapEntry(baseEntry), {
 							isPreview: false,
@@ -548,10 +1290,12 @@ export async function getEmDashEntry<T extends string, D = InferCollectionData<T
 							cacheHint: cacheHint ?? {},
 						});
 					}
+					// Not visible — try next locale in fallback chain
 					continue;
 				}
 			}
 
+			// Check if entry has a draft revision — if so, re-fetch with revision data
 			const baseData = entryData(baseEntry);
 			const draftRevisionId = dataStr(baseData, "draftRevisionId") || undefined;
 
@@ -579,16 +1323,32 @@ export async function getEmDashEntry<T extends string, D = InferCollectionData<T
 			});
 		}
 
+		// No entry found in any locale
 		return { entry: null, isPreview: serveDrafts, cacheHint: {} };
 	}
+
+	// Normal mode: try each locale in the fallback chain, only return published
+	// content. The full resolution (fallback chain + visibility + byline/term
+	// hydration) is wrapped in the distributed L2 cache, keyed by the requested
+	// locale. Preview/edit requests took the `serveDrafts` branch above and
+	// never reach here; the object cache additionally bypasses them.
 
 	const resolveNormal = async (): Promise<EntryResult<D>> => {
 		for (let i = 0; i < localeChain.length; i++) {
 			const locale = localeChain[i];
 			const fallbackLocale = i > 0 ? locale : undefined;
 
-			const { entry, error, cacheHint } = await getLiveEntry(COLLECTION_NAME, { type, id, locale });
+			const { entry, error, cacheHint } = await getLiveEntry(COLLECTION_NAME, {
+				type,
+				id,
+				locale,
+				...(locale !== undefined && getLocaleCandidates(locale).length > 1
+					? { publishedOnly: true }
+					: {}),
+			});
 			if (error) {
+				// Astro reports a missing entry as an error; try the next locale.
+				if (error.name === "LiveEntryNotFoundError") continue;
 				return { entry: null, error, isPreview: false, cacheHint: {} };
 			}
 
@@ -599,13 +1359,25 @@ export async function getEmDashEntry<T extends string, D = InferCollectionData<T
 					cacheHint: cacheHint ?? {},
 				});
 			}
+			// Entry not found or not visible in this locale — try next
 		}
 		return { entry: null, isPreview: false, cacheHint: {} };
 	};
 
+	// A snapshot carries whatever references the caller asked for, so both the
+	// key and the namespaces account for the selection: the key, or a render that
+	// asked for references would be served one that did not; the namespaces, or
+	// the snapshot would outlive a write to a child. A caller that asks for none
+	// must keep the plain key and namespaces, which entries already in the cache
+	// are stored under.
+	const namespaces = references
+		? [...contentNamespaces(type), ...(await referenceTargetNamespaces(type, references))]
+		: contentNamespaces(type);
+	const referenceKey = references ? `|refs=${stableStringify(references)}` : "";
+
 	const snapshot = await cachedQuery<ContentSnapshot<CachedEntryValue>>({
-		namespace: contentNamespaces(type),
-		key: `entry:${id}|loc=${requestedLocale ?? ""}`,
+		namespace: namespaces,
+		key: `entry:v2:${id}|loc=${requestedLocale ?? ""}${referenceKey}`,
 		load: async () => {
 			const result = await resolveNormal();
 			if (result.error) {
@@ -629,6 +1401,15 @@ export async function getEmDashEntry<T extends string, D = InferCollectionData<T
 	}
 	const revived = snapshot.value.entry ? reviveEntry<D>(snapshot.value.entry) : null;
 	if (revived && !canExposeRevisionMetadata(revived, type)) stripRevisionMetadata(revived);
+	if (revived) {
+		// On a warm object-cache hit the loader never runs, so prime the
+		// SEO panel cache from the snapshot's data (a no-op after a miss,
+		// where the loader already primed).
+		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- snapshot `data` is always a record
+		const { id: rowId, seo } = revived.data as Record<string, unknown>;
+		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- `data.seo` is written by the loader as ContentSeo
+		if (seo && typeof rowId === "string") primeSeoPanel(type, rowId, seo as ContentSeo);
+	}
 	return {
 		entry: revived,
 		isPreview: snapshot.value.isPreview,
@@ -637,6 +1418,115 @@ export async function getEmDashEntry<T extends string, D = InferCollectionData<T
 	};
 }
 
+/**
+ * Get one page of a single reference field, without re-reading the entry it
+ * hangs off.
+ *
+ * `getEmDashEntry({ references })` returns the first page of each field it is
+ * asked for; this is how a "load more" walks past it, using the `nextCursor`
+ * that page carried. Draft visibility follows the same request context — a
+ * preview token for this entry, or edit mode — so a walk started in preview
+ * keeps seeing the pending selection.
+ *
+ * @example
+ * ```ts
+ * import { getEmDashReferences } from "emdash";
+ *
+ * const more = await getEmDashReferences("posts", post.id, "related_posts", {
+ *   cursor,
+ *   limit: 20,
+ * });
+ * ```
+ */
+export async function getEmDashReferences<D = Record<string, unknown>>(
+	type: string,
+	id: string,
+	field: string,
+	options?: { limit?: number; cursor?: string; locale?: string },
+): Promise<ReferenceResult<D>> {
+	const ctx = getRequestContext();
+	const preview = ctx?.preview;
+	const isEditMode = ctx?.editMode ?? false;
+	const rawLocale = options?.locale ?? ctx?.locale;
+	const locale = rawLocale === undefined ? undefined : resolveConfiguredLocale(rawLocale);
+
+	try {
+		const { getDb } = await import("./loader.js");
+		const { ContentRepository } = await import("./database/repositories/content.js");
+		const { resolveReferencePages } = await import("./references/resolve.js");
+
+		const db = await getDb();
+		const addressed = splitLocalePrefixedId(id, locale);
+		const entry = await new ContentRepository(db).findByIdOrSlug(
+			type,
+			addressed.id,
+			addressed.locale,
+		);
+		if (!entry?.translationGroup) return { entries: [] };
+
+		// Preview tokens are entry-scoped, so a token minted for another entry
+		// gives no draft access here; edit mode is collection-wide.
+		const previewMatches =
+			!!preview && preview.collection === type && (preview.id === entry.id || preview.id === id);
+		const serveDrafts = isEditMode || previewMatches;
+		// Anchoring on an entry the caller may not see would let its links be
+		// probed. An unpublished anchor is simply empty, as a missing one is.
+		if (!serveDrafts && entry.status !== "published") return { entries: [] };
+
+		const query: ReferenceQuery =
+			options?.limit === undefined && options?.cursor === undefined
+				? true
+				: { limit: options.limit, cursor: options.cursor };
+
+		const pages = await resolveReferencePages({
+			collection: type,
+			entryGroup: entry.translationGroup,
+			locale: entry.locale,
+			draftRevisionId: entry.draftRevisionId ?? undefined,
+			serveDrafts,
+			selection: { [field]: query },
+		});
+
+		const page = pages[field];
+		if (!page) return { entries: [] };
+
+		const tags: string[] = [];
+		for (const child of page.entries) {
+			tags.push(...child.cacheHint.tags);
+		}
+
+		return {
+			entries: page.entries.map((child) => wrapReferencedEntry<D>(page.collection, child)),
+			...(page.nextCursor === undefined ? {} : { nextCursor: page.nextCursor }),
+			cacheHint: { tags },
+		};
+	} catch (error) {
+		return { entries: [], error: error instanceof Error ? error : new Error(String(error)) };
+	}
+}
+
+/**
+ * Take a locale prefix off an entry id, and read it as the locale to look in.
+ *
+ * Wherever i18n prefixes a locale's URLs, an entry is addressed as `fr/about`
+ * rather than `about` — that is the id the loader builds and the id a render
+ * holds, including for a referenced entry. Rows are stored under the bare slug,
+ * so the prefix has to become the locale instead. A first segment that is not a
+ * configured locale is part of the identifier and stays put.
+ */
+function splitLocalePrefixedId(
+	id: string,
+	locale: string | undefined,
+): { id: string; locale: string | undefined } {
+	const slash = id.indexOf("/");
+	if (slash === -1) return { id, locale };
+
+	const prefix = id.slice(0, slash);
+	if (!getI18nConfig()?.locales.includes(prefix)) return { id, locale };
+	return { id: id.slice(slash + 1), locale: prefix };
+}
+
+/** Shape of a cached single-entry snapshot. */
 interface CachedEntryValue {
 	entry: Record<string, unknown> | null;
 	isPreview: boolean;
@@ -644,48 +1534,93 @@ interface CachedEntryValue {
 	cacheHint: CacheHint;
 }
 
+/**
+ * Eagerly hydrate byline data onto entry.data for one or more entries.
+ *
+ * Attaches `bylines` (array of ContentBylineCredit) and `byline`
+ * (primary BylineSummary or null) to each entry's data object.
+ * Uses batch queries to avoid N+1.
+ *
+ * Fails silently if the byline tables don't exist yet (pre-migration).
+ */
 async function hydrateEntryBylines<D>(type: string, entries: ContentEntry<D>[]): Promise<void> {
 	if (entries.length === 0) return;
 
+	// Fast path: bylines were folded into the content query. Parse the JSON
+	// (no extra round trip): explicit credits, plus the author-fallback byline
+	// for an entry with none. Custom byline field values can't be expressed in
+	// the folded subquery, so when any credit resolves they are loaded for the
+	// folded bylines in one batched pass. The query path below handles only
+	// what the fold can't vouch for.
 	if (entries.every((e) => FOLDED_BYLINES in entryData(e))) {
 		const parsed = entries.map((entry) => {
 			const data = entryData(entry);
 			const folded = Reflect.get(data, FOLDED_BYLINES);
 			const rows = Array.isArray(folded) ? folded : [];
 			const credits = creditsFromFoldedBylines(rows);
-			return { data, credits };
+			// The fold is complete for an entry with no explicit credit when its
+			// author fallback was folded too and it has a locale: the query path
+			// resolves the fallback in that same locale (`(user_id, locale)` is
+			// unique), and a `primaryBylineId` without an explicit credit
+			// resolves to no byline on both paths.
+			const authorFolded = FOLDED_AUTHOR_BYLINE in data && dataStr(data, "locale") !== "";
+			if (credits.length === 0 && authorFolded && dataStr(data, "primaryBylineId") === "") {
+				const author = Reflect.get(data, FOLDED_AUTHOR_BYLINE);
+				if (dataStr(data, "authorId") !== "" && isRecord(author)) {
+					credits.push(creditFromFoldedAuthorByline(author));
+				}
+			}
+			return { data, credits, complete: credits.length > 0 || authorFolded };
 		});
 
+		// An empty `_emdash_bylines` table makes an empty fold authoritative: no
+		// credit can exist in any locale and the author fallback has no byline
+		// to resolve to, so skip the query path and the custom-fields probe
+		// entirely. A missing marker (older cached rows) means "unknown" and
+		// keeps the conservative fallback below.
 		const knownEmpty = entries.every(
 			(e) => Reflect.get(entryData(e), FOLDED_BYLINES_EXIST) === false,
 		);
 
+		// Fall back to the full query path when the fold can't be trusted to be
+		// complete: an entry with a byline reference (explicit primary, or an
+		// author for the author-fallback) but no folded credits, and no folded
+		// author fallback either — e.g. a row read without the author column,
+		// or an entry with no locale, which the locale-correlated subqueries
+		// can't match.
 		let needsQueryPath =
 			!knownEmpty &&
 			parsed.some(
 				(p) =>
-					p.credits.length === 0 &&
+					!p.complete &&
 					(dataStr(p.data, "authorId") !== "" || dataStr(p.data, "primaryBylineId") !== ""),
 			);
-		let hasCustomFields = false;
-		if (!needsQueryPath && !knownEmpty) {
+
+		// Custom byline fields: only bylines that resolved need their values, so
+		// an entry set with no credits skips the field-definition probe too.
+		const summaries = parsed.flatMap((p) => p.credits.map((c) => c.byline));
+		if (!needsQueryPath && summaries.length > 0) {
 			try {
 				const { getDb } = await import("./loader.js");
-				const db = await getDb();
-				const { getBylineFieldDefs } = await import("./bylines/field-defs-cache.js");
-				hasCustomFields = (await getBylineFieldDefs(db)).length > 0;
+				const { BylineRepository } = await import("./database/repositories/byline.js");
+				await new BylineRepository(await getDb()).hydrateBylineCustomFields(summaries);
 			} catch (error) {
+				// A missing table is expected pre-migration and means there are no
+				// custom fields — the fold's values are complete. Any other error
+				// means the values can't be trusted, so fall back to the query
+				// path rather than risk serving bylines with empty customFields.
 				if (!isMissingTableError(error)) needsQueryPath = true;
 			}
 		}
 
-		if (!needsQueryPath && !hasCustomFields) {
+		if (!needsQueryPath) {
 			for (const p of parsed) {
 				p.data.bylines = p.credits;
 				p.data.byline = p.credits[0]?.byline ?? null;
 			}
 			return;
 		}
+		// Fall through to the full query path for fallback / custom-field cases.
 	}
 
 	try {
@@ -727,6 +1662,9 @@ async function hydrateEntryBylines<D>(type: string, entries: ContentEntry<D>[]):
 			data.byline = credits[0]?.byline ?? null;
 		}
 	} catch (err) {
+		// Only swallow "table not found" errors from pre-migration databases.
+		// Matches SQLite/D1 ("no such table") and PostgreSQL ("relation/table
+		// ... does not exist") via the shared helper.
 		if (!isMissingTableError(err)) {
 			const msg = err instanceof Error ? err.message : String(err);
 			console.warn("[emdash] Failed to hydrate bylines:", msg);
@@ -734,6 +1672,24 @@ async function hydrateEntryBylines<D>(type: string, entries: ContentEntry<D>[]):
 	}
 }
 
+/**
+ * Eagerly hydrate taxonomy term data onto entry.data for one or more entries.
+ *
+ * Attaches `terms` (Record keyed by taxonomy name with an array of TaxonomyTerm
+ * values) to each entry's data object. Uses a single batched JOIN query across
+ * all taxonomies so the cost is O(1) regardless of the number of entries or
+ * taxonomies on the site.
+ *
+ * This eliminates the common N+1 pattern where templates loop over list
+ * results and call getEntryTerms() per entry. With hydration, the list page
+ * stays at a single round-trip for term data.
+ *
+ * `locale` is the preferred locale the entries were resolved to. Each assigned
+ * group resolves that variant first, then the configured default. When it is
+ * omitted, the stored locale of each content row is preferred.
+ *
+ * Fails silently if the taxonomy tables don't exist yet (pre-migration).
+ */
 async function hydrateEntryTerms<D>(
 	type: string,
 	entries: ContentEntry<D>[],
@@ -741,6 +1697,8 @@ async function hydrateEntryTerms<D>(
 ): Promise<void> {
 	if (entries.length === 0) return;
 
+	// Fast path: terms were folded into the content query. Group the JSON and
+	// skip the separate content_taxonomies query.
 	if (entries.every((e) => FOLDED_TERMS in entryData(e))) {
 		const perEntry: Array<{ entryId: string; byTaxonomy: Record<string, TaxonomyTerm[]> }> = [];
 		for (const entry of entries) {
@@ -761,6 +1719,8 @@ async function hydrateEntryTerms<D>(
 					translationGroup: r?.translation_group,
 				});
 			}
+			// Match getAllTermsForEntries' ORDER BY label (dropped from the
+			// aggregate since SQLite and Postgres order it differently).
 			for (const [name, arr] of Object.entries(grouped)) {
 				grouped[name] = arr.toSorted((a, b) => String(a.label).localeCompare(String(b.label)));
 			}
@@ -768,6 +1728,9 @@ async function hydrateEntryTerms<D>(
 			const entryId = dataStr(data, "id");
 			if (entryId) perEntry.push({ entryId, byTaxonomy: grouped });
 		}
+		// Prime the per-entry request cache (wildcard + present taxonomies) so
+		// subsequent getEntryTerms(...) calls in this render hit the cache instead
+		// of issuing an N+1 query. No DB lookup — purely from the folded data.
 		const { primeFoldedEntryTerms } = await import("./taxonomies/index.js");
 		primeFoldedEntryTerms(type, perEntry, { locale });
 		return;
@@ -789,6 +1752,9 @@ async function hydrateEntryTerms<D>(
 			data.terms = termsMap.get(dbId) ?? {};
 		}
 	} catch (err) {
+		// Only swallow "table not found" errors from pre-migration databases.
+		// Matches SQLite/D1 ("no such table") and PostgreSQL ("relation/table
+		// ... does not exist") via the shared helper.
 		if (!isMissingTableError(err)) {
 			const msg = err instanceof Error ? err.message : String(err);
 			console.warn("[emdash] Failed to hydrate terms:", msg);
@@ -796,19 +1762,47 @@ async function hydrateEntryTerms<D>(
 	}
 }
 
+/**
+ * Translation summary for a single locale variant
+ */
 export interface TranslationSummary {
+	/** Content item ID */
 	id: string;
+	/** Locale code (e.g. "en", "fr") */
 	locale: string;
+	/** URL slug */
 	slug: string | null;
+	/** Current status */
 	status: string;
 }
 
+/**
+ * Result from getTranslations
+ */
 export interface TranslationsResult {
+	/** The translation group ID (shared across locales) */
 	translationGroup: string;
+	/** All locale variants in this group */
 	translations: TranslationSummary[];
+	/** Error if the query failed */
 	error?: Error;
 }
 
+/**
+ * Get all translations of a content item.
+ *
+ * Given a content entry, returns all locale variants that share the same
+ * translation group. This is useful for building language switcher UI.
+ *
+ * @example
+ * ```ts
+ * import { getEmDashEntry, getTranslations } from "emdash";
+ *
+ * const { entry: post } = await getEmDashEntry("posts", "hello-world", { locale: "en" });
+ * const { translations } = await getTranslations("posts", post.data.id);
+ * // translations = [{ id: "...", locale: "en", slug: "hello-world", status: "published" }, ...]
+ * ```
+ */
 export async function getTranslations(type: string, id: string): Promise<TranslationsResult> {
 	try {
 		const db = (await import("./loader.js")).getDb;
@@ -816,6 +1810,7 @@ export async function getTranslations(type: string, id: string): Promise<Transla
 		const { ContentRepository } = await import("./database/repositories/content.js");
 		const repo = new ContentRepository(dbInstance);
 
+		// Find the item to get its translation group
 		const item = await repo.findByIdOrSlug(type, id);
 		if (!item) {
 			return {
@@ -846,12 +1841,19 @@ export async function getTranslations(type: string, id: string): Promise<Transla
 	}
 }
 
+/**
+ * Result from resolveEmDashPath
+ */
 export interface ResolvePathResult<T = Record<string, unknown>> {
+	/** The matched entry */
 	entry: ContentEntry<T>;
+	/** The collection slug that matched */
 	collection: string;
+	/** Extracted parameters from the URL pattern (e.g. { slug: "my-post" }) */
 	params: Record<string, string>;
 }
 
+/** Cached compiled URL patterns for resolveEmDashPath */
 interface CachedPattern {
 	slug: string;
 	regex: RegExp;
@@ -873,14 +1875,44 @@ const urlPatternCache: UrlPatternCache =
 		return cache;
 	})();
 
+/**
+ * Invalidate the cached URL patterns used by resolveEmDashPath.
+ * Call when collection URL patterns change (schema updates).
+ *
+ * Also busts the distributed schema cache (collection metadata such as
+ * `commentsEnabled`, `supports`, fields read by `getCollectionInfo`) and the
+ * per-isolate registered-collection-slugs cache used by term counting, since
+ * every schema-mutation path already routes through here.
+ */
 export function invalidateUrlPatternCache(): void {
 	urlPatternCache.patterns = null;
+	resetRegisteredCollectionsCache();
 	invalidateSchemaObjectCache();
 }
 
+/**
+ * Resolve a URL path to a content entry by matching against collection URL patterns.
+ *
+ * Loads all collections with a `urlPattern` set, converts each pattern to a regex,
+ * and tests the given path. On match, extracts the slug and fetches the entry.
+ *
+ * @example
+ * ```ts
+ * import { resolveEmDashPath } from "emdash";
+ *
+ * // Given pages with urlPattern "/{slug}" and posts with "/blog/{slug}":
+ * const result = await resolveEmDashPath("/blog/hello-world");
+ * if (result) {
+ *   console.log(result.collection); // "posts"
+ *   console.log(result.params.slug); // "hello-world"
+ *   console.log(result.entry.data); // post data
+ * }
+ * ```
+ */
 export async function resolveEmDashPath<T = Record<string, unknown>>(
 	path: string,
 ): Promise<ResolvePathResult<T> | null> {
+	// Build and cache compiled patterns on first call
 	let cachedUrlPatterns = urlPatternCache.patterns;
 	if (!cachedUrlPatterns) {
 		const { getDb } = await import("./loader.js");
@@ -892,8 +1924,15 @@ export async function resolveEmDashPath<T = Record<string, unknown>>(
 		cachedUrlPatterns = [];
 		for (const collection of collections) {
 			if (!collection.urlPattern) continue;
-			const { regex, paramNames } = compileUrlPattern(collection.urlPattern);
-			cachedUrlPatterns.push({ slug: collection.slug, regex, paramNames });
+			try {
+				const { regex, paramNames } = compileUrlPattern(collection.urlPattern);
+				cachedUrlPatterns.push({ slug: collection.slug, regex, paramNames });
+			} catch (error) {
+				const reason = error instanceof Error ? error.message : String(error);
+				console.warn(
+					`[emdash] Skipping URL pattern "${collection.urlPattern}" for collection "${collection.slug}": ${reason}. Update the collection's URL pattern to route its entries.`,
+				);
+			}
 		}
 		urlPatternCache.patterns = cachedUrlPatterns;
 	}
@@ -902,11 +1941,13 @@ export async function resolveEmDashPath<T = Record<string, unknown>>(
 		const match = path.match(pattern.regex);
 		if (!match) continue;
 
+		// Extract params
 		const params: Record<string, string> = {};
 		for (let i = 0; i < pattern.paramNames.length; i++) {
 			params[pattern.paramNames[i]] = match[i + 1];
 		}
 
+		// Look up entry by slug (most common pattern)
 		const slug = params.slug;
 		if (!slug) continue;
 

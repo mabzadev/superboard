@@ -1,3 +1,12 @@
+/**
+ * POST /_emdash/api/oauth/device/code
+ *
+ * Issue a device code + user code for the OAuth Device Flow.
+ * This is an unauthenticated endpoint (the CLI doesn't have a token yet).
+ *
+ * Rate limited: 10 requests per minute per IP.
+ */
+
 import type { APIRoute } from "astro";
 import { z } from "zod";
 
@@ -26,12 +35,14 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
 		const body = await parseBody(request, deviceCodeSchema);
 		if (isParseError(body)) return body;
 
+		// Rate limit: 10 requests per 60 seconds per IP
 		const ip = getClientIp(request, getTrustedProxyHeaders(emdash.config));
 		const rateLimit = await checkRateLimit(emdash.db, ip, "device/code", 10, 60);
 		if (!rateLimit.allowed) {
 			return rateLimitResponse(60);
 		}
 
+		// Build the verification URI — device page lives inside the admin SPA
 		const verificationUri = new URL(
 			"/_emdash/admin/device",
 			getPublicOrigin(url, emdash?.config),

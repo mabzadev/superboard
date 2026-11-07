@@ -6,6 +6,12 @@ import {
 	unwrapResult,
 } from "../../../../../../packages/core/src/api/error.js";
 
+/**
+ * The REST API reference documents a discriminated response envelope:
+ * successful responses are `{ success: true, data }` and error responses are
+ * `{ success: false, error }`. These tests pin the wire shape so it stays in
+ * sync with the documented contract.
+ */
 describe("API response envelope", () => {
 	describe("apiSuccess", () => {
 		it("wraps data in { success: true, data }", async () => {

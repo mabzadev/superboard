@@ -1,3 +1,17 @@
+/**
+ * Upload-widening tests for POST /_emdash/api/media.
+ *
+ * When a `fieldId` is included in the multipart body and that field has
+ * a custom `allowedMimeTypes` list in its validation JSON, the route must
+ * use that list instead of the global allowlist. This enables per-field
+ * MIME restrictions such as "PDF only" or "zip files allowed here".
+ *
+ * Test cases:
+ *  1. zip accepted when fieldId points to a zip-allowing file field
+ *  2. zip rejected when fieldId is omitted (global allowlist applies)
+ *  3. zip rejected when fieldId points to an image-only field
+ */
+
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -7,6 +21,10 @@ import { POST as postUploadUrl } from "../../../../../../packages/core/src/astro
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
+
+// ---------------------------------------------------------------------------
+// Minimal in-memory storage stub
+// ---------------------------------------------------------------------------
 
 interface StorageEntry {
 	body: Uint8Array;
@@ -47,6 +65,10 @@ function createMemoryStorage(): {
 	};
 	return { store, storage };
 }
+
+// ---------------------------------------------------------------------------
+// Context builder
+// ---------------------------------------------------------------------------
 
 function buildContext(opts: {
 	db: Kysely<Database>;
@@ -99,6 +121,7 @@ function buildContext(opts: {
 				id: "user-1",
 				email: "test@example.com",
 				name: "Test User",
+				// RoleLevel 50 = ADMIN (satisfies media:upload which requires CONTRIBUTOR = 20)
 				role: 50 as const,
 			},
 		},
@@ -121,6 +144,10 @@ function buildUploadRequest(opts: { file: File; fieldId?: string }): Request {
 	});
 }
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe("POST /media — upload widening via fieldId", () => {
 	let db: Kysely<Database>;
 	let zipFieldId: string;
@@ -130,6 +157,9 @@ describe("POST /media — upload widening via fieldId", () => {
 		db = await setupTestDatabase();
 		const registry = new SchemaRegistry(db);
 
+		// Create a collection with two fields:
+		//  - attachments: file field that allows zip files
+		//  - thumbnail:   image field (image/* only, no zips)
 		await registry.createCollection({
 			slug: "article",
 			label: "Articles",
@@ -204,6 +234,78 @@ describe("POST /media — upload widening via fieldId", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// MIME fallback from filename extension
+// ---------------------------------------------------------------------------
+
+describe("POST /media — extension MIME fallback", () => {
+	let db: Kysely<Database>;
+
+	beforeEach(async () => {
+		db = await setupTestDatabase();
+	});
+
+	afterEach(async () => {
+		await teardownTestDatabase(db);
+	});
+
+	it("accepts a .jxl file when the browser sends an empty file type", async () => {
+		const { storage, store } = createMemoryStorage();
+		const jxlFile = new File([new Uint8Array([0x00, 0x01, 0x02])], "photo.jxl", { type: "" });
+
+		const req = buildUploadRequest({ file: jxlFile });
+		const res = await postMedia(buildContext({ db, request: req, storage }));
+
+		expect(res.status).toBe(201);
+		const body = (await res.json()) as {
+			data?: { item?: { mimeType: string; storageKey: string } };
+			error?: { code: string };
+		};
+		expect(body.error).toBeUndefined();
+		expect(body.data?.item?.mimeType).toBe("image/jxl");
+		const entry = body.data?.item ? store.get(body.data.item.storageKey) : undefined;
+		expect(entry?.contentType).toBe("image/jxl");
+	});
+
+	it("accepts a .jxl file when the browser sends image/jxl", async () => {
+		const { storage, store } = createMemoryStorage();
+		const jxlFile = new File([new Uint8Array([0x00, 0x01, 0x02])], "photo.jxl", {
+			type: "image/jxl",
+		});
+
+		const req = buildUploadRequest({ file: jxlFile });
+		const res = await postMedia(buildContext({ db, request: req, storage }));
+
+		expect(res.status).toBe(201);
+		const body = (await res.json()) as {
+			data?: { item?: { mimeType: string; storageKey: string } };
+			error?: { code: string };
+		};
+		expect(body.error).toBeUndefined();
+		expect(body.data?.item?.mimeType).toBe("image/jxl");
+		const entry = body.data?.item ? store.get(body.data.item.storageKey) : undefined;
+		expect(entry?.contentType).toBe("image/jxl");
+	});
+
+	it("rejects an unknown extension with an empty file type", async () => {
+		const { storage } = createMemoryStorage();
+		const unknownFile = new File([new Uint8Array([0x00, 0x01, 0x02])], "photo.unknown", {
+			type: "",
+		});
+
+		const req = buildUploadRequest({ file: unknownFile });
+		const res = await postMedia(buildContext({ db, request: req, storage }));
+
+		expect(res.status).toBe(400);
+		const body = (await res.json()) as { error?: { code: string } };
+		expect(body.error?.code).toBe("INVALID_TYPE");
+	});
+});
+
+// ---------------------------------------------------------------------------
+// upload-url storage stub (returns a proper SignedUploadUrl object)
+// ---------------------------------------------------------------------------
+
 function createSignedUrlStorage(): ReturnType<typeof createMemoryStorage>["storage"] & {
 	getSignedUploadUrl: (opts: {
 		key: string;
@@ -250,6 +352,7 @@ function buildUploadUrlContext(opts: {
 				id: "user-1",
 				email: "test@example.com",
 				name: "Test User",
+				// RoleLevel 50 = ADMIN (satisfies media:upload which requires CONTRIBUTOR = 20)
 				role: 50 as const,
 			},
 		},
@@ -280,6 +383,10 @@ function buildUploadUrlRequest(opts: {
 		body: JSON.stringify(body),
 	});
 }
+
+// ---------------------------------------------------------------------------
+// upload-url widening tests
+// ---------------------------------------------------------------------------
 
 describe("POST /media/upload-url — upload widening via fieldId", () => {
 	let db: Kysely<Database>;
@@ -333,6 +440,7 @@ describe("POST /media/upload-url — upload widening via fieldId", () => {
 			error?: { code: string };
 		};
 		expect(body.error).toBeUndefined();
+		// uploadUrl is the signed URL returned by storage (contains a ULID-based key, not the filename)
 		expect(typeof body.data?.uploadUrl).toBe("string");
 		expect(body.data?.uploadUrl).toMatch(/^http/);
 	});
@@ -346,6 +454,7 @@ describe("POST /media/upload-url — upload widening via fieldId", () => {
 		});
 		const res = await postUploadUrl(buildUploadUrlContext({ db, request: req, storage }));
 
+		// 400 = rejected by MIME allowlist; 501 = storage doesn't support signed URLs
 		expect([400, 501]).toContain(res.status);
 		if (res.status === 400) {
 			const body = (await res.json()) as { error?: { code: string } };

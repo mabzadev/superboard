@@ -1,3 +1,15 @@
+/**
+ * Sandbox Entry Point -- Audit Log
+ *
+ * Canonical plugin implementation using the standard format.
+ * Runs in both trusted (in-process) and sandboxed (isolate) modes.
+ *
+ * Note: The beforeSaveCache is module-scoped. In sandbox isolates that persist
+ * across hook invocations within a request, this works correctly. In isolates
+ * that don't persist, updates will be logged without "before" state (graceful
+ * degradation -- the entry is still recorded).
+ */
+
 import type { PluginContext, SandboxedPlugin } from "emdash/plugin";
 
 interface AuditEntry {
@@ -14,10 +26,18 @@ interface AuditEntry {
 	metadata?: Record<string, unknown>;
 }
 
+// ── Helpers ──
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Coerce a content `id` to a string for use as a cache key or storage
+ * lookup. Accepts strings and numbers (the canonical ID types);
+ * everything else (objects, nulls, undefineds) becomes an empty string
+ * so the caller's existence check (`if (contentId)`) skips the entry.
+ */
 function stringifyId(value: unknown): string {
 	if (typeof value === "string") return value;
 	if (typeof value === "number" && Number.isFinite(value)) return String(value);
@@ -34,7 +54,20 @@ function isAuditEntry(value: unknown): value is AuditEntry {
 	);
 }
 
+// In-memory cache for content state before save/delete.
+// Works within a single request lifecycle if the isolate persists.
 const beforeSaveCache = new Map<string, unknown>();
+const MAX_CACHED_STATES = 100;
+
+function cacheBeforeState(key: string, value: unknown): void {
+	beforeSaveCache.set(key, value);
+	if (beforeSaveCache.size > MAX_CACHED_STATES) {
+		const oldest = beforeSaveCache.keys().next().value;
+		if (oldest !== undefined) beforeSaveCache.delete(oldest);
+	}
+}
+
+// ── Plugin definition ──
 
 export default {
 	hooks: {
@@ -56,16 +89,18 @@ export default {
 
 		"content:beforeSave": {
 			handler: async (event, ctx) => {
-				const contentId = stringifyId(event.content.id);
+				const contentId = stringifyId(event.id ?? event.content.id);
 				if (!event.isNew && contentId) {
 					try {
 						if (ctx.content) {
 							const existing = await ctx.content.get(event.collection, contentId);
-							if (existing) {
-								beforeSaveCache.set(`${event.collection}:${contentId}`, existing);
+							if (existing && isRecord(existing.data)) {
+								cacheBeforeState(`${event.collection}:${contentId}`, existing.data);
 							}
 						}
-					} catch {}
+					} catch {
+						// Ignore -- best effort
+					}
 				}
 				return event.content;
 			},
@@ -87,6 +122,7 @@ export default {
 					collection: event.collection,
 					resourceId: contentId,
 					resourceType: "content",
+					...(event.actor ? { userId: event.actor.id } : {}),
 					changes:
 						beforeRecord || afterRecord ? { before: beforeRecord, after: afterRecord } : undefined,
 					metadata: { slug: event.content.slug, status: event.content.status },
@@ -109,9 +145,11 @@ export default {
 					try {
 						const existing = await ctx.content.get(event.collection, event.id);
 						if (existing) {
-							beforeSaveCache.set(`delete:${event.collection}:${event.id}`, existing);
+							cacheBeforeState(`delete:${event.collection}:${event.id}`, existing);
 						}
-					} catch {}
+					} catch {
+						// Ignore
+					}
 				}
 				return true;
 			},
@@ -164,6 +202,7 @@ export default {
 	},
 
 	routes: {
+		// Block Kit admin handler -- returns plain block objects (no @emdash-cms/blocks import needed)
 		admin: {
 			handler: async (routeCtx, ctx) => {
 				const interaction = routeCtx.input as {
@@ -238,6 +277,8 @@ export default {
 		},
 	},
 } satisfies SandboxedPlugin;
+
+// ── Block Kit helpers (plain objects, no @emdash-cms/blocks import) ──
 
 async function buildHistoryBlocks(ctx: PluginContext, cursor?: string) {
 	try {

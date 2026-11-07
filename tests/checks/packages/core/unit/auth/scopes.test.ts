@@ -1,3 +1,10 @@
+/**
+ * Unit tests for scope enforcement.
+ *
+ * Tests the requireScope() guard that API routes and MCP tools use
+ * to enforce token scope restrictions.
+ */
+
 import { describe, it, expect } from "vitest";
 
 import { requireScope } from "../../../../../../packages/core/src/auth/scopes.js";
@@ -58,6 +65,12 @@ describe("requireScope", () => {
 	});
 
 	describe("backwards compatibility: content:write implicit grants", () => {
+		// Before the menu/taxonomy mutation MCP tools were split out into
+		// `menus:manage` and `taxonomies:manage`, the only scope checked for
+		// those operations was `content:write`. Tokens issued before the
+		// split must continue to work — `content:write` implicitly grants
+		// `menus:manage` and `taxonomies:manage`.
+
 		it("content:write grants menus:manage", () => {
 			expect(requireScope({ tokenScopes: ["content:write"] }, "menus:manage")).toBeNull();
 		});
@@ -87,9 +100,45 @@ describe("requireScope", () => {
 		});
 
 		it("prototype-chain keys do not crash or grant access", () => {
+			// Defense in depth: the implicit-grants table is a Map, but a
+			// regression to a plain-object lookup would let Object.prototype
+			// keys (`__proto__`, `constructor`, `toString`) walk the chain
+			// and either crash with "x.includes is not a function" or
+			// accidentally satisfy the check. Either is a 500 instead of a
+			// 403. Verify both paths reject cleanly.
 			for (const key of ["__proto__", "constructor", "toString", "hasOwnProperty"]) {
 				expect(requireScope({ tokenScopes: [key] }, "menus:manage")).toBeInstanceOf(Response);
 			}
+		});
+	});
+
+	describe("site transfer scopes", () => {
+		const TRANSFER = ["transfer:export", "transfer:analyze", "transfer:execute"] as const;
+
+		it.each(TRANSFER)("admin token passes for %s", (scope) => {
+			expect(requireScope({ tokenScopes: ["admin"] }, scope)).toBeNull();
+		});
+
+		it.each(TRANSFER)("other scopes are rejected for %s", async (scope) => {
+			const result = requireScope({ tokenScopes: ["content:write", "settings:manage"] }, scope);
+			expect(result?.status).toBe(403);
+			const body = (await result!.json()) as { error: { code: string } };
+			expect(body.error.code).toBe("INSUFFICIENT_SCOPE");
+		});
+
+		it("each transfer scope satisfies only itself", () => {
+			for (const held of TRANSFER) {
+				for (const required of TRANSFER) {
+					const result = requireScope({ tokenScopes: [held] }, required);
+					if (held === required) expect(result).toBeNull();
+					else expect(result?.status).toBe(403);
+				}
+				expect(requireScope({ tokenScopes: [held] }, "admin")?.status).toBe(403);
+			}
+		});
+
+		it("session auth passes (RBAC gates session callers)", () => {
+			expect(requireScope({}, "transfer:execute")).toBeNull();
 		});
 	});
 });

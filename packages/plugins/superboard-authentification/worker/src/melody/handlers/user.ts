@@ -12,8 +12,6 @@ import {
   emailService, kvService, passkeyService, userService,
   identityBridgeService,
   jwtService,
-  orgService,
-  orgGroupService,
 } from '../services'
 import { userDto } from '../dtos'
 import {
@@ -37,12 +35,10 @@ export const getUsers = async (c: Context<typeConfig.Context>) => {
     })
     : undefined
 
-  const orgId = undefined
   const result = await userService.getUsers(
     c,
     search || undefined,
     pagination,
-    orgId,
   )
   return c.json(result)
 }
@@ -164,18 +160,6 @@ export const postUserOtpMfa = async (c: Context<typeConfig.Context>) => {
   return c.body(null)
 }
 
-export const postUserSmsMfa = async (c: Context<typeConfig.Context>) => {
-  const authId = c.req.param('authId') ?? ''
-
-  await userService.enrollUserMfa(
-    c,
-    authId,
-    userModel.MfaType.Sms,
-  )
-  c.status(204)
-  return c.body(null)
-}
-
 export const deleteUserEmailMfa = async (c: Context<typeConfig.Context>) => {
   const authId = c.req.param('authId') ?? ''
 
@@ -195,18 +179,6 @@ export const deleteUserOtpMfa = async (c: Context<typeConfig.Context>) => {
     c,
     authId,
     userModel.MfaType.Otp,
-  )
-  c.status(204)
-  return c.body(null)
-}
-
-export const deleteUserSmsMfa = async (c: Context<typeConfig.Context>) => {
-  const authId = c.req.param('authId') ?? ''
-
-  await userService.resetUserMfa(
-    c,
-    authId,
-    userModel.MfaType.Sms,
   )
   c.status(204)
   return c.body(null)
@@ -539,105 +511,6 @@ export const deleteUserActiveSession = async (c: Context<typeConfig.Context>) =>
   return c.body(null)
 }
 
-export const postUserOrgGroup = async (c: Context<typeConfig.Context>) => {
-  const authId = c.req.param('authId') ?? ''
-  const orgGroupId = c.req.param('orgGroupId')
-
-  const user = await userService.getUserByAuthId(
-    c,
-    authId,
-  )
-
-  const org = await orgService.getOrgBySlug(
-    c,
-    user.orgSlug,
-  )
-
-  const orgGroup = await orgGroupService.getOrgGroupById(
-    c,
-    Number(orgGroupId),
-  )
-
-  if (!orgGroup || orgGroup.orgId !== org.id) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Warn,
-      messageConfig.RequestError.OrgGroupNotFound,
-    )
-    throw new errorConfig.NotFound(messageConfig.RequestError.OrgGroupNotFound)
-  }
-
-  await orgGroupService.createUserOrgGroup(
-    c,
-    user.id,
-    orgGroup.id,
-  )
-
-  return c.json({ success: true })
-}
-
-export const deleteUserOrgGroup = async (c: Context<typeConfig.Context>) => {
-  const authId = c.req.param('authId') ?? ''
-  const orgGroupId = c.req.param('orgGroupId')
-
-  const user = await userService.getUserByAuthId(
-    c,
-    authId,
-  )
-
-  await orgGroupService.deleteUserOrgGroup(
-    c,
-    user.id,
-    Number(orgGroupId),
-  )
-
-  return c.json({ success: true })
-}
-
-export const getUserOrgs = async (c: Context<typeConfig.Context>) => {
-  const authId = c.req.param('authId') ?? ''
-  const user = await userService.getUserByAuthId(
-    c,
-    authId,
-  )
-  const orgs = await orgService.getUserOrgs(
-    c,
-    user.id,
-  )
-  return c.json({ orgs })
-}
-
-export const postUserOrgs = async (c: Context<typeConfig.Context>) => {
-  const authId = c.req.param('authId') ?? ''
-  const reqBody = await c.req.json()
-  const orgIds = reqBody.orgs
-  const user = await userService.getUserByAuthId(
-    c,
-    authId,
-  )
-  await orgService.updateUserOrgs(
-    c,
-    user.id,
-    orgIds,
-  )
-
-  if (user.orgSlug.trim()) {
-    const org = await orgService.getOrgBySlug(
-      c,
-      user.orgSlug,
-    )
-    if (!orgIds.includes(org.id)) {
-      await userService.updateUser(
-        c,
-        authId,
-        { orgSlug: ' ' },
-      )
-    }
-  }
-
-  return c.json({ success: true })
-}
-
 export const postResendUserInvitation = async (c: Context<typeConfig.Context>) => {
   const authId = c.req.param('authId') ?? ''
   const reqBody = await c.req.json()
@@ -692,7 +565,6 @@ export const postResendUserInvitation = async (c: Context<typeConfig.Context>) =
   await emailService.sendInvitationEmail(
     c,
     user.email ?? '',
-    user.orgSlug ?? '',
     locale,
     invitationUrl,
     variableConfig.systemConfig.invitationExpiresIn,
@@ -750,11 +622,9 @@ export const postUserInvitation = async (c: Context<typeConfig.Context>) => {
     AUTH_SERVER_URL: serverUrl,
     SUPPORTED_LOCALES: supportedLocales,
     ENABLE_NAMES: enableNames,
-    ENABLE_ORG: enableOrg,
   } = env(c)
 
   const locale = (bodyDto.locale ?? supportedLocales[0]) as typeConfig.Locale
-  const orgSlug = bodyDto.orgSlug?.trim() ?? ''
   const requestedRoles = Array.from(new Set(bodyDto.roles ?? []))
 
   userService.verifyCanAssignRoles(
@@ -773,16 +643,6 @@ export const postUserInvitation = async (c: Context<typeConfig.Context>) => {
       messageConfig.RequestError.EmailTaken,
     )
     throw new errorConfig.Forbidden(messageConfig.RequestError.EmailTaken)
-  }
-
-  if (orgSlug) {
-    const org = await orgService.getOrgBySlug(
-      c,
-      orgSlug,
-    )
-    if (org.onlyUseForBrandingOverride) {
-      throw new errorConfig.Forbidden(messageConfig.RequestError.OrgNotAllowInvite)
-    }
   }
 
   let targetRoles: roleModel.Record[] = []
@@ -804,7 +664,6 @@ export const postUserInvitation = async (c: Context<typeConfig.Context>) => {
     c.env.DB,
     {
       authId: crypto.randomUUID(),
-      orgSlug,
       email: bodyDto.email,
       socialAccountId: null,
       socialAccountType: null,
@@ -842,7 +701,6 @@ export const postUserInvitation = async (c: Context<typeConfig.Context>) => {
   await emailService.sendInvitationEmail(
     c,
     bodyDto.email,
-    orgSlug,
     locale,
     invitationUrl,
     variableConfig.systemConfig.invitationExpiresIn,
@@ -852,10 +710,7 @@ export const postUserInvitation = async (c: Context<typeConfig.Context>) => {
   const apiRecord = userModel.convertToApiRecordFull(
     newUser,
     enableNames,
-    enableOrg,
     roleNames,
-    null,
-    [],
     undefined,
   )
   apiRecord.authId = canonicalAuthId

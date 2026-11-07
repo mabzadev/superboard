@@ -15,7 +15,7 @@ export function Providers({
 		path === "/identity" ||
 		path.startsWith("/identity/") ||
 		path === "/auth" ||
-		/^\/auth\/(?:directory|apps|roles|scopes|orgs|saml|logs|user-attributes|account-policies)(?:\/|$)/u.test(
+		/^\/auth\/(?:directory|apps|roles|scopes|logs|user-attributes|account-policies)(?:\/|$)/u.test(
 			path,
 		);
 	if (!isIdentity || path === "/auth" || path === "/identity") return children;

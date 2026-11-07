@@ -38,6 +38,7 @@ describe("storage-indexes", () => {
 	describe("generateCreateIndexSql", () => {
 		it("should return a RawBuilder with CREATE INDEX", () => {
 			const result = generateCreateIndexSql(db, "my-plugin", "items", ["status"]);
+			// It should be a RawBuilder (has toOperationNode method)
 			expect(result).toBeDefined();
 			expect(typeof (result as any).toOperationNode).toBe("function");
 		});
@@ -61,11 +62,13 @@ describe("storage-indexes", () => {
 		});
 
 		it("should accept valid identifiers with hyphens in plugin ID", () => {
+			// Should not throw
 			const result = generateCreateIndexSql(db, "my-plugin", "items", ["status"]);
 			expect(result).toBeDefined();
 		});
 
 		it("should accept composite field indexes", () => {
+			// Should not throw
 			const result = generateCreateIndexSql(db, "my-plugin", "items", ["status", "created_at"]);
 			expect(result).toBeDefined();
 		});

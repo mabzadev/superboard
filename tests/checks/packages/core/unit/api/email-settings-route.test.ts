@@ -1,3 +1,11 @@
+/**
+ * Email Settings Route Registration Test
+ *
+ * Regression test for https://github.com/emdash-cms/emdash/issues/151
+ * The email settings API route file existed but was never registered
+ * via injectRoute(), causing the endpoint to return 404.
+ */
+
 import { describe, expect, it, vi } from "vitest";
 
 import { injectCoreRoutes } from "../../../../../../packages/core/src/astro/integration/routes.js";

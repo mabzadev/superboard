@@ -1,4 +1,15 @@
-import Database from "better-sqlite3";
+/**
+ * How a reorder reaches the database.
+ *
+ * D1 has no transactions, so `withTransaction` runs its callback bare there and
+ * a statement per term would leave a failed reorder half-applied — some groups
+ * moved, positions duplicated. The repository writes each chunk as one `CASE`
+ * update instead, which is atomic per statement and bounds the subrequests a
+ * large renumbering costs.
+ *
+ * SQLite-only: this is about the SQL emitted, which doesn't vary by dialect.
+ */
+
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -6,10 +17,12 @@ import { handleTermReorder } from "../../../../../packages/core/src/api/handlers
 import { runMigrations } from "../../../../../packages/core/src/database/migrations/runner.js";
 import { TaxonomyRepository } from "../../../../../packages/core/src/database/repositories/taxonomy.js";
 import type { Database as DatabaseSchema } from "../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../packages/core/src/db/node-sqlite-compat.js";
 
+/** Mirrors GROUPS_PER_UPDATE in the repository. */
 const GROUPS_PER_UPDATE = 32;
 
-let sqlite: Database.Database;
+let sqlite: Database;
 let db: Kysely<DatabaseSchema>;
 let repo: TaxonomyRepository;
 let captured: string[];
@@ -34,6 +47,8 @@ afterEach(async () => {
 async function createCategories(count: number): Promise<string[]> {
 	const ids: string[] = [];
 	for (let i = 0; i < count; i++) {
+		// Zero-padded so the label order the migration would mint matches creation
+		// order, and a reversal is unambiguous.
 		const label = `Term ${String(i).padStart(3, "0")}`;
 		const term = await repo.create({ name: "category", slug: `term-${i}`, label });
 		ids.push(term.translationGroup ?? term.id);
@@ -68,6 +83,7 @@ it("chunks a renumbering that exceeds the parameter budget", async () => {
 
 	expect(result.success).toBe(true);
 	const statements = updates();
+	// One per chunk — not one per term, which is what the loop this replaced cost.
 	expect(statements).toHaveLength(Math.ceil(ids.length / GROUPS_PER_UPDATE));
 	expect(statements.length).toBeLessThan(ids.length);
 });

@@ -10,22 +10,20 @@ import ClientTypeLabel from "../../../../../../identity/components/ClientTypeLab
 import DeleteButton from "../../../../../../identity/components/DeleteButton.js";
 import FieldError from "../../../../../../identity/components/FieldError.js";
 import LoadingPage from "../../../../../../identity/components/LoadingPage.js";
+import {
+	PropertyLabel,
+	PropertyList,
+	PropertyRow,
+	PropertyValue,
+} from "../../../../../../identity/components/PropertyList.js";
 import RequiredProperty from "../../../../../../identity/components/RequiredProperty.js";
 import SaveButton from "../../../../../../identity/components/SaveButton.js";
 import ScopesEditor from "../../../../../../identity/components/ScopesEditor.js";
 import SubmitError from "../../../../../../identity/components/SubmitError.js";
+import SwitchRow from "../../../../../../identity/components/SwitchRow.js";
 import { Alert } from "../../../../../../identity/components/ui/alert.js";
 import { Input } from "../../../../../../identity/components/ui/input.js";
-import { Label } from "../../../../../../identity/components/ui/label.js";
 import { Switch } from "../../../../../../identity/components/ui/switch.js";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "../../../../../../identity/components/ui/table.js";
 import { useRouter } from "../../../../../../identity/i18n/navigation.js";
 import { useAuth } from "../../../../../../identity/melody-react.js";
 import {
@@ -71,7 +69,6 @@ const Page = () => {
 			| "useSystemMfaConfig"
 			| "requireEmailMfa"
 			| "requireOtpMfa"
-			| "requireSmsMfa"
 			| "allowEmailMfaAsBackup";
 		const updateKeys = [
 			"name",
@@ -81,7 +78,6 @@ const Page = () => {
 			"useSystemMfaConfig",
 			"requireEmailMfa",
 			"requireOtpMfa",
-			"requireSmsMfa",
 			"allowEmailMfaAsBackup",
 		].filter((key) => values[key as Key] !== app[key as Key]);
 		return updateKeys.reduce(
@@ -131,176 +127,140 @@ const Page = () => {
 				}}
 			/>
 			<section>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="max-md:w-24 md:w-48">{t("common.property")}</TableHead>
-							<TableHead>{t("common.value")}</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody className="divide-y break-all">
-						<TableRow>
-							<TableCell>
-								<RequiredProperty title={t("apps.name")} />
-							</TableCell>
-							<TableCell>
-								<Input
-									disabled={!canWriteApp}
-									data-testid="nameInput"
-									onChange={(e) => onChange("name", e.target.value)}
-									value={values.name}
-								/>
-								<FieldError error={errors.name} />
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("apps.clientId")}</TableCell>
-							<TableCell>{app.clientId}</TableCell>
-						</TableRow>
-						{app.type === typeTool.ClientType.S2S && (
-							<TableRow>
-								<TableCell>{t("apps.clientSecret")}</TableCell>
-								<TableCell className="break-all">
-									<div className="flex items-center gap-4">
-										{createdApp?.id === Number(id) ? createdApp.secret : "*****"}
-									</div>
-									{createdApp?.id === Number(id) && (
-										<Alert variant="warning" className="mt-2">
-											{t("apps.secretNote")}
-										</Alert>
-									)}
-								</TableCell>
-							</TableRow>
-						)}
-						<TableRow>
-							<TableCell>{t("apps.status")}</TableCell>
-							<TableCell>
-								<Switch
-									data-testid="statusInput"
-									checked={values.isActive}
-									disabled={!canWriteApp}
-									onClick={() => onChange("isActive", !values.isActive)}
-								/>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("apps.type")}</TableCell>
-							<TableCell>
-								<ClientTypeLabel type={app.type} />
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>
-								<RequiredProperty title={t("apps.scopes")} />
-							</TableCell>
-							<TableCell>
-								<ScopesEditor
-									disabled={!canWriteApp}
-									scopes={availableScopes}
-									value={values.scopes}
-									onToggleScope={handleToggleAppScope}
-								/>
-								<FieldError error={errors.scopes} />
-							</TableCell>
-						</TableRow>
-						{app.type === typeTool.ClientType.SPA && (
-							<TableRow>
-								<TableCell>{t("apps.redirectUris")}</TableCell>
-								<TableCell>
-									<RedirectUriEditor
-										disabled={!canWriteApp}
-										redirectUris={values.redirectUris}
-										onChange={(uris) => onChange("redirectUris", uris)}
-									/>
-								</TableCell>
-							</TableRow>
-						)}
-						<TableRow>
-							<TableCell>{t("apps.appLevelMfa")}</TableCell>
-							<TableCell className="flex flex-col gap-4">
-								<div className="flex items-center gap-2">
-									<Switch
-										id="mfa-useSystem"
-										data-testid="mfa-useSystem"
-										checked={values.useSystemMfaConfig}
-										disabled={!canWriteApp}
-										onClick={() => onChange("useSystemMfaConfig", !values.useSystemMfaConfig)}
-									/>
-									<Label htmlFor="mfa-useSystem" className="flex">
-										{t("apps.useSystemMfaConfig")}
-									</Label>
+				<PropertyList>
+					<PropertyRow>
+						<PropertyLabel>
+							<RequiredProperty title={t("apps.name")} />
+						</PropertyLabel>
+						<PropertyValue>
+							<Input
+								disabled={!canWriteApp}
+								data-testid="nameInput"
+								onChange={(e) => onChange("name", e.target.value)}
+								value={values.name}
+							/>
+							<FieldError error={errors.name} />
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("apps.clientId")}</PropertyLabel>
+						<PropertyValue>{app.clientId}</PropertyValue>
+					</PropertyRow>
+					{app.type === typeTool.ClientType.S2S && (
+						<PropertyRow>
+							<PropertyLabel>{t("apps.clientSecret")}</PropertyLabel>
+							<PropertyValue className="break-all">
+								<div className="flex items-center gap-4">
+									{createdApp?.id === Number(id) ? createdApp.secret : "*****"}
 								</div>
-								{!values.useSystemMfaConfig && (
-									<>
-										<p className="text-sm">{t("apps.appLevelMfaDescription")}</p>
-										<div className="flex items-center gap-2">
-											<Switch
-												id="mfa-requireEmail"
-												data-testid="mfa-requireEmail"
-												checked={values.requireEmailMfa}
-												disabled={!canWriteApp}
-												onClick={() => onChange("requireEmailMfa", !values.requireEmailMfa)}
-											/>
-											<Label htmlFor="mfa-requireEmail" className="flex">
-												{t("apps.requireEmailMfa")}
-											</Label>
-										</div>
-										<div className="flex items-center gap-2">
-											<Switch
-												id="mfa-requireOtp"
-												data-testid="mfa-requireOtp"
-												checked={values.requireOtpMfa}
-												disabled={!canWriteApp}
-												onClick={() => onChange("requireOtpMfa", !values.requireOtpMfa)}
-											/>
-											<Label htmlFor="mfa-requireOtp" className="flex">
-												{t("apps.requireOtpMfa")}
-											</Label>
-										</div>
-										<div className="flex items-center gap-2">
-											<Switch
-												id="mfa-requireSms"
-												data-testid="mfa-requireSms"
-												checked={values.requireSmsMfa}
-												disabled={!canWriteApp}
-												onClick={() => onChange("requireSmsMfa", !values.requireSmsMfa)}
-											/>
-											<Label htmlFor="mfa-requireSms" className="flex">
-												{t("apps.requireSmsMfa")}
-											</Label>
-										</div>
-										<div className="flex items-center gap-2">
-											<Switch
-												id="mfa-allowEmailMfaAsBackup"
-												data-testid="mfa-allowEmailMfaAsBackup"
-												checked={values.allowEmailMfaAsBackup}
-												disabled={!canWriteApp}
-												onClick={() =>
-													onChange("allowEmailMfaAsBackup", !values.allowEmailMfaAsBackup)
-												}
-											/>
-											<Label htmlFor="mfa-allowEmailMfaAsBackup" className="flex">
-												{t("apps.allowEmailMfaAsBackup")}
-											</Label>
-										</div>
-									</>
+								{createdApp?.id === Number(id) && (
+									<Alert variant="warning" className="mt-2">
+										{t("apps.secretNote")}
+									</Alert>
 								)}
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("common.createdAt")}</TableCell>
-							<TableCell>{app.createdAt} UTC</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("common.updatedAt")}</TableCell>
-							<TableCell>{app.updatedAt} UTC</TableCell>
-						</TableRow>
-					</TableBody>
-				</Table>
+							</PropertyValue>
+						</PropertyRow>
+					)}
+					<PropertyRow inline>
+						<PropertyLabel>{t("apps.status")}</PropertyLabel>
+						<PropertyValue>
+							<Switch
+								data-testid="statusInput"
+								checked={values.isActive}
+								disabled={!canWriteApp}
+								onClick={() => onChange("isActive", !values.isActive)}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("apps.type")}</PropertyLabel>
+						<PropertyValue>
+							<ClientTypeLabel type={app.type} />
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>
+							<RequiredProperty title={t("apps.scopes")} />
+						</PropertyLabel>
+						<PropertyValue>
+							<ScopesEditor
+								disabled={!canWriteApp}
+								scopes={availableScopes}
+								value={values.scopes}
+								onToggleScope={handleToggleAppScope}
+							/>
+							<FieldError error={errors.scopes} />
+						</PropertyValue>
+					</PropertyRow>
+					{app.type === typeTool.ClientType.SPA && (
+						<PropertyRow>
+							<PropertyLabel>{t("apps.redirectUris")}</PropertyLabel>
+							<PropertyValue>
+								<RedirectUriEditor
+									disabled={!canWriteApp}
+									redirectUris={values.redirectUris}
+									onChange={(uris) => onChange("redirectUris", uris)}
+								/>
+							</PropertyValue>
+						</PropertyRow>
+					)}
+					<PropertyRow>
+						<PropertyLabel>{t("apps.appLevelMfa")}</PropertyLabel>
+						<PropertyValue className="flex flex-col gap-4">
+							<SwitchRow
+								id="mfa-useSystem"
+								data-testid="mfa-useSystem"
+								label={t("apps.useSystemMfaConfig")}
+								checked={values.useSystemMfaConfig}
+								disabled={!canWriteApp}
+								onClick={() => onChange("useSystemMfaConfig", !values.useSystemMfaConfig)}
+							/>
+							{!values.useSystemMfaConfig && (
+								<>
+									<p className="text-sm">{t("apps.appLevelMfaDescription")}</p>
+									<SwitchRow
+										id="mfa-requireEmail"
+										data-testid="mfa-requireEmail"
+										label={t("apps.requireEmailMfa")}
+										checked={values.requireEmailMfa}
+										disabled={!canWriteApp}
+										onClick={() => onChange("requireEmailMfa", !values.requireEmailMfa)}
+									/>
+									<SwitchRow
+										id="mfa-requireOtp"
+										data-testid="mfa-requireOtp"
+										label={t("apps.requireOtpMfa")}
+										checked={values.requireOtpMfa}
+										disabled={!canWriteApp}
+										onClick={() => onChange("requireOtpMfa", !values.requireOtpMfa)}
+									/>
+									<SwitchRow
+										id="mfa-allowEmailMfaAsBackup"
+										data-testid="mfa-allowEmailMfaAsBackup"
+										label={t("apps.allowEmailMfaAsBackup")}
+										checked={values.allowEmailMfaAsBackup}
+										disabled={!canWriteApp}
+										onClick={() => {
+											onChange("allowEmailMfaAsBackup", !values.allowEmailMfaAsBackup);
+										}}
+									/>
+								</>
+							)}
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("common.createdAt")}</PropertyLabel>
+						<PropertyValue>{t("common.utcTime", { time: app.createdAt })}</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("common.updatedAt")}</PropertyLabel>
+						<PropertyValue>{t("common.utcTime", { time: app.updatedAt })}</PropertyValue>
+					</PropertyRow>
+				</PropertyList>
 			</section>
 			<SubmitError />
 			{canWriteApp && (
-				<section className="flex items-center gap-4 mt-8">
+				<section className="mt-8 flex items-center justify-end gap-4">
 					<SaveButton
 						isLoading={isUpdating}
 						disabled={!Object.keys(updateObj).length || isDeleting}

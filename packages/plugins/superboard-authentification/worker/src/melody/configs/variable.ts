@@ -42,15 +42,8 @@ export const OIDCProviderConfigs: Record<string, OIDCProviderConfig> = Object.fr
 });
 
 export const SocialSignInConfig = Object.freeze({
-	DiscordScope: "identity+email",
-	FacebookScope: "public_profile",
 	AppleScope: "name email",
 	ExternalSignInCanBypassLocalMfa: true,
-});
-
-export const SmsMfaConfig = Object.freeze({
-	CountryCode: "+1",
-	validationRegex: /^\+[1-9]\d{1,14}$/,
 });
 
 export const RequestIPConfig = Object.freeze({
@@ -59,15 +52,12 @@ export const RequestIPConfig = Object.freeze({
 
 export const systemConfig = Object.freeze({
 	name: "Melody Auth",
-	enableOrgGroup: true,
 	emailVerificationCodeExpiresIn: 7200,
 	passwordResetCodeExpiresIn: 7200,
 	changeEmailVerificationCodeExpiresIn: 7200,
 	emailMfaCodeExpiresIn: 300,
-	smsMfaCodeExpiresIn: 300,
 	invitationExpiresIn: 7,
 	sendEmailToRealReceiverOnDev: false,
-	sendSmsToRealReceiverOnDev: false,
 	enablePlainPkceMethod: false,
 });
 
@@ -88,7 +78,5 @@ export const S2sConfig = Object.freeze({
 		Scope.WriteRole,
 		Scope.ReadScope,
 		Scope.WriteScope,
-		Scope.ReadOrg,
-		Scope.WriteOrg,
 	]),
 });

@@ -38,14 +38,15 @@ const RedirectUriEditor = ({
 			<section className="flex flex-col gap-4">
 				{redirectUris.map((uri, index) => (
 					<section key={index} className="flex flex-col">
-						<section className="flex items-center gap-2 w-full">
-							<Input
-								data-testid="redirectUriInput"
-								onChange={(e) => handleUpdateUri(index, e.target.value)}
-								value={uri}
-								className="w-full"
-								disabled={disabled}
-							/>
+						<Input
+							data-testid="redirectUriInput"
+							onChange={(e) => handleUpdateUri(index, e.target.value)}
+							value={uri}
+							className="w-full"
+							disabled={disabled}
+						/>
+						<div className="mt-2 flex items-center justify-between gap-2">
+							<p>{t("apps.urlFormat")}</p>
 							{!disabled && (
 								<Button
 									variant="outline"
@@ -56,20 +57,16 @@ const RedirectUriEditor = ({
 									<TrashIcon className="w-4 h-4" />
 								</Button>
 							)}
-						</section>
-						<p className="mt-2">{t("apps.urlFormat")}</p>
+						</div>
 					</section>
 				))}
 			</section>
 			{!disabled && (
-				<Button
-					onClick={handleAddMoreUri}
-					className="mt-4"
-					size="sm"
-					data-testid="redirectUriAddButton"
-				>
-					<PlusIcon className="w-4 h-4" />
-				</Button>
+				<div className="mt-4 flex justify-end">
+					<Button onClick={handleAddMoreUri} size="sm" data-testid="redirectUriAddButton">
+						<PlusIcon className="w-4 h-4" />
+					</Button>
+				</div>
 			)}
 		</>
 	);

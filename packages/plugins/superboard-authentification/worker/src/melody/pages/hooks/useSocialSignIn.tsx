@@ -69,41 +69,6 @@ const useSocialSignIn = ({
     [params, locale, onSubmitError, onSwitchView],
   )
 
-  const handleFacebookSignIn = useCallback(
-    (response: any) => {
-      if (!response || !response.authResponse || !response.authResponse.accessToken) return false
-      fetch(
-        routeConfig.IdentityRoute.AuthorizeFacebook,
-        {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            credential: response.authResponse.accessToken,
-            ...parseAuthorizeBaseValues(
-              params,
-              locale,
-            ),
-          }),
-        },
-      )
-        .then(parseResponse)
-        .then((response) => {
-          handleAuthorizeStep(
-            response,
-            locale,
-            onSwitchView,
-          )
-        })
-        .catch((error) => {
-          onSubmitError(error)
-        })
-    },
-    [params, locale, onSubmitError, onSwitchView],
-  )
-
   const socialSignInState = useMemo(
     () => {
       return {
@@ -115,7 +80,6 @@ const useSocialSignIn = ({
         codeChallengeMethod: params.codeChallengeMethod,
         locale,
         policy: params.policy,
-        org: params.org,
         scopes: params.scope.split(' '),
       }
     },
@@ -157,7 +121,6 @@ const useSocialSignIn = ({
 
   return {
     handleGoogleSignIn,
-    handleFacebookSignIn,
     handleGetOidcConfigs,
     socialSignInState,
     oidcConfigs,

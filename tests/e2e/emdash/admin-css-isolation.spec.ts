@@ -1,3 +1,18 @@
+/**
+ * Admin CSS isolation (#1281)
+ *
+ * The admin shell imports the compiled Kumo/Tailwind v4 stylesheet. In
+ * `astro dev`, Astro injects every CSS module reachable from the project's
+ * Vite graph into every page's <head>, so a top-level `import "...styles.css"`
+ * in the admin route leaked the admin theme onto public, non-admin routes —
+ * overriding host `:root` tokens (`--text-base`, `--text-lg`, ...) and applying
+ * admin author styling to otherwise-unstyled pages.
+ *
+ * Importing the stylesheet as `?url` keeps it out of the page CSS graph and
+ * scopes it to a route-local <link>. These tests pin both halves: the leak is
+ * gone from public routes, and the admin route still pulls the stylesheet in.
+ */
+
 import { test, expect } from "../../fixtures/emdash-browser";
 
 const TAILWIND_SIGNATURE = "tailwindcss v4";

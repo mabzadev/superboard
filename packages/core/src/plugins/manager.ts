@@ -1,3 +1,14 @@
+/**
+ * Plugin Manager v2
+ *
+ * Central orchestrator for the plugin system:
+ * - Loads and resolves plugins
+ * - Manages plugin lifecycle (install, activate, deactivate, uninstall)
+ * - Dispatches hooks across all plugins
+ * - Routes API requests to plugins
+ *
+ */
+
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 
@@ -15,6 +26,8 @@ import {
 } from "./hooks.js";
 import { PluginRouteRegistry, type RouteResult, type InvokeRouteOptions } from "./routes.js";
 import type {
+	ActorInfo,
+	ContentSaveHookDetails,
 	PluginDefinition,
 	ResolvedPlugin,
 	PluginStorageConfig,
@@ -22,25 +35,47 @@ import type {
 	CronEvent,
 } from "./types.js";
 
+/** Options table key prefix for exclusive hook DB reads via PluginManager */
 const EXCLUSIVE_HOOK_KEY_PREFIX = "emdash:exclusive_hook:";
 
+/**
+ * Plugin state in the manager
+ */
 export type PluginState = "registered" | "installed" | "active" | "inactive";
 
+/**
+ * Plugin entry in the manager
+ */
 interface PluginEntry {
 	plugin: ResolvedPlugin;
 	state: PluginState;
 }
 
+/**
+ * Plugin manager options
+ */
 export interface PluginManagerOptions {
+	/** Database instance */
 	db: Kysely<Database>;
+	/** Storage backend for direct media uploads */
 	storage?: Storage;
+	/** Function to generate upload URLs for media */
 	getUploadUrl?: (
 		filename: string,
 		contentType: string,
 	) => Promise<{ uploadUrl: string; mediaId: string }>;
+	/**
+	 * Pre-resolved list of trusted proxy header names for client-IP
+	 * resolution in plugin route handlers. Thread through from the runtime.
+	 */
 	trustedProxyHeaders?: string[];
 }
 
+/**
+ * Plugin Manager v2
+ *
+ * Manages the full lifecycle of plugins and coordinates hooks/routes.
+ */
 export class PluginManager {
 	private plugins: Map<string, PluginEntry> = new Map();
 	private hookPipeline: HookPipeline | null = null;
@@ -57,6 +92,10 @@ export class PluginManager {
 		};
 	}
 
+	/**
+	 * Set the email pipeline used when creating plugin contexts.
+	 * Reinitializes routes/hooks if already initialized so ctx.email is available immediately.
+	 */
 	setEmailPipeline(pipeline: EmailPipeline): void {
 		this.factoryOptions.emailPipeline = pipeline;
 		if (this.initialized) {
@@ -64,6 +103,14 @@ export class PluginManager {
 		}
 	}
 
+	// =========================================================================
+	// Plugin Registration
+	// =========================================================================
+
+	/**
+	 * Register a plugin definition
+	 * This resolves the definition and adds it to the manager, but doesn't install it
+	 */
 	register<TStorage extends PluginStorageConfig>(
 		definition: PluginDefinition<TStorage>,
 	): ResolvedPlugin<TStorage> {
@@ -78,17 +125,25 @@ export class PluginManager {
 			state: "registered",
 		});
 
+		// Mark as needing reinitialization
 		this.initialized = false;
 
 		return resolved;
 	}
 
+	/**
+	 * Register multiple plugins
+	 */
 	registerAll(definitions: PluginDefinition[]): void {
 		for (const def of definitions) {
 			this.register(def);
 		}
 	}
 
+	/**
+	 * Unregister a plugin
+	 * Plugin must be inactive or just registered
+	 */
 	unregister(pluginId: string): boolean {
 		const entry = this.plugins.get(pluginId);
 		if (!entry) return false;
@@ -102,6 +157,13 @@ export class PluginManager {
 		return true;
 	}
 
+	// =========================================================================
+	// Plugin Lifecycle
+	// =========================================================================
+
+	/**
+	 * Install a plugin (run install hooks, set up storage)
+	 */
 	async install(pluginId: string): Promise<HookResult<void>[]> {
 		const entry = this.plugins.get(pluginId);
 		if (!entry) {
@@ -114,8 +176,10 @@ export class PluginManager {
 
 		this.ensureInitialized();
 
+		// Run install hooks
 		const results = await this.hookPipeline!.runPluginInstall(pluginId);
 
+		// Check for errors
 		const failed = results.find((r) => !r.success);
 		if (failed) {
 			throw new Error(`Plugin install failed: ${failed.error?.message ?? "Unknown error"}`);
@@ -125,6 +189,9 @@ export class PluginManager {
 		return results;
 	}
 
+	/**
+	 * Activate a plugin (run activate hooks, enable hooks/routes)
+	 */
 	async activate(pluginId: string): Promise<HookResult<void>[]> {
 		const entry = this.plugins.get(pluginId);
 		if (!entry) {
@@ -132,17 +199,20 @@ export class PluginManager {
 		}
 
 		if (entry.state === "active") {
-			return [];
+			return []; // Already active
 		}
 
 		if (entry.state === "registered") {
+			// Auto-install if not installed
 			await this.install(pluginId);
 		}
 
 		this.ensureInitialized();
 
+		// Run activate hooks
 		const results = await this.hookPipeline!.runPluginActivate(pluginId);
 
+		// Check for errors
 		const failed = results.find((r) => !r.success);
 		if (failed) {
 			throw new Error(`Plugin activation failed: ${failed.error?.message ?? "Unknown error"}`);
@@ -150,15 +220,21 @@ export class PluginManager {
 
 		entry.state = "active";
 
+		// Re-enable cron tasks for the activated plugin
 		await setCronTasksEnabled(this.options.db, pluginId, true);
 
+		// Reinitialize pipeline so the newly active plugin's hooks are registered
 		this.reinitialize();
 
+		// Resolve exclusive hooks (new provider may need auto-selection)
 		await this.resolveExclusiveHooks();
 
 		return results;
 	}
 
+	/**
+	 * Deactivate a plugin (run deactivate hooks, disable hooks/routes)
+	 */
 	async deactivate(pluginId: string): Promise<HookResult<void>[]> {
 		const entry = this.plugins.get(pluginId);
 		if (!entry) {
@@ -166,69 +242,106 @@ export class PluginManager {
 		}
 
 		if (entry.state !== "active") {
-			return [];
+			return []; // Not active
 		}
 
 		this.ensureInitialized();
 
+		// Run deactivate hooks
 		const results = await this.hookPipeline!.runPluginDeactivate(pluginId);
 
+		// Disable cron tasks for the deactivated plugin
 		await setCronTasksEnabled(this.options.db, pluginId, false);
 
 		entry.state = "inactive";
 
+		// Reinitialize pipeline so the deactivated plugin's hooks are removed
 		this.reinitialize();
 
+		// Resolve exclusive hooks (deactivated provider may need clearing)
 		await this.resolveExclusiveHooks();
 
 		return results;
 	}
 
+	/**
+	 * Uninstall a plugin (run uninstall hooks, optionally delete data)
+	 */
 	async uninstall(pluginId: string, deleteData: boolean = false): Promise<HookResult<void>[]> {
 		const entry = this.plugins.get(pluginId);
 		if (!entry) {
 			throw new Error(`Plugin "${pluginId}" not found`);
 		}
 
+		// Deactivate first if active (this also resolves exclusive hooks)
 		if (entry.state === "active") {
 			await this.deactivate(pluginId);
 		}
 
 		this.ensureInitialized();
 
+		// Run uninstall hooks
 		const results = await this.hookPipeline!.runPluginUninstall(pluginId, deleteData);
 
+		// Delete all cron tasks for the uninstalled plugin
 		await this.deleteCronTasks(pluginId);
 
+		// Remove from manager
 		this.plugins.delete(pluginId);
 		this.initialized = false;
 
+		// Resolve exclusive hooks after removal
 		await this.resolveExclusiveHooks();
 
 		return results;
 	}
 
+	// =========================================================================
+	// Hook Dispatch
+	// =========================================================================
+
+	/**
+	 * Run content:beforeSave hooks across all active plugins
+	 */
 	async runContentBeforeSave(
 		content: Record<string, unknown>,
 		collection: string,
 		isNew: boolean,
+		id?: string,
+		actor?: ActorInfo,
+		details?: ContentSaveHookDetails,
 	): Promise<{
 		content: Record<string, unknown>;
 		results: HookResult<Record<string, unknown>>[];
 	}> {
 		this.ensureInitialized();
-		return this.hookPipeline!.runContentBeforeSave(content, collection, isNew);
+		return this.hookPipeline!.runContentBeforeSave(content, collection, isNew, id, actor, details);
 	}
 
+	/**
+	 * Run content:afterSave hooks across all active plugins
+	 */
 	async runContentAfterSave(
 		content: Record<string, unknown>,
 		collection: string,
 		isNew: boolean,
+		actor?: ActorInfo,
+		details?: ContentSaveHookDetails,
 	): Promise<HookResult<void>[]> {
 		this.ensureInitialized();
-		return this.hookPipeline!.runContentAfterSave(content, collection, isNew);
+		return this.hookPipeline!.runContentAfterSave(
+			content,
+			collection,
+			isNew,
+			actor,
+			undefined,
+			details,
+		);
 	}
 
+	/**
+	 * Run content:beforeDelete hooks across all active plugins
+	 */
 	async runContentBeforeDelete(
 		id: string,
 		collection: string,
@@ -237,6 +350,9 @@ export class PluginManager {
 		return this.hookPipeline!.runContentBeforeDelete(id, collection);
 	}
 
+	/**
+	 * Run content:afterDelete hooks across all active plugins
+	 */
 	async runContentAfterDelete(
 		id: string,
 		collection: string,
@@ -246,6 +362,9 @@ export class PluginManager {
 		return this.hookPipeline!.runContentAfterDelete(id, collection, permanent);
 	}
 
+	/**
+	 * Run content:afterPublish hooks across all active plugins
+	 */
 	async runContentAfterPublish(
 		content: Record<string, unknown>,
 		collection: string,
@@ -254,6 +373,9 @@ export class PluginManager {
 		return this.hookPipeline!.runContentAfterPublish(content, collection);
 	}
 
+	/**
+	 * Run content:afterUnpublish hooks across all active plugins
+	 */
 	async runContentAfterUnpublish(
 		content: Record<string, unknown>,
 		collection: string,
@@ -262,6 +384,9 @@ export class PluginManager {
 		return this.hookPipeline!.runContentAfterUnpublish(content, collection);
 	}
 
+	/**
+	 * Run content:afterRestore hooks across all active plugins
+	 */
 	async runContentAfterRestore(
 		content: Record<string, unknown>,
 		collection: string,
@@ -270,6 +395,9 @@ export class PluginManager {
 		return this.hookPipeline!.runContentAfterRestore(content, collection);
 	}
 
+	/**
+	 * Run content:afterSchedule hooks across all active plugins
+	 */
 	async runContentAfterSchedule(
 		content: Record<string, unknown>,
 		collection: string,
@@ -278,6 +406,9 @@ export class PluginManager {
 		return this.hookPipeline!.runContentAfterSchedule(content, collection);
 	}
 
+	/**
+	 * Run content:afterUnschedule hooks across all active plugins
+	 */
 	async runContentAfterUnschedule(
 		content: Record<string, unknown>,
 		collection: string,
@@ -286,6 +417,9 @@ export class PluginManager {
 		return this.hookPipeline!.runContentAfterUnschedule(content, collection);
 	}
 
+	/**
+	 * Run media:beforeUpload hooks across all active plugins
+	 */
 	async runMediaBeforeUpload(file: { name: string; type: string; size: number }): Promise<{
 		file: { name: string; type: string; size: number };
 		results: HookResult<{ name: string; type: string; size: number }>[];
@@ -294,11 +428,18 @@ export class PluginManager {
 		return this.hookPipeline!.runMediaBeforeUpload(file);
 	}
 
+	/**
+	 * Run media:afterUpload hooks across all active plugins
+	 */
 	async runMediaAfterUpload(media: MediaItem): Promise<HookResult<void>[]> {
 		this.ensureInitialized();
 		return this.hookPipeline!.runMediaAfterUpload(media);
 	}
 
+	/**
+	 * Invoke the cron hook for a specific plugin (per-plugin dispatch).
+	 * Used as the InvokeCronHookFn callback for CronExecutor.
+	 */
 	async invokeCronHook(pluginId: string, event: CronEvent): Promise<void> {
 		this.ensureInitialized();
 		const result = await this.hookPipeline!.invokeCronHook(pluginId, event);
@@ -307,6 +448,13 @@ export class PluginManager {
 		}
 	}
 
+	// =========================================================================
+	// Route Dispatch
+	// =========================================================================
+
+	/**
+	 * Invoke a plugin route
+	 */
 	async invokeRoute(
 		pluginId: string,
 		routeName: string,
@@ -316,19 +464,35 @@ export class PluginManager {
 		return this.routeRegistry!.invoke(pluginId, routeName, options);
 	}
 
+	/**
+	 * Get all routes for a plugin
+	 */
 	getPluginRoutes(pluginId: string): string[] {
 		this.ensureInitialized();
 		return this.routeRegistry!.getRoutes(pluginId);
 	}
 
+	// =========================================================================
+	// Query Methods
+	// =========================================================================
+
+	/**
+	 * Get a plugin by ID
+	 */
 	getPlugin(pluginId: string): ResolvedPlugin | undefined {
 		return this.plugins.get(pluginId)?.plugin;
 	}
 
+	/**
+	 * Get plugin state
+	 */
 	getPluginState(pluginId: string): PluginState | undefined {
 		return this.plugins.get(pluginId)?.state;
 	}
 
+	/**
+	 * Get all registered plugins
+	 */
 	getAllPlugins(): Array<{ plugin: ResolvedPlugin; state: PluginState }> {
 		return Array.from(this.plugins.values(), (entry) => ({
 			plugin: entry.plugin,
@@ -336,20 +500,36 @@ export class PluginManager {
 		}));
 	}
 
+	/**
+	 * Get all active plugins
+	 */
 	getActivePlugins(): ResolvedPlugin[] {
 		return [...this.plugins.values()]
 			.filter((entry) => entry.state === "active")
 			.map((entry) => entry.plugin);
 	}
 
+	/**
+	 * Check if a plugin exists
+	 */
 	hasPlugin(pluginId: string): boolean {
 		return this.plugins.has(pluginId);
 	}
 
+	/**
+	 * Check if a plugin is active
+	 */
 	isActive(pluginId: string): boolean {
 		return this.plugins.get(pluginId)?.state === "active";
 	}
 
+	// =========================================================================
+	// Exclusive Hooks
+	// =========================================================================
+
+	/**
+	 * Get all plugins that registered a handler for an exclusive hook.
+	 */
 	getExclusiveHookProviders(hookName: string): Array<{ pluginId: string; pluginName: string }> {
 		this.ensureInitialized();
 		return this.hookPipeline!.getExclusiveHookProviders(hookName).map((p) => {
@@ -361,11 +541,18 @@ export class PluginManager {
 		});
 	}
 
+	/**
+	 * Read the selected provider for an exclusive hook from the options table.
+	 */
 	async getExclusiveHookSelection(hookName: string): Promise<string | null> {
 		const optionsRepo = new OptionsRepository(this.options.db);
 		return optionsRepo.get<string>(`${EXCLUSIVE_HOOK_KEY_PREFIX}${hookName}`);
 	}
 
+	/**
+	 * Set the selected provider for an exclusive hook in the options table.
+	 * Pass null to clear the selection.
+	 */
 	async setExclusiveHookSelection(hookName: string, pluginId: string | null): Promise<void> {
 		const optionsRepo = new OptionsRepository(this.options.db);
 		const key = `${EXCLUSIVE_HOOK_KEY_PREFIX}${hookName}`;
@@ -376,6 +563,7 @@ export class PluginManager {
 			return;
 		}
 
+		// Validate plugin exists and is active
 		const entry = this.plugins.get(pluginId);
 		if (!entry) {
 			throw new Error(`Plugin "${pluginId}" not found`);
@@ -388,6 +576,12 @@ export class PluginManager {
 		this.hookPipeline?.setExclusiveSelection(hookName, pluginId);
 	}
 
+	/**
+	 * Resolution algorithm for exclusive hooks.
+	 *
+	 * Delegates to the shared resolveExclusiveHooks() function.
+	 * See hooks.ts for the full algorithm description.
+	 */
 	async resolveExclusiveHooks(preferredHints?: Map<string, string[]>): Promise<void> {
 		this.ensureInitialized();
 
@@ -406,6 +600,10 @@ export class PluginManager {
 		});
 	}
 
+	/**
+	 * Get all exclusive hooks with their providers and current selections.
+	 * Used by the admin API.
+	 */
 	async getExclusiveHooksInfo(): Promise<
 		Array<{
 			hookName: string;
@@ -430,15 +628,26 @@ export class PluginManager {
 		return result;
 	}
 
+	// =========================================================================
+	// Internal Methods
+	// =========================================================================
+
+	/**
+	 * Initialize or reinitialize the hook pipeline and route registry
+	 */
 	private ensureInitialized(): void {
 		if (this.initialized) return;
 
+		// Get all active plugins for hooks
 		const activePlugins = this.getActivePlugins();
 
+		// Create hook pipeline with active plugins
 		this.hookPipeline = new HookPipeline(activePlugins, this.factoryOptions);
 
+		// Create route registry
 		this.routeRegistry = new PluginRouteRegistry(this.factoryOptions);
 
+		// Register routes for active plugins
 		for (const plugin of activePlugins) {
 			this.routeRegistry.register(plugin);
 		}
@@ -446,21 +655,33 @@ export class PluginManager {
 		this.initialized = true;
 	}
 
+	/**
+	 * Force reinitialization (useful after plugin state changes)
+	 */
 	reinitialize(): void {
 		this.initialized = false;
 		this.ensureInitialized();
 	}
 
+	/**
+	 * Delete all cron tasks for a plugin.
+	 * Used during uninstall.
+	 */
 	private async deleteCronTasks(pluginId: string): Promise<void> {
 		try {
 			await sql`
 				DELETE FROM _emdash_cron_tasks
 				WHERE plugin_id = ${pluginId}
 			`.execute(this.options.db);
-		} catch {}
+		} catch {
+			// Cron table may not exist yet (pre-migration). Non-fatal.
+		}
 	}
 }
 
+/**
+ * Create a plugin manager
+ */
 export function createPluginManager(options: PluginManagerOptions): PluginManager {
 	return new PluginManager(options);
 }

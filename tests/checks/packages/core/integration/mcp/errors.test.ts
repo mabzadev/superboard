@@ -1,3 +1,22 @@
+/**
+ * MCP error envelope fidelity tests.
+ *
+ * Specific failure modes (unknown collection, duplicate slug, unknown
+ * field, bad orderBy, etc.) must return discriminated error codes so
+ * callers can act on them programmatically:
+ *
+ *   - Handlers detect known failure shapes and return one of:
+ *     `SLUG_CONFLICT`, `COLLECTION_NOT_FOUND`, `UNKNOWN_FIELD`,
+ *     `INVALID_ORDER_BY`, `VALIDATION_ERROR`.
+ *   - The MCP envelope emits the code as a `[CODE]` prefix on the
+ *     message text and as `_meta.code` for SDK-aware clients.
+ *
+ * Each test asserts:
+ *   (a) the response is `isError: true`
+ *   (b) the code/message names the specific failure, not a generic
+ *       "Failed to ..." string
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -7,6 +26,7 @@ import type { Database } from "../../../../../../packages/core/src/database/type
 import { connectMcpHarness, extractText, type McpHarness } from "../../utils/mcp-runtime.js";
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../../utils/test-db.js";
 
+// Generic placeholders that should NOT survive after the fix.
 const GENERIC_CREATE = /^Failed to create content$/;
 const GENERIC_LIST = /^Failed to list content$/;
 const GENERIC_UPDATE = /^Failed to update content$/;
@@ -38,12 +58,16 @@ describe("MCP error envelope — content_create (bug #3)", () => {
 
 		expect(result.isError).toBe(true);
 		const text = extractText(result);
+		// Message should name the specific failure (collection not found).
 		expect(text).not.toMatch(GENERIC_CREATE);
 		expect(text).not.toMatch(UNKNOWN_ERROR);
+		// Tight match: explicitly the COLLECTION_NOT_FOUND code (or message),
+		// rather than any text that happens to contain "collection".
 		expect(text).toMatch(/COLLECTION_NOT_FOUND|Collection ['"]?nonexistent['"]? not found/i);
 	});
 
 	it("duplicate slug returns a SLUG_CONFLICT-style error", async () => {
+		// Seed an item with a known slug
 		const repo = new ContentRepository(db);
 		await repo.create({
 			type: "post",
@@ -66,6 +90,7 @@ describe("MCP error envelope — content_create (bug #3)", () => {
 		const text = extractText(result);
 		expect(text).not.toMatch(GENERIC_CREATE);
 		expect(text).not.toMatch(UNKNOWN_ERROR);
+		// Either explicit "slug" wording or a UNIQUE/conflict signal.
 		expect(text).toMatch(/slug|unique|conflict|duplicate|exists/i);
 	});
 
@@ -74,6 +99,7 @@ describe("MCP error envelope — content_create (bug #3)", () => {
 			name: "content_create",
 			arguments: {
 				collection: "post",
+				// `nonexistent_field` was never created on the post collection
 				data: { title: "Hello", nonexistent_field: "boom" },
 			},
 		});
@@ -127,6 +153,9 @@ describe("MCP error envelope — content_list (bug #3)", () => {
 		const text = extractText(result);
 		expect(text).not.toMatch(GENERIC_LIST);
 		expect(text).not.toMatch(UNKNOWN_ERROR);
+		// Concrete: response must echo the offending column AND carry a
+		// stable validation-style code. Avoids matching unrelated phrases
+		// that happen to contain "order" or "column".
 		expect(text).toContain("definitely_not_a_column");
 		const meta = (result as { _meta?: { code?: string } })._meta;
 		expect(meta?.code).toBe("VALIDATION_ERROR");
@@ -185,7 +214,12 @@ describe("MCP error envelope — content_update (bug #3)", () => {
 	it("update on missing id returns a NOT_FOUND-style error", async () => {
 		const result = await harness.client.callTool({
 			name: "content_update",
-			arguments: { collection: "post", id: "01NEVEREXISTED", data: { title: "x" } },
+			arguments: {
+				collection: "post",
+				id: "01NEVEREXISTED",
+				data: { title: "x" },
+				_rev: "c3R1Yi1yZXY=",
+			},
 		});
 
 		expect(result.isError).toBe(true);
@@ -242,18 +276,32 @@ describe("MCP error envelope — error code preservation through unwrap()", () =
 		await teardownTestDatabase(db);
 	});
 
+	/**
+	 * The MCP SDK forwards `_meta` on tool results when present — once
+	 * `unwrap()` propagates it, callers can read structured codes
+	 * programmatically. Until then, codes must at least appear in the
+	 * message text so callers can match on a stable token.
+	 */
 	it("a NOT_FOUND error from a handler surfaces 'NOT_FOUND' or equivalent", async () => {
 		const result = await harness.client.callTool({
 			name: "content_get",
 			arguments: { collection: "post", id: "01MISSING" },
 		});
 		expect(result.isError).toBe(true);
+		// Either the structured _meta carries the code, or the message
+		// includes a stable token. Today: only `Content item not found:` —
+		// no machine-readable code.
 		const text = extractText(result);
 		const meta = (result as { _meta?: { code?: string } })._meta;
 		const codeFromMeta = meta?.code;
 		expect(codeFromMeta === "NOT_FOUND" || /\bNOT_FOUND\b/.test(text)).toBe(true);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// F7: error envelope correctly carries codes for SchemaError, McpError,
+// and SDK-thrown auth errors.
+// ---------------------------------------------------------------------------
 
 describe("MCP error envelope — F7 (codes propagated for SchemaError + auth)", () => {
 	let db: Kysely<Database>;
@@ -266,6 +314,7 @@ describe("MCP error envelope — F7 (codes propagated for SchemaError + auth)", 
 
 	it("INSUFFICIENT_SCOPE for a token without the required scope", async () => {
 		db = await setupTestDatabaseWithCollections();
+		// Only grant content:read; content_create needs content:write.
 		harness = await connectMcpHarness({
 			db,
 			userId: "user_admin",
@@ -283,6 +332,9 @@ describe("MCP error envelope — F7 (codes propagated for SchemaError + auth)", 
 	});
 
 	it("backwards compat: content:write token can call menu_create (implicit grant)", async () => {
+		// PATs issued before menus:manage was split out of content:write
+		// must continue to work. Verify the implicit grant flows through
+		// the full MCP stack.
 		db = await setupTestDatabaseWithCollections();
 		harness = await connectMcpHarness({
 			db,
@@ -337,12 +389,18 @@ describe("MCP error envelope — F7 (codes propagated for SchemaError + auth)", 
 			userId: "user_admin",
 			userRole: Role.ADMIN,
 		});
+		// '_emdash_collections' is the prefix used for system tables — that
+		// kind of slug is reserved. Pick a guaranteed reserved slug
+		// (the '_emdash' prefix or e.g. 'media' — see RESERVED_COLLECTION_SLUGS).
 		const result = await harness.client.callTool({
 			name: "schema_create_collection",
 			arguments: { slug: "media", label: "Reserved" },
 		});
 		expect(result.isError).toBe(true);
 		const meta = (result as { _meta?: { code?: string } })._meta;
+		// SchemaError carries `code` directly; respondHandlerError should
+		// forward it. Whichever specific reserved-slug code applies is fine
+		// — just assert it's a stable string that isn't the generic fallback.
 		expect(meta?.code).toBeDefined();
 		expect(meta?.code).not.toBe("INTERNAL_ERROR");
 		expect(meta?.code).not.toBe("");

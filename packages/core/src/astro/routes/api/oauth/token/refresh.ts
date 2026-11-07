@@ -1,3 +1,10 @@
+/**
+ * POST /_emdash/api/oauth/token/refresh
+ *
+ * Exchange a refresh token for a new access token.
+ * This is an unauthenticated endpoint (the caller presents the refresh token).
+ */
+
 import type { APIRoute } from "astro";
 import { z } from "zod";
 

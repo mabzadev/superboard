@@ -1,3 +1,10 @@
+/**
+ * Taxonomy terms list and create endpoint
+ *
+ * GET  /_emdash/api/taxonomies/:name/terms[?locale=xx] - List terms (tree for hierarchical)
+ * POST /_emdash/api/taxonomies/:name/terms              - Create a new term (body may include locale & translationOf)
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -5,9 +12,14 @@ import { apiError, handleError, requireDb, unwrapResult } from "#api/error.js";
 import { handleTermCreate, handleTermList } from "#api/handlers/taxonomies.js";
 import { isParseError, parseBody, parseQuery } from "#api/parse.js";
 import { createTermBody, termListQuery } from "#api/schemas.js";
+import { taxonomyTag } from "#cache/chrome-tags.js";
+import { invalidateRouteCache } from "#cache/route-cache.js";
 
 export const prerender = false;
 
+/**
+ * List all terms for a taxonomy
+ */
 export const GET: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { name } = params;
@@ -34,7 +46,10 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 	}
 };
 
-export const POST: APIRoute = async ({ params, request, locals }) => {
+/**
+ * Create a new term
+ */
+export const POST: APIRoute = async ({ params, request, locals, cache }) => {
 	const { emdash, user } = locals;
 	const { name } = params;
 	if (!name) return apiError("VALIDATION_ERROR", "Taxonomy name required", 400);
@@ -50,6 +65,8 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		if (isParseError(body)) return body;
 
 		const result = await handleTermCreate(emdash.db, name, body);
+		if (!result.success) return unwrapResult(result, 201);
+		await invalidateRouteCache(cache, [taxonomyTag(name)]);
 		return unwrapResult(result, 201);
 	} catch (error) {
 		return handleError(error, "Failed to create term", "TERM_CREATE_ERROR");

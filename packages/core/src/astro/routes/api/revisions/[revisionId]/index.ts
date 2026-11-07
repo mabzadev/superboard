@@ -1,3 +1,10 @@
+/**
+ * Single revision endpoint - injected by EmDash integration
+ *
+ * GET  /_emdash/api/revisions/{revisionId} - Get revision details
+ * POST /_emdash/api/revisions/{revisionId}/restore - Restore revision
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

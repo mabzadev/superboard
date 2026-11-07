@@ -11,13 +11,8 @@ export type IdentityConfig = Record<string, unknown> & {
 	ENABLE_PASSWORD_RESET: boolean;
 	ENABLE_RECOVERY_CODE: boolean;
 	ALLOW_PASSKEY_ENROLLMENT: boolean;
-	ENABLE_ORG: boolean;
-	ENABLE_ORG_GROUP: boolean;
 	ENABLE_USER_ATTRIBUTE: boolean;
-	ENABLE_SAML_SSO_AS_SP: boolean;
-	ENABLE_APP_BANNER: boolean;
 	ENABLE_EMAIL_LOG: boolean;
-	ENABLE_SMS_LOG: boolean;
 	ENABLE_SIGN_IN_LOG: boolean;
 };
 
@@ -31,13 +26,8 @@ export const defaultIdentityConfig: IdentityConfig = {
 	ENABLE_PASSWORD_RESET: true,
 	ENABLE_RECOVERY_CODE: true,
 	ALLOW_PASSKEY_ENROLLMENT: true,
-	ENABLE_ORG: true,
-	ENABLE_ORG_GROUP: true,
 	ENABLE_USER_ATTRIBUTE: true,
-	ENABLE_SAML_SSO_AS_SP: true,
-	ENABLE_APP_BANNER: true,
 	ENABLE_EMAIL_LOG: true,
-	ENABLE_SMS_LOG: true,
 	ENABLE_SIGN_IN_LOG: true,
 };
 

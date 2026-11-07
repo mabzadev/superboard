@@ -583,7 +583,11 @@ async function saveProfile(
 		hourly_quota: body.hourly_quota == null ? null : integer(body.hourly_quota, 0),
 		daily_quota: body.daily_quota == null ? null : integer(body.daily_quota, 0),
 		dkim_selector:
-			body.dkim_selector == null ? null : requiredText(body.dkim_selector, "dkim_selector", 63),
+			body.dkim_selector === undefined
+				? storedSelector(existing)
+				: body.dkim_selector === null
+					? null
+					: requiredText(body.dkim_selector, "dkim_selector", 63),
 		authentication_status: "unverified",
 	};
 	return {
@@ -646,6 +650,9 @@ export async function decryptEmailSender(
 	snapshot: EmailSenderSnapshot,
 ): Promise<EmailSmtpSecretConfig> {
 	return decryptJson<EmailSmtpSecretConfig>(encryptionKey(env), snapshot.encrypted_config);
+}
+function storedSelector(row: ProfileRow | null) {
+	return typeof row?.dkim_selector === "string" && row.dkim_selector ? row.dkim_selector : null;
 }
 function serializeProfile(row: ProfileRow) {
 	const { encrypted_config, public_config_json, ...safe } = row;

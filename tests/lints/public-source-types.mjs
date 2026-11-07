@@ -12,6 +12,7 @@ const RUNTIME_COUPLED = new Set([
 	"./ui/comments",
 	"./auth/providers/github-admin",
 	"./auth/providers/google-admin",
+	"./auth/providers/microsoft-admin",
 ]);
 
 const RAW_SOURCE = /(?<!\.d)\.tsx?$/;

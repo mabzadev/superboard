@@ -1,10 +1,11 @@
 import { parseCompiledFrontReleaseJson } from "@superboard/supbrd-core";
-import type { APIContext } from "astro";
+import type { APIContext, MiddlewareNext } from "astro";
 import { applySeed } from "emdash";
 import { expect, test } from "vitest";
 
 import { withViewConnections } from "../../../../../apps/site/src/lib/view-connections.js";
 import { saveViewPluginSelection } from "../../../../../apps/site/src/lib/view-plugin-selection.js";
+import { PUT as updateContent } from "../../../../../packages/core/src/astro/routes/api/content/[collection]/[id].js";
 import releaseJson from "../../../../../scripts/config/superboard-parity-release.json";
 import { createCmsApi } from "./retirement-api-cms.js";
 
@@ -66,7 +67,9 @@ test("selecting a plugin preserves View ownership in storage and rejects incompa
 				params: { collection: "views", id: "plugin-choice-test" },
 				locals: { emdash: cms.runtime, user: { id: "operator-1", role: 50 } },
 			} as unknown as APIContext;
-			return saveViewPluginSelection(context, release);
+			const next: MiddlewareNext = async (payload) =>
+				updateContent({ ...context, request: payload instanceof Request ? payload : request });
+			return saveViewPluginSelection(context, next, release);
 		};
 		const response = await save("superboard-acquisition", "After");
 		expect(response?.status).toBe(200);

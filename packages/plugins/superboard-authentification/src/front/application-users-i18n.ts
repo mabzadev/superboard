@@ -30,7 +30,7 @@ const french: Record<string, string> = {
 		"L’identité est disponible. Les détails des achats sont temporairement indisponibles : {message}",
 	"User sheet": "Fiche utilisateur",
 	"View in Communication › Audience": "Voir dans Communication › Audience",
-	"Authentication emails and SMS": "E-mails et SMS d’authentification",
+	"Authentication emails and sign-ins": "E-mails d’authentification et connexions",
 	"View in Support": "Voir dans le Support",
 	"View events": "Voir les événements",
 	"Unable to load users": "Impossible de charger les utilisateurs",

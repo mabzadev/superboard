@@ -8,10 +8,14 @@ export interface BooleanOptions {
 	helpText?: string;
 }
 
+/**
+ * Boolean field - checkbox/toggle
+ */
 export function boolean(options: BooleanOptions = {}): FieldDefinition<boolean> {
 	const boolSchema = z.boolean();
 
-	const schema: z.ZodTypeAny =
+	// Apply default
+	const schema: z.ZodType =
 		options.default !== undefined ? boolSchema.default(options.default) : boolSchema;
 
 	const ui: FieldUIHints = {

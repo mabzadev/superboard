@@ -5,6 +5,14 @@ import { isValidFocalPointUpdate } from "#media/focal-point.js";
 import { cursorPaginationQuery } from "./common.js";
 import { mediaUsageSummarySchema } from "./media-usage.js";
 
+// ---------------------------------------------------------------------------
+// Media: Input schemas
+// ---------------------------------------------------------------------------
+
+/**
+ * Accepts a comma-separated string (from URL query params) or an array of
+ * strings (from JSON body or programmatic use) and normalises to string[].
+ */
 const mimeTypeFilter = z
 	.union([z.string(), z.array(z.string())])
 	.transform((v) => {
@@ -24,6 +32,7 @@ export const mediaListQuery = cursorPaginationQuery
 				description:
 					"Filter by a media folder ID. Use `unfiled` for the Main library; omit for all media.",
 			}),
+		/** Case-insensitive filename substring search (also matches extensions). */
 		q: z.string().trim().min(1).max(200).optional(),
 		includeUsage: z.literal("1").optional().meta({
 			description: "Include a coverage-aware usage summary on each media item",
@@ -90,6 +99,7 @@ export const mediaFolderBody = z
 	.object({ name: mediaFolderNameSchema })
 	.meta({ id: "MediaFolderBody" });
 
+/** Default maximum allowed file upload size (50 MB). */
 export const DEFAULT_MAX_UPLOAD_SIZE = 50 * 1024 * 1024;
 
 export function formatFileSize(bytes: number): string {
@@ -98,6 +108,8 @@ export function formatFileSize(bytes: number): string {
 	return `${Math.floor(bytes / 1024 / 1024)}MB`;
 }
 
+// Matches a full MIME type (type/subtype) with an optional semicolon-delimited
+// parameter section. Forbids CR/LF to prevent header injection.
 export const CONTENT_TYPE_RE = /^[a-z0-9][a-z0-9!#$&^_+\-.]*\/[a-z0-9!#$&^_+\-.]+(\s*;[^\r\n]*)?$/i;
 
 export function mediaUploadUrlBody(maxSize: number) {
@@ -118,9 +130,62 @@ export function mediaUploadUrlBody(maxSize: number) {
 				.max(maxSize, `File size must not exceed ${formatFileSize(maxSize)}`),
 			contentHash: z.string().optional(),
 			fieldId: z.string().optional(),
+			deduplicate: z.boolean().optional(),
+			ensureUniqueFilename: z.boolean().optional(),
+			folderId: mediaFolderIdSchema.nullable().optional(),
 		})
 		.meta({ id: "MediaUploadUrlBody" });
 }
+
+export const mediaUploadDeduplicateForm = z
+	.enum(["true", "false"])
+	.default("true")
+	.transform((value) => value === "true");
+
+export const mediaUploadEnsureUniqueFilenameForm = z
+	.enum(["true", "false"])
+	.default("false")
+	.transform((value) => value === "true");
+
+const optionalMediaTextForm = z
+	.string()
+	.optional()
+	.transform((value) => (value === "" ? undefined : value));
+
+export const mediaUploadMetadataForm = z.object({
+	alt: optionalMediaTextForm,
+	caption: optionalMediaTextForm,
+});
+
+export const mediaReplaceMetadataForm = z.object({
+	width: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+	height: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+});
+
+const binaryFileSchema = z.string().meta({ format: "binary" });
+
+export const mediaDirectUploadBody = z
+	.object({
+		file: binaryFileSchema,
+		alt: z.string().optional(),
+		caption: z.string().optional(),
+		width: z.string().optional(),
+		height: z.string().optional(),
+		thumbnail: binaryFileSchema.optional(),
+		fieldId: z.string().optional(),
+		deduplicate: z.enum(["true", "false"]).optional(),
+		ensureUniqueFilename: z.enum(["true", "false"]).optional(),
+		folderId: z.union([mediaFolderIdSchema, z.literal("unfiled")]).optional(),
+	})
+	.meta({ id: "MediaDirectUploadBody" });
+
+export const mediaReplaceBody = z
+	.object({
+		file: binaryFileSchema,
+		width: z.number().int().positive(),
+		height: z.number().int().positive(),
+	})
+	.meta({ id: "MediaReplaceBody" });
 
 export const mediaConfirmBody = z
 	.object({
@@ -136,6 +201,10 @@ export const mediaProviderListQuery = cursorPaginationQuery
 		mimeType: mimeTypeFilter,
 	})
 	.meta({ id: "MediaProviderListQuery" });
+
+// ---------------------------------------------------------------------------
+// Media: Response schemas
+// ---------------------------------------------------------------------------
 
 const mediaStatusSchema = z.enum(["pending", "ready", "failed"]);
 
@@ -231,6 +300,17 @@ export const mediaConfirmResponseSchema = z
 		item: mediaItemSchema.extend({ url: z.string() }),
 	})
 	.meta({ id: "MediaConfirmResponse" });
+
+export const mediaUploadResponseSchema = z
+	.object({
+		item: mediaItemSchema.extend({ url: z.string() }),
+		deduplicated: z.literal(true).optional(),
+	})
+	.meta({ id: "MediaUploadResponse" });
+
+export const mediaReplaceResponseSchema = z
+	.object({ item: mediaItemSchema.extend({ url: z.string() }) })
+	.meta({ id: "MediaReplaceResponse" });
 
 export const mediaStreamUploadResponseSchema = z
 	.object({

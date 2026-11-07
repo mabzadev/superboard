@@ -1,8 +1,8 @@
-import Database from "better-sqlite3";
 import { Kysely, SqliteDialect, sql } from "kysely";
 import { describe, expect, it } from "vitest";
 
 import { kyselyLogOption } from "../../../../../packages/core/src/database/instrumentation.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { requestCached } from "../../../../../packages/core/src/request-cache.js";
 import {
 	createRequestMetrics,

@@ -37,6 +37,7 @@ export function evaluateReleaseWithdrawal(
 	return evaluateReleaseWithdrawalCore(input);
 }
 
+/** Evaluates labels loaded from a store that authenticated them before persistence. */
 export function evaluateHydratedReleaseWithdrawal(
 	input: ReleaseWithdrawalInput<ListingLabelEvent>,
 ): ReleaseWithdrawalResult {

@@ -1,3 +1,11 @@
+/**
+ * Single media item endpoint
+ *
+ * GET /_emdash/api/media/:id - Get media item
+ * PUT /_emdash/api/media/:id - Update media metadata
+ * DELETE /_emdash/api/media/:id - Delete media item
+ */
+
 import type { APIRoute } from "astro";
 
 import { canReadMediaUsageCount, requireOwnerPerm, requirePerm } from "#api/authorize.js";
@@ -5,11 +13,11 @@ import { apiError, apiSuccess, handleError, unwrapResult } from "#api/error.js";
 import { handleMediaUsageSummaries } from "#api/handlers/media-usage.js";
 import { isParseError, parseBody, parseQuery } from "#api/parse.js";
 import { mediaGetQuery, mediaUpdateBody } from "#api/schemas.js";
-import { MediaRepository } from "#db/repositories/media.js";
-import { removeUploadAttempt } from "#media/upload-attempts.js";
-
 export const prerender = false;
 
+/**
+ * Get media item
+ */
 export const GET: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { id } = params;
@@ -39,10 +47,16 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 	return apiSuccess({ item: { ...result.data.item, usage } });
 };
 
+/**
+ * Update media metadata
+ *
+ * Authors can edit their own media; editors+ can edit any.
+ */
 export const PUT: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { id } = params;
 
+	// Minimum permission gate — ownership checked below
 	const editDenied = requirePerm(user, "media:edit_own");
 	if (editDenied) return editDenied;
 
@@ -55,6 +69,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 	}
 
 	try {
+		// Fetch media item for ownership check
 		const getResult = await emdash.handleMediaGet(id);
 		if (!getResult.success || !getResult.data?.item) {
 			return apiError("NOT_FOUND", "Media item not found", 404);
@@ -62,6 +77,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
 		const media = getResult.data.item;
 
+		// Ownership check: authors can edit own, editors+ can edit any
 		const ownerDenied = requireOwnerPerm(user, media.authorId, "media:edit_own", "media:edit_any");
 		if (ownerDenied) return ownerDenied;
 
@@ -84,10 +100,16 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 	}
 };
 
+/**
+ * Delete media item
+ *
+ * Authors can delete their own media; editors+ can delete any.
+ */
 export const DELETE: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const { id } = params;
 
+	// Minimum permission gate — ownership checked below
 	const deleteDenied = requirePerm(user, "media:delete_own");
 	if (deleteDenied) return deleteDenied;
 
@@ -100,6 +122,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 	}
 
 	try {
+		// Fetch media item for ownership check and storage key
 		const getResult = await emdash.handleMediaGet(id);
 		if (!getResult.success || !getResult.data?.item) {
 			return apiError("NOT_FOUND", "Media item not found", 404);
@@ -107,6 +130,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
 		const media = getResult.data.item;
 
+		// Ownership check: authors can delete own, editors+ can delete any
 		const ownerDenied = requireOwnerPerm(
 			user,
 			media.authorId,
@@ -115,25 +139,20 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 		);
 		if (ownerDenied) return ownerDenied;
 
+		// Storage deletion and site-settings cache invalidation happen in
+		// `EmDashRuntime.handleMediaDelete` so the MCP tool inherits them.
 		const result = await emdash.handleMediaDelete(id);
 		if (!result.success) return unwrapResult(result);
 		if (
 			typeof result.data !== "object" ||
 			result.data === null ||
-			!("storageKey" in result.data) ||
-			typeof result.data.storageKey !== "string"
+			!("storageDeleted" in result.data) ||
+			typeof result.data.storageDeleted !== "boolean"
 		) {
 			return apiError("MEDIA_DELETE_ERROR", "Failed to delete media", 500);
 		}
 
-		if (emdash.storage) {
-			const repo = new MediaRepository(emdash.db);
-			await removeUploadAttempt(emdash.storage, repo, result.data.storageKey, {
-				allowUntracked: true,
-			});
-		}
-
-		return apiSuccess({ deleted: true });
+		return apiSuccess({ deleted: true, storageDeleted: result.data.storageDeleted });
 	} catch (error) {
 		return handleError(error, "Failed to delete media", "MEDIA_DELETE_ERROR");
 	}

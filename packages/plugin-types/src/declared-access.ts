@@ -11,16 +11,36 @@ export type CanonicalJsonValue =
 export type CanonicalAccessConstraints = Readonly<Record<string, CanonicalJsonValue>>;
 
 export interface CanonicalDeclaredAccess {
+	readonly admin?: Readonly<{
+		editorDraftPatch?: CanonicalAccessConstraints;
+		editorDraftRead?: CanonicalAccessConstraints;
+	}>;
+	readonly comments?: Readonly<{
+		moderate?: CanonicalAccessConstraints;
+		read?: CanonicalAccessConstraints;
+	}>;
 	readonly content?: Readonly<{
+		policy?: CanonicalAccessConstraints;
+		publish?: CanonicalAccessConstraints;
+		read?: CanonicalAccessConstraints;
+		revisionsRead?: CanonicalAccessConstraints;
+		restore?: CanonicalAccessConstraints;
+		write?: CanonicalAccessConstraints;
+	}>;
+	readonly schema?: Readonly<{ read?: CanonicalAccessConstraints }>;
+	readonly taxonomies?: Readonly<{
 		read?: CanonicalAccessConstraints;
 		write?: CanonicalAccessConstraints;
 	}>;
+	readonly bylines?: Readonly<{ read?: CanonicalAccessConstraints }>;
 	readonly email?: Readonly<{
 		events?: CanonicalAccessConstraints;
 		send?: CanonicalAccessConstraints;
 		transport?: CanonicalAccessConstraints;
 	}>;
 	readonly media?: Readonly<{
+		bytesRead?: CanonicalAccessConstraints;
+		metadataWrite?: CanonicalAccessConstraints;
 		read?: CanonicalAccessConstraints;
 		write?: CanonicalAccessConstraints;
 	}>;
@@ -28,6 +48,10 @@ export interface CanonicalDeclaredAccess {
 		request?: CanonicalAccessConstraints & { readonly allowedHosts?: readonly string[] };
 	}>;
 	readonly page?: Readonly<{ fragments?: CanonicalAccessConstraints }>;
+	readonly redirects?: Readonly<{
+		read?: CanonicalAccessConstraints;
+		write?: CanonicalAccessConstraints;
+	}>;
 	readonly users?: Readonly<{ read?: CanonicalAccessConstraints }>;
 }
 
@@ -172,10 +196,21 @@ function normalizeDeclaredAccess(value: DeclaredAccess): CanonicalObject {
 			}
 			defineDataProperty(normalizedOperations, operation, Object.freeze(normalizedConstraints));
 		}
+		if (category === "comments" && Object.hasOwn(normalizedOperations, "moderate")) {
+			normalizedOperations.read ??= Object.freeze({});
+		}
 		if (
-			(category === "content" || category === "media") &&
-			Object.hasOwn(normalizedOperations, "write")
+			(((category === "content" ||
+				category === "media" ||
+				category === "redirects" ||
+				category === "taxonomies") &&
+				Object.hasOwn(normalizedOperations, "write")) ||
+				(category === "content" && Object.hasOwn(normalizedOperations, "publish"))) &&
+			!Object.hasOwn(normalizedOperations, "read")
 		) {
+			normalizedOperations.read = Object.freeze({});
+		}
+		if (category === "content" && Object.hasOwn(normalizedOperations, "revisionsRead")) {
 			normalizedOperations.read ??= Object.freeze({});
 		}
 		defineDataProperty(
@@ -194,6 +229,10 @@ function normalizeDeclaredAccess(value: DeclaredAccess): CanonicalObject {
 	return Object.freeze(output);
 }
 
+/**
+ * Returns an immutable, implication-closed declared-access value with recursively
+ * sorted keys and canonical host sets. Non-JSON runtime values throw TypeError.
+ */
 export function canonicalizeDeclaredAccess(value: DeclaredAccess): CanonicalDeclaredAccess {
 	return normalizeDeclaredAccess(value);
 }
@@ -385,6 +424,10 @@ export function isDeclaredAccessEscalation(
 	return diffDeclaredAccess(previous, next).escalation;
 }
 
+/**
+ * Returns the canonical JSON preimage for a declared-access digest. The format
+ * is domain-separated and versioned; callers choose and apply the hash.
+ */
 export function declaredAccessDigestInput(value: DeclaredAccess): string {
 	return `{"declaredAccess":${canonicalString(value)},"domain":${JSON.stringify(DIGEST_DOMAIN)},"version":${DIGEST_VERSION}}`;
 }

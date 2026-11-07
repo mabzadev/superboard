@@ -6,6 +6,8 @@ import { Progress } from "@superboard/front-ui/ui/progress.js";
 import { Check, ChevronLeft, ChevronRight, Circle, Save } from "lucide-react";
 import React, { lazy, Suspense, useCallback, useRef } from "react";
 
+import { useSdkI18n } from "../../sdk-i18n.js";
+
 function useNativeClick(handler: (() => void) | undefined) {
 	const handlerRef = useRef(handler);
 	handlerRef.current = handler;
@@ -144,18 +146,19 @@ export function WizardSidebar({
 	onStepClick: (step: number) => void;
 	onOverview: () => void;
 }) {
+	const { t } = useSdkI18n();
 	const completedCount = stepCompleted.filter(Boolean).length;
 	const progressPercent = Math.round((completedCount / steps.length) * 100);
 
 	return (
-		<div className="w-[280px] shrink-0 bg-sidebar/50 border-r border-sidebar-border flex flex-col">
+		<div className="w-[280px] shrink-0 bg-sidebar/50 border-e border-sidebar-border flex flex-col">
 			<div className="px-4 pt-5 pb-4 flex flex-col gap-3">
 				<div className="flex flex-col gap-0.5">
 					<span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 						{platformLabel}
 					</span>
 					<span className="text-xs text-muted-foreground">
-						{completedCount}/{steps.length} complete
+						{t("sidebar.complete", { count: completedCount, total: steps.length })}
 					</span>
 				</div>
 				<Progress value={progressPercent} className="h-1.5" indicatorClassName="bg-valid-green" />
@@ -176,7 +179,7 @@ export function WizardSidebar({
 								disabled={!isAccessible}
 								aria-current={isActive ? "step" : undefined}
 								className={cn(
-									"flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors w-full",
+									"flex items-center gap-2.5 px-3 py-2 rounded-lg text-start transition-colors w-full",
 									isActive
 										? "bg-accent"
 										: isAccessible
@@ -206,7 +209,7 @@ export function WizardSidebar({
 										{step.name}
 									</span>
 									{step.optional && (
-										<span className="text-[10px] text-muted-foreground/70">Optional</span>
+										<span className="text-[10px] text-muted-foreground/70">{t("optional")}</span>
 									)}
 								</div>
 							</button>
@@ -218,7 +221,7 @@ export function WizardSidebar({
 			{sdkConfigured && (
 				<div className="px-3 pb-3">
 					<Button variant="outline" size="sm" className="w-full text-xs" onClick={onOverview}>
-						Exit guide
+						{t("sidebar.exit")}
 					</Button>
 				</div>
 			)}
@@ -251,6 +254,7 @@ export function StepNavigation({
 	onSkip?: () => void;
 	onFinish: () => void;
 }) {
+	const { t } = useSdkI18n();
 	const isLastStep = currentStep === totalSteps - 1;
 
 	const backRef = useNativeClick(onBack);
@@ -264,44 +268,44 @@ export function StepNavigation({
 		<div className="border-t border-sidebar-border bg-card px-6 py-3 flex items-center justify-between">
 			<div>
 				{currentStep > 0 && (
-					<Button variant="outline" size="sm" className="pl-2 pr-4" ref={backRef}>
-						<ChevronLeft className="h-3.5 w-3.5" />
-						Back
+					<Button variant="outline" size="sm" className="ps-2 pe-4" ref={backRef}>
+						<ChevronLeft className="h-3.5 w-3.5 rtl:-scale-x-100" />
+						{t("nav.back")}
 					</Button>
 				)}
 			</div>
 			<span className="text-xs text-muted-foreground">
-				Step {currentStep + 1} of {totalSteps}
+				{t("nav.step", { current: currentStep + 1, total: totalSteps })}
 			</span>
 			<div className="flex items-center gap-2">
 				{isOptional && onSkip && (
 					<Button variant="ghost" size="sm" ref={skipRef}>
-						Skip
+						{t("nav.skip")}
 					</Button>
 				)}
 				{isLastStep ? (
-					<Button size="sm" className="pl-3 pr-4" disabled={isSaving} ref={finishRef}>
+					<Button size="sm" className="ps-3 pe-4" disabled={isSaving} ref={finishRef}>
 						{isInteractive && hasChanges ? (
 							<>
 								<Save className="h-3.5 w-3.5" />
-								{isSaving ? "Saving…" : "Save & Finish"}
+								{t(isSaving ? "nav.saving" : "nav.saveFinish")}
 							</>
 						) : (
 							<>
 								<Check className="h-3.5 w-3.5" />
-								Finish Setup
+								{t("nav.finish")}
 							</>
 						)}
 					</Button>
 				) : isInteractive && hasChanges ? (
-					<Button size="sm" className="pl-3 pr-4" disabled={isSaving} ref={saveAndContinueRef}>
+					<Button size="sm" className="ps-3 pe-4" disabled={isSaving} ref={saveAndContinueRef}>
 						<Save className="h-3.5 w-3.5" />
-						{isSaving ? "Saving…" : "Save & Continue"}
+						{t(isSaving ? "nav.saving" : "nav.saveContinue")}
 					</Button>
 				) : (
-					<Button size="sm" className="pl-3 pr-4" ref={continueRef}>
-						Continue
-						<ChevronRight className="h-3.5 w-3.5" />
+					<Button size="sm" className="ps-3 pe-4" ref={continueRef}>
+						{t("nav.continue")}
+						<ChevronRight className="h-3.5 w-3.5 rtl:-scale-x-100" />
 					</Button>
 				)}
 			</div>

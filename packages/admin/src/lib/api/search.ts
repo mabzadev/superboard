@@ -1,3 +1,7 @@
+/**
+ * Search enable/disable APIs
+ */
+
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -10,6 +14,9 @@ export interface SearchEnableResult {
 	indexed?: number;
 }
 
+/**
+ * Enable or disable search for a collection
+ */
 export async function setSearchEnabled(
 	collection: string,
 	enabled: boolean,

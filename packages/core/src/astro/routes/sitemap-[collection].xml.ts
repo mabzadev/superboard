@@ -1,12 +1,33 @@
+/**
+ * Per-collection sitemap endpoint
+ *
+ * GET /sitemap-{collection}.xml - First page of a single collection's sitemap.
+ * GET /sitemap-{collection}-{n}.xml - Page n (2 and up) of that sitemap.
+ *
+ * Uses the collection's url_pattern to build URLs. Falls back to
+ * /{collection}/{slug} when no pattern is configured.
+ *
+ * i18n behaviour: when Astro i18n is enabled, the locale prefix is
+ * applied via Astro's own `getRelativeLocaleUrl` (which honours
+ * `prefixDefaultLocale`, custom `path` mappings, and other `routing`
+ * config). Each translation row is emitted as its own `<url>` with
+ * `<xhtml:link rel="alternate" hreflang="...">` entries pointing to
+ * its siblings (grouped by `translation_group`). The default-locale
+ * variant is also linked as `hreflang="x-default"`.
+ */
+
 import type { APIRoute } from "astro";
+// @ts-ignore - virtual module
+import virtualConfig from "virtual:emdash/config";
 
 import { handleSitemapData } from "#api/handlers/seo.js";
 import { getPublicOrigin } from "#api/public-url.js";
 import { getSiteSettingsWithDb } from "#settings/index.js";
 
 import { getI18nConfig, isI18nEnabled } from "../../i18n/config.js";
-import { interpolateUrlPattern, localizePath } from "../../i18n/resolve.js";
+import { resolveLocalizedContentRoutePath } from "../../i18n/resolve.js";
 import { buildSeoImageUrl } from "../../seo/media-url.js";
+import { parseCollectionSitemapName } from "../../seo/sitemap-name.js";
 
 export const prerender = false;
 
@@ -19,9 +40,19 @@ const APOS_RE = /'/g;
 
 export const GET: APIRoute = async ({ params, locals, url }) => {
 	const { emdash } = locals;
-	const collectionSlug = params.collection;
 
-	if (!emdash?.db || !collectionSlug) {
+	// The middleware skips runtime setup for names no collection can have, so
+	// this check must run before the configuration check below.
+	const parsed = params.collection ? parseCollectionSitemapName(params.collection) : null;
+	if (!parsed) {
+		return new Response("<!-- Sitemap not found -->", {
+			status: 404,
+			headers: { "Content-Type": "application/xml" },
+		});
+	}
+	const { collection: collectionSlug, page } = parsed;
+
+	if (!emdash?.db) {
 		return new Response("<!-- EmDash not configured -->", {
 			status: 500,
 			headers: { "Content-Type": "application/xml" },
@@ -35,7 +66,7 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 			"",
 		);
 
-		const result = await handleSitemapData(emdash.db, collectionSlug);
+		const result = await handleSitemapData(emdash.db, collectionSlug, { page });
 
 		if (!result.success || !result.data) {
 			return new Response("<!-- Failed to generate sitemap -->", {
@@ -55,6 +86,9 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 		const i18nEnabled = isI18nEnabled();
 		const i18nConfig = getI18nConfig();
 
+		// Group entries by `translation_group` so each <url> can advertise
+		// its sibling translations via xhtml:link. Rows without a group
+		// (legacy/single-locale data) are emitted individually.
 		type Entry = (typeof col.entries)[number];
 		const groups = new Map<string, Entry[]>();
 		const ungrouped: Entry[] = [];
@@ -67,18 +101,40 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 				ungrouped.push(entry);
 			}
 		}
+		// Translations listed on other pages still count as alternates here.
+		const alternatesByGroup = new Map<string, Entry[]>();
+		const all = [...col.entries, ...col.translations].toSorted((a, b) =>
+			a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+		);
+		for (const entry of all) {
+			if (!i18nEnabled || !entry.translationGroup) continue;
+			const list = alternatesByGroup.get(entry.translationGroup);
+			if (list) list.push(entry);
+			else alternatesByGroup.set(entry.translationGroup, [entry]);
+		}
 
+		// Resolve every URL up-front so we can reference sibling URLs
+		// while emitting hreflang alternates without re-resolving.
+		// `localizePath` returns `null` when the row's locale isn't in
+		// the configured `i18n.locales` list -- the site can't serve a
+		// route for it, so the entry is dropped from the sitemap and
+		// omitted from sibling alternates.
 		const urlByEntry = new Map<string, string | null>();
 		const resolveEntryUrl = async (entry: Entry): Promise<string | null> => {
 			if (urlByEntry.has(entry.id)) return urlByEntry.get(entry.id) ?? null;
-			const path = interpolateUrlPattern({
+			const absolutePath = await resolveLocalizedContentRoutePath({
 				pattern: col.urlPattern,
 				collection: col.collection,
 				slug: entry.slug || entry.id,
 				id: entry.id,
+				// Published date keeps date-token permalinks stable across edits;
+				// no updatedAt fallback — tokens stay literal without a publish
+				// date, consistent with the resolver's documented behavior.
+				date: entry.publishedAt,
+				locale: entry.locale,
+				trailingSlash: virtualConfig?.trailingSlash,
 			});
-			const localized = await localizePath(path, entry.locale);
-			const absolute = localized === null ? null : `${siteUrl}${localized}`;
+			const absolute = absolutePath === null ? null : `${siteUrl}${absolutePath}`;
 			urlByEntry.set(entry.id, absolute);
 			return absolute;
 		};
@@ -93,12 +149,18 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 
 		const writeUrl = async (entry: Entry, siblings: Entry[] | null) => {
 			const loc = await resolveEntryUrl(entry);
+			// Skip rows whose locale isn't in the configured `i18n.locales`
+			// list. Linking to a route the site can't serve is worse than
+			// no link at all (search engines hit a 404 and downrank).
 			if (loc === null) return;
 
 			lines.push("  <url>");
 			lines.push(`    <loc>${escapeXml(loc)}</loc>`);
 			lines.push(`    <lastmod>${escapeXml(entry.updatedAt)}</lastmod>`);
 
+			// Google image sitemap extension: advertise the entry's SEO
+			// image (the same "preferred image" used for og:image) so it
+			// can be discovered and indexed for Google Images.
 			if (entry.image) {
 				const imageLoc = buildSeoImageUrl(entry.image, siteUrl);
 				lines.push("    <image:image>");
@@ -108,6 +170,9 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 
 			const alternateEntries = siblings ?? (useXhtml ? [entry] : null);
 			if (useXhtml && alternateEntries) {
+				// Emit one xhtml:link per sibling (including self -- Google
+				// recommends including the page's own hreflang annotation).
+				// Siblings with unroutable locales are skipped here too.
 				for (const sib of alternateEntries) {
 					const sibLoc = await resolveEntryUrl(sib);
 					if (sibLoc === null) continue;
@@ -116,6 +181,8 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 					);
 				}
 
+				// x-default: prefer the default-locale sibling, otherwise
+				// the first sibling with a routable URL (siblings are sorted by ID).
 				const defaultSibling =
 					i18nConfig && alternateEntries.find((s) => s.locale === i18nConfig.defaultLocale);
 				let xDefaultLoc: string | null = null;
@@ -141,9 +208,10 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 			lines.push("  </url>");
 		};
 
-		for (const siblings of groups.values()) {
+		for (const [group, siblings] of groups) {
+			const alternates = alternatesByGroup.get(group) ?? siblings;
 			for (const entry of siblings) {
-				await writeUrl(entry, siblings);
+				await writeUrl(entry, alternates);
 			}
 		}
 		for (const entry of ungrouped) {
@@ -167,6 +235,7 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 	}
 };
 
+/** Escape special XML characters in a string */
 function escapeXml(str: string): string {
 	return str
 		.replace(AMP_RE, "&amp;")

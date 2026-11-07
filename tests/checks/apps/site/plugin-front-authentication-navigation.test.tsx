@@ -94,7 +94,7 @@ async function click(label: string) {
 	});
 }
 
-test("settings tabs preserve unsaved fields and follow browser navigation", async () => {
+test("settings tabs keep edits while switching and follow browser navigation", async () => {
 	await render();
 	await vi.waitFor(
 		() => expect(container.querySelector("#setting-EMAIL_SENDER_NAME")).not.toBeNull(),
@@ -112,8 +112,7 @@ test("settings tabs preserve unsaved fields and follow browser navigation", asyn
 	await click("Connexion");
 	expect(location.search).toContain("tab=sign-in");
 	expect(container.querySelector("#setting-EMAIL_SENDER_NAME")).toBeNull();
-	expect(container.querySelector("#setting-AUTHORIZATION_CODE_EXPIRES_IN")).not.toBeNull();
-	expect(container.querySelector("#setting-GOOGLE_AUTH_CLIENT_ID")).not.toBeNull();
+	expect(container.querySelector("#setting-ACCOUNT_LOCKOUT_THRESHOLD")).not.toBeNull();
 	await act(async () => {
 		history.replaceState({}, "", "/auth/settings?lang=fr&tab=appearance");
 		dispatchEvent(new PopStateEvent("popstate"));
@@ -121,17 +120,22 @@ test("settings tabs preserve unsaved fields and follow browser navigation", asyn
 	expect(container.querySelector<HTMLInputElement>("#setting-EMAIL_SENDER_NAME")?.value).toBe(
 		"Unsaved name",
 	);
-	expect(api.put).not.toHaveBeenCalled();
 });
 
-test("Settings has four tabs and former tab links open their new home", async () => {
+test("Settings has five tabs and former tab links open their new home", async () => {
 	history.replaceState({}, "", "/auth/settings?lang=fr&tab=user-attributes");
 	await render();
 	const labels = Array.from(
 		container.querySelectorAll("nav button"),
 		(button) => button.textContent ?? "",
 	);
-	expect(labels).toEqual(["Connexion", "Contrôle d’accès", "Utilisateurs et champs", "Apparence"]);
+	expect(labels).toEqual([
+		"Connexion",
+		"Contrôle d’accès",
+		"Utilisateurs et champs",
+		"Apparence",
+		"Avancé",
+	]);
 	expect(container.querySelector('nav [aria-pressed="true"]')?.textContent).toBe(
 		"Utilisateurs et champs",
 	);

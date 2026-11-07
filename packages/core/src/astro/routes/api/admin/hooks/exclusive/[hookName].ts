@@ -1,3 +1,13 @@
+/**
+ * Exclusive hook selection endpoint
+ *
+ * PUT /_emdash/api/admin/hooks/exclusive/:hookName
+ *
+ * Sets or clears the selected provider for an exclusive hook.
+ * Body: { pluginId: string | null }
+ * Requires settings:manage permission.
+ */
+
 import type { APIRoute } from "astro";
 import { z } from "zod";
 
@@ -8,6 +18,7 @@ import { OptionsRepository } from "#db/repositories/options.js";
 
 export const prerender = false;
 
+/** Hook name format: namespace:action (e.g., "content:beforeSave") */
 const HOOK_NAME_RE = /^[a-z]+:[a-zA-Z]+$/;
 
 const setSelectionSchema = z.object({
@@ -29,6 +40,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 		return apiError("VALIDATION_ERROR", "Hook name is required", 400);
 	}
 
+	// Validate hook name format: must be namespace:action (e.g., "content:beforeSave")
 	if (!HOOK_NAME_RE.test(hookName)) {
 		return apiError("VALIDATION_ERROR", "Invalid hook name format", 400);
 	}
@@ -36,6 +48,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 	try {
 		const pipeline = emdash.hooks;
 
+		// Verify this is actually an exclusive hook
 		if (!pipeline.isExclusiveHook(hookName)) {
 			return apiError("NOT_FOUND", `Hook '${hookName}' is not a registered exclusive hook`, 404);
 		}
@@ -47,9 +60,11 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 		const optionKey = `emdash:exclusive_hook:${hookName}`;
 
 		if (body.pluginId === null) {
+			// Clear the selection
 			await optionsRepo.delete(optionKey);
 			pipeline.clearExclusiveSelection(hookName);
 		} else {
+			// Validate that the pluginId is an actual provider for this hook
 			const providers = pipeline.getExclusiveHookProviders(hookName);
 			const isValidProvider = providers.some(
 				(p: { pluginId: string }) => p.pluginId === body.pluginId,

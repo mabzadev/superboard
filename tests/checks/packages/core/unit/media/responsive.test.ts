@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
 	RESPONSIVE_BREAKPOINTS,
 	buildResponsiveImage,
+	gallerySizes,
 	responsiveSizes,
 	responsiveWidths,
 	toAbsoluteMediaUrl,
@@ -11,7 +12,35 @@ import {
 
 describe("responsiveWidths", () => {
 	it("includes breakpoints up to 2x the rendered width", () => {
-		expect(responsiveWidths(400)).toEqual([400, 640, 750]);
+		expect(responsiveWidths(400)).toEqual([400, 640, 750, 800]);
+	});
+
+	it("offers 1x and 2x for images narrower than the first breakpoint", () => {
+		expect(responsiveWidths(40)).toEqual([40, 80]);
+	});
+
+	it("adds 2x only up to the largest breakpoint", () => {
+		expect(responsiveWidths(900)).toContain(1800);
+		expect(responsiveWidths(1000)).not.toContain(2000);
+	});
+
+	it("offers the original instead of an upscaled high-density width", () => {
+		expect(responsiveWidths(40, 40)).toEqual([40]);
+		expect(responsiveWidths(40, 60)).toEqual([40, 60]);
+		expect(responsiveWidths(400, 700)).toEqual([400, 640, 700]);
+		expect(responsiveWidths(1000, 500)).toEqual([500, 1000]);
+	});
+
+	it("rounds fractional widths and ignores unusable original widths", () => {
+		expect(responsiveWidths(40.4, 60.6)).toEqual([40, 61]);
+		expect(responsiveWidths(40, -5)).toEqual([40, 80]);
+	});
+
+	it("returns no widths for unusable rendered widths", () => {
+		expect(responsiveWidths(0.3)).toEqual([]);
+		expect(responsiveWidths(0)).toEqual([]);
+		expect(responsiveWidths(-5)).toEqual([]);
+		expect(responsiveWidths(Number.NaN)).toEqual([]);
 	});
 
 	it("always includes the rendered width and sorts ascending", () => {
@@ -41,6 +70,29 @@ describe("responsiveSizes", () => {
 	});
 });
 
+describe("gallerySizes", () => {
+	it("estimates one cell of the grid, with two columns on narrow viewports", () => {
+		expect(gallerySizes(3)).toBe(
+			"(max-width: 640px) calc((100vw - 1rem) / 2), calc((100vw - 2rem) / 3)",
+		);
+		expect(gallerySizes(5)).toBe(
+			"(max-width: 640px) calc((100vw - 1rem) / 2), calc((100vw - 4rem) / 5)",
+		);
+	});
+
+	it("uses the full viewport for a single column above the breakpoint", () => {
+		expect(gallerySizes(1)).toBe("(max-width: 640px) calc((100vw - 1rem) / 2), 100vw");
+	});
+
+	it("falls back to three columns for a missing or unusable count", () => {
+		const three = gallerySizes(3);
+		expect(gallerySizes(undefined)).toBe(three);
+		expect(gallerySizes(0)).toBe(three);
+		expect(gallerySizes(2.5)).toBe(three);
+		expect(gallerySizes(Number.NaN)).toBe(three);
+	});
+});
+
 describe("buildResponsiveImage", () => {
 	const ABS = "https://cdn.example.com/a.jpg";
 
@@ -54,6 +106,8 @@ describe("buildResponsiveImage", () => {
 
 	it("returns null for relative URLs without calling getImage", async () => {
 		const getImage = vi.fn();
+		// Relative same-origin proxy/public URLs are never optimized by Astro's
+		// image services; skip them rather than emit a no-op srcset.
 		expect(
 			await buildResponsiveImage(getImage, {
 				src: "/_emdash/api/media/file/01ABC.jpg",
@@ -88,7 +142,14 @@ describe("buildResponsiveImage", () => {
 		});
 	});
 
+	it("does not request widths above a known original width", async () => {
+		const getImage: GetImage = vi.fn(async (opts) => ({ src: `/_image?href=${opts.src}` }));
+		await buildResponsiveImage(getImage, { src: ABS, width: 400, height: 300, originalWidth: 400 });
+		expect(getImage).toHaveBeenCalledWith(expect.objectContaining({ widths: [400] }));
+	});
+
 	it("returns null when the service passes the URL through unchanged (unauthorized host)", async () => {
+		// baseService.getURL returns options.src verbatim for unauthorized hosts.
 		const getImage: GetImage = async (opts) => ({ src: opts.src });
 		expect(await buildResponsiveImage(getImage, { src: ABS, width: 800, height: 600 })).toBeNull();
 	});
@@ -140,6 +201,8 @@ describe("toAbsoluteMediaUrl", () => {
 	});
 
 	it("does not let backslash tricks escape the origin (SSRF guard)", () => {
+		// WHATWG URL normalizes backslashes to slashes for http(s), so
+		// "/\\evil.com" would otherwise resolve to https://evil.com.
 		expect(toAbsoluteMediaUrl("/\\evil.com/x.jpg", ORIGIN)).toBe("/\\evil.com/x.jpg");
 		expect(toAbsoluteMediaUrl("/\\/evil.com/x.jpg", ORIGIN)).toBe("/\\/evil.com/x.jpg");
 	});

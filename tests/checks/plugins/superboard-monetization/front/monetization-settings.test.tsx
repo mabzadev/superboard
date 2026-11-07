@@ -52,6 +52,33 @@ const displayCurrencies = [
 	"PLN",
 ];
 
+const autosaved = { timeout: 3000 };
+
+function overview(
+	settings: {
+		purchases_enabled: number;
+		restore_behavior: string;
+		sandbox_restore_behavior?: string | null;
+	},
+	credentials = { ios: { configured: false }, android: { configured: false } },
+) {
+	return { settings, credentials };
+}
+
+const configuredStripe = {
+	configured: true,
+	environment: "sandbox",
+	application_origin: "https://app.example.test",
+	last_tested_at: null,
+	webhook_path: "/stripe/sandbox/1",
+};
+
+function settled() {
+	return new Promise((resolve) => {
+		setTimeout(resolve, 900);
+	});
+}
+
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "1-test" } }),
 }));
@@ -59,7 +86,10 @@ vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 const billing = vi.hoisted(() => ({
 	getBillingOverview: vi.fn(),
 	updateBillingSettings: vi.fn(),
+	testBillingCredentials: vi.fn(),
 	getStripeConnection: vi.fn(),
+	saveStripeConnection: vi.fn(),
+	testStripeConnection: vi.fn(),
 	getOperatorDisplayCurrency: vi.fn(),
 	updateOperatorDisplayCurrency: vi.fn(),
 }));
@@ -75,6 +105,8 @@ vi.mock("@superboard/front-ui/section-navigation.js", () => ({
 describe("MonetizationSettingsPage", () => {
 	const originalFetch = globalThis.fetch;
 	beforeEach(() => {
+		if (!("PointerEvent" in window))
+			Object.defineProperty(window, "PointerEvent", { value: MouseEvent, configurable: true });
 		vi.stubGlobal(
 			"ResizeObserver",
 			class {
@@ -90,10 +122,9 @@ describe("MonetizationSettingsPage", () => {
 			last_tested_at: null,
 			webhook_path: "/stripe/sandbox/1",
 		});
-		billing.getBillingOverview.mockResolvedValue({
-			settings: { purchases_enabled: 0, restore_behavior: "block" },
-			credentials: { ios: { configured: false }, android: { configured: false } },
-		});
+		billing.getBillingOverview.mockResolvedValue(
+			overview({ purchases_enabled: 0, restore_behavior: "block" }),
+		);
 		billing.getOperatorDisplayCurrency.mockResolvedValue({
 			display_currency: "USD",
 			available_currencies: displayCurrencies,
@@ -105,30 +136,79 @@ describe("MonetizationSettingsPage", () => {
 		render(<MonetizationSettingsPage />);
 
 		expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
-		expect(await screen.findByRole("checkbox", { name: "Enable purchases" })).toBeVisible();
+		expect(await screen.findByRole("switch", { name: "Enable purchases" })).toBeVisible();
 		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
 			"General",
 			"Gateways",
 		]);
 	});
 
-	it("loads persisted billing settings and reports a rejected save without discarding the draft", async () => {
-		billing.getBillingOverview.mockResolvedValue({
-			settings: { purchases_enabled: 0, restore_behavior: "block" },
-			credentials: { ios: { configured: false }, android: { configured: false } },
-		});
-		billing.updateBillingSettings.mockRejectedValue(new Error("Service unavailable"));
+	it("keeps the restore behavior hidden until purchases are enabled", async () => {
+		billing.updateBillingSettings.mockResolvedValue({});
 		render(<MonetizationSettingsPage />);
-		const enabled = await screen.findByRole("checkbox", { name: "Enable purchases" });
+
+		const enabled = await screen.findByRole("switch", { name: "Enable purchases" });
 		expect(enabled).not.toBeChecked();
+		expect(screen.queryByRole("radiogroup", { name: "Restore behavior" })).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole("switch", { name: "Use a different restore behavior for sandbox" }),
+		).not.toBeInTheDocument();
+
+		billing.getBillingOverview.mockResolvedValue(
+			overview({ purchases_enabled: 1, restore_behavior: "block" }),
+		);
 		fireEvent.click(enabled);
-		fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
-		expect(await screen.findByRole("alert")).toHaveTextContent("Could not save billing settings.");
-		expect(enabled).toBeChecked();
-		expect(screen.queryByText("Settings saved.")).not.toBeInTheDocument();
+
+		expect(screen.getByRole("radiogroup", { name: "Restore behavior" })).toBeVisible();
+		expect(screen.getByRole("radio", { name: "Keep with original App User ID" })).toBeChecked();
+		expect(await screen.findByText("All changes saved.", {}, autosaved)).toBeInTheDocument();
+		expect(billing.updateBillingSettings).toHaveBeenCalledWith("1-test", {
+			purchases_enabled: true,
+			restore_behavior: "block",
+		});
 	});
 
-	it("offers the three restore behaviors and reads the legacy blocking setting as keeping the original App User ID", async () => {
+	it("reports a rejected automatic save without discarding the change, then saves it on retry", async () => {
+		billing.updateBillingSettings.mockRejectedValueOnce(new Error("Service unavailable"));
+		render(<MonetizationSettingsPage />);
+		const enabled = await screen.findByRole("switch", { name: "Enable purchases" });
+		expect(enabled).not.toBeChecked();
+		fireEvent.click(enabled);
+
+		expect(await screen.findByRole("alert", {}, autosaved)).toHaveTextContent(
+			"Changes could not be saved.",
+		);
+		expect(enabled).toBeChecked();
+		expect(screen.queryByText("All changes saved.")).not.toBeInTheDocument();
+		await settled();
+		expect(billing.updateBillingSettings).toHaveBeenCalledTimes(1);
+
+		billing.updateBillingSettings.mockResolvedValue({});
+		billing.getBillingOverview.mockResolvedValue(
+			overview({ purchases_enabled: 1, restore_behavior: "block" }),
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+		expect(await screen.findByText("All changes saved.", {}, autosaved)).toBeInTheDocument();
+		expect(billing.updateBillingSettings).toHaveBeenCalledTimes(2);
+		expect(enabled).toBeChecked();
+	});
+
+	it("reports a change the service did not keep as not saved", async () => {
+		billing.updateBillingSettings.mockResolvedValue({});
+		render(<MonetizationSettingsPage />);
+		fireEvent.click(await screen.findByRole("switch", { name: "Enable purchases" }));
+
+		expect(await screen.findByRole("alert", {}, autosaved)).toHaveTextContent(
+			"Changes could not be saved.",
+		);
+		expect(screen.queryByText("All changes saved.")).not.toBeInTheDocument();
+	});
+
+	it("offers the three restore behaviors and saves the chosen one without a save button", async () => {
+		billing.getBillingOverview.mockResolvedValue(
+			overview({ purchases_enabled: 1, restore_behavior: "block" }),
+		);
 		billing.updateBillingSettings.mockResolvedValue({});
 		render(<MonetizationSettingsPage />);
 
@@ -145,39 +225,43 @@ describe("MonetizationSettingsPage", () => {
 		expect(conditional).toHaveAccessibleDescription(/no active subscription/u);
 		expect(keep).toHaveAccessibleDescription(/^Use with caution\..*account before purchasing/u);
 		expect(screen.queryByText("Block purchase transfers between users")).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /save/iu })).not.toBeInTheDocument();
 
-		billing.getBillingOverview.mockResolvedValue({
-			settings: { purchases_enabled: 0, restore_behavior: "transfer_if_no_active_subscriptions" },
-			credentials: { ios: { configured: false }, android: { configured: false } },
-		});
+		billing.getBillingOverview.mockResolvedValue(
+			overview({ purchases_enabled: 1, restore_behavior: "transfer_if_no_active_subscriptions" }),
+		);
 		fireEvent.click(conditional);
-		fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
 
-		expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
+		expect(await screen.findByText("All changes saved.", {}, autosaved)).toBeInTheDocument();
+		expect(billing.updateBillingSettings).toHaveBeenCalledTimes(1);
 		expect(billing.updateBillingSettings).toHaveBeenCalledWith("1-test", {
-			purchases_enabled: false,
+			purchases_enabled: true,
 			restore_behavior: "transfer_if_no_active_subscriptions",
 		});
 		expect(conditional).toBeChecked();
 	});
 
-	it("selects the RevenueCat default when no supported restore behavior is stored", async () => {
-		billing.getBillingOverview.mockResolvedValue({
-			settings: { purchases_enabled: 1, restore_behavior: "share_between_ids" },
-			credentials: { ios: { configured: false }, android: { configured: false } },
-		});
+	it("selects the RevenueCat default when no supported restore behavior is stored, without saving it", async () => {
+		billing.getBillingOverview.mockResolvedValue(
+			overview({ purchases_enabled: 1, restore_behavior: "share_between_ids" }),
+		);
 		render(<MonetizationSettingsPage />);
 
 		expect(await screen.findByRole("radio", { name: "Transfer to new App User ID" })).toBeChecked();
-		expect(screen.getByRole("button", { name: "Save settings" })).toBeDisabled();
+		await settled();
+		expect(billing.updateBillingSettings).not.toHaveBeenCalled();
 	});
 
 	it("describes the restore behaviors in French", async () => {
+		billing.getBillingOverview.mockResolvedValue(
+			overview({ purchases_enabled: 1, restore_behavior: "block" }),
+		);
 		render(<MonetizationSettingsPage />, { wrapper: French });
 
 		expect(
 			await screen.findByRole("radiogroup", { name: "Comportement de restauration" }),
 		).toBeVisible();
+		expect(screen.getByRole("switch", { name: "Activer les achats" })).toBeChecked();
 		const transfer = screen.getByRole("radio", { name: "Transférer au nouvel identifiant" });
 		const conditional = screen.getByRole("radio", {
 			name: "Transférer s’il n’y a pas d’abonnement actif",
@@ -187,15 +271,24 @@ describe("MonetizationSettingsPage", () => {
 		expect(transfer).toHaveAccessibleDescription(/un seul client y a accès à la fois/u);
 		expect(conditional).toHaveAccessibleDescription(/aucun abonnement actif/u);
 		expect(keep).toHaveAccessibleDescription(/^À utiliser avec prudence\./u);
-		for (const english of ["Transfer to new App User ID", "Restore behavior", "Use with caution"])
+		for (const english of [
+			"Transfer to new App User ID",
+			"Restore behavior",
+			"Use with caution",
+			"Purchases",
+			"Let your apps sell products",
+		])
 			expect(screen.queryByText(english, { exact: false })).not.toBeInTheDocument();
 	});
 
 	it("applies a different restore behavior to sandbox purchases when asked", async () => {
+		billing.getBillingOverview.mockResolvedValue(
+			overview({ purchases_enabled: 1, restore_behavior: "block" }),
+		);
 		billing.updateBillingSettings.mockResolvedValue({});
 		render(<MonetizationSettingsPage />);
 
-		const different = await screen.findByRole("checkbox", {
+		const different = await screen.findByRole("switch", {
 			name: "Use a different restore behavior for sandbox",
 		});
 		expect(different).not.toBeChecked();
@@ -216,37 +309,35 @@ describe("MonetizationSettingsPage", () => {
 		]);
 		fireEvent.change(sandbox, { target: { value: "transfer" } });
 
-		billing.getBillingOverview.mockResolvedValue({
-			settings: {
-				purchases_enabled: 0,
+		billing.getBillingOverview.mockResolvedValue(
+			overview({
+				purchases_enabled: 1,
 				restore_behavior: "block",
 				sandbox_restore_behavior: "transfer",
-			},
-			credentials: { ios: { configured: false }, android: { configured: false } },
-		});
-		fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+			}),
+		);
 
-		expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
+		expect(await screen.findByText("All changes saved.", {}, autosaved)).toBeInTheDocument();
+		expect(billing.updateBillingSettings).toHaveBeenCalledTimes(1);
 		expect(billing.updateBillingSettings).toHaveBeenCalledWith("1-test", {
-			purchases_enabled: false,
+			purchases_enabled: true,
 			restore_behavior: "block",
 			sandbox_restore_behavior: "transfer",
 		});
 	});
 
 	it("shows and clears a stored sandbox restore behavior, in French", async () => {
-		billing.getBillingOverview.mockResolvedValue({
-			settings: {
+		billing.getBillingOverview.mockResolvedValue(
+			overview({
 				purchases_enabled: 1,
 				restore_behavior: "transfer",
 				sandbox_restore_behavior: "transfer_if_no_active_subscriptions",
-			},
-			credentials: { ios: { configured: false }, android: { configured: false } },
-		});
+			}),
+		);
 		billing.updateBillingSettings.mockResolvedValue({});
 		render(<MonetizationSettingsPage />, { wrapper: French });
 
-		const different = await screen.findByRole("checkbox", {
+		const different = await screen.findByRole("switch", {
 			name: "Utiliser un autre comportement pour le bac à sable",
 		});
 		expect(different).toBeChecked();
@@ -255,28 +346,27 @@ describe("MonetizationSettingsPage", () => {
 		});
 		expect(sandbox).toHaveValue("transfer_if_no_active_subscriptions");
 		expect(sandbox).toHaveAccessibleDescription(/achats du bac à sable/u);
-		expect(screen.getByRole("button", { name: "Enregistrer les paramètres" })).toBeDisabled();
 
-		billing.getBillingOverview.mockResolvedValue({
-			settings: {
+		billing.getBillingOverview.mockResolvedValue(
+			overview({
 				purchases_enabled: 1,
 				restore_behavior: "transfer",
 				sandbox_restore_behavior: null,
-			},
-			credentials: { ios: { configured: false }, android: { configured: false } },
-		});
+			}),
+		);
 		fireEvent.click(different);
-		fireEvent.click(screen.getByRole("button", { name: "Enregistrer les paramètres" }));
 
-		expect(await screen.findByText("Paramètres enregistrés.")).toBeInTheDocument();
+		expect(
+			screen.queryByRole("combobox", { name: "Comportement de restauration du bac à sable" }),
+		).not.toBeInTheDocument();
+		expect(
+			await screen.findByText("Modifications enregistrées.", {}, autosaved),
+		).toBeInTheDocument();
 		expect(billing.updateBillingSettings).toHaveBeenCalledWith("1-test", {
 			purchases_enabled: true,
 			restore_behavior: "transfer",
 			sandbox_restore_behavior: null,
 		});
-		expect(
-			screen.queryByRole("combobox", { name: "Comportement de restauration du bac à sable" }),
-		).not.toBeInTheDocument();
 	});
 
 	afterEach(() => {
@@ -284,6 +374,7 @@ describe("MonetizationSettingsPage", () => {
 		vi.unstubAllGlobals();
 		globalThis.fetch = originalFetch;
 		vi.restoreAllMocks();
+		for (const mock of Object.values(billing)) mock.mockReset();
 	});
 
 	it("renders Monetization Settings with general tab by default", async () => {
@@ -298,11 +389,11 @@ describe("MonetizationSettingsPage", () => {
 			expect.stringMatching(/^\/_emdash\/admin\/plugins-manager\/[^/]+\/configuration$/),
 		);
 
-		expect(await screen.findByRole("checkbox", { name: "Enable purchases" })).not.toBeChecked();
+		expect(await screen.findByRole("switch", { name: "Enable purchases" })).not.toBeChecked();
 		expect(screen.queryByText("Automatic (Stripe Tax)")).not.toBeInTheDocument();
 	});
 
-	it("switches to gateways tab", async () => {
+	it("switches to gateways tab and shows each gateway's state", async () => {
 		render(<MonetizationSettingsPage />);
 
 		const gatewaysBtn = screen.getByRole("tab", { name: "Gateways" });
@@ -310,9 +401,41 @@ describe("MonetizationSettingsPage", () => {
 
 		expect(await screen.findByText("Connected Gateways")).toBeInTheDocument();
 		expect(screen.queryByText("Stripe Payments")).not.toBeInTheDocument();
-		expect(screen.getAllByText("Not configured")).toHaveLength(2);
-		expect(await screen.findByText(/Not configured.*Sandbox/)).toBeInTheDocument();
-		expect(screen.getByText("Apple App Store")).toBeInTheDocument();
+		const stores = screen.getByText("Connected Gateways").closest("section");
+		if (!stores) throw new Error("Store gateways section missing");
+		expect(within(stores).getAllByText("Not configured")).toHaveLength(2);
+		expect(within(stores).getByText("Apple App Store")).toBeInTheDocument();
+		const stripe = (await screen.findByText("Stripe web payments")).closest("section");
+		if (!stripe) throw new Error("Stripe section missing");
+		expect(await within(stripe).findByText("Not configured")).toBeInTheDocument();
+		expect(within(stripe).getByText("Sandbox")).toBeInTheDocument();
+		expect(within(stripe).getByRole("button", { name: "Test connection" })).toBeDisabled();
+	});
+
+	it("only lets the operator test a store whose credentials are configured", async () => {
+		billing.getBillingOverview.mockResolvedValue(
+			overview(
+				{ purchases_enabled: 1, restore_behavior: "transfer" },
+				{ ios: { configured: true }, android: { configured: false } },
+			),
+		);
+		billing.testBillingCredentials.mockResolvedValue({});
+		render(<MonetizationSettingsPage />);
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
+
+		const stores = (await screen.findByText("Connected Gateways")).closest("section");
+		if (!stores) throw new Error("Store gateways section missing");
+		const apple = (await within(stores).findByText("Apple App Store")).parentElement?.parentElement;
+		const google = within(stores).getByText("Google Play Billing").parentElement?.parentElement;
+		if (!apple || !google) throw new Error("Store rows missing");
+		expect(within(apple).getByText("Configured")).toBeInTheDocument();
+		expect(within(google).getByRole("button", { name: "Test connection" })).toBeDisabled();
+		fireEvent.click(within(apple).getByRole("button", { name: "Test connection" }));
+
+		expect(await within(apple).findByRole("status")).toHaveTextContent(
+			"Store connection verified.",
+		);
+		expect(billing.testBillingCredentials).toHaveBeenCalledWith("1-test", "ios");
 	});
 
 	it("leaves store credentials to the application settings instead of unused fields", async () => {
@@ -326,7 +449,6 @@ describe("MonetizationSettingsPage", () => {
 
 		expect(await screen.findByText("Connected Gateways")).toBeInTheDocument();
 		expect(screen.getAllByRole("link", { name: "Configure store" })).toHaveLength(2);
-		expect(screen.queryByText("Advanced")).not.toBeInTheDocument();
 		for (const label of [
 			"Apple issuer ID",
 			"Apple key ID",
@@ -334,6 +456,122 @@ describe("MonetizationSettingsPage", () => {
 			"Google service account JSON",
 		])
 			expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+	});
+
+	it("shows the Stripe webhook endpoint in the last, Advanced section", async () => {
+		render(<MonetizationSettingsPage />, { wrapper: French });
+
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Passerelles" }), { key: "Enter" });
+
+		const advanced = (await screen.findByRole("heading", { name: "Avancé" })).closest("section");
+		if (!advanced) throw new Error("Advanced section missing");
+		expect(within(advanced).getByText("/stripe/sandbox/1")).toBeInTheDocument();
+		expect(within(advanced).getByText("Adresse de notification Stripe")).toBeInTheDocument();
+		const sections = screen
+			.getAllByRole("heading", { level: 2 })
+			.map((heading) => heading.textContent);
+		expect(sections.at(-1)).toBe("Avancé");
+		const stripe = screen.getByText("Paiements web Stripe").closest("section");
+		if (!stripe) throw new Error("Stripe section missing");
+		expect(within(stripe).queryByText("/stripe/sandbox/1")).not.toBeInTheDocument();
+	});
+
+	it("saves a new Stripe origin automatically without resending the secrets", async () => {
+		billing.getStripeConnection.mockResolvedValue(configuredStripe);
+		billing.saveStripeConnection.mockResolvedValue({});
+		render(<MonetizationSettingsPage />);
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
+
+		const origin = await screen.findByRole("textbox", { name: "Application origin" });
+		expect(origin).toHaveValue("https://app.example.test");
+		await settled();
+		expect(billing.saveStripeConnection).not.toHaveBeenCalled();
+
+		fireEvent.change(origin, { target: { value: "shop" } });
+		expect(origin).toHaveAccessibleDescription(
+			"Enter an HTTPS address, for example https://example.com.",
+		);
+		await settled();
+		expect(billing.saveStripeConnection).not.toHaveBeenCalled();
+
+		fireEvent.change(origin, { target: { value: "https://shop.example.test" } });
+		expect(await screen.findByText("All changes saved.", {}, autosaved)).toBeInTheDocument();
+		expect(billing.saveStripeConnection).toHaveBeenCalledTimes(1);
+		expect(billing.saveStripeConnection.mock.calls[0]).toEqual([
+			"1-test",
+			{ application_origin: "https://shop.example.test" },
+		]);
+		expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument();
+	});
+
+	it("replaces only the secrets the operator typed, with an explicit action, in French", async () => {
+		billing.getStripeConnection.mockResolvedValue(configuredStripe);
+		billing.saveStripeConnection.mockResolvedValue({});
+		render(<MonetizationSettingsPage />, { wrapper: French });
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Passerelles" }), { key: "Enter" });
+
+		const replace = await screen.findByRole("button", { name: "Remplacer les secrets" });
+		expect(replace).toBeDisabled();
+		const key = screen.getByLabelText("Clé secrète Stripe");
+		const signing = screen.getByLabelText("Secret de signature des webhooks");
+		for (const field of [key, signing]) {
+			expect(field).not.toBeRequired();
+			expect(field).toHaveAccessibleDescription("Laissez vide pour conserver le secret actuel.");
+		}
+		fireEvent.change(signing, { target: { value: "whsec_rotated" } });
+		fireEvent.click(replace);
+
+		expect(await screen.findByText("Secrets remplacés.")).toBeInTheDocument();
+		expect(billing.saveStripeConnection.mock.calls[0]).toEqual([
+			"1-test",
+			{ webhook_secret: "whsec_rotated", application_origin: "https://app.example.test" },
+		]);
+		expect(signing).toHaveValue("");
+	});
+
+	it("asks for the origin and both secrets before connecting Stripe the first time", async () => {
+		billing.saveStripeConnection.mockResolvedValue({});
+		render(<MonetizationSettingsPage />);
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
+
+		const connect = await screen.findByRole("button", { name: "Connect Stripe" });
+		const origin = screen.getByRole("textbox", { name: "Application origin" });
+		const key = screen.getByLabelText("Stripe secret key");
+		const signing = screen.getByLabelText("Webhook signing secret");
+		for (const field of [origin, key, signing]) expect(field).toBeRequired();
+		fireEvent.change(origin, { target: { value: "https://shop.example.test" } });
+		await settled();
+		expect(billing.saveStripeConnection).not.toHaveBeenCalled();
+
+		fireEvent.change(key, { target: { value: "sk_test_new" } });
+		fireEvent.change(signing, { target: { value: "whsec_new" } });
+		fireEvent.click(connect);
+
+		await waitFor(() => {
+			expect(billing.saveStripeConnection).toHaveBeenCalledWith("1-test", {
+				secret_key: "sk_test_new",
+				webhook_secret: "whsec_new",
+				application_origin: "https://shop.example.test",
+			});
+		});
+	});
+
+	it("shows the full Stripe webhook URL and copies it, in French", async () => {
+		const url = "https://sdk.example.com/v1/monetization/webhooks/stripe/sandbox/1";
+		billing.getStripeConnection.mockResolvedValue({ ...configuredStripe, webhook_url: url });
+		const writeText = vi.fn(async () => undefined);
+		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+		render(<MonetizationSettingsPage />, { wrapper: French });
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Passerelles" }), { key: "Enter" });
+
+		const advanced = (await screen.findByRole("heading", { name: "Avancé" })).closest("section");
+		if (!advanced) throw new Error("Advanced section missing");
+		expect(within(advanced).getByText(url)).toBeInTheDocument();
+		expect(within(advanced).queryByText("/stripe/sandbox/1")).not.toBeInTheDocument();
+		fireEvent.click(within(advanced).getByRole("button", { name: "Copier l’adresse" }));
+
+		expect(await within(advanced).findByRole("button", { name: "Adresse copiée" })).toBeVisible();
+		expect(writeText).toHaveBeenCalledWith(url);
 	});
 
 	it("asks for the Stripe secret key and webhook signing secret only in the Stripe section", async () => {
@@ -358,14 +596,14 @@ describe("MonetizationSettingsPage", () => {
 		window.history.replaceState(null, "", "/monetization/settings");
 		render(<MonetizationSettingsPage />);
 
-		expect(await screen.findByRole("checkbox", { name: "Enable purchases" })).toBeVisible();
+		expect(await screen.findByRole("switch", { name: "Enable purchases" })).toBeVisible();
 		expect(
 			screen.queryByRole("combobox", { name: "Your display currency" }),
 		).not.toBeInTheDocument();
 		expect(billing.getOperatorDisplayCurrency).not.toHaveBeenCalled();
 	});
 
-	it("saves the operator's own display currency when there is no operator profile page", async () => {
+	it("saves the operator's own display currency automatically when there is no operator profile page", async () => {
 		billing.updateOperatorDisplayCurrency.mockResolvedValue({
 			display_currency: "JPY",
 			available_currencies: displayCurrencies,
@@ -398,15 +636,18 @@ describe("MonetizationSettingsPage", () => {
 			"Swedish Krona (SEK)",
 			"Polish Zloty (PLN)",
 		]);
+		await settled();
+		expect(billing.updateOperatorDisplayCurrency).not.toHaveBeenCalled();
 		fireEvent.change(select, { target: { value: "JPY" } });
 
-		expect(await screen.findByText("Display currency saved.")).toBeInTheDocument();
+		expect(await screen.findByText("All changes saved.", {}, autosaved)).toBeInTheDocument();
+		expect(billing.updateOperatorDisplayCurrency).toHaveBeenCalledTimes(1);
 		expect(billing.updateOperatorDisplayCurrency).toHaveBeenCalledWith("1-test", "JPY");
 		expect(select).toHaveValue("JPY");
 	});
 
-	it("restores the previous display currency when saving fails, in French", async () => {
-		billing.updateOperatorDisplayCurrency.mockRejectedValue(new Error("Forbidden"));
+	it("keeps the chosen display currency when saving fails and saves it on retry, in French", async () => {
+		billing.updateOperatorDisplayCurrency.mockRejectedValueOnce(new Error("Forbidden"));
 		window.history.replaceState(null, "", "/monetization/settings?lang=fr");
 		render(<MonetizationSettingsPage />, {
 			wrapper: ({ children }) => (
@@ -425,13 +666,24 @@ describe("MonetizationSettingsPage", () => {
 		).toBeInTheDocument();
 		fireEvent.change(select, { target: { value: "KRW" } });
 
-		expect(
-			await screen.findByText("Impossible d’enregistrer la devise d’affichage."),
-		).toBeInTheDocument();
-		expect(select).toHaveValue("USD");
+		expect(await screen.findByRole("alert", {}, autosaved)).toHaveTextContent(
+			"Impossible d’enregistrer les modifications.",
+		);
+		expect(select).toHaveValue("KRW");
 		expect(
 			within(select).getByRole("option", { name: "Won sud-coréen (KRW)" }),
 		).toBeInTheDocument();
+
+		billing.updateOperatorDisplayCurrency.mockResolvedValue({
+			display_currency: "KRW",
+			available_currencies: displayCurrencies,
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Réessayer" }));
+
+		expect(
+			await screen.findByText("Modifications enregistrées.", {}, autosaved),
+		).toBeInTheDocument();
+		expect(billing.updateOperatorDisplayCurrency).toHaveBeenLastCalledWith("1-test", "KRW");
 	});
 
 	it("opens legacy configuration links on the gateways tab", async () => {

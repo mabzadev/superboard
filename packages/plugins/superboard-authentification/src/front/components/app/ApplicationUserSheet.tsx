@@ -93,7 +93,7 @@ function ElsewhereLinks({ detail }: { detail: ApplicationUserDetail }) {
 					label: t("View events"),
 				}
 			: null,
-		{ href: "/auth/users?tab=activity", label: t("Authentication emails and SMS") },
+		{ href: "/auth/users?tab=activity", label: t("Authentication emails and sign-ins") },
 	].filter((link) => link !== null);
 	return (
 		<SheetSection title={t("Elsewhere in SuperBoard")}>

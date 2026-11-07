@@ -1,3 +1,20 @@
+/**
+ * EmDash Request Context Middleware
+ *
+ * Sets up AsyncLocalStorage-based request context for query functions.
+ * Skips ALS for logged-out users with no CMS signals unless a configured
+ * object cache must be fenced off during a route-cache render.
+ *
+ * Handles:
+ * - Preview tokens: _preview query param with signed HMAC token
+ * - Edit mode: emdash-edit-mode cookie (for visual editing)
+ * - Toolbar injection: floating pill for authenticated editors
+ * - Client toolbar mode (`toolbar: "client"`): cache-identical HTML with a
+ *   client-side bootstrap pill and an `_edit` query param for fresh editor
+ *   renders; the backend verifies the `_edit` param and redirects non-editors
+ */
+
+import { loadVisualEditingToolbarLabels } from "@emdash-cms/admin/locales/server";
 import type { APIContext } from "astro";
 import { defineMiddleware } from "astro:middleware";
 // @ts-ignore - virtual module
@@ -7,6 +24,7 @@ import { resolveSecretsCached } from "#config/secrets.js";
 
 import { verifyPreviewToken, parseContentId } from "../../preview/tokens.js";
 import { getRequestContext, runWithContext } from "../../request-context.js";
+import { generateVisualEditingActionToken } from "../../visual-editing/action-token.js";
 import { EDIT_PARAM, renderToolbarBootstrap } from "../../visual-editing/toolbar-bootstrap.js";
 import { renderToolbar } from "../../visual-editing/toolbar.js";
 
@@ -14,25 +32,75 @@ type ToolbarMode = "server" | "client" | false;
 
 const toolbarMode: ToolbarMode = virtualConfig?.toolbar ?? "server";
 
-type RouteCache = APIContext["cache"];
+/**
+ * Astro's route-cache handle. Astro defines `context.cache` only on requests
+ * that went through its cache handler, so it is `undefined` on some renders,
+ * such as the 404 page for a URL that matches no route.
+ */
+type RouteCache = APIContext["cache"] | undefined;
 
-function optOutOfRouteCache(cache: RouteCache): void {
-	cache.set(false);
+async function renderEditorToolbar(
+	context: APIContext,
+	config: { editMode: boolean; isPreview: boolean },
+): Promise<string> {
+	const labels = await loadVisualEditingToolbarLabels(context.request);
+	const { emdash, user } = context.locals;
+	if (!emdash?.db || !user) return renderToolbar({ ...config, labels });
+	const { previewSecret } = await resolveSecretsCached(emdash.db);
+	const actionToken = await generateVisualEditingActionToken(previewSecret, user.id);
+	return renderToolbar({ ...config, actionToken, labels });
 }
 
+/**
+ * Opt the current request out of Astro's route cache (e.g. Workers Cache on
+ * Cloudflare). `Cache-Control` headers do NOT cover this: the adapter derives
+ * the shared-cache TTL from the route-cache options (on Cloudflare via
+ * `Cloudflare-CDN-Cache-Control`), so session-specific responses must
+ * explicitly disable it or they get stored in the shared cache and served to
+ * anonymous visitors without ever invoking the middleware again. With no cache
+ * provider configured, or no cache handle on the request, this is a no-op.
+ */
+function optOutOfRouteCache(cache: RouteCache): void {
+	cache?.set(false);
+}
+
+function isHtmlResponse(response: Response): boolean {
+	return response.headers.get("content-type")?.includes("text/html") ?? false;
+}
+
+const DOCUMENT_START_RE = /^\s*<(?:!doctype|html)\b/i;
+
+/**
+ * Inject HTML before the page's closing `</body>` if the response is a whole
+ * HTML document with one. Does not touch cache headers — callers decide
+ * whether the result is still shareable. `injected` tells the caller whether
+ * the result carries the injected HTML.
+ *
+ * `Astro.rewrite()` runs this middleware again for the rewritten route inside
+ * the original request, so the response can already contain the HTML; `marker`
+ * identifies it so it is injected only once.
+ */
 async function injectBeforeBodyEnd(
 	response: Response,
 	htmlToInject: string,
+	marker: string,
 ): Promise<{ response: Response; injected: boolean }> {
-	const contentType = response.headers.get("content-type");
-	if (!contentType?.includes("text/html")) return { response, injected: false };
+	if (!isHtmlResponse(response)) return { response, injected: false };
 
 	const html = await response.text();
-	if (!html.includes("</body>")) {
+	if (html.includes(marker)) {
+		return { response: new Response(html, response), injected: true };
+	}
+	// The page's own closing tag is its last `</body>`. Astro leaves `<` and `>`
+	// unescaped in attribute values, so an earlier one, or one in a fragment
+	// such as a server island, can be author text inside an attribute.
+	const bodyEnd = DOCUMENT_START_RE.test(html) ? html.lastIndexOf("</body>") : -1;
+	if (bodyEnd === -1) {
+		// Body already consumed — rebuild the response unchanged.
 		return { response: new Response(html, response), injected: false };
 	}
 
-	const injected = html.replace("</body>", `${htmlToInject}</body>`);
+	const injected = html.slice(0, bodyEnd) + htmlToInject + html.slice(bodyEnd);
 	return {
 		response: new Response(injected, {
 			status: response.status,
@@ -42,24 +110,55 @@ async function injectBeforeBodyEnd(
 	};
 }
 
+/**
+ * Inject toolbar HTML into a response if it's an HTML page.
+ * Returns the original response if not HTML, without calling
+ * `renderToolbarHtml`, which loads labels and, for an editor, resolves the
+ * preview secret.
+ */
 async function injectToolbar(
 	response: Response,
-	toolbarHtml: string,
+	renderToolbarHtml: () => Promise<string>,
 	routeCache: RouteCache,
 ): Promise<Response> {
-	const result = await injectBeforeBodyEnd(response, toolbarHtml);
+	if (!isHtmlResponse(response)) return response;
+	const result = await injectBeforeBodyEnd(
+		response,
+		await renderToolbarHtml(),
+		'id="emdash-toolbar"',
+	);
 	if (result.injected) {
+		// Toolbar-injected HTML is session-specific (its presence reveals an
+		// active editor session); it must never be stored in a shared CDN cache
+		// and served to anonymous visitors. `Cache-Control` covers
+		// browsers/downstream proxies; the
+		// route-cache opt-out covers the shared edge cache, which ignores
+		// `Cache-Control`.
 		result.response.headers.set("Cache-Control", "private, no-store");
 		optOutOfRouteCache(routeCache);
 	}
 	return result.response;
 }
 
+/**
+ * Inject the client-toolbar bootstrap script. Identical for every visitor, so
+ * cache headers and route-cache options are left untouched and the response
+ * stays fully shareable.
+ */
 async function injectBootstrap(response: Response): Promise<Response> {
-	const result = await injectBeforeBodyEnd(response, renderToolbarBootstrap());
+	const result = await injectBeforeBodyEnd(
+		response,
+		renderToolbarBootstrap(),
+		"<!-- EmDash Toolbar Bootstrap -->",
+	);
 	return result.response;
 }
 
+/**
+ * Redirect an `_edit` URL to its canonical form (same URL without the param).
+ * Applied when the requester is not an authenticated editor, so a shared
+ * `?_edit` link degrades gracefully for everyone else.
+ */
 function redirectToCanonical(url: URL): Response {
 	const canonical = new URL(url);
 	canonical.searchParams.delete(EDIT_PARAM);
@@ -67,6 +166,10 @@ function redirectToCanonical(url: URL): Response {
 		status: 302,
 		headers: {
 			Location: canonical.pathname + canonical.search + canonical.hash,
+			// Header-following caches (Fastly, Varnish, browsers) must not store
+			// the redirect — a cached 302 would bounce editors back to the
+			// canonical URL. The route-cache opt-out at the call site covers the
+			// Workers Cache, which ignores Cache-Control.
 			"Cache-Control": "private, no-store",
 		},
 	});
@@ -75,47 +178,101 @@ function redirectToCanonical(url: URL): Response {
 export const onRequest = defineMiddleware(async (context, next) => {
 	const { cookies, url } = context;
 
+	// Skip /_emdash routes (admin has its own UI, no rendering context needed)
 	if (url.pathname.startsWith("/_emdash")) {
 		return next();
 	}
 
+	// Check for authenticated editor (role >= 30)
 	const { user } = context.locals;
 	const isEditor = !!user && user.role >= 30;
 
+	// Playground mode: the playground middleware (from @emdash-cms/cloudflare) stashes
+	// the per-session DO database on locals.__playgroundDb. We set it via ALS here
+	// (same module instance as the loader) so getDb() picks it up correctly.
+	//
+	// `dbIsIsolated: true` tells schema-derived caches (manifest, taxonomy defs,
+	// byline/term existence probes) to bypass module-scope memoization — each
+	// playground session is its own database with its own schema, so a cached
+	// value from another session would be wrong.
 	const playgroundDb = context.locals.__playgroundDb;
 	if (playgroundDb) {
+		// Check if playground user has toggled edit mode on
 		const hasEditCookie = cookies.get("emdash-edit-mode")?.value === "true";
-		return runWithContext({ editMode: hasEditCookie, db: playgroundDb, dbIsIsolated: true }, () =>
-			next(),
+		return runWithContext(
+			{ editMode: hasEditCookie, db: playgroundDb, dbIsIsolated: true },
+			async () => {
+				const response = await next();
+				if (!hasEditCookie || toolbarMode === false) return response;
+				// The Playground shows its own bar, so the editor toolbar is hidden and
+				// only provides inline editing.
+				return injectToolbar(
+					response,
+					async () =>
+						renderToolbar({
+							editMode: true,
+							isPreview: false,
+							labels: await loadVisualEditingToolbarLabels(context.request),
+							hidden: true,
+						}),
+					context.cache,
+				);
+			},
 		);
 	}
 
+	// Fast path: check for CMS signals before doing any work
 	const hasEditCookie = cookies.get("emdash-edit-mode")?.value === "true";
 	const hasPreviewToken = url.searchParams.has("_preview");
+	// `_edit` requests a fresh (never cached) editor render; only meaningful in
+	// client toolbar mode where public HTML is otherwise identical for everyone.
 	const hasEditParam = toolbarMode === "client" && url.searchParams.has(EDIT_PARAM);
 
 	if (hasEditParam) {
+		// `_edit` URLs are their own cache key. Never store them in the route
+		// cache — a cached anonymous redirect would bounce editors back to the
+		// canonical URL, and a cached editor render must never be shared.
 		optOutOfRouteCache(context.cache);
 
+		// A non-editor (anonymous, logged-out, or insufficient role) opening an
+		// `_edit` URL is sent to the canonical URL — shared `?_edit` links
+		// degrade gracefully and never prime a cache entry with page content.
 		if (!isEditor) {
 			return redirectToCanonical(url);
 		}
 	}
 
+	// No CMS signals and not an editor. Route-cache renders get a context so
+	// object-cache reads cannot seed a fresh response with stale data; other
+	// requests retain the anonymous fast path.
 	if (!hasEditCookie && !hasPreviewToken && !isEditor) {
-		if (toolbarMode === "client") {
-			return injectBootstrap(await next());
+		const render = async () => {
+			const response = await next();
+			return toolbarMode === "client" ? injectBootstrap(response) : response;
+		};
+		if (virtualConfig?.objectCacheEnabled && context.cache?.enabled) {
+			const parent = getRequestContext();
+			if (parent?.siteSettings) parent.siteSettings.live = true;
+			return runWithContext({ ...parent, editMode: false, routeCacheFill: true }, render);
 		}
-		return next();
+		return render();
 	}
 
+	// Determine edit mode: cookie AND authenticated editor
 	const editMode = hasEditCookie && isEditor;
 
+	// Read locale from Astro's i18n routing
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Astro context includes currentLocale when i18n is configured
 	const locale = (context as { currentLocale?: string }).currentLocale;
 
 	const routeCache = context.cache;
 
+	// Verify preview token if present.
+	// The preview secret is resolved via `resolveSecretsCached`: env wins,
+	// otherwise a DB-stored value is read (or generated on first need).
+	// `emdash.db` is set by the runtime middleware which runs first; it is
+	// missing after a runtime-init failure and on signed-out requests to the
+	// image endpoint EmDash installs, which skip runtime init.
 	let preview: { collection: string; id: string } | undefined;
 	if (hasPreviewToken) {
 		const db = context.locals.emdash?.db;
@@ -133,13 +290,26 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		}
 	}
 
+	// If we have CMS signals, wrap in ALS context
 	const needsContext = hasEditCookie || hasPreviewToken;
 
 	if (needsContext) {
+		// Merge with any outer ALS context (e.g. the per-request D1 session db
+		// set by the runtime middleware). `storage.run()` replaces the store
+		// wholesale, so without the spread the outer `db` would be lost and
+		// loaders would fall back to the singleton non-session dialect.
 		const parent = getRequestContext();
 		return runWithContext({ ...parent, editMode, preview, locale }, async () => {
 			let response = await next();
 
+			// Preview responses must not be cached -- draft content could leak past token expiry.
+			// Clone the response before modifying headers — the original may be immutable.
+			// `Cache-Control` only governs browsers/downstream proxies; the shared
+			// edge cache follows the route-cache options, so opt out of those too —
+			// otherwise the draft response is stored in the shared cache and served
+			// on cache hits without token verification until TTL/purge. Opt out for
+			// any request carrying a `_preview` param (valid or not): those URLs are
+			// per-token, so cached copies are useless at best and drafts at worst.
 			if (hasPreviewToken) {
 				optOutOfRouteCache(routeCache);
 			}
@@ -148,14 +318,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
 				response.headers.set("Cache-Control", "private, no-store");
 			}
 
+			// Inject toolbar for authenticated editors. Preview and edit-mode
+			// responses are session-specific (`private, no-store` + route-cache
+			// opt-out) in every toolbar mode, so the server toolbar is safe to
+			// inject here even in client mode.
 			if (isEditor && toolbarMode !== false) {
-				const toolbarHtml = renderToolbar({
-					editMode,
-					isPreview: !!preview,
-				});
-				return injectToolbar(response, toolbarHtml, routeCache);
+				return injectToolbar(
+					response,
+					() => renderEditorToolbar(context, { editMode, isPreview: !!preview }),
+					routeCache,
+				);
 			}
 
+			// Stale edit cookie without a session (client mode): still serve the
+			// shareable bootstrap variant.
 			if (toolbarMode === "client" && !isEditor && !preview) {
 				return injectBootstrap(response);
 			}
@@ -164,21 +340,29 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		});
 	}
 
+	// Editor without preview/edit-mode signals.
 	if (isEditor) {
 		if (toolbarMode === false) {
 			return next();
 		}
 
+		// Client mode: without the `_edit` param the response must stay
+		// byte-identical to the anonymous variant (plus the same bootstrap
+		// script), so shared caches serve one entry for everyone. The bootstrap
+		// pill is the editor's entry point into the fresh `_edit` render.
 		if (toolbarMode === "client" && !hasEditParam) {
 			return injectBootstrap(await next());
 		}
 
+		// Server mode, or an `_edit` request in client mode: inject the full
+		// toolbar (response becomes `private, no-store` and route-cache
+		// opted out).
 		const response = await next();
-		const toolbarHtml = renderToolbar({
-			editMode: false,
-			isPreview: false,
-		});
-		return injectToolbar(response, toolbarHtml, routeCache);
+		return injectToolbar(
+			response,
+			() => renderEditorToolbar(context, { editMode: false, isPreview: false }),
+			routeCache,
+		);
 	}
 
 	return next();

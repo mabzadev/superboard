@@ -1,3 +1,16 @@
+/**
+ * Rate-limit enforcement on POST /_emdash/api/auth/signup/request.
+ *
+ * The signup request route must be rate-limited per IP, mirroring the
+ * existing protection on magic-link/send. Without a limit, a caller on
+ * Cloudflare can trigger unlimited signup verification emails for any
+ * allowed domain.
+ *
+ * Tests drive the route handler directly with a real in-memory SQLite
+ * database (so checkRateLimit actually persists) and a stubbed email
+ * pipeline to observe send counts.
+ */
+
 import { Role } from "@emdash-cms/auth";
 import type { AuthAdapter } from "@emdash-cms/auth";
 import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
@@ -9,6 +22,9 @@ import { POST as signupRequest } from "../../../../../../packages/core/src/astro
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
+// Simulate a Cloudflare request so getClientIp returns a value. Without the
+// `cf` marker, the rate limiter short-circuits with null-IP and nothing is
+// enforced.
 function cfRequest(url: string, body: unknown): Request {
 	const req = new Request(url, {
 		method: "POST",
@@ -77,10 +93,13 @@ describe("POST /auth/signup/request rate limiting", () => {
 	it("stops sending emails after the per-IP limit is exceeded", async () => {
 		const email = buildEmail();
 
+		// Use 4 distinct addresses so each one would normally send — if the
+		// limit is absent, the stub is called 4 times. With the fix, it's 3.
 		for (const local of ["a", "b", "c", "d"]) {
 			await signupRequest(ctx({ db, email, body: { email: `${local}@allowed.com` } }));
 		}
 
+		// Matches magic-link/send: 3 requests per 5 minutes per IP.
 		expect(email.send).toHaveBeenCalledTimes(3);
 	});
 
@@ -93,6 +112,9 @@ describe("POST /auth/signup/request rate limiting", () => {
 			);
 		}
 
+		// All responses are 200 with the generic success envelope. The rate
+		// limit is invisible to the caller (which also keeps signup
+		// indistinguishable from disallowed-domain).
 		expect(responses.every((r) => r.status === 200)).toBe(true);
 	});
 
@@ -122,11 +144,13 @@ describe("POST /auth/signup/request rate limiting", () => {
 			} as unknown as APIContext;
 		}
 
+		// Exhaust IP A
 		for (const local of ["a", "b", "c", "d"]) {
 			await signupRequest(makeCtx(req("198.51.100.7", `${local}@allowed.com`)));
 		}
 		expect(email.send).toHaveBeenCalledTimes(3);
 
+		// IP B still gets through
 		await signupRequest(makeCtx(req("198.51.100.8", "x@allowed.com")));
 		expect(email.send).toHaveBeenCalledTimes(4);
 	});

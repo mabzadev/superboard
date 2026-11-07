@@ -1,10 +1,36 @@
+/**
+ * Byline custom-field schema management API (Discussion #1174, Phase 4).
+ *
+ * Mirrors the server-side admin endpoints at
+ * `/_emdash/api/admin/byline-fields/*`. Mutation responses use the
+ * shared `ApiResult<T>` envelope; this client unwraps it via
+ * `parseApiResponse` and surfaces typed errors through
+ * `throwResponseError` (so the admin client sees the registry's
+ * `FIELD_EXISTS` / `TRANSLATABLE_LOCKED` / `REORDER_MISMATCH` messages
+ * verbatim).
+ */
+
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
 import { API_BASE, apiFetch, parseApiResponse, throwResponseError } from "./client.js";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/**
+ * The five v1 field types — deliberately narrower than the content-field
+ * union. Adding a new type requires server-side changes (`BYLINE_FIELD_TYPES`)
+ * + a column in the storage tables; keep this list in lock-step with
+ * `packages/core/src/schema/types.ts`.
+ */
 export type BylineFieldType = "string" | "text" | "url" | "boolean" | "select";
 
+/**
+ * v1 validation shape. Only `options` is consumed today (for `select`-type
+ * fields); future field types may extend the shape.
+ */
 export interface BylineFieldValidation {
 	options?: string[];
 }
@@ -15,6 +41,11 @@ export interface BylineFieldDefinition {
 	label: string;
 	type: BylineFieldType;
 	required: boolean;
+	/**
+	 * Whether values are stored per-locale (`true`, default) or shared
+	 * across all translations of the same byline (`false`). The flag is
+	 * locked once value rows exist — see `BylineFieldUsage`.
+	 */
 	translatable: boolean;
 	validation: BylineFieldValidation | null;
 	sortOrder: number;
@@ -22,6 +53,10 @@ export interface BylineFieldDefinition {
 	updatedAt: string;
 }
 
+/**
+ * Per-table value counts for a field. Backs the destructive-delete confirm
+ * dialog and the `translatable` toggle's locked state in the editor.
+ */
 export interface BylineFieldUsage {
 	translatableValueCount: number;
 	groupValueCount: number;
@@ -38,6 +73,10 @@ export interface CreateBylineFieldInput {
 	sortOrder?: number;
 }
 
+/**
+ * `slug` and `type` are intentionally absent — both are immutable
+ * post-create (changing either would invalidate stored values).
+ */
 export interface UpdateBylineFieldInput {
 	label?: string;
 	required?: boolean;
@@ -45,6 +84,10 @@ export interface UpdateBylineFieldInput {
 	validation?: BylineFieldValidation | null;
 	sortOrder?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Requests
+// ---------------------------------------------------------------------------
 
 const BASE = `${API_BASE}/admin/byline-fields`;
 

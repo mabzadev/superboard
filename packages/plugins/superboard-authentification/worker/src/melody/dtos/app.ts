@@ -1,5 +1,4 @@
 import {
-  IsArray,
   IsBoolean,
   IsEnum,
   IsNotEmpty, IsOptional, IsString, Length,
@@ -74,10 +73,6 @@ export class PutAppDto {
 
   @IsBoolean()
   @IsOptional()
-    requireSmsMfa?: boolean
-
-  @IsBoolean()
-  @IsOptional()
     allowEmailMfaAsBackup?: boolean
 
   constructor (dto: PutAppDto) {
@@ -88,62 +83,6 @@ export class PutAppDto {
     this.useSystemMfaConfig = dto.useSystemMfaConfig
     this.requireEmailMfa = dto.requireEmailMfa
     this.requireOtpMfa = dto.requireOtpMfa
-    this.requireSmsMfa = dto.requireSmsMfa
     this.allowEmailMfaAsBackup = dto.allowEmailMfaAsBackup
-  }
-}
-
-export interface BannerLocale {
-  locale: string;
-  value: string;
-}
-
-export class PostAppBannerDto {
-  @IsString()
-  @IsNotEmpty()
-    type: string
-
-  @IsString()
-  @IsOptional()
-    text?: string
-
-  @IsArray()
-  @IsOptional()
-    locales?: BannerLocale[]
-
-  constructor (dto: PostAppBannerDto) {
-    this.type = dto.type
-    this.text = dto.text
-    this.locales = dto.locales
-  }
-}
-
-export class PutAppBannerDto {
-  @IsString()
-  @IsOptional()
-    type?: string
-
-  @IsString()
-  @IsOptional()
-    text?: string
-
-  @IsArray()
-  @IsOptional()
-    locales?: BannerLocale[]
-
-  @IsArray()
-  @IsOptional()
-    appIds?: number[]
-
-  @IsBoolean()
-  @IsOptional()
-    isActive?: boolean
-
-  constructor (dto: PutAppBannerDto) {
-    this.type = dto.type
-    this.text = dto.text
-    this.locales = dto.locales
-    this.isActive = dto.isActive
-    this.appIds = dto.appIds
   }
 }

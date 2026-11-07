@@ -5,6 +5,7 @@ import {
 	buildPreviewUrl,
 } from "../../../../../../packages/core/src/preview/urls.js";
 
+// Regex patterns for URL validation
 const RELATIVE_PREVIEW_URL_REGEX = /^\/posts\/hello-world\?_preview=/;
 const ABSOLUTE_PREVIEW_URL_REGEX = /^https:\/\/example\.com\/posts\/hello-world\?_preview=/;
 const BLOG_PREVIEW_URL_REGEX = /^\/blog\/hello-world\?_preview=/;
@@ -22,8 +23,10 @@ describe("preview URLs", () => {
 				secret: testSecret,
 			});
 
+			// Should start with path
 			expect(url).toMatch(RELATIVE_PREVIEW_URL_REGEX);
 
+			// Should have a token
 			const urlObj = new URL(url, "http://example.com");
 			const token = urlObj.searchParams.get("_preview");
 			expect(token).toBeTruthy();
@@ -70,6 +73,7 @@ describe("preview URLs", () => {
 				secret: testSecret,
 			});
 
+			// Token should not contain URL-unsafe characters
 			const urlObj = new URL(url, "http://example.com");
 			const token = urlObj.searchParams.get("_preview");
 			expect(token).not.toMatch(BASE64URL_INVALID_CHARS_REGEX);
@@ -96,6 +100,7 @@ describe("preview URLs", () => {
 				locale: "",
 			});
 
+			// Empty locale should not leave a leading double slash.
 			expect(url).toMatch(/^\/hello-world\?_preview=/);
 		});
 
@@ -114,6 +119,7 @@ describe("preview URLs", () => {
 				expiresIn: "7d",
 			});
 
+			// Both should be valid but different tokens
 			expect(shortUrl).not.toBe(longUrl);
 		});
 	});
@@ -145,6 +151,8 @@ describe("preview URLs", () => {
 		it("preserves existing query params in path", () => {
 			const token = "test-token";
 
+			// Note: buildPreviewUrl doesn't preserve existing params, it starts fresh
+			// This is intentional - the path should be clean
 			const url = buildPreviewUrl({
 				path: "/posts/hello-world",
 				token,

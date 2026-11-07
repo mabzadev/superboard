@@ -1,3 +1,10 @@
+/**
+ * Plugin settings endpoint (auto-generated settings UI)
+ *
+ * GET /_emdash/api/admin/plugins/:id/settings - Get schema + current values (secrets masked)
+ * PUT /_emdash/api/admin/plugins/:id/settings - Update values
+ */
+
 import type { APIRoute } from "astro";
 import { z } from "zod";
 

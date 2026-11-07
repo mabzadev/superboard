@@ -1,14 +1,14 @@
-import { defineConfig } from "vitest/config";
+import { getViteConfig } from "astro/config";
 
 import { centralTests } from "../../../tests/checks/project-config.mjs";
 
 export default centralTests(
 	import.meta.url,
-	defineConfig({
+	getViteConfig({
 		test: {
 			globals: true,
 			environment: "node",
-			include: ["../../../tests/checks/plugins/forms/**/*.test.ts"],
+			include: ["../../../tests/checks/plugins/forms/**/*.test.{ts,tsx}"],
 		},
 	}),
 );

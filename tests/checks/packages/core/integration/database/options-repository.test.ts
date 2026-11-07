@@ -1,3 +1,12 @@
+/**
+ * OptionsRepository.setIfAbsent — atomic write-once semantics.
+ *
+ * Used by routes that must never overwrite a stored value once set
+ * (e.g. the setup wizard's emdash:site_url write). Correctness under
+ * concurrent writes is a security property: a non-atomic read-then-write
+ * lets a second caller win the race and poison the value.
+ */
+
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -52,9 +61,11 @@ describe("OptionsRepository.setIfAbsent", () => {
 			repo.setIfAbsent("emdash:site_url", "https://c.example"),
 		]);
 
+		// Exactly one caller inserted; the others saw the existing row.
 		expect(results.filter((r) => r === true)).toHaveLength(1);
 		expect(results.filter((r) => r === false)).toHaveLength(2);
 
+		// And whichever value landed first now sticks.
 		const final = await repo.get("emdash:site_url");
 		expect(["https://a.example", "https://b.example", "https://c.example"]).toContain(final);
 	});

@@ -1,25 +1,61 @@
-import { randomUUID } from "node:crypto";
+/**
+ * EmDashRuntime.create() — cold-boot initialization
+ *
+ * Exercises the full static create() path end-to-end against a real
+ * in-memory SQLite database: migrations, the parallelized plugin-state +
+ * site-info reads, pipeline creation, batched exclusive hook resolution,
+ * and cron init. Asserts that the per-phase timing instrumentation still
+ * records every phase individually after parallelization.
+ */
 
-import Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
+import { rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import type { DialectAdapter } from "kysely";
 import { Kysely, sql, SqliteDialect } from "kysely";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { DEFAULT_COMMENT_MODERATOR_PLUGIN_ID } from "../../../../../../packages/core/src/comments/moderator.js";
-import { PendingMigrationsError } from "../../../../../../packages/core/src/database/migrations/policy.js";
-import { runMigrations } from "../../../../../../packages/core/src/database/migrations/runner.js";
+import { LockingSqliteAdapter } from "../../../../../../packages/core/src/database/migration-lock.js";
+import {
+	isMigrationRequiredError,
+	PendingMigrationsError,
+} from "../../../../../../packages/core/src/database/migrations/policy.js";
+import {
+	createMigrator,
+	getExactMigrationStatus,
+	MIGRATION_NAMES,
+	MigrationLockHeldError,
+	MigrationRowLimitError,
+	runMigrations,
+} from "../../../../../../packages/core/src/database/migrations/runner.js";
+import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
 import { OptionsRepository } from "../../../../../../packages/core/src/database/repositories/options.js";
 import type { Database as EmDashDatabase } from "../../../../../../packages/core/src/database/types.js";
+import { NodeSqliteCompatDatabase as Database } from "../../../../../../packages/core/src/db/node-sqlite-compat.js";
 import { EmDashRuntime } from "../../../../../../packages/core/src/emdash-runtime.js";
 import type { RuntimeDependencies } from "../../../../../../packages/core/src/emdash-runtime.js";
 import { getI18nConfig, setI18nConfig } from "../../../../../../packages/core/src/i18n/config.js";
 import { definePlugin } from "../../../../../../packages/core/src/plugins/define-plugin.js";
 import type { ContentBeforeSaveHandler } from "../../../../../../packages/core/src/plugins/types.js";
 import { runWithContext } from "../../../../../../packages/core/src/request-context.js";
+import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
+
+class LockingSqliteDialect extends SqliteDialect {
+	override createAdapter(): DialectAdapter {
+		return new LockingSqliteAdapter();
+	}
+}
 
 function createDeps(): RuntimeDependencies {
 	return {
 		config: {
 			database: {
+				// Unique entrypoint per test so the module-level dbCache in
+				// emdash-runtime.ts never serves a stale instance across tests.
 				entrypoint: `test-runtime-create-${randomUUID()}`,
 				config: {},
 				type: "sqlite",
@@ -47,23 +83,73 @@ function createDeps(): RuntimeDependencies {
 }
 
 describe("EmDashRuntime.create — cold boot", () => {
+	it("does not re-enter native save hooks for content created inside a save hook", async () => {
+		const deps = createDeps();
+		deps.plugins = [
+			definePlugin({
+				id: "nested-create",
+				version: "1.0.0",
+				capabilities: ["content:write"],
+				hooks: {
+					"content:beforeSave": async (event, ctx) => {
+						if (event.content.createCompanion === true) {
+							if (!ctx.content?.create) throw new Error("Content write access unavailable");
+							await ctx.content.create("posts", { title: "Companion" });
+						}
+						const content = { ...event.content };
+						delete content.createCompanion;
+						return { ...content, title: `${String(event.content.title)} [native]` };
+					},
+				},
+			}),
+		];
+		const runtime = await EmDashRuntime.create(deps);
+		try {
+			await new SchemaRegistry(runtime.db).createCollection({ slug: "posts", label: "Posts" });
+			await new SchemaRegistry(runtime.db).createField("posts", {
+				slug: "title",
+				label: "Title",
+				type: "string",
+			});
+			const result = await runtime.handleContentCreate("posts", {
+				data: { title: "Original", createCompanion: true },
+			});
+			expect(result).toMatchObject({
+				success: true,
+				data: { item: { data: { title: "Original [native]" } } },
+			});
+			const items = await new ContentRepository(runtime.db).findMany("posts", { limit: 10 });
+			expect(items.items).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({ data: { title: "Original [native]" } }),
+					expect.objectContaining({ data: { title: "Companion" } }),
+				]),
+			);
+		} finally {
+			await runtime.shutdown();
+		}
+	});
+
 	it("initializes end-to-end and records each phase's own timing", async () => {
 		const timings: Array<{ name: string; dur: number; desc?: string }> = [];
 		const runtime = await EmDashRuntime.create(createDeps(), timings);
 
 		try {
+			// Every phase records its own entry exactly once.
 			const names = timings.map((t) => t.name);
 			for (const expected of [
 				"rt.db",
 				"rt.seedcheck",
 				"rt.plugins",
 				"rt.site",
+				"rt.hookselections",
 				"rt.sandbox",
 				"rt.hooks",
 				"rt.cron",
 			]) {
 				expect(names.filter((n) => n === expected)).toHaveLength(1);
 			}
+			// rt.market / rt.registry are not configured — no phantom phases.
 			expect(names).not.toContain("rt.market");
 			expect(names).not.toContain("rt.registry");
 			for (const t of timings) {
@@ -71,6 +157,8 @@ describe("EmDashRuntime.create — cold boot", () => {
 				expect(Number.isFinite(t.dur)).toBe(true);
 			}
 
+			// Exclusive hooks resolved: sole providers auto-selected, both in
+			// memory and persisted to the options table.
 			expect(runtime.hooks.getExclusiveSelection("content:beforeSave")).toBe(
 				"test-exclusive-provider",
 			);
@@ -98,6 +186,77 @@ describe("EmDashRuntime.create — cold boot", () => {
 			);
 		} finally {
 			await runtime.stopCron();
+		}
+	});
+
+	it("runs the MCP route of a built plugin when the sandbox is bypassed", async () => {
+		const deps = createDeps();
+		deps.plugins = [];
+		deps.sandboxBypassed = true;
+		deps.sandboxedPluginEntries = [
+			{
+				id: "bypassed-mcp",
+				version: "1.0.0",
+				options: {},
+				code: `export default {
+					routes: {
+						echo: {
+							permission: "content:read",
+							methods: ["POST"],
+							handler: async ({ input }) => ({ echoed: input.value }),
+						},
+					},
+				};`,
+				capabilities: ["content:read"],
+				allowedHosts: [],
+				storage: {},
+				routes: [
+					{
+						name: "echo",
+						permission: "content:read",
+						methods: ["POST"],
+					},
+				],
+				mcp: {
+					tools: [
+						{
+							name: "echo",
+							description: "Echo a value.",
+							route: "echo",
+							permission: "content:read",
+							destructive: false,
+							inputSchema: z.toJSONSchema(z.object({ value: z.string() }), {
+								target: "draft-7",
+							}),
+							outputSchema: z.toJSONSchema(z.object({ echoed: z.string() }), {
+								target: "draft-7",
+							}),
+						},
+					],
+				},
+			},
+		];
+
+		const runtime = await EmDashRuntime.create(deps);
+		try {
+			const plugin = runtime.configuredPlugins.find(({ id }) => id === "bypassed-mcp");
+			const tool = plugin?.mcp?.tools.echo;
+			expect(tool?.input.safeParse({ value: "hello" }).success).toBe(true);
+			expect(tool?.input.safeParse({ value: 42 }).success).toBe(false);
+
+			const result = await runtime.handlePluginApiRoute(
+				"bypassed-mcp",
+				"POST",
+				"/echo",
+				new Request("http://test.local/_emdash/api/plugins/bypassed-mcp/echo", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ value: "hello" }),
+				}),
+			);
+			expect(result).toEqual({ success: true, status: 200, data: { echoed: "hello" } });
+		} finally {
+			await runtime.shutdown();
 		}
 	});
 
@@ -257,6 +416,10 @@ describe("EmDashRuntime.create — cold boot", () => {
 		}
 	});
 
+	// The init read phase feeds plugin enablement: a plugin marked inactive in
+	// _plugin_state must be excluded from the pipeline, so its exclusive hook is
+	// never auto-selected. A shared DB seeds the _plugin_state row before
+	// create() reads it.
 	it("excludes a plugin disabled in _plugin_state from the initial pipeline", async () => {
 		const sqlite = new Database(":memory:");
 		const setupDb = new Kysely<EmDashDatabase>({
@@ -267,6 +430,8 @@ describe("EmDashRuntime.create — cold boot", () => {
 			.insertInto("_plugin_state")
 			.values({ plugin_id: "test-exclusive-provider", version: "1.0.0", status: "inactive" })
 			.execute();
+		// Mark setup complete so create() doesn't attempt the (test-unavailable)
+		// virtual seed module; keeps the run focused on the plugin-state read.
 		await setupDb
 			.insertInto("options")
 			.values({ name: "emdash:setup_complete", value: "true" })
@@ -278,7 +443,9 @@ describe("EmDashRuntime.create — cold boot", () => {
 		};
 		const runtime = await EmDashRuntime.create(deps);
 		try {
+			// Disabled provider is not in the pipeline -> no candidate -> unselected.
 			expect(runtime.hooks.getExclusiveSelection("content:beforeSave")).toBeUndefined();
+			// The always-enabled built-in moderator is unaffected.
 			expect(runtime.hooks.getExclusiveSelection("comment:moderate")).toBe(
 				DEFAULT_COMMENT_MODERATOR_PLUGIN_ID,
 			);
@@ -288,6 +455,100 @@ describe("EmDashRuntime.create — cold boot", () => {
 		}
 	});
 
+	it.each([
+		{
+			sandboxBypassed: false,
+			mode: "sandboxed",
+			manifests: [
+				"marketplace/market-active/1.2.0/manifest.json",
+				"registry/from-registry/2.0.0/manifest.json",
+			],
+		},
+		{
+			sandboxBypassed: true,
+			mode: "in-process",
+			manifests: ["marketplace/market-active/1.2.0/manifest.json"],
+		},
+	])(
+		"loads $mode installed plugins from the plugin states read once at cold start",
+		async ({ sandboxBypassed, manifests }) => {
+			const sqlite = new Database(":memory:");
+			const setupDb = new Kysely<EmDashDatabase>({
+				dialect: new SqliteDialect({ database: sqlite }),
+			});
+			await runMigrations(setupDb);
+			await setupDb
+				.insertInto("_plugin_state")
+				.values([
+					{
+						plugin_id: "market-active",
+						version: "1.0.0",
+						marketplace_version: "1.2.0",
+						status: "active",
+						source: "marketplace",
+					},
+					{
+						plugin_id: "market-inactive",
+						version: "1.0.0",
+						status: "inactive",
+						source: "marketplace",
+					},
+					{ plugin_id: "from-registry", version: "2.0.0", status: "active", source: "registry" },
+				])
+				.execute();
+			await setupDb
+				.insertInto("options")
+				.values({ name: "emdash:setup_complete", value: "true" })
+				.execute();
+
+			const pluginStateStatements: string[] = [];
+			const prepare = sqlite.prepare.bind(sqlite);
+			sqlite.prepare = ((statement: string) => {
+				if (statement.includes('"_plugin_state"')) pluginStateStatements.push(statement);
+				return prepare(statement);
+			}) as typeof sqlite.prepare;
+
+			const download = vi.fn(() => Promise.reject(new Error("not found")));
+			const runner = {
+				isAvailable: () => true,
+				isHealthy: () => true,
+				load: vi.fn(),
+				setEmailSend: vi.fn(),
+				terminateAll: vi.fn(),
+			};
+			const base = createDeps();
+			const deps: RuntimeDependencies = {
+				...base,
+				config: {
+					...base.config,
+					marketplace: "https://marketplace.example.com",
+					registry: "https://registry.example.com",
+					storage: { entrypoint: `test-storage-${randomUUID()}`, config: {} },
+				},
+				createDialect: () => new SqliteDialect({ database: sqlite }),
+				createStorage: () => ({ download }) as never,
+				sandboxEnabled: true,
+				sandboxBypassed,
+				createSandboxRunner: () => runner as never,
+			};
+
+			const runtime = await EmDashRuntime.create(deps);
+			try {
+				expect(download.mock.calls.map(([key]) => key)).toEqual(expect.arrayContaining(manifests));
+				expect(download).toHaveBeenCalledTimes(manifests.length);
+				expect(pluginStateStatements.filter((s) => s.startsWith("select"))).toHaveLength(1);
+			} finally {
+				await runtime.stopCron();
+				await setupDb.destroy();
+			}
+		},
+	);
+
+	// When a coalescing dialect is provided, the cold-start read phase must run
+	// on it (one batched round trip), not the singleton. Prove the routing: the
+	// coalescing db marks the provider inactive while the singleton leaves it
+	// enabled, so reading from the coalescing db excludes the provider and
+	// leaves its exclusive hook unselected.
 	it("routes the cold-start read phase through createCoalescingDialect", async () => {
 		const singletonSqlite = new Database(":memory:");
 		const singletonSetup = new Kysely<EmDashDatabase>({
@@ -324,20 +585,92 @@ describe("EmDashRuntime.create — cold boot", () => {
 		};
 		const runtime = await EmDashRuntime.create(deps);
 		try {
+			// The read phase built exactly one coalescing connection...
 			expect(coalescingCalls).toBe(1);
+			// ...and read plugin state from it (provider inactive there), so the
+			// provider is excluded and its exclusive hook is unselected. Reading
+			// from the singleton (provider enabled) would have selected it.
 			expect(runtime.hooks.getExclusiveSelection("content:beforeSave")).toBeUndefined();
 		} finally {
 			await runtime.stopCron();
+			// create() destroys the read connection, which closes coalescingSqlite;
+			// the setup handles may already be closed.
 			try {
 				await singletonSetup.destroy();
-			} catch {}
+			} catch {
+				// already closed
+			}
 			try {
 				await coalescingSetup.destroy();
-			} catch {}
+			} catch {
+				// already closed
+			}
 		}
 	});
 
+	it("resolves exclusive hooks from selections read in the cold-start batch", async () => {
+		const provider = (id: string) =>
+			definePlugin({
+				id,
+				version: "1.0.0",
+				capabilities: ["content:write", "content:read"],
+				hooks: {
+					"content:beforeSave": {
+						exclusive: true,
+						handler: vi.fn() as unknown as ContentBeforeSaveHandler,
+					},
+				},
+			});
+		const migratedDb = async (selection: string) => {
+			const sqlite = new Database(":memory:");
+			const setup = new Kysely<EmDashDatabase>({
+				dialect: new SqliteDialect({ database: sqlite }),
+			});
+			await runMigrations(setup);
+			await setup
+				.insertInto("options")
+				.values([
+					{ name: "emdash:setup_complete", value: "true" },
+					{
+						name: "emdash:exclusive_hook:content:beforeSave",
+						value: JSON.stringify(selection),
+					},
+				])
+				.execute();
+			return { sqlite, setup };
+		};
+		const singleton = await migratedDb("provider-a");
+		const coalescing = await migratedDb("provider-b");
+
+		const runtime = await EmDashRuntime.create({
+			...createDeps(),
+			plugins: [provider("provider-a"), provider("provider-b")],
+			createDialect: () => new SqliteDialect({ database: singleton.sqlite }),
+			createCoalescingDialect: () => new SqliteDialect({ database: coalescing.sqlite }),
+		});
+		try {
+			expect(runtime.hooks.getExclusiveSelection("content:beforeSave")).toBe("provider-b");
+		} finally {
+			await runtime.stopCron();
+			for (const handle of [singleton.setup, coalescing.setup]) {
+				try {
+					await handle.destroy();
+				} catch {
+					// already closed
+				}
+			}
+		}
+	});
+
+	// A failed migration must not be retried on every create() call: on
+	// Workers each request in a warm isolate re-enters create(), and without
+	// a backoff every request re-runs the failing migration against the
+	// database (#1744). The failure is remembered per database entrypoint
+	// and re-attempts are skipped for a backoff window.
 	it("backs off after a migration failure instead of retrying immediately", async () => {
+		// A database whose next migration deterministically fails: fully
+		// migrated, then the 001_initial bookkeeping row is removed so the
+		// migrator re-runs it against existing tables.
 		const sqlite = new Database(":memory:");
 		const setupDb = new Kysely<EmDashDatabase>({
 			dialect: new SqliteDialect({ database: sqlite }),
@@ -357,8 +690,134 @@ describe("EmDashRuntime.create — cold boot", () => {
 		await expect(EmDashRuntime.create(deps)).rejects.toThrow(/Migration failed/i);
 		expect(dialectCalls).toBe(1);
 
+		// An immediate retry (same entrypoint → same failure record) must
+		// fail fast without building a new connection or touching the db.
 		await expect(EmDashRuntime.create(deps)).rejects.toThrow(/backing off/i);
 		expect(dialectCalls).toBe(1);
+	});
+
+	it("backs off behind a migration lock that was left long ago", async () => {
+		const sqlite = new Database(":memory:");
+		const setupDb = new Kysely<EmDashDatabase>({
+			dialect: new SqliteDialect({ database: sqlite }),
+		});
+		await runMigrations(setupDb);
+		await sql`DELETE FROM _emdash_migrations WHERE name = ${MIGRATION_NAMES.at(-1)}`.execute(
+			setupDb,
+		);
+		await sql`UPDATE _emdash_migrations_lock SET is_locked = ${Date.now() - 10 * 60_000}`.execute(
+			setupDb,
+		);
+
+		let dialectCalls = 0;
+		const deps: RuntimeDependencies = {
+			...createDeps(),
+			createDialect: () => {
+				dialectCalls += 1;
+				return new LockingSqliteDialect({ database: sqlite });
+			},
+		};
+
+		await expect(EmDashRuntime.create(deps)).rejects.toBeInstanceOf(MigrationLockHeldError);
+		const backedOff = EmDashRuntime.create(deps);
+		await expect(backedOff).rejects.toThrow(/backing off/i);
+		await expect(backedOff).rejects.toSatisfy(isMigrationRequiredError);
+		expect(dialectCalls).toBe(1);
+	});
+
+	describe("a datetime migration over the Worker row limit", () => {
+		const ROWS = 5_001;
+		let path = "";
+
+		beforeEach(async () => {
+			path = join(tmpdir(), `emdash-row-limit-${randomUUID()}.db`);
+			const sqlite = new Database(path);
+			const setupDb = new Kysely<EmDashDatabase>({
+				dialect: new SqliteDialect({ database: sqlite }),
+			});
+			const { error } = await createMigrator(setupDb).migrateTo("078_menu_item_translation_groups");
+			if (error) throw error;
+			await new SchemaRegistry(setupDb).createCollection({ slug: "posts", label: "Posts" });
+			await sql`
+				WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ${ROWS})
+				INSERT INTO ec_posts (id, slug, status, created_at, updated_at, version, locale, translation_group)
+				SELECT 'post-' || i, 'post-' || i, 'draft', '2012-09-12T18:00:00', '2012-09-12T18:00:00', 1, 'en', 'post-' || i
+				FROM n
+			`.execute(setupDb);
+			await setupDb.destroy();
+		});
+
+		afterEach(async () => {
+			vi.unstubAllEnvs();
+			vi.unstubAllGlobals();
+			await rm(path, { force: true });
+		});
+
+		async function pendingMigrations(): Promise<string[]> {
+			const db = new Kysely<EmDashDatabase>({
+				dialect: new SqliteDialect({ database: new Database(path) }),
+			});
+			try {
+				return (await getExactMigrationStatus(db)).pending;
+			} finally {
+				await db.destroy();
+			}
+		}
+
+		it("is left pending on a deployed Worker and answered as waiting for migrations", async () => {
+			let dialectCalls = 0;
+			const deps: RuntimeDependencies = {
+				...createDeps(),
+				createDialect: () => {
+					dialectCalls += 1;
+					return new SqliteDialect({ database: new Database(path) });
+				},
+			};
+			vi.stubEnv("DEV", false);
+			vi.stubGlobal("navigator", { userAgent: "Cloudflare-Workers" });
+
+			await expect(EmDashRuntime.create(deps)).rejects.toBeInstanceOf(MigrationRowLimitError);
+			const backedOff: unknown = await EmDashRuntime.create(deps).catch((error: unknown) => error);
+
+			expect(isMigrationRequiredError(backedOff)).toBe(true);
+			expect(dialectCalls).toBe(1);
+			expect((await pendingMigrations())[0]).toBe("079_datetime_normalization");
+		});
+
+		it("is applied at startup outside a Worker", async () => {
+			const deps: RuntimeDependencies = {
+				...createDeps(),
+				createDialect: () => new SqliteDialect({ database: new Database(path) }),
+			};
+			vi.stubEnv("DEV", false);
+
+			const runtime = await EmDashRuntime.create(deps);
+			await runtime.stopCron();
+
+			expect(await pendingMigrations()).toEqual([]);
+		}, 60_000);
+	});
+
+	it("retries immediately after an error reading migration state", async () => {
+		const unavailable = new Database(":memory:");
+		unavailable.close();
+		const healthy = new Database(":memory:");
+		await runMigrations(
+			new Kysely<EmDashDatabase>({ dialect: new SqliteDialect({ database: healthy }) }),
+		);
+
+		let dialectCalls = 0;
+		const deps: RuntimeDependencies = {
+			...createDeps(),
+			createDialect: () => {
+				dialectCalls += 1;
+				return new SqliteDialect({ database: dialectCalls === 1 ? unavailable : healthy });
+			},
+		};
+
+		await expect(EmDashRuntime.create(deps)).rejects.toThrow();
+		await expect(EmDashRuntime.create(deps)).resolves.toBeInstanceOf(EmDashRuntime);
+		expect(dialectCalls).toBe(2);
 	});
 
 	it("rechecks pending migrations without entering migration-failure backoff", async () => {
@@ -386,16 +845,28 @@ describe("EmDashRuntime.create — cold boot", () => {
 		await expect(EmDashRuntime.create(deps)).rejects.toThrow(/no such table/i);
 	});
 
+	// A per-request isolated db (playground / DO preview) must never be
+	// auto-seeded. With an isolated, empty, not-set-up db, a broken guard would
+	// run the gate (rt.seedcheck appears) and attempt a seed; assert neither
+	// happens.
 	it("does not run the auto-seed gate for an isolated request db", async () => {
 		const sqlite = new Database(":memory:");
 		const isolated = new Kysely<EmDashDatabase>({
 			dialect: new SqliteDialect({ database: sqlite }),
 		});
 		await runMigrations(isolated);
+		// Sentinel: mark the configured provider inactive ONLY in the isolated
+		// db. If create() reads plugin state from this db (proving it honored
+		// ctx.db), the provider is excluded and its exclusive hook is unselected.
+		// If it silently used a different db, the provider would be selected and
+		// the assertion below would fail — so this proves the routing, which a
+		// bare "collections still 0" check cannot.
 		await isolated
 			.insertInto("_plugin_state")
 			.values({ plugin_id: "test-exclusive-provider", version: "1.0.0", status: "inactive" })
 			.execute();
+		// Empty + not set up: this is exactly the state that WOULD seed on the
+		// configured-singleton path. The guard must skip it for an isolated db.
 		const before = await isolated
 			.selectFrom("_emdash_collections")
 			.select((eb) => eb.fn.countAll<number>().as("count"))
@@ -408,8 +879,12 @@ describe("EmDashRuntime.create — cold boot", () => {
 			() => EmDashRuntime.create(createDeps(), timings),
 		);
 		try {
+			// create() read plugin state from the ISOLATED db (honored ctx.db):
+			// the sentinel inactive row excluded the provider from the pipeline.
 			expect(runtime.hooks.getExclusiveSelection("content:beforeSave")).toBeUndefined();
+			// Guard skipped the gate entirely: no rt.seedcheck phase.
 			expect(timings.map((t) => t.name)).not.toContain("rt.seedcheck");
+			// And nothing was seeded onto the borrowed db.
 			const after = await isolated
 				.selectFrom("_emdash_collections")
 				.select((eb) => eb.fn.countAll<number>().as("count"))

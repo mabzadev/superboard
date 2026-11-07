@@ -35,9 +35,11 @@ describe("Loader revision preview", () => {
 	it("should return Date objects for system date fields in revision preview", async () => {
 		const post = await createPublishedPost("Test Post");
 
+		// Publish the post to set published_at
 		const contentRepo = new ContentRepository(db);
 		await contentRepo.publish("post", post.id);
 
+		// Create a revision (simulating a draft edit)
 		const revision = await revisionRepo.create({
 			collection: "post",
 			entryId: post.id,
@@ -54,12 +56,14 @@ describe("Loader revision preview", () => {
 		expect(result).not.toHaveProperty("error");
 		const data = (result as { data: Record<string, unknown> }).data;
 
+		// These must be Date objects, not ISO strings
 		expect(data.createdAt).toBeInstanceOf(Date);
 		expect(data.updatedAt).toBeInstanceOf(Date);
 		expect(data.publishedAt).toBeInstanceOf(Date);
 	});
 
 	it("should return null for unpopulated date fields in revision preview", async () => {
+		// Create a draft post (no publishedAt)
 		const createResult = await handleContentCreate(db, "post", {
 			data: { title: "Draft Post" },
 			status: "draft",
@@ -83,9 +87,33 @@ describe("Loader revision preview", () => {
 		expect(entry).not.toHaveProperty("error");
 		const data = (entry as { data: Record<string, unknown> }).data;
 
+		// Draft posts have no publishedAt
 		expect(data.publishedAt).toBeNull();
+		// But createdAt and updatedAt should still be Date objects
 		expect(data.createdAt).toBeInstanceOf(Date);
 		expect(data.updatedAt).toBeInstanceOf(Date);
+	});
+
+	it("excludes unpublished posts with retained publication dates from public collection loads", async () => {
+		const unpublished = await createPublishedPost("Unpublished");
+		const visible = await createPublishedPost("Visible");
+		const contentRepo = new ContentRepository(db);
+		await contentRepo.publish("post", unpublished.id, "2020-01-01T00:00:00.000Z");
+		await contentRepo.unpublish("post", unpublished.id);
+		await contentRepo.publish("post", visible.id, "2021-01-01T00:00:00.000Z");
+
+		const retained = await contentRepo.findById("post", unpublished.id);
+		expect(retained).toMatchObject({
+			status: "draft",
+			publishedAt: "2020-01-01T00:00:00.000Z",
+		});
+
+		const loader = emdashLoader();
+		const result = await runWithContext({ editMode: false, db }, () =>
+			loader.loadCollection!({ filter: { type: "post" } }),
+		);
+
+		expect(result.entries.map((entry) => entry.data.title)).toEqual(["Visible"]);
 	});
 
 	it("should use revision content fields while preserving system date types", async () => {
@@ -107,7 +135,9 @@ describe("Loader revision preview", () => {
 		expect(entry).not.toHaveProperty("error");
 		const data = (entry as { data: Record<string, unknown> }).data;
 
+		// Content from revision
 		expect(data.title).toBe("Revised Title");
+		// System dates from content table, as Date objects
 		expect(data.createdAt).toBeInstanceOf(Date);
 		expect(data.updatedAt).toBeInstanceOf(Date);
 	});

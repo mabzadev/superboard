@@ -1,4 +1,10 @@
 ---
+/**
+ * Vimeo embed component for Portable Text
+ *
+ * Wraps astro-embed's Vimeo component, extracting props from the PT block node.
+ * astro-portabletext passes `node` (not `value`) for custom type components.
+ */
 import { Vimeo as AstroVimeo } from "astro-embed";
 import type { VimeoBlock } from "../schemas.js";
 

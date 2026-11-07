@@ -443,7 +443,7 @@ it("projects customer events independently and keeps raw customer identifiers ou
 	}
 });
 
-it("pauses Analytics processing of native facts while core keeps collecting and resumes later", async () => {
+it("keeps processing native facts for a project whose retired global Analytics switch was off", async () => {
 	for (const name of [
 		"0001_analytics.sql",
 		"0002_countly_capabilities.sql",
@@ -474,15 +474,12 @@ it("pauses Analytics processing of native facts while core keeps collecting and 
 		ANALYTICS_ID_HASH_KEY: "test-hash",
 		ANALYTICS_INGEST_QUEUE: { send: async () => undefined },
 	} as unknown as AnalyticsEnv;
-	expect(await collectAnalyticsProjection(env)).toEqual({ consumed: 0, failedProjects: 1 });
-	await collectEvents(db, 1, [event("while-paused")]);
+	expect(await collectAnalyticsProjection(env)).toEqual({ consumed: 1, failedProjects: 0 });
+	await collectEvents(db, 1, [event("after-switch")]);
 	expect(
 		(await readCollectedEvents(db, { projectId: 1, after: 0, limit: 100 })).items,
 	).toHaveLength(2);
-	sqlite.exec(
-		"UPDATE analytics_project_settings SET data_collection_enabled=1 WHERE project_id='1'",
-	);
-	expect(await collectAnalyticsProjection(env)).toEqual({ consumed: 2, failedProjects: 0 });
+	expect(await collectAnalyticsProjection(env)).toEqual({ consumed: 1, failedProjects: 0 });
 });
 
 it("upgrades a populated legacy outbox, resumes a partial migration and retains cursor order for late events", async () => {

@@ -93,6 +93,7 @@ describe("List widget", () => {
 				options={{ fields, itemLabel: "Thing" }}
 			/>,
 		);
+		// Summary buttons for both rows use itemLabel + index
 		const summaryButtons = screen
 			.getAllByRole("button")
 			.filter((b) => /Thing \d$/.test(b.textContent ?? ""));
@@ -194,12 +195,14 @@ describe("List widget", () => {
 				options={{ fields }}
 			/>,
 		);
+		// Default: first item expanded → sub-field id scoped to parent "ing"
 		let nameInputs = container.querySelectorAll('input[id*="-name"]');
 		expect(nameInputs.length).toBe(1);
 		const firstId = (nameInputs[0] as HTMLInputElement).id;
 		expect(firstId.startsWith("ing-")).toBe(true);
 		expect(firstId.endsWith("-name")).toBe(true);
 
+		// Collapse first, expand second → distinct id because stable key differs
 		fireEvent.click(screen.getByRole("button", { name: /^▸ Item 1$/ }));
 		fireEvent.click(screen.getByRole("button", { name: /^▸ Item 2$/ }));
 		nameInputs = container.querySelectorAll('input[id*="-name"]');

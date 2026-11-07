@@ -1,4 +1,8 @@
-import { Label } from "@superboard/front-ui/ui/label.js";
+import {
+	SettingsRow,
+	SettingsSection,
+	useSettingsAutosave,
+} from "@superboard/front-ui/settings-form";
 import { useEffect, useId, useState } from "react";
 
 import {
@@ -8,76 +12,97 @@ import {
 } from "./billing/api/billing/billingService.js";
 import { useMonetizationI18n } from "./i18n.js";
 
-export default function DisplayCurrencySetting({ projectId }: { projectId: string }) {
-	const { t, currency: currencyName } = useMonetizationI18n();
-	const id = useId();
+export function useDisplayCurrency(projectId: string, active: boolean) {
 	const [setting, setSetting] = useState<Setting | null>(null);
-	const [status, setStatus] = useState<"saved" | "load-error" | "save-error" | null>(null);
-	const [busy, setBusy] = useState(false);
+	const [loadFailed, setLoadFailed] = useState(false);
 
 	useEffect(() => {
-		let active = true;
+		if (!active) return;
+		let current = true;
 		getOperatorDisplayCurrency(projectId)
 			.then((loaded) => {
-				if (active) setSetting(loaded);
+				if (current) setSetting(loaded);
 			})
 			.catch(() => {
-				if (active) setStatus("load-error");
+				if (current) setLoadFailed(true);
 			});
 		return () => {
-			active = false;
+			current = false;
 		};
-	}, [projectId]);
+	}, [projectId, active]);
 
-	const change = (next: string) => {
-		if (!setting) return;
-		const previous = setting;
-		setSetting({ ...setting, display_currency: next });
-		setBusy(true);
-		setStatus(null);
-		updateOperatorDisplayCurrency(projectId, next)
-			.then((saved) => {
-				setSetting(saved);
-				setStatus("saved");
-			})
-			.catch(() => {
-				setSetting(previous);
-				setStatus("save-error");
-			})
-			.finally(() => {
-				setBusy(false);
-			});
+	const autosave = useSettingsAutosave({
+		resourceKey: setting ? "loaded" : "loading",
+		value: setting?.display_currency ?? "",
+		enabled: setting !== null,
+		save: async (code) => {
+			const saved = await updateOperatorDisplayCurrency(projectId, code);
+			setSetting(
+				(previous) => previous && { ...previous, available_currencies: saved.available_currencies },
+			);
+		},
+	});
+
+	return {
+		...autosave,
+		setting,
+		loadFailed,
+		select: (code: string) => {
+			setSetting((previous) =>
+				previous?.available_currencies.includes(code)
+					? { ...previous, display_currency: code }
+					: previous,
+			);
+		},
 	};
+}
+
+export type DisplayCurrency = ReturnType<typeof useDisplayCurrency>;
+
+export default function DisplayCurrencySetting({ currency }: { currency: DisplayCurrency }) {
+	const { t, currency: currencyName } = useMonetizationI18n();
+	const id = useId();
+	const { setting } = currency;
 
 	return (
-		<section className="mt-6 space-y-2 border-t pt-5">
-			<Label htmlFor={id}>{t("Your display currency")}</Label>
-			<p id={`${id}-help`} className="text-sm text-muted-foreground">
-				{t(
-					"Only for you: other operators choose their own. Revenue totals, charts and customer spending are converted to USD at the exchange rate of each purchase day, then to this currency at the same day’s rate.",
+		<SettingsSection
+			title={t("Display currency")}
+			description={t("The currency in which you read revenue amounts.")}
+		>
+			<SettingsRow>
+				<div className="space-y-2">
+					<label htmlFor={id} className="block text-sm font-medium">
+						{t("Your display currency")}
+					</label>
+					<select
+						id={id}
+						aria-describedby={`${id}-help`}
+						className="h-9 w-full rounded-md border border-kumo-line bg-kumo-base px-3 text-sm"
+						value={setting?.display_currency ?? ""}
+						disabled={!setting}
+						onChange={(event) => {
+							currency.select(event.currentTarget.value);
+						}}
+					>
+						{!setting && <option value="" />}
+						{setting?.available_currencies.map((code) => (
+							<option key={code} value={code}>
+								{`${currencyName(code)} (${code})`}
+							</option>
+						))}
+					</select>
+					<p id={`${id}-help`} className="text-xs text-kumo-subtle">
+						{t(
+							"Only for you: other operators choose their own. Revenue totals, charts and customer spending are converted to USD at the exchange rate of each purchase day, then to this currency at the same day’s rate.",
+						)}
+					</p>
+				</div>
+				{currency.loadFailed && (
+					<p role="alert" className="text-sm text-kumo-danger">
+						{t("Could not load the display currency.")}
+					</p>
 				)}
-			</p>
-			<select
-				id={id}
-				aria-describedby={`${id}-help`}
-				className="h-9 w-full max-w-xs rounded-md border bg-background px-3 text-sm"
-				value={setting?.display_currency ?? ""}
-				disabled={busy || !setting}
-				onChange={(event) => {
-					const value = event.currentTarget.value;
-					if (setting?.available_currencies.includes(value)) change(value);
-				}}
-			>
-				{!setting && <option value="" />}
-				{setting?.available_currencies.map((code) => (
-					<option key={code} value={code}>
-						{`${currencyName(code)} (${code})`}
-					</option>
-				))}
-			</select>
-			{status === "saved" && <p role="status">{t("Display currency saved.")}</p>}
-			{status === "save-error" && <p role="alert">{t("Could not save the display currency.")}</p>}
-			{status === "load-error" && <p role="alert">{t("Could not load the display currency.")}</p>}
-		</section>
+			</SettingsRow>
+		</SettingsSection>
 	);
 }

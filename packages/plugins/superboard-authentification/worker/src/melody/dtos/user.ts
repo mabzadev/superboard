@@ -18,10 +18,6 @@ export class PostUserInvitationDto {
   @IsOptional()
     locale?: string
 
-  @IsString()
-  @IsOptional()
-    orgSlug?: string
-
   @IsString({ each: true })
   @IsOptional()
     roles?: string[]
@@ -35,7 +31,6 @@ export class PostUserInvitationDto {
     this.firstName = dto.firstName
     this.lastName = dto.lastName
     this.locale = dto.locale
-    this.orgSlug = dto.orgSlug
     this.roles = dto.roles
     this.signinUrl = dto.signinUrl
   }
@@ -84,10 +79,6 @@ export class PutUserDto {
   @IsOptional()
     locale?: string
 
-  @IsString()
-  @IsOptional()
-    orgSlug?: string
-
   @IsBoolean()
   @IsOptional()
     isActive?: boolean
@@ -102,6 +93,5 @@ export class PutUserDto {
     this.firstName = dto.firstName
     this.lastName = dto.lastName
     this.locale = dto.locale
-    this.orgSlug = dto.orgSlug
   }
 }

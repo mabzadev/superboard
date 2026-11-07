@@ -7,6 +7,10 @@ export type RoleLevelConfig = {
 	color: string;
 };
 
+/**
+ * Canonical role levels for admin UI (badge colors, selects, labels).
+ * Allowed Domains UI only offers default roles up to Editor (40), not Admin (50).
+ */
 export const ROLE_ENTRIES = [
 	{
 		value: 10,
@@ -60,6 +64,7 @@ function unknownRoleConfig(role: number): RoleLevelConfig {
 	};
 }
 
+/** Badge / display config for a numeric role level */
 export function getRoleConfig(role: number): RoleLevelConfig {
 	return ROLE_CONFIG[role] ?? unknownRoleConfig(role);
 }

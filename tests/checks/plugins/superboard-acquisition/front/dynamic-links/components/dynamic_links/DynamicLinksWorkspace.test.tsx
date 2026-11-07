@@ -20,6 +20,10 @@ const mocks = vi.hoisted(() => ({
 	getTracking: vi.fn(),
 	getRedirectRules: vi.fn(),
 	getSocialPreview: vi.fn(),
+	saveSocialPreview: vi.fn(),
+	saveTracking: vi.fn(),
+	deleteDomain: vi.fn(),
+	verifyDomain: vi.fn(),
 }));
 
 vi.mock(
@@ -113,6 +117,8 @@ function renderInFrench(ui: ReactElement) {
 describe("DynamicLinksWorkspace", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		if (!("PointerEvent" in window))
+			Object.defineProperty(window, "PointerEvent", { value: MouseEvent, configurable: true });
 		window.history.replaceState(null, "", "/acquisition/dynamic-links");
 		mocks.getLinks.mockResolvedValue([link]);
 		mocks.getLinkCampaigns.mockResolvedValue([]);
@@ -126,6 +132,9 @@ describe("DynamicLinksWorkspace", () => {
 		});
 		mocks.getRedirectRules.mockResolvedValue([]);
 		mocks.getSocialPreview.mockResolvedValue(null);
+		mocks.saveSocialPreview.mockResolvedValue({ saved: true });
+		mocks.saveTracking.mockResolvedValue({ saved: true });
+		mocks.deleteDomain.mockResolvedValue({ deleted: true });
 		Object.defineProperties(Element.prototype, {
 			hasPointerCapture: { configurable: true, value: () => false },
 			setPointerCapture: { configurable: true, value: () => undefined },
@@ -188,9 +197,10 @@ describe("DynamicLinksWorkspace", () => {
 			screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent),
 		).toEqual(settingsHeadings);
 		expect(
-			await screen.findByRole("button", { name: "Save tracking settings" }),
+			await screen.findByRole("switch", { name: "Collect link analytics" }),
 		).toBeInTheDocument();
-		expect(await screen.findByRole("button", { name: "Save preview" })).toBeInTheDocument();
+		expect(await screen.findByRole("textbox", { name: "Title" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /^Save/ })).not.toBeInTheDocument();
 		expect(scrollIntoView).not.toHaveBeenCalled();
 	});
 
@@ -199,7 +209,7 @@ describe("DynamicLinksWorkspace", () => {
 		expect(screen.getByRole("tab", { name: "Settings" })).toHaveAttribute("aria-selected", "true");
 		expect(screen.getAllByRole("tablist")).toHaveLength(1);
 		expect(
-			await screen.findByRole("button", { name: "Save tracking settings" }),
+			await screen.findByRole("switch", { name: "Collect link analytics" }),
 		).toBeInTheDocument();
 		expect(screen.getAllByRole("switch")).toHaveLength(1);
 		const tracking = screen.getByRole("heading", { level: 2, name: "Tracking" });
@@ -238,6 +248,134 @@ describe("DynamicLinksWorkspace", () => {
 		expect(search().has("domain")).toBe(false);
 		expect(screen.getByRole("button", { name: "Add domain" })).toBeInTheDocument();
 		expect(screen.queryByText("token-1")).not.toBeInTheDocument();
+	});
+
+	it("asks before removing a domain and shows its verification state", async () => {
+		const user = userEvent.setup();
+		mocks.getDomains.mockResolvedValue([
+			{
+				id: "domain-1",
+				hostname: "go.example.test",
+				status: "pending",
+				verification_token: "token-1",
+				is_default: 1,
+			},
+		]);
+		window.history.replaceState(null, "", "/acquisition/dynamic-links?tab=settings");
+		render(<DynamicLinksWorkspace />);
+		await user.click(await screen.findByRole("button", { name: /go\.example\.test/ }));
+		expect(screen.getByText("Pending verification")).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Remove" }));
+		expect(mocks.deleteDomain).not.toHaveBeenCalled();
+		const confirmation = await screen.findByRole("alertdialog");
+		await user.click(within(confirmation).getByRole("button", { name: "Remove" }));
+		await waitFor(() => expect(mocks.deleteDomain).toHaveBeenCalledWith("10-test", "domain-1"));
+	});
+
+	it("shows the exact DNS record and explains why a verification failed", async () => {
+		const user = userEvent.setup();
+		const record = { type: "TXT", name: "_superboard.go.example.test", value: "token-1" };
+		mocks.getDomains.mockResolvedValue([
+			{
+				id: "domain-1",
+				hostname: "go.example.test",
+				status: "pending",
+				verification_token: "token-1",
+				verification_record: record,
+				is_default: 1,
+			},
+		]);
+		mocks.verifyDomain
+			.mockResolvedValueOnce({
+				id: "domain-1",
+				verified: false,
+				status: "pending",
+				check: { result: "not_found", record, found: [] },
+			})
+			.mockResolvedValueOnce({
+				id: "domain-1",
+				verified: false,
+				status: "pending",
+				check: { result: "mismatch", record, found: ["old-token"] },
+			});
+		window.history.replaceState(null, "", "/acquisition/dynamic-links?tab=settings");
+		render(<DynamicLinksWorkspace />);
+		await user.click(await screen.findByRole("button", { name: /go\.example\.test/ }));
+		expect(screen.getByText("_superboard.go.example.test")).toBeInTheDocument();
+		expect(screen.getByText("token-1")).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Verify DNS" }));
+		expect(
+			await screen.findByText(
+				"No TXT record was found at _superboard.go.example.test yet. DNS changes can take several minutes to propagate.",
+			),
+		).toBeInTheDocument();
+		expect(screen.getByText("Pending verification")).toBeInTheDocument();
+		expect(screen.queryByText("Verified")).not.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Verify DNS" }));
+		expect(
+			await screen.findByText(
+				"A TXT record exists at _superboard.go.example.test, but its value does not match. Value found: old-token",
+			),
+		).toBeInTheDocument();
+		expect(mocks.verifyDomain).toHaveBeenCalledWith("10-test", "domain-1");
+	});
+
+	it("keeps the tracking provider hidden until collection is on and saves the switch by itself", async () => {
+		const user = userEvent.setup();
+		mocks.getTracking.mockResolvedValue({
+			enabled: false,
+			provider: "superboard",
+			configuration: {},
+		});
+		render(<DynamicLinksWorkspace tab="settings" section="tracking" />);
+		const collect = await screen.findByRole("switch", { name: "Collect link analytics" });
+		await waitFor(() => expect(collect).not.toBeChecked());
+		expect(screen.queryByRole("combobox", { name: "Provider" })).not.toBeInTheDocument();
+		await user.click(collect);
+		expect(screen.getByRole("combobox", { name: "Provider" })).toBeInTheDocument();
+		await waitFor(
+			() =>
+				expect(mocks.saveTracking).toHaveBeenCalledWith(
+					"10-test",
+					expect.objectContaining({ enabled: true, provider: "superboard" }),
+				),
+			{ timeout: 3000 },
+		);
+		expect(mocks.saveTracking).toHaveBeenCalledTimes(1);
+	});
+
+	it("saves social preview edits by itself, and only once the preview has a title", async () => {
+		const user = userEvent.setup();
+		mocks.getSocialPreview.mockResolvedValue({
+			title: "Launch",
+			description: "",
+			image_url: "",
+			site_name: "",
+		});
+		render(<DynamicLinksWorkspace tab="settings" section="preview" />);
+		const title = await screen.findByDisplayValue("Launch");
+		await new Promise((resolve) => {
+			setTimeout(resolve, 800);
+		});
+		expect(mocks.saveSocialPreview).not.toHaveBeenCalled();
+		await user.clear(title);
+		expect(await screen.findByText("Add a title to save the social preview.")).toBeInTheDocument();
+		await new Promise((resolve) => {
+			setTimeout(resolve, 800);
+		});
+		expect(mocks.saveSocialPreview).not.toHaveBeenCalled();
+		await user.type(title, "Spring launch");
+		await waitFor(
+			() =>
+				expect(mocks.saveSocialPreview).toHaveBeenCalledWith("10-test", {
+					title: "Spring launch",
+					description: "",
+					image_url: "",
+					site_name: "",
+				}),
+			{ timeout: 3000 },
+		);
+		expect(mocks.saveSocialPreview).toHaveBeenCalledTimes(1);
 	});
 
 	it("stacks a link's details in sections instead of internal tabs", async () => {

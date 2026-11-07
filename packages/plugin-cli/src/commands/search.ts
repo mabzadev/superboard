@@ -1,9 +1,16 @@
+/**
+ * `emdash-plugin search <query> [--capability <name>] [--limit <n>] [--cursor <c>]`
+ *
+ * Free-text search the aggregator. Read-only; no auth required.
+ */
+
 import { DiscoveryClient } from "@emdash-cms/registry-client";
 import { defineCommand } from "citty";
 import { consola } from "consola";
 import pc from "picocolors";
 
 import { resolveAggregatorUrl } from "../config.js";
+import { formatPackageIdentifier } from "../package-identifier.js";
 
 export const searchCommand = defineCommand({
 	meta: {
@@ -63,14 +70,19 @@ export const searchCommand = defineCommand({
 
 		console.log();
 		for (const pkg of result.packages) {
+			// `pkg.profile` is lexicon-validated by DiscoveryClient (or null).
 			const profile = pkg.profile;
-			console.log(`${pc.bold(profile?.name ?? pkg.slug)} ${pc.dim(`(${pkg.slug})`)}`);
+			console.log(pc.bold(formatPackageIdentifier(pkg.handle ?? pkg.did, pkg.slug)));
+			if (profile?.name && profile.name !== pkg.slug) console.log(`  Name: ${profile.name}`);
 			if (profile?.description) console.log(`  ${profile.description}`);
-			console.log(`  ${pc.dim(pkg.uri)}`);
+			console.log(`  Profile URI: ${pc.dim(pkg.uri)}`);
 			console.log();
 		}
 
 		if (result.cursor) {
+			// Cursor-based pagination: callers paginate by passing the cursor
+			// back in, not by bumping --limit. The aggregator caps `limit` at
+			// 100, so suggesting "increase the limit" was misleading advice.
 			consola.info(
 				`More results available. Continue with: ${pc.cyan(
 					`emdash-plugin search "${args.query}" --cursor ${result.cursor}`,

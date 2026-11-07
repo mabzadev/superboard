@@ -1,7 +1,17 @@
+/**
+ * Tests for the field widget plugin pipeline.
+ *
+ * Covers:
+ * - Manifest schema validation for fieldWidgets
+ * - definePlugin() with fieldWidgets
+ * - FieldWidgetConfig type correctness
+ */
+
 import { describe, expect, it } from "vitest";
 
 import { pluginManifestSchema } from "../../../../../../packages/core/src/plugins/manifest-schema.js";
 
+/** Minimal valid manifest */
 function makeManifest(admin: Record<string, unknown> = {}) {
 	return {
 		id: "test-plugin",

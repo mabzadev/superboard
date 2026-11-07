@@ -2,9 +2,9 @@ import { Badge, Button, Dialog, Input, Label, Select, Switch } from "@cloudflare
 import { plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import {
-	MagnifyingGlass,
 	Plus,
 	ArrowsLeftRight,
+	FileX,
 	Trash,
 	PencilSimple,
 	WarningCircle,
@@ -26,11 +26,17 @@ import type {
 	Redirect,
 	UpdateRedirectInput,
 } from "../lib/api/redirects.js";
-import { cn } from "../lib/utils.js";
+import { cn, formatDate } from "../lib/utils.js";
 import { ADMIN_NAV_ICONS } from "./admin-navigation-icons.js";
 import { ArrowNext } from "./ArrowIcons.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 import { DialogError, getMutationError } from "./DialogError.js";
+import { PageHeader } from "./PageHeader.js";
+import { TableToolbarSearch } from "./TableToolbar.js";
+
+// ---------------------------------------------------------------------------
+// Redirect form dialog (create + edit)
+// ---------------------------------------------------------------------------
 
 function RedirectFormDialog({
 	open,
@@ -40,7 +46,9 @@ function RedirectFormDialog({
 }: {
 	open: boolean;
 	onClose: () => void;
+	/** Pass for edit mode */
 	redirect?: Redirect;
+	/** Pre-fill source for create mode (e.g. from 404 list) */
 	defaultSource?: string;
 }) {
 	const { t } = useLingui();
@@ -53,6 +61,7 @@ function RedirectFormDialog({
 	const [enabled, setEnabled] = useState(redirect?.enabled ?? true);
 	const [groupName, setGroupName] = useState(redirect?.groupName ?? "");
 
+	// Terminal statuses (410 Gone / 451) serve a status directly — no destination.
 	const isTerminal = type === "410" || type === "451";
 
 	const createMutation = useMutation({
@@ -122,6 +131,7 @@ function RedirectFormDialog({
 
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<Input
+						dir="ltr"
 						label={t`Source path`}
 						placeholder={t`/old-page or /blog/[slug]`}
 						value={source}
@@ -131,6 +141,7 @@ function RedirectFormDialog({
 
 					{!isTerminal && (
 						<Input
+							dir="ltr"
 							label={t`Destination path`}
 							placeholder={t`/new-page or /articles/[slug]`}
 							value={destination}
@@ -191,6 +202,10 @@ function RedirectFormDialog({
 	);
 }
 
+// ---------------------------------------------------------------------------
+// 404 Summary panel
+// ---------------------------------------------------------------------------
+
 function NotFoundPanel({
 	items,
 	onCreateRedirect,
@@ -200,7 +215,7 @@ function NotFoundPanel({
 	onCreateRedirect: (path: string) => void;
 	onMarkGone: (path: string) => void;
 }) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 
 	if (items.length === 0) {
 		return (
@@ -221,12 +236,18 @@ function NotFoundPanel({
 					key={item.path}
 					className="flex items-center gap-4 py-2 px-4 border-b last:border-0 text-sm"
 				>
-					<div className="flex-1 font-mono text-xs truncate">{item.path}</div>
+					<div className="flex-1 font-mono text-xs truncate">
+						<bdi dir="ltr">{item.path}</bdi>
+					</div>
 					<div className="w-16 text-end tabular-nums">{item.count}</div>
 					<div className="w-32 text-kumo-subtle text-xs">
 						{(() => {
 							const d = new Date(item.lastSeen);
-							return Number.isNaN(d.getTime()) ? item.lastSeen : d.toLocaleDateString();
+							return Number.isNaN(d.getTime()) ? (
+								item.lastSeen
+							) : (
+								<bdi>{formatDate(d, i18n.locale)}</bdi>
+							);
 						})()}
 					</div>
 					<div className="w-20 flex items-center justify-end gap-3">
@@ -253,6 +274,10 @@ function NotFoundPanel({
 	);
 }
 
+// ---------------------------------------------------------------------------
+// Main Redirects page
+// ---------------------------------------------------------------------------
+
 type TabKey = "redirects" | "404s";
 
 export function Redirects() {
@@ -264,16 +289,19 @@ export function Redirects() {
 	const [filterEnabled, setFilterEnabled] = useState<string>("all");
 	const [filterAuto, setFilterAuto] = useState<string>("all");
 
+	// Debounce search input
 	useEffect(() => {
 		const timer = setTimeout(setDebouncedSearch, 300, search);
 		return () => clearTimeout(timer);
 	}, [search]);
 
+	// Dialog state
 	const [showCreate, setShowCreate] = useState(false);
 	const [editRedirect, setEditRedirect] = useState<Redirect | null>(null);
 	const [deleteId, setDeleteId] = useState<string | null>(null);
 	const [prefillSource, setPrefillSource] = useState("");
 
+	// Queries
 	const enabledFilter = filterEnabled === "all" ? undefined : filterEnabled === "true";
 	const autoFilter = filterAuto === "all" ? undefined : filterAuto === "true";
 
@@ -297,6 +325,7 @@ export function Redirects() {
 		enabled: tab === "404s",
 	});
 
+	// Delete mutation
 	const deleteMutation = useMutation({
 		mutationFn: (id: string) => deleteRedirect(id),
 		onSuccess: () => {
@@ -305,6 +334,7 @@ export function Redirects() {
 		},
 	});
 
+	// Toggle enabled mutation
 	const toggleMutation = useMutation({
 		mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
 			updateRedirect(id, { enabled }),
@@ -316,6 +346,7 @@ export function Redirects() {
 		},
 	});
 
+	// One-click "Gone": create a 410 rule (no destination) for a 404 path.
 	const markGoneMutation = useMutation({
 		mutationFn: (path: string) =>
 			createRedirect({ source: path, destination: "", type: 410, enabled: true }),
@@ -334,81 +365,93 @@ export function Redirects() {
 	const loopRedirectIds = new Set(
 		redirectsQuery.data?.pages.flatMap((page) => page.loopRedirectIds ?? []) ?? [],
 	);
+	const searchPlaceholder = t`Search source or destination...`;
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-semibold leading-tight">{t`Redirects`}</h1>
-					<p className="mt-1 text-sm leading-5 text-pretty text-kumo-subtle">
-						{t`Manage URL redirects and view 404 errors.`}
-					</p>
-				</div>
-				<Button icon={<Plus />} onClick={() => setShowCreate(true)}>
-					{t`New Redirect`}
-				</Button>
-			</div>
-
-			<div className="flex gap-1 border-b">
-				<button
-					onClick={() => setTab("redirects")}
-					className={cn(
-						"px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
-						tab === "redirects"
-							? "border-kumo-brand text-kumo-link"
-							: "border-transparent text-kumo-subtle hover:text-kumo-default",
-					)}
-				>
-					{t`Redirects`}
-					{redirectsQuery.data && (
-						<Badge variant="secondary" className="ms-2">
-							{redirects.length}
-							{redirectsQuery.hasNextPage ? "+" : ""}
-						</Badge>
-					)}
-				</button>
-				<button
-					onClick={() => setTab("404s")}
-					className={cn(
-						"px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
-						tab === "404s"
-							? "border-kumo-brand text-kumo-link"
-							: "border-transparent text-kumo-subtle hover:text-kumo-default",
-					)}
-				>
-					{t`404 Errors`}
-				</button>
-			</div>
-
-			{tab === "redirects" && (
-				<>
-					<div className="flex items-center gap-4">
-						<div className="relative flex-1 max-w-md">
-							<MagnifyingGlass
-								className="absolute start-3 top-1/2 -translate-y-1/2 text-kumo-subtle"
-								size={16}
-							/>
-							<Input
-								placeholder={t`Search source or destination...`}
-								className="ps-10"
+			<PageHeader
+				title={t`Redirects`}
+				description={t`Manage URL redirects and view 404 errors.`}
+				value={tab}
+				onValueChange={(value) => {
+					if (value === "redirects" || value === "404s") setTab(value);
+				}}
+				actions={
+					<Button variant="primary" icon={<Plus />} onClick={() => setShowCreate(true)}>
+						{t`New Redirect`}
+					</Button>
+				}
+				tools={
+					tab === "redirects" ? (
+						<>
+							<TableToolbarSearch
+								size="base"
+								placeholder={searchPlaceholder}
+								aria-label={searchPlaceholder}
 								value={search}
 								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
 							/>
-						</div>
-						<Select
-							value={filterEnabled}
-							onValueChange={(v) => setFilterEnabled(v ?? "all")}
-							items={{ all: t`All statuses`, true: t`Enabled`, false: t`Disabled` }}
-							aria-label={t`Filter by status`}
-						/>
-						<Select
-							value={filterAuto}
-							onValueChange={(v) => setFilterAuto(v ?? "all")}
-							items={{ all: t`All types`, false: t`Manual`, true: t`Auto (slug change)` }}
-							aria-label={t`Filter by type`}
-						/>
-					</div>
+							<div className="grid grid-cols-2 gap-2 sm:flex">
+								<Select
+									className="w-full sm:w-auto"
+									value={filterEnabled}
+									onValueChange={(v) => setFilterEnabled(v ?? "all")}
+									items={{ all: t`All statuses`, true: t`Enabled`, false: t`Disabled` }}
+									aria-label={t`Filter by status`}
+								/>
+								<Select
+									className="w-full sm:w-auto"
+									value={filterAuto}
+									onValueChange={(v) => setFilterAuto(v ?? "all")}
+									items={{ all: t`All types`, false: t`Manual`, true: t`Auto (slug change)` }}
+									aria-label={t`Filter by type`}
+								/>
+							</div>
+						</>
+					) : undefined
+				}
+				tabs={[
+					{
+						value: "redirects",
+						className: "flex-1 justify-center text-sm sm:flex-none",
+						label: (
+							<span className="flex items-center gap-1.5">
+								<ArrowsLeftRight
+									className="size-4 shrink-0"
+									weight={tab === "redirects" ? "fill" : "regular"}
+									aria-hidden="true"
+								/>
+								{t`Redirects`}
+								{redirectsQuery.data && (
+									<Badge variant="secondary">
+										{redirects.length}
+										{redirectsQuery.hasNextPage ? "+" : ""}
+									</Badge>
+								)}
+							</span>
+						),
+					},
+					{
+						value: "404s",
+						className: "flex-1 justify-center text-sm sm:flex-none",
+						label: (
+							<span className="flex items-center gap-1.5">
+								<FileX
+									className="size-4 shrink-0"
+									weight={tab === "404s" ? "fill" : "regular"}
+									aria-hidden="true"
+								/>
+								{t`404 Errors`}
+							</span>
+						),
+					},
+				]}
+			/>
 
+			{/* Tab content */}
+			{tab === "redirects" && (
+				<>
+					{/* Loop warning banner */}
 					{loopRedirectIds.size > 0 && (
 						<div
 							role="alert"
@@ -433,12 +476,13 @@ export function Redirects() {
 						</div>
 					)}
 
+					{/* Redirect list */}
 					{redirectsQuery.isLoading ? (
 						<div className="py-12 text-center text-kumo-subtle">{t`Loading redirects...`}</div>
 					) : redirects.length === 0 ? (
-						<div className="py-12 text-center text-kumo-subtle">
-							<ADMIN_NAV_ICONS.redirects size={48} className="mx-auto mb-4 opacity-30" />
-							<p className="text-lg font-medium">{t`No redirects yet`}</p>
+						<div className="py-10 text-center text-kumo-subtle">
+							<ADMIN_NAV_ICONS.redirects size={40} className="mx-auto mb-3 opacity-30" />
+							<p className="text-base font-medium">{t`No redirects yet`}</p>
 							<p className="text-sm mt-1">{t`Create redirect rules to manage URL changes.`}</p>
 						</div>
 					) : (
@@ -462,13 +506,13 @@ export function Redirects() {
 										)}
 									>
 										<div className="flex-1 font-mono text-xs truncate" title={r.source}>
-											{r.source}
+											<bdi dir="ltr">{r.source}</bdi>
 										</div>
 										<div className="w-8 text-center text-kumo-subtle">
 											<ArrowNext size={14} />
 										</div>
 										<div className="flex-1 font-mono text-xs truncate" title={r.destination}>
-											{r.destination}
+											<bdi dir="ltr">{r.destination}</bdi>
 										</div>
 										<div className="w-14 text-center">
 											<Badge variant="secondary">{r.type}</Badge>
@@ -547,6 +591,7 @@ export function Redirects() {
 				/>
 			)}
 
+			{/* Create dialog */}
 			{showCreate && (
 				<RedirectFormDialog
 					open
@@ -558,10 +603,12 @@ export function Redirects() {
 				/>
 			)}
 
+			{/* Edit dialog */}
 			{editRedirect && (
 				<RedirectFormDialog open onClose={() => setEditRedirect(null)} redirect={editRedirect} />
 			)}
 
+			{/* Delete confirmation */}
 			<ConfirmDialog
 				open={!!deleteId}
 				onClose={() => {

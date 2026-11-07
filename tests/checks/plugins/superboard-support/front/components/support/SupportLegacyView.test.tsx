@@ -47,13 +47,13 @@ describe("legacy Support addresses", () => {
 		expect(target.searchParams.get("lang")).toBe("fr");
 	});
 
-	it("lets the destination choose its own tab over a legacy one", () => {
-		const replace = openLegacyAddress("/support/contacts?tab=directory&contact=contact-1");
+	it("lets the destination choose its own section over a legacy one", () => {
+		const replace = openLegacyAddress("/support/contacts?section=directory&contact=contact-1");
 		render(<ContactsView />);
 
 		const target = redirectedTo(replace);
-		expect(target.pathname).toBe("/support/settings");
-		expect(target.searchParams.get("tab")).toBe("contacts");
+		expect(target.pathname).toBe("/support/inbox");
+		expect(target.searchParams.get("section")).toBe("contacts");
 		expect(target.searchParams.get("contact")).toBe("contact-1");
 	});
 });

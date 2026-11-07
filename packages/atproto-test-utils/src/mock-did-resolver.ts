@@ -1,5 +1,20 @@
+/**
+ * In-memory DID document resolver. Used by both the aggregator (resolves
+ * publisher DIDs to discover their PDS endpoint and signing key) and any
+ * test-side code that needs to look up a DID document.
+ *
+ * Tests register DID documents via `register(did, doc)`; production resolves
+ * via PLC directory or did:web HTTP. The interface matches the subset that
+ * the aggregator's verification path actually calls.
+ */
+
 import type { AtprotoDid } from "./types.js";
 
+/**
+ * DID document subset the aggregator reads. Real DID documents have more
+ * fields (alsoKnownAs, multiple verification methods, multiple services); we
+ * only model what's load-bearing for verification + PDS routing.
+ */
 export interface DidDocument {
 	id: AtprotoDid;
 	alsoKnownAs?: string[];
@@ -23,6 +38,10 @@ export interface BuildDidDocumentOptions {
 	handle?: string;
 }
 
+/**
+ * Convenience builder for the most common DID document shape: one
+ * `#atproto` Multikey verification method + one `#atproto_pds` PDS service.
+ */
 export function buildDidDocument(opts: BuildDidDocumentOptions): DidDocument {
 	return {
 		id: opts.did,
@@ -56,6 +75,11 @@ export class MockDidResolver {
 		return this.docs.get(did) ?? null;
 	}
 
+	/**
+	 * Convenience for the aggregator's PDS-routing path: returns the
+	 * `serviceEndpoint` of the `AtprotoPersonalDataServer` service entry, or
+	 * null if the DID is unknown or the service is missing.
+	 */
 	pdsFor(did: AtprotoDid): string | null {
 		const doc = this.docs.get(did);
 		if (!doc) return null;
@@ -65,6 +89,7 @@ export class MockDidResolver {
 		return pds?.serviceEndpoint ?? null;
 	}
 
+	/** Returns the `#atproto` signing key in multibase form. */
 	signingKeyFor(did: AtprotoDid): string | null {
 		const doc = this.docs.get(did);
 		if (!doc) return null;

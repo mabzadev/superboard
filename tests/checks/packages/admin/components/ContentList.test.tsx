@@ -1,8 +1,11 @@
-import { i18n } from "@lingui/core";
+import { i18n, setupI18n } from "@lingui/core";
+import { I18nProvider } from "@lingui/react";
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { userEvent } from "vitest/browser";
 
 import { ContentList } from "../../../../../packages/admin/src/components/ContentList";
+import type { ListPagination } from "../../../../../packages/admin/src/components/ListPaginationFooter";
 import type { ContentItem, TrashedContentItem } from "../../../../../packages/admin/src/lib/api";
 import type {
 	ContentListColumnCellContext,
@@ -12,10 +15,15 @@ import {
 	PluginAdminProvider,
 	type PluginAdmins,
 } from "../../../../../packages/admin/src/lib/plugin-context.js";
+import { messages as enMessages } from "../../../../../packages/admin/src/locales/en/messages.mjs";
 import { render } from "../utils/render.tsx";
 
 const NO_RESULTS_PATTERN = /No results for/;
 const HAS_MORE_ITEMS_PATTERN = /21\+ items/;
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const NO_POSTS_YET_REGEX = /No posts yet/;
 const MOVE_TO_TRASH_CONFIRMATION_REGEX = /Move "Post" to trash/;
@@ -85,6 +93,34 @@ describe("ContentList", () => {
 			const items = [makeItem({ id: "1", data: { title: "My Post" } })];
 			const screen = await render(<ContentList {...defaultProps} items={items} />);
 			await expect.element(screen.getByText("My Post")).toBeInTheDocument();
+		});
+
+		it("links published translations to their locale-prefixed path", async () => {
+			const items = [
+				makeItem({
+					status: "published",
+					slug: "polski-test",
+					locale: "pl",
+					data: { title: "Polski test" },
+				}),
+			];
+			const screen = await render(
+				<ContentList
+					{...defaultProps}
+					items={items}
+					urlPattern="/posts/{slug}"
+					i18n={{
+						defaultLocale: "en",
+						locales: ["en", "pl"],
+						prefixDefaultLocale: false,
+					}}
+				/>,
+			);
+
+			await screen.getByRole("button", { name: "Actions for Polski test" }).click();
+			await expect
+				.element(screen.getByRole("menuitem", { name: "View published" }))
+				.toHaveAttribute("href", "/pl/posts/polski-test");
 		});
 
 		it("falls back to data.name when title is missing", async () => {
@@ -219,6 +255,7 @@ describe("ContentList", () => {
 
 		it("shows empty trash message in Trash tab", async () => {
 			const screen = await render(<ContentList {...defaultProps} items={[]} trashedItems={[]} />);
+			// Switch to Trash tab
 			await screen.getByText("Trash").click();
 			await expect.element(screen.getByText("Trash is empty")).toBeInTheDocument();
 		});
@@ -228,6 +265,7 @@ describe("ContentList", () => {
 		it("defaults to All tab", async () => {
 			const items = [makeItem()];
 			const screen = await render(<ContentList {...defaultProps} items={items} />);
+			// Items should be visible (All tab active)
 			await expect.element(screen.getByText("Hello World")).toBeInTheDocument();
 		});
 
@@ -250,6 +288,36 @@ describe("ContentList", () => {
 				<ContentList {...defaultProps} items={[]} trashedItems={[]} trashedCount={42} />,
 			);
 			await expect.element(screen.getByText("42")).toBeInTheDocument();
+		});
+
+		it("shows each trashed item's locale when i18n is configured", async () => {
+			const screen = await render(
+				<ContentList
+					{...defaultProps}
+					items={[]}
+					trashedItems={[makeTrashedItem({ id: "t1", locale: "fr" })]}
+					i18n={{ defaultLocale: "en", locales: ["en", "fr"] }}
+					activeLocale="fr"
+					onLocaleChange={() => {}}
+				/>,
+			);
+			await screen.getByText("Trash").click();
+			await expect
+				.element(screen.getByRole("columnheader", { name: "Locale" }))
+				.toBeInTheDocument();
+			await expect.element(screen.getByRole("cell", { name: "fr" })).toBeInTheDocument();
+		});
+
+		it("omits the trash locale column on a single-locale site", async () => {
+			const screen = await render(
+				<ContentList
+					{...defaultProps}
+					items={[]}
+					trashedItems={[makeTrashedItem({ id: "t1", locale: "en" })]}
+				/>,
+			);
+			await screen.getByText("Trash").click();
+			expect(screen.getByRole("columnheader", { name: "Locale" }).query()).toBeNull();
 		});
 	});
 
@@ -307,6 +375,19 @@ describe("ContentList", () => {
 			const screen = await render(<ContentList {...defaultProps} items={items} />);
 			const badge = screen.getByText("Pending changes").element();
 			expect(badge.querySelector("svg")).not.toBeNull();
+		});
+
+		it("does not show pending badge when the entry has never been published", async () => {
+			const items = [
+				makeItem({
+					id: "1",
+					status: "scheduled",
+					draftRevisionId: "rev_draft",
+					liveRevisionId: null,
+				}),
+			];
+			const screen = await render(<ContentList {...defaultProps} items={items} />);
+			expect(screen.getByText("Pending changes").query()).toBeNull();
 		});
 
 		it("does not show pending badge when revisions match", async () => {
@@ -463,14 +544,52 @@ describe("ContentList", () => {
 				<ContentList {...defaultProps} items={items} onDelete={onDelete} />,
 			);
 
-			await screen.getByRole("button", { name: "Move Post to trash" }).click();
+			await screen.getByRole("button", { name: "Actions for Post" }).click();
+			await screen.getByRole("menuitem", { name: "Move to trash" }).click();
 
+			// Dialog should appear with confirmation text
 			await expect.element(screen.getByText("Move to Trash?")).toBeInTheDocument();
 			await expect.element(screen.getByText(MOVE_TO_TRASH_CONFIRMATION_REGEX)).toBeInTheDocument();
+			// Confirm and Cancel buttons should be visible
 			await expect
 				.element(screen.getByRole("button", { name: "Move to Trash" }))
 				.toBeInTheDocument();
 			await expect.element(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+		});
+
+		it("returns focus to the row's menu button when the dialog closes", async () => {
+			const items = [makeItem({ id: "item_1", data: { title: "Post" } })];
+			const screen = await render(<ContentList {...defaultProps} items={items} />);
+			const trigger = screen.getByRole("button", { name: "Actions for Post" });
+
+			await trigger.click();
+			await screen.getByRole("menuitem", { name: "Move to trash" }).click();
+			await expect.element(screen.getByRole("dialog", { name: "Move to Trash?" })).toBeVisible();
+			await userEvent.keyboard("{Escape}");
+
+			await expect
+				.element(screen.getByRole("dialog", { name: "Move to Trash?" }))
+				.not.toBeInTheDocument();
+			await expect.element(trigger).toHaveFocus();
+		});
+
+		it("closes the dialog when the user confirms", async () => {
+			const onDelete = vi.fn();
+			const items = [makeItem({ id: "item_1", data: { title: "Post" } })];
+			const screen = await render(
+				<ContentList {...defaultProps} items={items} onDelete={onDelete} />,
+			);
+
+			await screen.getByRole("button", { name: "Actions for Post" }).click();
+			await screen.getByRole("menuitem", { name: "Move to trash" }).click();
+			await expect.element(screen.getByRole("dialog", { name: "Move to Trash?" })).toBeVisible();
+			// Direct DOM click to bypass Base UI inert overlay
+			screen.getByRole("button", { name: "Move to Trash" }).element().click();
+
+			expect(onDelete).toHaveBeenCalledWith("item_1");
+			await expect
+				.element(screen.getByRole("dialog", { name: "Move to Trash?" }))
+				.not.toBeInTheDocument();
 		});
 	});
 
@@ -492,10 +611,13 @@ describe("ContentList", () => {
 				/>,
 			);
 
+			// Switch to trash tab
 			await screen.getByText("Trash").click();
 
-			await screen.getByRole("button", { name: "Permanently delete Old Post" }).click();
+			await screen.getByRole("button", { name: "Actions for Old Post" }).click();
+			await screen.getByRole("menuitem", { name: "Delete permanently" }).click();
 
+			// Dialog should appear with correct text
 			await expect.element(screen.getByText("Delete Permanently?")).toBeInTheDocument();
 			await expect
 				.element(screen.getByText(PERMANENT_DELETE_CONFIRMATION_REGEX))
@@ -504,10 +626,37 @@ describe("ContentList", () => {
 				.element(screen.getByRole("button", { name: "Delete Permanently" }))
 				.toBeInTheDocument();
 		});
+
+		it("closes the dialog when the user confirms", async () => {
+			const onPermanentDelete = vi.fn();
+			const trashed = [makeTrashedItem({ id: "t1", data: { title: "Old Post" } })];
+			const screen = await render(
+				<ContentList
+					{...defaultProps}
+					items={[]}
+					trashedItems={trashed}
+					onPermanentDelete={onPermanentDelete}
+				/>,
+			);
+
+			await screen.getByText("Trash").click();
+			await screen.getByRole("button", { name: "Actions for Old Post" }).click();
+			await screen.getByRole("menuitem", { name: "Delete permanently" }).click();
+			await expect
+				.element(screen.getByRole("dialog", { name: "Delete Permanently?" }))
+				.toBeVisible();
+			// Direct DOM click to bypass Base UI inert overlay
+			screen.getByRole("button", { name: "Delete Permanently" }).element().click();
+
+			expect(onPermanentDelete).toHaveBeenCalledWith("t1");
+			await expect
+				.element(screen.getByRole("dialog", { name: "Delete Permanently?" }))
+				.not.toBeInTheDocument();
+		});
 	});
 
 	describe("restore", () => {
-		it("calls onRestore when restore button is clicked", async () => {
+		it("calls onRestore when Restore is chosen from the row menu", async () => {
 			const onRestore = vi.fn();
 			const trashed = [
 				makeTrashedItem({
@@ -520,21 +669,23 @@ describe("ContentList", () => {
 			);
 
 			await screen.getByText("Trash").click();
-			await screen.getByRole("button", { name: "Restore Restorable" }).click();
+			await screen.getByRole("button", { name: "Actions for Restorable" }).click();
+			await screen.getByRole("menuitem", { name: "Restore" }).click();
 
 			expect(onRestore).toHaveBeenCalledWith("t1");
 		});
 	});
 
 	describe("duplicate", () => {
-		it("calls onDuplicate when duplicate button is clicked", async () => {
+		it("calls onDuplicate when Duplicate is chosen from the row menu", async () => {
 			const onDuplicate = vi.fn();
 			const items = [makeItem({ id: "item_1", data: { title: "Copyable" } })];
 			const screen = await render(
 				<ContentList {...defaultProps} items={items} onDuplicate={onDuplicate} />,
 			);
 
-			await screen.getByRole("button", { name: "Duplicate Copyable" }).click();
+			await screen.getByRole("button", { name: "Actions for Copyable" }).click();
+			await screen.getByRole("menuitem", { name: "Duplicate" }).click();
 
 			expect(onDuplicate).toHaveBeenCalledWith("item_1");
 		});
@@ -558,13 +709,16 @@ describe("ContentList", () => {
 
 		it("auto-fetches when user navigates to the last client-side page", async () => {
 			const onLoadMore = vi.fn();
+			// 21 items = 2 pages of 20; user starts on page 0 (not the last page)
 			const items = Array.from({ length: 21 }, (_, i) => makeItem({ id: `item_${i}` }));
 			const screen = await render(
 				<ContentList {...defaultProps} items={items} hasMore={true} onLoadMore={onLoadMore} />,
 			);
 
+			// On mount, page 0 is not the last page — no fetch yet
 			expect(onLoadMore).not.toHaveBeenCalled();
 
+			// Navigate to page 2 (the last page)
 			await screen.getByRole("button", { name: "Next page" }).click();
 
 			expect(onLoadMore).toHaveBeenCalledOnce();
@@ -572,6 +726,7 @@ describe("ContentList", () => {
 
 		it("does not auto-fetch when a search query is active", async () => {
 			const onLoadMore = vi.fn();
+			// 21 items so pagination exists, but search will collapse to 1 result / 1 page
 			const items = [
 				...Array.from({ length: 20 }, (_, i) =>
 					makeItem({ id: `item_${i}`, data: { title: `Post ${i}` } }),
@@ -582,8 +737,10 @@ describe("ContentList", () => {
 				<ContentList {...defaultProps} items={items} hasMore={true} onLoadMore={onLoadMore} />,
 			);
 
+			// No fetch on mount (page 0 is not the last page with 21 items)
 			expect(onLoadMore).not.toHaveBeenCalled();
 
+			// Search collapses results to 1 item — totalPages becomes 1, but should NOT fetch
 			await screen.getByRole("searchbox").fill("Unique Title");
 
 			expect(onLoadMore).not.toHaveBeenCalled();
@@ -603,6 +760,9 @@ describe("ContentList", () => {
 				<ContentList {...defaultProps} items={items} hasMore={true} onLoadMore={onLoadMore} />,
 			);
 
+			// With 1 item and hasMore=true, the auto-fetch effect fires on mount
+			// because page 0 is already the last client-side page.
+			// The button click adds a second call on top of that.
 			expect(onLoadMore).toHaveBeenCalledOnce();
 
 			await screen.getByRole("button", { name: "Load More" }).click();
@@ -630,6 +790,24 @@ describe("ContentList", () => {
 			await expect
 				.element(screen.getByRole("searchbox", { name: "Search posts" }))
 				.toBeInTheDocument();
+		});
+
+		it("keeps the collection label capitalized for a German admin", async () => {
+			const previousLocale = i18n.locale;
+			i18n.load("de", {});
+			i18n.activate("de");
+
+			try {
+				const items = [makeItem({ id: "1", data: { title: "Beitrag" } })];
+				const screen = await render(
+					<ContentList {...defaultProps} collectionLabel="Beiträge" items={items} />,
+				);
+				await expect
+					.element(screen.getByRole("searchbox"))
+					.toHaveAttribute("placeholder", "Search Beiträge...");
+			} finally {
+				i18n.activate(previousLocale);
+			}
 		});
 
 		it("hides search input when no items", async () => {
@@ -661,6 +839,9 @@ describe("ContentList", () => {
 			await expect.element(screen.getByText(NO_RESULTS_PATTERN)).toBeInTheDocument();
 		});
 
+		// #1219: when the caller opts into server-side search it reports the
+		// (debounced) query and must NOT also filter the loaded page client-side
+		// (the server already returned the matching rows).
 		it("reports the query upward and does not client-filter in server mode", async () => {
 			const onSearchChange = vi.fn();
 			const items = [
@@ -673,14 +854,19 @@ describe("ContentList", () => {
 
 			await screen.getByRole("searchbox").fill("beta");
 
+			// Debounced callback fires with the typed term.
 			await vi.waitFor(() => {
 				expect(onSearchChange).toHaveBeenCalledWith("beta");
 			});
 
+			// Server mode shows whatever `items` the caller supplied — it does not
+			// hide "Alpha post" by filtering locally.
 			await expect.element(screen.getByText("Alpha post")).toBeInTheDocument();
 			await expect.element(screen.getByText("Beta post")).toBeInTheDocument();
 		});
 
+		// #1219: in server mode a zero-match query empties `items`. The search box
+		// must stay mounted so the user can clear the query.
 		it("keeps the search input mounted in server mode when there are no items", async () => {
 			const onSearchChange = vi.fn();
 			const screen = await render(
@@ -691,6 +877,8 @@ describe("ContentList", () => {
 				.toBeInTheDocument();
 		});
 
+		// #1219: a zero-match server search must not show "Create your first one"
+		// (there is content, it just doesn't match), it must report the query.
 		it("shows a no-results message, not the empty state, for a zero-match server search", async () => {
 			const onSearchChange = vi.fn();
 			const screen = await render(
@@ -703,6 +891,8 @@ describe("ContentList", () => {
 			expect(screen.getByText("Create your first one").query()).toBeNull();
 		});
 
+		// #1219: the match count must come from the server `total`, not the loaded
+		// page length, otherwise it undercounts when matches span multiple pages.
 		it("counts server-search matches using total, not the loaded page", async () => {
 			const onSearchChange = vi.fn();
 			const items = Array.from({ length: 20 }, (_, i) =>
@@ -725,6 +915,29 @@ describe("ContentList", () => {
 	});
 
 	describe("pagination", () => {
+		it("explains the bulk tag limit before opening the dialog", async () => {
+			const items = Array.from({ length: 51 }, (_, index) =>
+				makeItem({ id: `item_${index}`, data: { title: `Post ${index}` } }),
+			);
+			const screen = await render(
+				<ContentList
+					{...defaultProps}
+					items={items}
+					bulkTagTaxonomies={[{ name: "tag", label: "Tags", labelSingular: "Tag" }]}
+				/>,
+			);
+			for (let pageIndex = 0; pageIndex < 3; pageIndex++) {
+				await screen.getByRole("checkbox", { name: "Select all on this page" }).click();
+				if (pageIndex < 2) await screen.getByRole("button", { name: "Next page" }).click();
+			}
+			await expect.element(screen.getByRole("button", { name: "Add tag" })).toBeDisabled();
+			await expect
+				.element(screen.getByRole("status"))
+				.toHaveTextContent("Select up to 50 posts at a time.");
+			await screen.getByRole("checkbox", { name: "Select Post 50" }).click();
+			await expect.element(screen.getByRole("button", { name: "Add tag" })).toBeEnabled();
+		});
+
 		it("shows pagination when items exceed page size", async () => {
 			const items = Array.from({ length: 25 }, (_, i) =>
 				makeItem({ id: `item_${i}`, data: { title: `Post ${i}` } }),
@@ -747,16 +960,27 @@ describe("ContentList", () => {
 			);
 			const screen = await render(<ContentList {...defaultProps} items={items} />);
 
+			// Page 1 should show Post 0
 			await expect.element(screen.getByText("Post 0")).toBeInTheDocument();
 
+			// Go to page 2
 			await screen.getByRole("button", { name: "Next page" }).click();
 
 			await expect.element(screen.getByText("2 / 2")).toBeInTheDocument();
+			// Post 20 should be on page 2
 			await expect.element(screen.getByText("Post 20")).toBeInTheDocument();
+			// Post 0 should not be visible
 			expect(screen.getByText("Post 0").query()).toBeNull();
 		});
 
+		// Regression: before this change `totalPages` was derived only from
+		// loaded items, so the denominator grew in increments of 5 (API
+		// fetches 100, page size 20 → 5 client pages per fetch). When the
+		// parent supplies an authoritative `total`, the denominator must
+		// reflect it from the first render.
 		it("uses `total` as a stable denominator instead of items.length", async () => {
+			// Only the first 20 items have been loaded, but the server knows
+			// there are 143 total.
 			const items = Array.from({ length: 20 }, (_, i) =>
 				makeItem({ id: `item_${i}`, data: { title: `Post ${i}` } }),
 			);
@@ -764,7 +988,216 @@ describe("ContentList", () => {
 				<ContentList {...defaultProps} items={items} total={143} hasMore={true} />,
 			);
 
+			// 143 / 20 = 8 pages. The denominator should read 8, not "/5".
 			await expect.element(screen.getByText("1 / 8")).toBeInTheDocument();
+		});
+	});
+
+	describe("legacy selection", () => {
+		it("drops a selected row that leaves the loaded list", async () => {
+			const first = makeItem({ id: "a", data: { title: "Alpha" } });
+			const second = makeItem({ id: "b", data: { title: "Bravo" } });
+			const screen = await render(
+				<ContentList {...defaultProps} items={[first, second]} onBulkDelete={vi.fn()} />,
+			);
+			await screen.getByRole("checkbox", { name: "Select Alpha" }).click();
+			await screen.getByRole("checkbox", { name: "Select Bravo" }).click();
+
+			await screen.rerender(
+				<ContentList {...defaultProps} items={[second]} onBulkDelete={vi.fn()} />,
+			);
+
+			await expect.element(screen.getByText("1 selected")).toBeInTheDocument();
+		});
+	});
+
+	describe("bulk delete", () => {
+		it("closes the confirmation dialog when the user confirms", async () => {
+			const onBulkDelete = vi.fn((ids: string[]) => Promise.resolve(ids));
+			const items = [makeItem({ id: "a", data: { title: "Alpha" } })];
+			const screen = await render(
+				<ContentList {...defaultProps} items={items} onBulkDelete={onBulkDelete} />,
+			);
+			await screen.getByRole("checkbox", { name: "Select Alpha" }).click();
+
+			await screen.getByRole("button", { name: "Move to trash", exact: true }).click();
+			await expect.element(screen.getByRole("dialog", { name: "Move to Trash?" })).toBeVisible();
+			// Direct DOM click to bypass Base UI inert overlay
+			screen.getByRole("button", { name: "Move to Trash", exact: true }).element().click();
+
+			expect(onBulkDelete).toHaveBeenCalledWith(["a"]);
+			await expect
+				.element(screen.getByRole("dialog", { name: "Move to Trash?" }))
+				.not.toBeInTheDocument();
+			await expect.element(screen.getByText("1 selected")).toBeInTheDocument();
+		});
+	});
+
+	describe("numbered pages", () => {
+		function makePagination(overrides: Partial<ListPagination> = {}): ListPagination {
+			return {
+				page: 1,
+				perPage: 20,
+				totalCount: 143,
+				isPending: false,
+				onPageChange: vi.fn(),
+				onPageSizeChange: vi.fn(),
+				...overrides,
+			};
+		}
+
+		function makePosts(from: number, count: number) {
+			return Array.from({ length: count }, (_, index) =>
+				makeItem({ id: `post_${from + index}`, data: { title: `Post ${from + index}` } }),
+			);
+		}
+
+		it("renders the whole server page with the media footer", async () => {
+			const screen = await render(
+				<ContentList
+					{...defaultProps}
+					items={makePosts(1, 50)}
+					pagination={makePagination({ perPage: 50 })}
+					hasMore
+					onLoadMore={vi.fn()}
+				/>,
+			);
+
+			await expect.element(screen.getByText("Showing 1-50 of 143")).toBeInTheDocument();
+			await expect.element(screen.getByText("Post 50")).toBeInTheDocument();
+			await expect
+				.element(screen.getByRole("navigation", { name: "Posts pagination" }))
+				.toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Load More" }).query()).toBeNull();
+		});
+
+		it("shows the loading row, not the empty state, while an empty page loads", async () => {
+			const screen = await render(
+				<ContentList
+					{...defaultProps}
+					items={[]}
+					pagination={makePagination({ totalCount: 0, isPending: true })}
+				/>,
+			);
+
+			await expect.element(screen.getByText("Loading...")).toBeInTheDocument();
+			expect(screen.getByText(NO_POSTS_YET_REGEX).query()).toBeNull();
+			expect(screen.getByRole("navigation", { name: "Posts pagination" }).query()).toBeNull();
+		});
+
+		it("keeps the sort headers usable but locks the rows while a page loads", async () => {
+			const posts = makePosts(1, 2);
+			const props = {
+				...defaultProps,
+				items: posts,
+				sort: { field: "updatedAt", direction: "desc" } as const,
+				onSortChange: vi.fn(),
+				onBulkDelete: vi.fn(),
+			};
+			const screen = await render(<ContentList {...props} pagination={makePagination()} />);
+			const sortByTitle = screen.getByRole("button", { name: "Title" });
+			sortByTitle.element().focus();
+
+			await screen.rerender(
+				<ContentList {...props} pagination={makePagination({ isPending: true })} />,
+			);
+			// The browser moves focus out of an inert subtree on its next rendering update.
+			await new Promise(requestAnimationFrame);
+			await new Promise(requestAnimationFrame);
+
+			expect(document.activeElement).toBe(sortByTitle.element());
+			const rowCheckbox = screen.getByRole("checkbox", { name: "Select Post 1" }).element();
+			rowCheckbox.focus();
+			expect(document.activeElement).not.toBe(rowCheckbox);
+		});
+
+		it("keeps selections from other pages for bulk actions", async () => {
+			const onBulkPublish = vi.fn().mockResolvedValue([]);
+			const props = { ...defaultProps, onBulkPublish };
+			const screen = await render(
+				<ContentList {...props} items={makePosts(1, 20)} pagination={makePagination()} />,
+			);
+			await screen.getByRole("checkbox", { name: "Select Post 3" }).click();
+
+			await screen.rerender(
+				<ContentList
+					{...props}
+					items={makePosts(21, 20)}
+					pagination={makePagination({ page: 2 })}
+				/>,
+			);
+			await screen.getByRole("checkbox", { name: "Select Post 22" }).click();
+			await screen.getByRole("button", { name: "Publish", exact: true }).click();
+
+			expect(onBulkPublish).toHaveBeenCalledWith(["post_3", "post_22"]);
+		});
+
+		it.each([
+			["the status filter", { statusFilter: "draft" as const }],
+			["the collection", { collection: "pages", collectionLabel: "Pages" }],
+		])("clears selections when %s changes", async (_change, changedProps) => {
+			const props = {
+				...defaultProps,
+				items: makePosts(1, 2),
+				onBulkDelete: vi.fn(),
+				onStatusFilterChange: vi.fn(),
+				pagination: makePagination(),
+			};
+			const screen = await render(<ContentList {...props} />);
+			await screen.getByRole("checkbox", { name: "Select Post 1" }).click();
+			await expect.element(screen.getByText("1 selected")).toBeInTheDocument();
+
+			await screen.rerender(<ContentList {...props} {...changedProps} />);
+
+			await expect.element(screen.getByText("1 selected")).not.toBeInTheDocument();
+		});
+
+		it("lists rows selected on another page in the bulk-tag dialog", async () => {
+			const props = {
+				...defaultProps,
+				bulkTagTaxonomies: [{ name: "tag", label: "Tags", labelSingular: "Tag" }],
+			};
+			const screen = await render(
+				<ContentList {...props} items={makePosts(1, 20)} pagination={makePagination()} />,
+			);
+			await screen.getByRole("checkbox", { name: "Select Post 3" }).click();
+			await screen.rerender(
+				<ContentList
+					{...props}
+					items={makePosts(21, 20)}
+					pagination={makePagination({ page: 2 })}
+				/>,
+			);
+
+			await screen.getByRole("button", { name: "Add tag" }).click();
+
+			await expect
+				.element(screen.getByRole("dialog").getByText("Post 3", { exact: true }))
+				.toBeInTheDocument();
+		});
+
+		it("pages the trash with its own footer", async () => {
+			const trashedItems = Array.from({ length: 20 }, (_, index) =>
+				makeTrashedItem({ id: `trashed_${index}`, data: { title: `Old ${index}` } }),
+			);
+			const screen = await render(
+				<ContentList
+					{...defaultProps}
+					trashedItems={trashedItems}
+					trashedCount={25}
+					trashPagination={makePagination({ totalCount: 25 })}
+					hasMoreTrashed
+					onLoadMoreTrashed={vi.fn()}
+				/>,
+			);
+
+			await screen.getByRole("tab", { name: /Trash/ }).click();
+
+			await expect.element(screen.getByText("Showing 1-20 of 25")).toBeInTheDocument();
+			await expect
+				.element(screen.getByRole("navigation", { name: "Trash pagination" }))
+				.toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Load More" }).query()).toBeNull();
 		});
 	});
 
@@ -817,6 +1250,8 @@ describe("ContentList", () => {
 			const titleHeader = screen.getByRole("columnheader", { name: "Title" });
 			const statusHeader = screen.getByRole("columnheader", { name: "Status" });
 			await expect.element(titleHeader).toHaveAttribute("aria-sort", "ascending");
+			// Inactive columns explicitly advertise "none" so the header still
+			// announces as sortable.
 			await expect.element(statusHeader).toHaveAttribute("aria-sort", "none");
 		});
 
@@ -824,6 +1259,7 @@ describe("ContentList", () => {
 			const items = [makeItem({ id: "1", data: { title: "Post" } })];
 			const screen = await render(<ContentList {...defaultProps} items={items} />);
 
+			// The header must not render as a button — it's just a label.
 			expect(screen.getByRole("button", { name: "Title" }).query()).toBeNull();
 		});
 
@@ -890,6 +1326,43 @@ describe("ContentList", () => {
 				.toBeVisible();
 			await expect.element(screen.getByText("Needs review")).toBeVisible();
 			await expect.element(screen.getByText("Plugin Post")).toBeVisible();
+		});
+
+		it("renders an untranslated label without invoking Lingui's compiler", async () => {
+			const localI18n = setupI18n({ locale: "en", messages: { en: enMessages } });
+			localI18n.setMessagesCompiler(undefined as never);
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+			try {
+				const screen = await render(
+					listWithColumns([{ id: "review-status", label: "Review status", cell: () => null }]),
+					{
+						wrapper: ({ children }) => <I18nProvider i18n={localI18n}>{children}</I18nProvider>,
+					},
+				);
+
+				await expect
+					.element(screen.getByRole("columnheader", { name: "Review status" }))
+					.toBeVisible();
+				expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("Review status"));
+			} finally {
+				warn.mockRestore();
+			}
+		});
+
+		it("translates a contributed label found in the active catalog", async () => {
+			const localI18n = setupI18n({
+				locale: "en",
+				messages: { en: { ...enMessages, "Review status": ["Prüfstatus"] } },
+			});
+			localI18n.setMessagesCompiler(undefined as never);
+			const screen = await render(
+				listWithColumns([{ id: "review-status", label: "Review status", cell: () => null }]),
+				{
+					wrapper: ({ children }) => <I18nProvider i18n={localI18n}>{children}</I18nProvider>,
+				},
+			);
+
+			await expect.element(screen.getByRole("columnheader", { name: "Prüfstatus" })).toBeVisible();
 		});
 
 		it("updates contributed header labels when the shared catalog changes", async () => {

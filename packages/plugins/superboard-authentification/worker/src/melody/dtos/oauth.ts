@@ -29,9 +29,7 @@ export enum Policy {
   ResetMfa = 'reset_mfa',
   ManagePasskey = 'manage_passkey',
   UpdateInfo = 'update_info',
-  ChangeOrg = 'change_org',
   ManageRecoveryCode = 'manage_recovery_code',
-  SamSso = 'saml_sso_',
   Oidc = 'oidc_sso_',
 }
 
@@ -60,10 +58,6 @@ export class CoreAuthorizeDto {
   @IsString()
     locale: typeConfig.Locale
 
-  @IsString()
-  @IsOptional()
-    org?: string | undefined
-
   constructor (dto: CoreAuthorizeDto) {
     this.redirectUri = dto.redirectUri.toLowerCase()
     this.clientId = dto.clientId
@@ -71,7 +65,6 @@ export class CoreAuthorizeDto {
     this.codeChallengeMethod = dto.codeChallengeMethod?.toLowerCase()
     this.scopes = parseScopes(dto.scopes)
     this.locale = dto.locale
-    this.org = dto.org
 
     if (
       this.codeChallengeMethod === AuthorizeCodeChallengeMethod.Plain &&

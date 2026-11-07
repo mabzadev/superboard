@@ -1,3 +1,23 @@
+/**
+ * `emdash-plugin publish`
+ *
+ * Thin citty wrapper around `publishRelease` from `../publish/api.js`.
+ *
+ * Responsibilities here are limited to:
+ *   - parsing args and reading filesystem credentials,
+ *   - building and uploading the package blob, or fetching `--url` when the
+ *     publisher explicitly uses external hosting,
+ *   - extracting the manifest from those bytes BEFORE printing any tarball
+ *     metadata so users don't see "looks good" output for a malformed file,
+ *   - opening an authenticated `PublishingClient` from the OAuth session,
+ *   - rendering the API's structured output through consola,
+ *   - exiting non-zero on `PublishError`.
+ *
+ * Everything else (FAIR's immutability rule, profile bootstrap validation,
+ * deprecated-capability hard-fail, AT URI construction) lives in the API so
+ * tests can run it against a mock PDS.
+ */
+
 import { lookup as dnsLookup } from "node:dns/promises";
 import { readFile, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -8,8 +28,11 @@ import { defineCommand } from "citty";
 import consola from "consola";
 import pc from "picocolors";
 
+import { BundleError, bundlePlugin } from "../bundle/api.js";
 import { formatBytes, MAX_BUNDLE_SIZE, validateBundleSize } from "../bundle/utils.js";
+import { isFlagSet } from "../cli-args.js";
 import { redirectConsolaToStderr } from "../cli-output.js";
+import { probeEnvironment } from "../init/environment.js";
 import { loadManifest, MANIFEST_FILENAME, ManifestError } from "../manifest/load.js";
 import { checkPublisher, PublisherCheckError, writePublisherBack } from "../manifest/publisher.js";
 import {
@@ -20,7 +43,13 @@ import {
 	SectionError,
 } from "../manifest/translate.js";
 import { sha256Multihash } from "../multihash.js";
-import { resumeSession } from "../oauth.js";
+import { missingBlobScopes, resumeSession } from "../oauth.js";
+import {
+	formatPackageIdentifier,
+	formatPackageReleaseIdentifier,
+	formatPublisherIdentifier,
+	pluginPageUrl,
+} from "../package-identifier.js";
 import {
 	PublishError,
 	publishRelease,
@@ -28,21 +57,31 @@ import {
 	type PublishLogger,
 	type ReleaseArtifactsInput,
 } from "../publish/api.js";
-import { ArtifactUploadError, resolveReleaseArtifacts } from "../publish/upload-artifacts.js";
+import { ArtifactUploadError, resolveReleaseArtifacts } from "../publish/blob-artifacts.js";
 
+/**
+ * Hard cap on the gzipped tarball we'll buffer into memory. Sized for the
+ * decompressed bundle cap from RFC 0001 (MAX_BUNDLE_SIZE = 256 KB) plus
+ * tar headers and worst-case gzip overhead. Anything larger is rejected at
+ * fetch time before decompression. The decompressed bundle is then re-checked
+ * against the per-file and total caps via `validateBundleSize`.
+ */
 const MAX_TARBALL_BYTES = 384 * 1024;
+const MAX_PACKAGE_BLOB_BYTES = 256 * 1024;
 
 export const publishCommand = defineCommand({
 	meta: {
 		name: "publish",
-		description:
-			"Publish a sandboxed plugin release to the registry (atproto + FAIR-shaped records)",
+		description: "Build and publish a sandboxed plugin release to the atproto registry",
 	},
 	args: {
+		"artifact-base-url": {
+			type: "string",
+			description: "Removed; listing images are uploaded to the publisher PDS",
+		},
 		url: {
 			type: "string",
-			description: "Public URL where the tarball is hosted (artifact source-of-truth)",
-			required: true,
+			description: "Use an externally hosted tarball instead of uploading it to the publisher PDS",
 		},
 		local: {
 			type: "string",
@@ -81,37 +120,36 @@ export const publishCommand = defineCommand({
 			type: "string",
 			description: `Path to emdash-plugin.jsonc, or the directory containing it. Defaults to ./${MANIFEST_FILENAME}. Pass --no-manifest (or set to "false") to disable manifest loading and rely entirely on flags.`,
 		},
-		"no-manifest": {
-			type: "boolean",
-			description:
-				"Disable manifest loading and rely entirely on flags. Useful in CI where the manifest lives elsewhere or shouldn't be implicitly consumed.",
-			default: false,
-		},
 		"allow-overwrite": {
 			type: "boolean",
 			description:
-				"Allow overwriting an existing release at <slug>:<version>. Default refuses, since FAIR treats version records as immutable and aggregators/labellers may flag any change as a takedown event.",
+				"Allow overwriting an existing release at <slug>:<version>. Default refuses because release versions are immutable and aggregators/labellers may flag any change as a takedown event.",
 			default: false,
-		},
-		"artifact-base-url": {
-			type: "string",
-			description:
-				"Base URL the CLI PUTs media artifacts (icon / screenshot / banner) to. Each file is uploaded to <base>/<slug>/<version>/<filename> and that URL is recorded in the release. The target must serve the bytes back unchanged with a stable content type. Required when the manifest declares any `release.artifacts`.",
 		},
 		json: {
 			type: "boolean",
 			description:
-				"Emit a single-line JSON object on stdout instead of human output. Success: {profile, release, cid, checksum, url, profileCreated, releaseOverwritten}. Failure: {error: {code, message}}. Human-readable progress goes to stderr in either mode.",
+				"Emit a single-line JSON object on stdout instead of human output. Success includes profile, release, cid, checksum, hosting, and optional url. Failure is {error: {code, message}}. Human-readable progress goes to stderr in either mode.",
 		},
 	},
 	async run({ args }) {
+		// In --json mode, stdout MUST contain only the final JSON object so
+		// callers can `emdash-plugin publish ... --json | jq`. Route every
+		// consola log line to stderr; capture the previous reporter set so we
+		// can restore in the finally below (matters when the CLI is exec'd
+		// in-process by tests or wrappers).
 		const restoreReporters = args.json ? redirectConsolaToStderr() : null;
+		// `process.exit` inside a catch block runs SYNCHRONOUSLY and skips
+		// the finally. Capture the desired exit code, run finally, then
+		// exit. The exit code mirrors the originating CliError where
+		// available (so user-error vs publish-failure is distinguishable in
+		// scripts) and falls back to 1 for anything else.
 		let exitCode = 0;
 		try {
 			await runPublish(args);
 		} catch (error) {
 			exitCode = error instanceof CliError ? error.exitCode : 1;
-			handlePublishError(error, args.json);
+			handlePublishError(error, args.json === true);
 		} finally {
 			restoreReporters?.();
 		}
@@ -119,10 +157,22 @@ export const publishCommand = defineCommand({
 	},
 });
 
+/**
+ * Inner publish flow. Throws on every failure path; the outer `run` catches
+ * and renders consistently (human + JSON modes).
+ */
 async function runPublish(args: PublishArgs): Promise<void> {
-	const urlError = validatePublishUrl(args.url);
-	if (urlError) throw new CliError(urlError, 2, "INVALID_URL");
+	const removedOptionError = removedArtifactBaseUrlError(args["artifact-base-url"]);
+	if (removedOptionError) throw new CliError(removedOptionError, 2, "INVALID_FLAG");
+	if (args.url !== undefined) {
+		const urlError = validatePublishUrl(args.url);
+		if (urlError) throw new CliError(urlError, 2, "INVALID_URL");
+	} else if (args.local !== undefined) {
+		throw new CliError("--local can only be used with --url.", 2, "INVALID_FLAG");
+	}
 
+	// Reject empty-string flags up front. citty leaves them as "" rather
+	// than undefined, and the publish API treats "" as missing -- bad UX.
 	const stringFlagError = validateStringFlags({
 		license: args.license,
 		"author-name": args["author-name"],
@@ -133,9 +183,22 @@ async function runPublish(args: PublishArgs): Promise<void> {
 	});
 	if (stringFlagError) throw new CliError(stringFlagError, 2, "INVALID_FLAG");
 
+	// Load the manifest if present. Precedence: explicit flags win over
+	// manifest values, manifest values fill in any gaps. With
+	// --no-manifest, we skip loading entirely.
+	//
+	// The default path is `./emdash-plugin.jsonc`. If the user didn't pass
+	// --manifest and there's no file at the default path, that's NOT an
+	// error: legacy flag-only invocations keep working. Only `--manifest`
+	// explicit-not-found is an error.
 	const manifestLoad = await loadManifestBootstrap(args, consola);
 	const manifestProfile = manifestLoad?.profileInput ?? null;
 
+	// Resume the active publisher session BEFORE any network access.
+	// The publisher-mismatch check below depends only on the session DID
+	// and the manifest's pinned publisher; running both up front means
+	// a wrong-account publish fails in milliseconds rather than after a
+	// full tarball fetch + decompress + manifest extract.
 	const credentials = new FileCredentialStore();
 	const session = await credentials.current();
 	if (!session) {
@@ -145,8 +208,14 @@ async function runPublish(args: PublishArgs): Promise<void> {
 			"NOT_LOGGED_IN",
 		);
 	}
-	consola.info(`Publishing as ${pc.bold(session.handle ?? session.did)} (${pc.dim(session.did)})`);
+	consola.info(
+		`Publisher: ${pc.bold(formatPublisherIdentifier(session.handle ?? session.did))} (${pc.dim(session.did)})`,
+	);
 
+	// Verify the manifest's pinned publisher matches the active session
+	// before fetching the tarball. The check is offline (DID compare is
+	// verbatim; handle resolution only runs if the manifest pins a handle)
+	// so we can fail fast on the wrong-account case.
 	if (manifestLoad?.manifest.publisher !== undefined) {
 		try {
 			const check = await checkPublisher({
@@ -169,36 +238,102 @@ async function runPublish(args: PublishArgs): Promise<void> {
 		}
 	}
 
-	consola.start(`Fetching ${args.url}...`);
-	const tarballBytes = await fetchTarball(args.url);
-	const checksum = sha256Multihash(tarballBytes);
-	const manifest = await extractManifestFromTarball(tarballBytes);
+	let tarballBytes: Uint8Array;
+	let checksum: string;
+	let manifest: PluginManifest;
+	if (args.url !== undefined) {
+		consola.start(`Fetching ${args.url}...`);
+		tarballBytes = await fetchTarball(args.url);
+		checksum = sha256Multihash(tarballBytes);
+		manifest = await extractManifestFromTarball(tarballBytes);
+
+		if (args.local) {
+			const localPath = resolve(args.local);
+			const localBytes = await readFile(localPath);
+			const localChecksum = sha256Multihash(localBytes);
+			if (localChecksum !== checksum) {
+				throw new CliError(
+					`Local file ${localPath} does not match the bytes served at ${args.url}. Local multihash: ${localChecksum}; remote multihash: ${checksum}. Re-upload the correct tarball, or drop --local to publish whatever's at the URL.`,
+					1,
+					"LOCAL_CHECKSUM_MISMATCH",
+				);
+			}
+			consola.success(`Local file at ${pc.dim(localPath)} matches the URL`);
+		}
+	} else {
+		try {
+			const bundled = await bundlePlugin({
+				dir: manifestLoad ? dirname(manifestLoad.path) : process.cwd(),
+				displayPublisher: session.handle ?? session.did,
+				logger: {
+					start: (message) => consola.start(message),
+					info: (message) => consola.info(message),
+					success: (message) => consola.success(message),
+					warn: (message) => consola.warn(message),
+				},
+			});
+			if (!bundled.tarballPath) throw new Error("Plugin bundling produced no tarball");
+			tarballBytes = await readFile(bundled.tarballPath);
+			if (tarballBytes.byteLength > MAX_PACKAGE_BLOB_BYTES) {
+				throw new CliError(
+					`Compressed bundle is ${formatBytes(tarballBytes.byteLength)}; PDS package blobs are limited to ${formatBytes(MAX_PACKAGE_BLOB_BYTES)}. Use --url with an external host for this release.`,
+					1,
+					"TARBALL_TOO_LARGE",
+				);
+			}
+			checksum = sha256Multihash(tarballBytes);
+			manifest = bundled.manifest;
+		} catch (error) {
+			if (error instanceof BundleError) throw new CliError(error.message, 1, error.code);
+			throw error;
+		}
+	}
 
 	consola.info(`Tarball: ${formatBytes(tarballBytes.length)}`);
 	consola.info(`Multihash: ${pc.dim(checksum)}`);
-	consola.info(`Manifest: ${pc.bold(manifest.id)}@${manifest.version}`);
-
-	if (args.local) {
-		const localPath = resolve(args.local);
-		const localBytes = await readFile(localPath);
-		const localChecksum = sha256Multihash(localBytes);
-		if (localChecksum !== checksum) {
-			throw new CliError(
-				`Local file ${localPath} does not match the bytes served at ${args.url}. Local multihash: ${localChecksum}; remote multihash: ${checksum}. Re-upload the correct tarball, or drop --local to publish whatever's at the URL.`,
-				1,
-				"LOCAL_CHECKSUM_MISMATCH",
-			);
-		}
-		consola.success(`Local file at ${pc.dim(localPath)} matches the URL`);
-	}
+	consola.info(
+		`Package: ${pc.bold(formatPackageReleaseIdentifier(session.handle ?? session.did, manifest.id, manifest.version))}`,
+	);
+	const pluginDir = manifestLoad ? dirname(manifestLoad.path) : process.cwd();
+	const publishRepository = manifestLoad?.manifest.repo ?? (await probeEnvironment(pluginDir)).repo;
 
 	const oauthSession = await resumeSession(session.did);
+	const needsImages = Boolean(
+		manifestLoad?.manifest.artifacts &&
+		(manifestLoad.manifest.artifacts.icon ||
+			manifestLoad.manifest.artifacts.banner ||
+			manifestLoad.manifest.artifacts.screenshots?.length),
+	);
+	const requiredBlobScopes = [
+		...(args.url === undefined ? ["blob:application/gzip"] : []),
+		...(needsImages ? ["blob:image/*"] : []),
+	];
+	if (requiredBlobScopes.length > 0) {
+		const token = await oauthSession.getTokenInfo();
+		const missing = missingBlobScopes(token.scope, requiredBlobScopes);
+		if (missing.length > 0) {
+			throw new CliError(
+				`The active OAuth grant is missing ${missing.join(", ")}. Run \`emdash-plugin logout\`, then log in again to grant blob uploads.`,
+				1,
+				"MISSING_BLOB_SCOPE",
+			);
+		}
+	}
 	const publisher = PublishingClient.fromHandler({
 		handler: oauthSession,
 		did: session.did,
 		pds: session.pds,
 	});
+	const packageBlob =
+		args.url === undefined
+			? await publisher.uploadBlob(tarballBytes, "application/gzip")
+			: undefined;
 
+	// Resolve the profile block. The manifest is the base; the deprecated
+	// flat flags override on top (explicit caller intent wins). A single
+	// --author-* / --security-* flag replaces the whole corresponding
+	// manifest list — the flat flags only ever model one entry, so merging
+	// them into a multi-entry list would be ambiguous.
 	const profileInput: ProfileInput = { ...manifestProfile };
 	if (args.license !== undefined) profileInput.license = args.license;
 	if (
@@ -239,7 +374,7 @@ async function runPublish(args: PublishArgs): Promise<void> {
 		warn: (m) => consola.warn(m),
 	};
 
-	const artifacts = await resolveManifestArtifacts(args, manifestLoad, logger);
+	const artifacts = await resolveManifestArtifacts(manifestLoad, publisher, logger);
 
 	const result = await publishRelease({
 		publisher,
@@ -247,24 +382,38 @@ async function runPublish(args: PublishArgs): Promise<void> {
 		manifest,
 		checksum,
 		url: args.url,
+		blob: packageBlob,
 		profileInput,
-		repo: manifestLoad?.manifest.repo,
+		repo: publishRepository,
 		requires: manifestLoad?.manifest.requires,
 		artifacts,
 		allowOverwrite: args["allow-overwrite"],
 		logger,
 	});
 
+	// Post-publish: pin the active session's DID back to the manifest if
+	// the user didn't pin one themselves. This is a convenience, not a
+	// publish requirement — failures are logged but don't fail the
+	// command (the publish already committed to the PDS).
+	//
+	// The handle is passed for the line-comment annotation; the CLI
+	// itself only ever uses the DID for the equality check.
 	if (manifestLoad && manifestLoad.manifest.publisher === undefined) {
 		await writePublisherBack({
 			manifestPath: manifestLoad.path,
 			sessionDid: session.did,
+			// session.handle is nullable; normalise to undefined for the
+			// optional argument so the absence-vs-empty distinction stays
+			// clean at the writePublisherBack boundary.
 			sessionHandle: session.handle ?? undefined,
 			onInfo: (m) => consola.info(m),
 			onWarn: (m) => consola.warn(m),
 		});
 	}
 
+	// Subsequent-publish: warn about ignored first-publish-only profile
+	// fields. These are owned by the existing profile record; a republish
+	// doesn't rewrite them.
 	if (!result.profileCreated && result.ignoredProfileFields.length > 0) {
 		const fields = result.ignoredProfileFields.join(", ");
 		consola.warn(
@@ -273,68 +422,64 @@ async function runPublish(args: PublishArgs): Promise<void> {
 	}
 
 	if (args.json) {
+		// Stdout-clean JSON for pipe consumers.
+		const identifier = formatPackageIdentifier(session.handle ?? session.did, result.slug);
 		process.stdout.write(
 			`${JSON.stringify({
+				identifier,
 				profile: result.profileUri,
 				release: result.releaseUri,
 				cid: result.releaseCid,
 				checksum: result.checksum,
-				url: args.url,
+				hosting: args.url === undefined ? "blob" : "url",
+				...(args.url === undefined ? {} : { url: args.url }),
 				profileCreated: result.profileCreated,
 				releaseOverwritten: result.releaseOverwritten,
+				...(session.handle ? { page: pluginPageUrl(session.handle, result.slug) } : {}),
 			})}\n`,
 		);
 		return;
 	}
 
-	consola.success(`Published ${pc.bold(`${result.slug}@${manifest.version}`)}`);
+	const identifier = formatPackageIdentifier(session.handle ?? session.did, result.slug);
+	consola.success(
+		`Published ${pc.bold(formatPackageReleaseIdentifier(session.handle ?? session.did, result.slug, manifest.version))}`,
+	);
 	consola.info(`Release URI: ${pc.dim(result.releaseUri)}`);
 	consola.info(`Profile URI: ${pc.dim(result.profileUri)}`);
+	if (session.handle) {
+		consola.info(
+			`Plugin page after approval: ${pc.cyan(pluginPageUrl(session.handle, result.slug))}`,
+		);
+	}
 	console.log();
-	consola.info(
-		`The aggregator will pick this up from the firehose. To verify discovery once it's indexed:`,
+	consola.info("The package stays out of the public registry while its listing is checked.");
+	consola.info("Track listing status:");
+	console.log(`  ${pc.bold(identifier)}`);
+	console.log(
+		`  ${pc.cyan(`emdash-plugin info ${session.handle ?? session.did} ${result.slug} --version ${manifest.version} --watch`)}`,
 	);
-	console.log(`  ${pc.cyan(`emdash-plugin info ${session.handle ?? session.did} ${result.slug}`)}`);
 }
 
+/**
+ * Resolve the manifest's `release.artifacts` block into uploaded, embeddable
+ * records. Returns `undefined` when no manifest was loaded or it declared no
+ * artifacts.
+ */
 async function resolveManifestArtifacts(
-	args: PublishArgs,
 	manifestLoad: ManifestLoadOutcome | null,
+	publisher: PublishingClient,
 	logger: PublishLogger,
 ): Promise<ReleaseArtifactsInput | undefined> {
 	const artifacts = manifestLoad?.manifest.artifacts;
 	if (!manifestLoad || !artifacts) return undefined;
 
-	const baseUrl = args["artifact-base-url"];
-	if (baseUrl === undefined || baseUrl.length === 0) {
-		throw new CliError(
-			"The manifest declares `release.artifacts` (icon / screenshot / banner) but no --artifact-base-url was given. Pass --artifact-base-url <url> so the CLI can upload the images and record where they're hosted.",
-			2,
-			"ARTIFACT_BASE_URL_REQUIRED",
-		);
-	}
-	let parsedBase: URL;
-	try {
-		parsedBase = new URL(baseUrl);
-	} catch {
-		throw new CliError(`--artifact-base-url is not a valid URL: ${baseUrl}`, 2, "INVALID_FLAG");
-	}
-	if (parsedBase.protocol !== "https:") {
-		throw new CliError(
-			`--artifact-base-url must use https; got ${parsedBase.protocol}. Host artifacts over TLS.`,
-			2,
-			"INVALID_FLAG",
-		);
-	}
-
 	try {
 		return await resolveReleaseArtifacts({
 			artifacts,
 			manifestDir: dirname(manifestLoad.path),
-			baseUrl,
-			slug: manifestLoad.manifest.slug,
-			version: manifestLoad.manifest.version,
 			logger,
+			upload: ({ bytes, contentType }) => publisher.uploadBlob(bytes, contentType),
 		});
 	} catch (error) {
 		if (error instanceof ArtifactUploadError) {
@@ -344,6 +489,13 @@ async function resolveManifestArtifacts(
 	}
 }
 
+/**
+ * Render any error from the publish flow, in human or JSON shape. Always
+ * writes to stderr (consola was already redirected for --json mode); in
+ * --json mode also writes a structured `{ error: { code, message } }` to
+ * stdout so a piped consumer can parse failures the same way they parse
+ * successes.
+ */
 function handlePublishError(error: unknown, jsonMode: boolean): void {
 	let code = "INTERNAL_ERROR";
 	let message = "Internal error";
@@ -372,6 +524,11 @@ function handlePublishError(error: unknown, jsonMode: boolean): void {
 	}
 }
 
+/**
+ * Internal CLI-only error with a stable code, so JSON mode can surface a
+ * structured failure shape without the caller having to map raw Error
+ * messages.
+ */
 class CliError extends Error {
 	override readonly name = "CliError";
 	constructor(
@@ -383,8 +540,10 @@ class CliError extends Error {
 	}
 }
 
+/** citty arg shape for the publish command. Inferred from the schema below. */
 type PublishArgs = {
-	url: string;
+	"artifact-base-url"?: string;
+	url?: string;
 	local?: string;
 	license?: string;
 	"author-name"?: string;
@@ -392,39 +551,76 @@ type PublishArgs = {
 	"author-email"?: string;
 	"security-email"?: string;
 	"security-url"?: string;
-	manifest?: string;
-	"no-manifest"?: boolean;
+	/** citty parses `--no-manifest` as `false`. */
+	manifest?: string | false;
+	/** Undocumented spelling of `--no-manifest`. */
+	noManifest?: unknown;
 	"allow-overwrite"?: boolean;
-	"artifact-base-url"?: string;
 	json?: boolean;
 };
 
+export function removedArtifactBaseUrlError(value: string | undefined): string | null {
+	return value === undefined
+		? null
+		: "--artifact-base-url was removed. Remove the option so listing images are uploaded to the publisher PDS.";
+}
+
+/**
+ * Result of resolving the manifest for `runPublish`. Surfaces both the
+ * derived ProfileInput (the publish API's input) and the normalised
+ * manifest itself, so downstream code can run the publisher-pin check
+ * and the post-publish write-back without re-parsing the file.
+ */
 interface ManifestLoadOutcome {
+	/** Resolved absolute path to the manifest file. */
 	path: string;
+	/** Normalised manifest (single/multi-author forms collapsed). */
 	manifest: NormalisedManifest;
+	/** Structured profile block for the publish-API input. */
 	profileInput: ProfileInput;
 }
 
+/**
+ * Resolve the manifest layer for `runPublish`. Returns `null` when no
+ * manifest was loaded (either suppressed by --no-manifest or the
+ * default-path file is missing). Throws a CliError when the user
+ * explicitly named a manifest path that couldn't be loaded, and warns
+ * when `--no-manifest` is used while a manifest exists at the default
+ * path so the publisher-pin safety story stays visible.
+ */
 async function loadManifestBootstrap(
 	args: PublishArgs,
 	log: { info(m: string): void; warn(m: string): void },
 ): Promise<ManifestLoadOutcome | null> {
-	const optedOut =
-		args["no-manifest"] === true || args.manifest === "false" || args.manifest === "";
-	if (optedOut) {
+	if (
+		args.manifest === false ||
+		args.manifest === "false" ||
+		args.manifest === "" ||
+		isFlagSet(args.noManifest)
+	) {
+		// `--no-manifest` is a power-user escape hatch (CI, debugging),
+		// but silently skipping a manifest at the default path defeats
+		// the publisher-pin safety story. If the file exists, warn that
+		// the pin (if any) won't be checked. We probe via stat to keep
+		// the path cheap: no parse, no schema validation.
 		const defaultPath = `./${MANIFEST_FILENAME}`;
 		try {
 			await stat(defaultPath);
 			log.warn(
 				`Skipping manifest at ${defaultPath} (--no-manifest is set). Publisher pin and license/security defaults are NOT being applied for this publish.`,
 			);
-		} catch {}
+		} catch {
+			// No manifest at the default path; nothing to warn about.
+		}
 		return null;
 	}
 	const explicit = args.manifest !== undefined && args.manifest.length > 0;
 	const path = args.manifest ?? `./${MANIFEST_FILENAME}`;
 	try {
 		const { manifest, path: resolvedPath } = await loadManifest(path);
+		// Manifest `version` is optional; reconcile with
+		// `package.json#version` (the canonical source for
+		// npm-distributed plugins) before validating.
 		const packageVersion = await readSiblingPackageVersion(dirname(resolvedPath));
 		let normalised: NormalisedManifest;
 		try {
@@ -454,6 +650,8 @@ async function loadManifestBootstrap(
 		};
 	} catch (error) {
 		if (error instanceof ManifestError) {
+			// Default-path miss: not an error. Legacy flag-only callers
+			// keep working when they have no manifest file.
 			if (!explicit && error.code === "MANIFEST_NOT_FOUND") return null;
 			throw new CliError(error.message, 1, error.code);
 		}
@@ -461,12 +659,20 @@ async function loadManifestBootstrap(
 	}
 }
 
+/**
+ * Read `package.json#version` from the directory containing the
+ * manifest. Returns `undefined` when no `package.json` exists (the
+ * registry-only path). Throws `CliError` when the file exists but is
+ * malformed, so a typo like `"verison"` surfaces directly rather than
+ * appearing as a misleading VERSION_MISSING further down.
+ */
 async function readSiblingPackageVersion(manifestDir: string): Promise<string | undefined> {
 	const packageJsonPath = join(manifestDir, "package.json");
 	let source: string;
 	try {
 		source = await readFile(packageJsonPath, "utf-8");
 	} catch (error) {
+		// ENOENT is the registry-only path; surface anything else.
 		if (
 			error instanceof Error &&
 			"code" in error &&
@@ -508,6 +714,18 @@ async function readSiblingPackageVersion(manifestDir: string): Promise<string | 
 	return typeof version === "string" ? version : undefined;
 }
 
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Validate the publish URL before any network access. Returns an error message
+ * to print, or `null` if the URL is acceptable.
+ *
+ * The CLI runs locally so the SSRF surface is the publisher's own machine,
+ * not a server. The real harm is publishing a record pointing at a
+ * non-public URL: consumers can't install from `file:///` or `http://192.x`
+ * and end up with a broken record in the registry. We reject those up front.
+ */
+// Exported for unit tests; not part of the public CLI surface.
 export function validatePublishUrlForTest(url: string): string | null {
 	return validatePublishUrl(url);
 }
@@ -519,9 +737,23 @@ function validatePublishUrl(url: string): string | null {
 	} catch {
 		return `--url is not a valid URL: ${url}`;
 	}
+	// Require https. Tarball integrity is enforced by the multihash we publish
+	// alongside the URL, so a MITM can't substitute the bytes -- consumers
+	// will reject a checksum mismatch. But TLS still matters here: it
+	// prevents an active attacker from observing which plugin versions the
+	// publisher is shipping, and it shuts the door on novel checksum-bypass
+	// attacks (e.g. a lexicon evolution that loosens checksum verification).
+	// The cost is near-zero -- no public CDN serves http-only in 2026.
 	if (parsed.protocol !== "https:") {
 		return `--url must use https; got ${parsed.protocol}. Host the tarball over TLS.`;
 	}
+	// `URL.hostname` keeps the `[ ]` around IPv6 literals AND normalises any
+	// embedded IPv4 dotted-quad to two hex groups (e.g.
+	// `::ffff:169.254.169.254` -> `[::ffff:a9fe:a9fe]`). Strip brackets
+	// before any check; downstream helpers operate on the bracket-free form.
+	// Also strip a single trailing dot (FQDN form): mDNS resolvers happily
+	// resolve both `mymachine.local` and `mymachine.local.`, so the
+	// `.local` deny check has to canonicalise both.
 	const host = stripTrailingDot(stripIPv6Brackets(parsed.hostname));
 	if (host.length === 0) {
 		return `--url ${url} has an empty hostname after canonicalisation`;
@@ -540,11 +772,20 @@ function validatePublishUrl(url: string): string | null {
 	return null;
 }
 
+/**
+ * Strip a single trailing dot from a DNS name (FQDN form). Idempotent.
+ * Real hostnames don't end with multiple dots after URL parsing, so we
+ * only strip one.
+ */
 function stripTrailingDot(host: string): string {
 	if (host.endsWith(".")) return host.slice(0, -1);
 	return host;
 }
 
+/**
+ * Remove the surrounding brackets that `URL.hostname` keeps around an IPv6
+ * literal. Returns the input unchanged if not bracketed.
+ */
 function stripIPv6Brackets(host: string): string {
 	if (host.length >= 2 && host.startsWith("[") && host.endsWith("]")) {
 		return host.slice(1, -1);
@@ -552,7 +793,36 @@ function stripIPv6Brackets(host: string): string {
 	return host;
 }
 
+/**
+ * Resolve `host` via DNS and check whether any A/AAAA record falls inside
+ * the public-host deny list. Used by the redirect loop to defend against
+ * a public hostname pointed at a private IP.
+ *
+ * Best-effort: errors short-circuit to "couldn't resolve, treat as
+ * suspicious" so a transient DNS failure during publish doesn't silently
+ * succeed against an attacker-controlled redirect chain.
+ *
+ * Returns an error message or null. Pass an already-validated URL.
+ */
 async function validateResolvedHost(host: string): Promise<string | null> {
+	// Literal IPs are caught by `validatePublishUrl`'s syntactic guard
+	// (which is invariably called immediately before this in both the
+	// initial-URL and redirect-hop paths). We skip resolving them here:
+	//   - v4 literal: matches IPV4_RE, no DNS to do.
+	//   - v6 literal: contains `:`, no DNS to do (URL keeps brackets in
+	//     hostname; the bracket form has `:` so the include check fires).
+	// Real hostnames contain neither; that's what we resolve.
+	//
+	// CAVEAT (DNS rebinding): the OS resolver may cache for a TTL the
+	// attacker controls. A 1-second TTL means the validation lookup and
+	// the subsequent `fetch` lookup can resolve to different addresses.
+	// A motivated attacker can return a public IP for the validation
+	// lookup and a private IP for the fetch. Mitigating this fully
+	// requires resolving once and binding the connection to the resolved
+	// IP literal, which means giving up SNI / Host-header convenience.
+	// We accept the residual risk for the publish CLI (run by a human
+	// publishing their own content) and document it here so it isn't
+	// surprising.
 	const stripped = stripIPv6Brackets(host);
 	if (IPV4_RE.test(stripped)) return null;
 	if (stripped.includes(":")) return null;
@@ -576,40 +846,89 @@ async function validateResolvedHost(host: string): Promise<string | null> {
 	return null;
 }
 
+// Module-scope regexes so we don't re-compile on every call. The IP-literal
+// guard is the FIRST line of defence -- the redirect loop additionally runs
+// a DNS-resolved check (`validateResolvedHost`) so a public hostname
+// pointing at a private IP is also caught.
 const TAR_LEADING_DOT_SLASH_RE = /^\.\//;
 const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+// IPv6 ULA (fc00::/7), link-local (fe80::/10). Bracket-stripped form.
 const IPV6_ULA_FC_RE = /^fc[0-9a-f]{2}(?::|$)/i;
 const IPV6_ULA_FD_RE = /^fd[0-9a-f]{2}(?::|$)/i;
 const IPV6_LINK_LOCAL_RE = /^fe[89ab][0-9a-f](?::|$)/i;
+// Loopback (::1), unspecified (::) -- already special-cased in
+// `validatePublishUrl` for clarity, also caught here. Bracket-stripped.
 const IPV6_LOOPBACK_RE = /^::1$/i;
 const IPV6_UNSPECIFIED_RE = /^::$/i;
+// IPv4-compatible IPv6 (`::a.b.c.d`, deprecated but valid input form).
 const IPV6_V4_COMPAT_DOTTED_RE = /^::(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i;
+// IPv4-mapped IPv6 in dotted form (`::ffff:a.b.c.d`).
 const IPV6_V4_MAPPED_DOTTED_RE = /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i;
+// IPv4-mapped IPv6 after URL parser normalisation (`::ffff:hhhh:hhhh`).
+// Two hex groups of up to 4 chars each, encoding 4 octets of v4. The URL
+// parser collapses leading zero groups into `::` and converts the IPv4
+// suffix into hex pairs.
 const IPV6_V4_MAPPED_HEX_RE = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i;
+// IPv4-compatible IPv6 after URL parser normalisation. The dotted form
+// `::a.b.c.d` is normalised by Node's URL parser to `::hhhh:hhhh` (no
+// `ffff:` prefix) -- without this branch, the IPv4-compat case slips
+// through both the dotted regex (because the URL parser ate the dots)
+// and the v4-mapped-hex regex (because there's no `ffff:`).
 const IPV6_V4_COMPAT_HEX_RE = /^::([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i;
+// IPv6 prefixes that carry an embedded IPv4 in their last 32 bits. We
+// enumerate explicitly rather than treating EVERY v6 literal's trailing
+// 32 bits as a candidate v4 -- the broader form would false-positive
+// reject legitimate public v6 addresses whose last two hex groups
+// coincidentally encode an RFC1918 / loopback / 169.254 octet pattern.
+//
+// Currently covered:
+//   - `64:ff9b::/96`        — RFC 6052 NAT64 well-known prefix
+//   - `64:ff9b:1::/48`      — RFC 8215 NAT64 local-use prefix
+//   - `2002:xxxx:xxxx::/16` — 6to4 (xxxx:xxxx encodes the v4)
+//   - `::/96`               — IPv4-compatible (already handled by
+//                             IPV6_V4_COMPAT_DOTTED_RE for dotted form)
 const IPV6_NAT64_RE = /^64:ff9b::([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i;
+// RFC 8215 local-use NAT64 prefix `64:ff9b:1::/48`. The URL parser
+// collapses runs of zero groups into `::`, so the typical form for this
+// prefix when carrying a v4 in the last 32 bits is
+// `64:ff9b:1::WWWW:XXXX`. Match the prefix permissively and capture the
+// trailing two hex groups.
 const IPV6_NAT64_LOCAL_RE = /^64:ff9b:1:[0-9a-f:]*:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i;
 const IPV6_6TO4_RE = /^2002:([0-9a-f]{1,4}):([0-9a-f]{1,4}):/i;
 
+/**
+ * Detect RFC 1918, loopback, link-local, CGNAT, and 0.0.0.0/8 IPv4
+ * literals. The IPv6 ULA/link-local cases are handled below.
+ */
 function isPrivateIp(host: string): boolean {
 	const v4 = IPV4_RE.exec(host);
 	if (v4) {
 		const [, aStr, bStr] = v4;
 		const a = Number(aStr);
 		const b = Number(bStr);
-		if (a === 0) return true;
+		if (a === 0) return true; // 0.0.0.0/8 ("this network")
 		if (a === 10) return true;
-		if (a === 100 && b >= 64 && b <= 127) return true;
+		if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT 100.64.0.0/10
 		if (a === 127) return true;
-		if (a === 169 && b === 254) return true;
+		if (a === 169 && b === 254) return true; // link-local + cloud metadata
 		if (a === 172 && b >= 16 && b <= 31) return true;
 		if (a === 192 && b === 168) return true;
 	}
+	// IPv6 literal in URL form is wrapped in []; URL strips the brackets in
+	// `hostname`. ULA fc00::/7 and link-local fe80::/10.
 	if (IPV6_ULA_FC_RE.test(host) || IPV6_ULA_FD_RE.test(host)) return true;
 	if (IPV6_LINK_LOCAL_RE.test(host)) return true;
 	return false;
 }
 
+/**
+ * IPv4-mapped (`::ffff:1.2.3.4`) and IPv4-compatible (`::1.2.3.4`) IPv6.
+ *
+ * Note: Node's `URL` parser normalises the dotted-quad form to hex pairs
+ * (`::ffff:a9fe:a9fe`), so for inputs that came through `URL.hostname` we
+ * also need the hex-pair branch. We handle both because `validatePublishUrl`
+ * is also called with redirect Locations that may not have been re-parsed.
+ */
 function isPrivateMappedIPv6(host: string): boolean {
 	const dotted = IPV6_V4_MAPPED_DOTTED_RE.exec(host) ?? IPV6_V4_COMPAT_DOTTED_RE.exec(host);
 	if (dotted) {
@@ -624,17 +943,28 @@ function isPrivateMappedIPv6(host: string): boolean {
 	return false;
 }
 
+/**
+ * Detect a private IPv6 address literal in bracket-stripped form. Covers
+ * loopback `::1`, unspecified `::`, ULA `fc00::/7`, link-local `fe80::/10`,
+ * and any literal whose final 32 bits decode to a private IPv4 (handles
+ * NAT64 well-known-prefix `64:ff9b::a.b.c.d` style addresses where the
+ * URL parser has converted the dotted suffix to hex).
+ */
 function isPrivateIPv6Literal(host: string): boolean {
 	if (IPV6_LOOPBACK_RE.test(host)) return true;
 	if (IPV6_UNSPECIFIED_RE.test(host)) return true;
 	if (IPV6_ULA_FC_RE.test(host)) return true;
 	if (IPV6_ULA_FD_RE.test(host)) return true;
 	if (IPV6_LINK_LOCAL_RE.test(host)) return true;
+	// NAT64 (`64:ff9b::a.b.c.d` -> URL-normalised to
+	// `64:ff9b::aabb:ccdd`). Decode the embedded v4 and re-check.
 	const nat64 = IPV6_NAT64_RE.exec(host) ?? IPV6_NAT64_LOCAL_RE.exec(host);
 	if (nat64) {
 		const v4 = decodeIPv6V4HexPair(nat64[1], nat64[2]);
 		if (v4 && isPrivateIp(v4)) return true;
 	}
+	// 6to4 (`2002:WWXX:YYZZ::/48` where WWXX:YYZZ is the v4). The v4 is at
+	// the prefix, not the suffix.
 	const sixtofour = IPV6_6TO4_RE.exec(host);
 	if (sixtofour) {
 		const v4 = decodeIPv6V4HexPair(sixtofour[1], sixtofour[2]);
@@ -643,6 +973,12 @@ function isPrivateIPv6Literal(host: string): boolean {
 	return false;
 }
 
+/**
+ * Decode two IPv6 hex groups (each up to 4 hex digits) into an IPv4 dotted
+ * quad. Returns null if either group is out of range. Matches the encoding
+ * Node's `URL` parser uses when an IPv6 literal includes a dotted IPv4
+ * suffix.
+ */
 function decodeIPv6V4HexPair(a: string | undefined, b: string | undefined): string | null {
 	if (!a || !b) return null;
 	const ax = Number.parseInt(a, 16);
@@ -656,6 +992,12 @@ function decodeIPv6V4HexPair(a: string | undefined, b: string | undefined): stri
 	return `${o1}.${o2}.${o3}.${o4}`;
 }
 
+/**
+ * Catch the user passing an empty-string flag value (`--license=`). citty
+ * gives us "" which the publish API treats as missing -- the user gets a
+ * confusing PROFILE_BOOTSTRAP_MISSING_FIELD even though they explicitly
+ * passed the flag.
+ */
 function validateStringFlags(flags: Record<string, string | undefined>): string | null {
 	for (const [name, value] of Object.entries(flags)) {
 		if (value !== undefined && value === "") {
@@ -665,6 +1007,23 @@ function validateStringFlags(flags: Record<string, string | undefined>): string 
 	return null;
 }
 
+/**
+ * Fetch the tarball bytes at `url`. We need the full body to compute the
+ * checksum and to read `manifest.json` from inside it. Streams the response
+ * with a hard cap so a malicious URL can't OOM the CLI.
+ *
+ * Follows redirects MANUALLY so we can re-validate every hop against
+ * `validatePublishUrl`. Without this, a publisher could pass a public URL
+ * that 302s to `http://169.254.169.254/...` (cloud metadata) or to a
+ * `localhost` victim, defeating the publish-side allow-list.
+ */
+/**
+ * Build the error message for the gzipped-fetch cap. The cap itself is an
+ * implementation detail of the fetch buffer (sized to fit any bundle that
+ * meets the published RFC 0001 caps); the user-facing constraint is the
+ * decompressed total — surface that here so the next attempt aims at the
+ * right number.
+ */
 function oversizedFetchError(url: string, fetched: number): string {
 	return (
 		`tarball at ${url} is ${formatBytes(fetched)} (gzipped), exceeding the ${formatBytes(MAX_TARBALL_BYTES)} fetch cap. ` +
@@ -676,15 +1035,25 @@ async function fetchTarball(url: string): Promise<Uint8Array> {
 	const MAX_REDIRECTS = 10;
 	let currentUrl = url;
 	let res: Response | undefined;
+	// Run a DNS-level check on the initial URL (validatePublishUrl already
+	// passed, but it only catches IP literals -- a public hostname pointing
+	// at a private IP slips through the syntactic guard).
 	const initialDns = await validateResolvedHost(new URL(url).hostname);
 	if (initialDns) {
 		throw new Error(`tarball at ${url}: ${initialDns}`);
 	}
 	for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
 		res = await fetch(currentUrl, {
+			// GitHub release assets need this header to actually serve the file
+			// (without it the API URL returns JSON metadata). Direct CDN URLs
+			// ignore the header.
 			headers: { Accept: "application/octet-stream" },
 			redirect: "manual",
 		});
+		// `manual` means 3xx responses come back with a Location header rather
+		// than being followed. fetch() in workerd / node also surfaces
+		// "opaqueredirect" status 0 in some environments; treat any 3xx-ish
+		// state (or status 0) WITH a Location header as a redirect.
 		const status = res.status;
 		const location = res.headers.get("location");
 		if (location === null) break;
@@ -693,11 +1062,15 @@ async function fetchTarball(url: string): Promise<Uint8Array> {
 		if (hop === MAX_REDIRECTS) {
 			throw new Error(`tarball at ${url}: too many redirects (>${MAX_REDIRECTS})`);
 		}
+		// Resolve relative Locations against the current URL.
 		const next = new URL(location, currentUrl).toString();
 		const hopError = validatePublishUrl(next);
 		if (hopError) {
 			throw new Error(`tarball at ${url} redirected to a disallowed URL (${next}): ${hopError}`);
 		}
+		// DNS-resolve the hop target to defend against a public hostname
+		// that returns a private A/AAAA record (the publishUrl syntactic
+		// guard only catches IP literals).
 		const dnsError = await validateResolvedHost(new URL(next).hostname);
 		if (dnsError) {
 			throw new Error(`tarball at ${url} redirected to a disallowed URL (${next}): ${dnsError}`);
@@ -705,12 +1078,15 @@ async function fetchTarball(url: string): Promise<Uint8Array> {
 		currentUrl = next;
 	}
 	if (!res) {
+		// Loop is structured so this is unreachable, but TS can't see it.
 		throw new Error(`failed to fetch ${url}: no response`);
 	}
 	if (!res.ok) {
 		throw new Error(`failed to fetch ${url}: ${res.status} ${res.statusText}`);
 	}
 
+	// If the server told us the size up front, reject oversized responses
+	// before reading the body.
 	const contentLength = res.headers.get("content-length");
 	if (contentLength) {
 		const len = Number(contentLength);
@@ -727,6 +1103,8 @@ async function fetchTarball(url: string): Promise<Uint8Array> {
 		return new Uint8Array(buf);
 	}
 
+	// Stream the body so we can abort once we exceed the cap, instead of
+	// buffering an unbounded response into memory.
 	const reader = res.body.getReader();
 	const chunks: Uint8Array[] = [];
 	let total = 0;
@@ -751,6 +1129,25 @@ async function fetchTarball(url: string): Promise<Uint8Array> {
 	return combined;
 }
 
+/**
+ * Extract `manifest.json` from a gzipped tarball, using `modern-tar`'s
+ * stream-then-collect API. Returns the parsed-and-validated manifest.
+ *
+ * Accepts both `manifest.json` and `./manifest.json` since modern-tar's
+ * exact naming behaviour isn't pinned in our contract.
+ *
+ * Enforces the bundle size caps from RFC 0001 against the decompressed
+ * entries — total decompressed size, per-file size, and file count. The
+ * gzipped fetch is already capped at MAX_TARBALL_BYTES upstream; this is
+ * the post-decompression check that matches what aggregators enforce at
+ * ingest, so a publisher who would be rejected at the registry sees the
+ * same error locally first.
+ *
+ * Validates the parsed JSON shape against the contract before returning,
+ * so downstream code (which iterates `capabilities`, indexes `allowedHosts`,
+ * etc.) doesn't TypeError on garbage input from a malicious tarball.
+ */
+// Exported for unit tests; not part of the public CLI surface.
 export const extractManifestFromTarballForTest = extractManifestFromTarball;
 
 async function extractManifestFromTarball(bytes: Uint8Array): Promise<PluginManifest> {
@@ -771,6 +1168,12 @@ async function extractManifestFromTarball(bytes: Uint8Array): Promise<PluginMani
 			{ cause: error },
 		);
 	}
+	// The bundle size caps apply to regular files only: directories,
+	// symlinks, hardlinks, devices, and FIFOs all carry no content and
+	// shouldn't appear in a sandboxed plugin bundle anyway. Filtering by
+	// header.type matches what `collectBundleEntries` does for the staging
+	// dir (where `item.isFile()` already excludes non-files), so the bundle
+	// command and the publish command agree on what counts.
 	const fileEntries = entries
 		.filter((e) => (e.header.type ?? "file") === "file")
 		.map((e) => ({
@@ -802,6 +1205,19 @@ async function extractManifestFromTarball(bytes: Uint8Array): Promise<PluginMani
 	return assertManifestShape(parsed);
 }
 
+/**
+ * Best-effort structural sanity check on a parsed `manifest.json`. NOT a
+ * full lexicon validation: we check the shapes the publish flow actually
+ * touches (`id`, `version`, `capabilities`, `allowedHosts`, plus that
+ * `storage`/`hooks`/`routes`/`admin` are at least the right top-level
+ * shape). Hook and route entries are only checked to be string-or-object;
+ * we deliberately don't validate their inner structure here because (a)
+ * the publish flow doesn't iterate them and (b) the inner shape varies
+ * across manifest schema versions and is core's read-side problem.
+ *
+ * Callers who need a full validation should round-trip through the runtime
+ * narrowing helper in `packages/core/src/plugins/manifest-schema.ts`.
+ */
 function assertManifestShape(value: unknown): PluginManifest {
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
 		throw new Error("manifest.json must be a JSON object");
@@ -819,6 +1235,8 @@ function assertManifestShape(value: unknown): PluginManifest {
 	if (!Array.isArray(v.allowedHosts) || v.allowedHosts.some((h) => typeof h !== "string")) {
 		throw new Error("manifest.json: `allowedHosts` must be an array of strings");
 	}
+	// `typeof null === "object"` and `typeof [] === "object"`, so both checks
+	// matter. Same for `admin` below.
 	if (!v.storage || typeof v.storage !== "object" || Array.isArray(v.storage)) {
 		throw new Error("manifest.json: `storage` must be an object");
 	}
@@ -826,6 +1244,9 @@ function assertManifestShape(value: unknown): PluginManifest {
 		throw new Error("manifest.json: `hooks` must be an array");
 	}
 	for (const [i, entry] of v.hooks.entries()) {
+		// Hook entries are either bare hook-name strings or
+		// `{ hook: string, ... }` objects per the manifest contract. Anything
+		// else means the publisher hand-edited (or corrupted) the manifest.
 		if (typeof entry === "string") continue;
 		if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
 			throw new Error(
@@ -850,6 +1271,7 @@ function assertManifestShape(value: unknown): PluginManifest {
 	return v as unknown as PluginManifest;
 }
 
+/** Shape-describing string for error messages. Distinguishes null/array/object. */
 function describeJsonValue(value: unknown): string {
 	if (value === null) return "null";
 	if (Array.isArray(value)) return "array";

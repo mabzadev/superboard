@@ -1,3 +1,10 @@
+/**
+ * Site Settings API endpoint
+ *
+ * GET  /_emdash/api/settings - Get all site settings
+ * POST /_emdash/api/settings - Update site settings
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -5,9 +12,17 @@ import { apiError, handleError, unwrapResult } from "#api/error.js";
 import { handleSettingsGet, handleSettingsUpdate } from "#api/handlers/settings.js";
 import { isParseError, parseBody } from "#api/parse.js";
 import { settingsUpdateBody } from "#api/schemas.js";
+import { siteSettingsTag } from "#cache/chrome-tags.js";
+import { invalidateRouteCache } from "#cache/route-cache.js";
 
 export const prerender = false;
 
+/**
+ * GET /_emdash/api/settings
+ *
+ * Returns all site settings as a JSON object.
+ * Unset values are undefined. Media references include resolved URLs.
+ */
 export const GET: APIRoute = async ({ locals }) => {
 	const { emdash, user } = locals;
 
@@ -26,7 +41,13 @@ export const GET: APIRoute = async ({ locals }) => {
 	}
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+/**
+ * POST /_emdash/api/settings
+ *
+ * Updates site settings. Accepts a partial settings object.
+ * Merges with existing settings and returns the updated settings.
+ */
+export const POST: APIRoute = async ({ request, locals, cache }) => {
 	const { emdash, user } = locals;
 
 	if (!emdash?.db) {
@@ -41,6 +62,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		if (isParseError(body)) return body;
 
 		const result = await handleSettingsUpdate(emdash.db, emdash.storage, body);
+		if (!result.success) return unwrapResult(result);
+		await invalidateRouteCache(cache, [siteSettingsTag()]);
 		return unwrapResult(result);
 	} catch (error) {
 		return handleError(error, "Failed to update settings", "SETTINGS_UPDATE_ERROR");

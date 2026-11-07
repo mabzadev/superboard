@@ -8,6 +8,16 @@ import { setI18nConfig } from "../../../../../../packages/core/src/i18n/config.j
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
+/**
+ * Regression for #1329: `emdash export-seed --with-content all` exported
+ * nothing because the literal string "all" was treated as a collection name.
+ * Only the bare flag and `--with-content=true` were honoured as the
+ * "include every collection" sentinel, contradicting the args help text:
+ *
+ *     "with-content": {
+ *       description: "Include content (all or comma-separated collection names)",
+ *     }
+ */
 describe("exportSeed: --with-content sentinel handling", () => {
 	let db: Kysely<Database>;
 

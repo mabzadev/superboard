@@ -2,8 +2,8 @@
 	"schemaVersion": 1,
 	"upstream": {
 		"remote": "https://github.com/emdash-cms/emdash.git",
-		"commit": "1717d31b351164a5f78e95fe004ee582c7c50f40",
-		"version": "0.35.0"
+		"commit": "10beb8c5a99e41c3a8554b09ac5123c4dddc8d11",
+		"version": "1.4.0"
 	},
 	"overlay": {
 		"root": "scripts/config/emdash-root.overlay.json",
@@ -36,7 +36,10 @@
 			"core-js": false,
 			"unrs-resolver": true
 		},
-		"additionalOverrides": {},
+		"additionalOverrides": {
+			"@vitest/runner": "4.1.12",
+			"@vitest/snapshot": "4.1.12"
+		},
 		"patchedDependencies": {
 			"miniflare@5.20260815.0-alpha": "patches/miniflare@5.20260815.0-alpha.patch"
 		},
@@ -72,5 +75,45 @@
 			"os": ["current", "darwin", "linux"],
 			"cpu": ["x64", "arm64"]
 		}
+	},
+	"upstreamSync": {
+		"ignored": [
+			"^\\.claude/",
+			"^\\.opencode/",
+			"^\\.github/(?:workflows/|(?:codeql-config|dependabot|zizmor)\\.yml$|scripts/(?!ci-reference-contract\\.mjs$))",
+			"^(?:Dockerfile|compose\\.yaml|\\.dockerignore|AGENTS\\.md|CLAUDE\\.md|CONTRIBUTING\\.md|LICENSE|README\\.md|SECURITY\\.md|\\.prettierrc|\\.gitignore|package\\.json|pnpm-lock\\.yaml|pnpm-workspace\\.yaml)$",
+			"^apps/release-action/",
+			"^demos/(?!playground/seed/seed\\.json$)",
+			"^infra/emdash-bot/",
+			"^scripts/sync-blog-demos\\.sh$",
+			"^scripts/query-dumps/README\\.md$"
+		],
+		"relocated": [
+			["^demos/(playground/seed/seed\\.json)$", "tests/fixtures/demos/$1"],
+			["^packages/core/tests/integration/fixture/", "tests/fixtures/core-integration-site/"],
+			["^e2e/fixture-cloudflare/", "tests/fixtures/emdash-cloudflare/"],
+			["^e2e/fixture/", "tests/fixtures/emdash-site/"],
+			["^e2e/fixtures/", "tests/fixtures/emdash-browser/"],
+			["^fixtures/perf-site/", "tests/fixtures/performance-site/"],
+			["^e2e/tests/", "tests/e2e/emdash/"],
+			["^e2e/(?!fixture)", "tests/e2e/emdash/"],
+			["^packages/plugin-cli/tests/fixtures/", "tests/fixtures/plugin-cli/"],
+			["^packages/registry-verification/fixtures/", "tests/fixtures/registry-verification/"],
+			["^((?:.+/)?tests?/(?:.+/)?)fixtures/", "tests/fixtures/$1"],
+			[
+				"^packages/plugins/([^/]+)/src/(.+\\.(?:test|spec)\\.[cm]?[jt]sx?)$",
+				"tests/checks/plugins/$1/$2"
+			],
+			["^packages/plugins/([^/]+)/tests?/", "tests/checks/plugins/$1/"],
+			["^packages/auth/src/(.+\\.test\\.ts)$", "tests/checks/packages/auth/unit/$1"],
+			["^((?:apps|packages)/[^/]+)/src/(.+\\.(?:test|spec)\\.[cm]?[jt]sx?)$", "tests/checks/$1/$2"],
+			["^apps/([^/]+)/e2e/", "tests/e2e/$1/"],
+			["^apps/labeler/evals/(.+\\.live\\.test\\.ts)$", "tests/checks/apps/labeler/live/$1"],
+			["^(.+?)/tests?/", "tests/checks/$1/"],
+			["^scripts/([^/]+\\.test\\.mjs)$", "tests/checks/emdash/$1"],
+			["^scripts/query-dumps/(.+)$", "scripts/emdash/query-dump-$1"],
+			["^scripts/relink-bins-if-needed\\.mjs$", "scripts/local/relink-bins.mjs"],
+			["^scripts/([^/]+)$", "scripts/emdash/$1"]
+		]
 	}
 }

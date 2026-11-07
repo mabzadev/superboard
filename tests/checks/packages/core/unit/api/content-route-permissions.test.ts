@@ -1,9 +1,20 @@
 import { Role } from "@emdash-cms/auth";
-import { describe, it, expect, vi } from "vitest";
+import type { Kysely } from "kysely";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 
 import { PUT as updateContent } from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/[id].js";
 import { POST as createContent } from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/index.js";
+import type { Database } from "../../../../../../packages/core/src/database/types.js";
+import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
+/**
+ * Regression tests for the `publishedAt` / `createdAt` permission gate.
+ *
+ * The gate must trigger on *any* explicit presence of these fields —
+ * including `null` (explicit clear) — not just on non-null values. Checking
+ * only `!= null` would let a regular AUTHOR clear `published_at` on any item
+ * they can edit, bypassing `content:publish_any`.
+ */
 describe("content route — publishedAt / createdAt permission gate", () => {
 	const makeUser = (role: (typeof Role)[keyof typeof Role]) => ({
 		id: "user-1",
@@ -11,6 +22,16 @@ describe("content route — publishedAt / createdAt permission gate", () => {
 	});
 
 	const makeCache = () => ({ enabled: false, invalidate: vi.fn() });
+
+	let db: Kysely<Database>;
+
+	beforeAll(async () => {
+		db = await setupTestDatabase();
+	});
+
+	afterAll(async () => {
+		await teardownTestDatabase(db);
+	});
 
 	describe("POST /_emdash/api/content/{collection}", () => {
 		it("returns 403 when an AUTHOR tries to set publishedAt", async () => {
@@ -174,7 +195,7 @@ describe("content route — publishedAt / createdAt permission gate", () => {
 				request,
 				url: new URL(request.url),
 				locals: {
-					emdash: { handleContentUpdate, handleContentGet },
+					emdash: { handleContentUpdate, handleContentGet, db },
 					user: makeUser(Role.AUTHOR),
 				},
 				cache: makeCache(),
@@ -199,7 +220,7 @@ describe("content route — publishedAt / createdAt permission gate", () => {
 				request,
 				url: new URL(request.url),
 				locals: {
-					emdash: { handleContentUpdate, handleContentGet },
+					emdash: { handleContentUpdate, handleContentGet, db },
 					user: makeUser(Role.AUTHOR),
 				},
 				cache: makeCache(),
@@ -230,7 +251,7 @@ describe("content route — publishedAt / createdAt permission gate", () => {
 				request,
 				url: new URL(request.url),
 				locals: {
-					emdash: { handleContentUpdate, handleContentGet },
+					emdash: { handleContentUpdate, handleContentGet, db },
 					user: makeUser(Role.EDITOR),
 				},
 				cache: makeCache(),
@@ -262,7 +283,7 @@ describe("content route — publishedAt / createdAt permission gate", () => {
 				request,
 				url: new URL(request.url),
 				locals: {
-					emdash: { handleContentUpdate, handleContentGet },
+					emdash: { handleContentUpdate, handleContentGet, db },
 					user: makeUser(Role.AUTHOR),
 				},
 				cache: makeCache(),
@@ -292,7 +313,7 @@ describe("content route — publishedAt / createdAt permission gate", () => {
 				params: { collection: "post", id: "shared" },
 				request,
 				locals: {
-					emdash: { handleContentUpdate, handleContentGet },
+					emdash: { handleContentUpdate, handleContentGet, db },
 					user: makeUser(Role.AUTHOR),
 				},
 				cache: makeCache(),

@@ -1,3 +1,9 @@
+/**
+ * emdash menu
+ *
+ * Manage menus via the EmDash REST API.
+ */
+
 import { defineCommand } from "citty";
 import { consola } from "consola";
 

@@ -1,3 +1,14 @@
+/**
+ * Regression tests for #2016: /.well-known/* OAuth discovery must honor
+ * config.siteUrl even on the middleware's anonymous fast path.
+ *
+ * MCP clients fetch these routes unauthenticated at the site root, which is
+ * exactly the path where locals.emdash carries handlers but no `config`.
+ * Behind Cloudflare's proxy url.origin is `http://`, so without the
+ * build-time-config fallback the discovery document advertises http:// and
+ * clients refuse to attach.
+ */
+
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("virtual:emdash/config", () => ({ default: { siteUrl: "https://cms.example.com" } }), {
@@ -7,7 +18,9 @@ vi.mock("virtual:emdash/config", () => ({ default: { siteUrl: "https://cms.examp
 import { GET as getAuthServer } from "../../../../../../packages/core/src/astro/routes/api/well-known/oauth-authorization-server.js";
 import { GET as getProtectedResource } from "../../../../../../packages/core/src/astro/routes/api/well-known/oauth-protected-resource.js";
 
+/** Minimal APIContext for these routes: they only read `url` and `locals`. */
 function makeContext(locals: Record<string, unknown>) {
+	// Internal URL as seen behind Cloudflare's proxy — http, not https.
 	const url = new URL("http://cms.example.com/.well-known/oauth-protected-resource");
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- routes only destructure url + locals
 	return { url, locals } as unknown as Parameters<typeof getProtectedResource>[0];
@@ -15,6 +28,7 @@ function makeContext(locals: Record<string, unknown>) {
 
 describe("oauth-protected-resource (#2016)", () => {
 	it("reproduces #2016: uses siteUrl when locals.emdash has no config (anonymous fast path)", async () => {
+		// The anonymous fast path attaches page helpers but NO `config`.
 		const response = await getProtectedResource(makeContext({ emdash: {} }));
 		const body = (await response.json()) as { resource: string; authorization_servers: string[] };
 

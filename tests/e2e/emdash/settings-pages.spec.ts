@@ -1,5 +1,16 @@
+/**
+ * Settings Pages E2E Tests
+ *
+ * Tests the Social, SEO, and Email settings sub-pages.
+ * These are form-based pages that load settings from the API and save them.
+ *
+ * The primary class of bug we're catching: API response shape mismatches
+ * that crash the page on load, or save mutations that silently fail.
+ */
+
 import { test, expect } from "../../fixtures/emdash-browser";
 
+// API patterns
 const SETTINGS_API_PATTERN = /\/api\/settings$/;
 
 test.describe("Social Settings", () => {
@@ -12,8 +23,10 @@ test.describe("Social Settings", () => {
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
+		// Page heading
 		await expect(page.locator("h1")).toContainText("Social Links");
 
+		// Should show the social profiles section
 		await expect(page.locator("text=Social Profiles")).toBeVisible({ timeout: 10000 });
 	});
 
@@ -22,6 +35,7 @@ test.describe("Social Settings", () => {
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
+		// Each social field should have a visible input with its label
 		for (const label of ["Twitter", "GitHub", "Facebook", "Instagram", "LinkedIn", "YouTube"]) {
 			await expect(page.locator(`label:has-text("${label}")`)).toBeVisible({ timeout: 5000 });
 		}
@@ -36,9 +50,11 @@ test.describe("Social Settings", () => {
 
 		const testHandle = `@e2e-test-${Date.now()}`;
 
+		// Fill the first social input field (Twitter)
 		const firstInput = page.locator("form input").first();
 		await firstInput.fill(testHandle);
 
+		// Wait for the save response
 		const saveResponse = page.waitForResponse(
 			(res) =>
 				SETTINGS_API_PATTERN.test(res.url()) &&
@@ -50,12 +66,15 @@ test.describe("Social Settings", () => {
 		await page.getByRole("button", { name: "Save", exact: true }).first().click();
 		await saveResponse;
 
+		// Success banner should appear
 		await expect(page.locator("text=Social links saved")).toBeVisible({ timeout: 5000 });
 
+		// Reload the page
 		await admin.goto("/settings/social");
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
+		// The value should persist
 		const firstInputAfterReload = page.locator("form input").first();
 		await expect(firstInputAfterReload).toHaveValue(testHandle, { timeout: 10000 });
 	});
@@ -71,8 +90,10 @@ test.describe("SEO Settings", () => {
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
+		// Page heading
 		await expect(page.locator("h1")).toContainText("SEO Settings");
 
+		// Should show the SEO section
 		await expect(
 			page.getByRole("heading", { name: "Search Engine Optimization", exact: true }),
 		).toBeVisible({ timeout: 10000 });
@@ -104,12 +125,14 @@ test.describe("SEO Settings", () => {
 
 		const testVerification = `e2e-verify-${Date.now()}`;
 
+		// Fill the Google Verification field
 		const googleInput = page.getByRole("textbox", {
 			name: "Google Verification",
 			exact: true,
 		});
 		await googleInput.fill(testVerification);
 
+		// Wait for save response
 		const saveResponse = page.waitForResponse(
 			(res) =>
 				SETTINGS_API_PATTERN.test(res.url()) &&
@@ -121,12 +144,15 @@ test.describe("SEO Settings", () => {
 		await page.getByRole("button", { name: "Save", exact: true }).first().click();
 		await saveResponse;
 
+		// Success banner
 		await expect(page.locator("text=SEO settings saved")).toBeVisible({ timeout: 5000 });
 
+		// Reload
 		await admin.goto("/settings/seo");
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
+		// Value should persist
 		const googleInputAfterReload = page.getByRole("textbox", {
 			name: "Google Verification",
 			exact: true,
@@ -152,11 +178,13 @@ test.describe("Language Switcher", () => {
 		await admin.goto("/settings");
 		await admin.waitForShell();
 
+		// Switch to German
 		await page.getByRole("combobox", { name: "Language", exact: true }).click();
 		await page.getByRole("option", { name: "Deutsch", exact: true }).click();
 
 		await expect(page.locator("h1")).toContainText("Einstellungen", { timeout: 5000 });
 
+		// Switch back — the select now shows "Deutsch" as its value
 		await page.getByRole("combobox").filter({ hasText: "Deutsch" }).click();
 		await page.getByRole("option", { name: "English", exact: true }).click();
 
@@ -174,8 +202,10 @@ test.describe("Email Settings", () => {
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
+		// Page heading
 		await expect(page.locator("h1")).toContainText("Email Settings");
 
+		// Should show the Email Pipeline section
 		await expect(page.getByRole("heading", { name: "Email Pipeline" })).toBeVisible({
 			timeout: 10000,
 		});

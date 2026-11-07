@@ -1,4 +1,17 @@
-import { sanitizeGalleryImages } from "./gallery.js";
+/**
+ * Portable Text to ProseMirror Converter
+ *
+ * Converts Portable Text to TipTap's ProseMirror JSON format for editing.
+ */
+
+import { htmlBlockFields } from "@emdash-cms/admin/html-block";
+import {
+	UnsafePortableTextTableError,
+	portableTextTableToProseMirror,
+} from "@emdash-cms/admin/portable-text-table";
+
+import { resolveImageMedia, sanitizeGalleryImages } from "./gallery.js";
+import { normalizeImageLink } from "./image-link.js";
 import {
 	UnsupportedPortableTextMarksError,
 	assertPortableTextMarksSupported,
@@ -9,6 +22,12 @@ import {
 	normalizeListId,
 	normalizeListStart,
 } from "./numbered-list.js";
+import {
+	PORTABLE_TEXT_BLOCK_ATTR,
+	PORTABLE_TEXT_BLOCK_NODE,
+	PORTABLE_TEXT_SPAN_MARK,
+	attrsWithPortableTextKey,
+} from "./portable-text-identity.js";
 import type {
 	ProseMirrorDocument,
 	ProseMirrorNode,
@@ -20,9 +39,27 @@ import type {
 	PortableTextImageBlock,
 	PortableTextGalleryBlock,
 	PortableTextCodeBlock,
+	PortableTextIframeBlock,
 } from "./types.js";
+import { isPortableTextVideoBlock, videoNodeAttrs } from "./video.js";
 
-export function portableTextToProsemirror(blocks: PortableTextBlock[]): ProseMirrorDocument {
+function generateKey(): string {
+	return Math.random().toString(36).substring(2, 11);
+}
+
+export interface PortableTextToProsemirrorOptions {
+	/**
+	 * Preserve custom blocks and Portable Text keys through a ProseMirror round trip.
+	 * Add `portableTextIdentityExtensions` to the TipTap schema when this is enabled.
+	 */
+	preserveIdentity?: boolean;
+}
+
+/** Convert Portable Text to a ProseMirror document. */
+export function portableTextToProsemirror(
+	blocks: PortableTextBlock[],
+	options: PortableTextToProsemirrorOptions = {},
+): ProseMirrorDocument {
 	if (!blocks || blocks.length === 0) {
 		return {
 			type: "doc",
@@ -30,6 +67,7 @@ export function portableTextToProsemirror(blocks: PortableTextBlock[]): ProseMir
 		};
 	}
 	assertPortableTextMarksSupported(blocks);
+	const preserveIdentity = options.preserveIdentity === true;
 
 	const content: ProseMirrorNode[] = [];
 	let i = 0;
@@ -37,7 +75,17 @@ export function portableTextToProsemirror(blocks: PortableTextBlock[]): ProseMir
 	while (i < blocks.length) {
 		const block = blocks[i];
 
+		// Check for list items
 		if (isTextBlock(block) && block.listItem) {
+			// Collect a list "run": the level=1 anchor plus everything that
+			// nests under it (level > 1, regardless of listItem type — a number
+			// child under a bullet parent is still part of the same tree). A
+			// level=1 block with a different listItem ends the run. Without the
+			// `level > 1` carve-out the run breaks on the first nested type
+			// switch and the descendant subtree leaks out as its own top-level
+			// list (e.g. `[bullet L1, number L2, bullet L1]` would render as
+			// three sibling lists instead of one bullet list with a numbered
+			// child).
 			const listBlocks: PortableTextTextBlock[] = [];
 			const listType = block.listItem;
 			const runStart = i;
@@ -61,8 +109,14 @@ export function portableTextToProsemirror(blocks: PortableTextBlock[]): ProseMir
 				}
 			}
 
-			content.push(convertList(listBlocks, listType, `root:${runStart}`));
+			content.push(convertList(listBlocks, listType, `root:${runStart}`, preserveIdentity));
 		} else if (isTextBlock(block) && block.style === "blockquote") {
+			// Collect a blockquote "run": Portable Text is flat, so a
+			// multi-paragraph quote is stored as consecutive blocks with
+			// style "blockquote" (that's what the Gutenberg importer emits
+			// and what prosemirrorToPortableText serializes back to).
+			// Without this grouping each paragraph became its own quote
+			// node, and editor merges reverted on reload.
 			const quoteBlocks: PortableTextTextBlock[] = [];
 			while (i < blocks.length) {
 				const current = blocks[i];
@@ -80,15 +134,20 @@ export function portableTextToProsemirror(blocks: PortableTextBlock[]): ProseMir
 			content.push({
 				type: "blockquote",
 				content: quoteBlocks.map((quoteBlock) => {
-					const paragraph = convertSpans(quoteBlock.children, quoteBlock.markDefs || []);
+					const paragraph = convertSpans(
+						quoteBlock.children,
+						quoteBlock.markDefs || [],
+						preserveIdentity,
+					);
 					return {
 						type: "paragraph",
+						attrs: identityAttrs(undefined, quoteBlock._key, preserveIdentity),
 						content: paragraph.length > 0 ? paragraph : undefined,
 					};
 				}),
 			});
 		} else {
-			const converted = convertBlock(block);
+			const converted = convertBlock(block, `root:${i}`, preserveIdentity);
 			if (converted) {
 				content.push(converted);
 			}
@@ -100,6 +159,14 @@ export function portableTextToProsemirror(blocks: PortableTextBlock[]): ProseMir
 		type: "doc",
 		content: content.length > 0 ? content : [{ type: "paragraph" }],
 	});
+}
+
+function identityAttrs(
+	attrs: Record<string, unknown> | undefined,
+	key: string,
+	preserveIdentity: boolean,
+): Record<string, unknown> | undefined {
+	return preserveIdentity ? attrsWithPortableTextKey(attrs, key) : attrs;
 }
 
 function getListMetadata(
@@ -128,10 +195,19 @@ function belongsToNestedGroup(
 	return anchorId ? itemId === anchorId : itemId === undefined;
 }
 
+/**
+ * Type guard for text blocks
+ */
 function isTextBlock(block: PortableTextBlock): block is PortableTextTextBlock {
 	return block._type === "block";
 }
 
+/**
+ * Type guard for image blocks.
+ * Checks both `_type` and that `asset` is a valid object — image blocks
+ * without an `asset` wrapper (e.g. `{ _type: "image", url: "..." }`) are
+ * malformed and should not be cast to `PortableTextImageBlock`.
+ */
 function isImageBlock(block: PortableTextBlock): block is PortableTextImageBlock {
 	return (
 		block._type === "image" &&
@@ -141,45 +217,140 @@ function isImageBlock(block: PortableTextBlock): block is PortableTextImageBlock
 	);
 }
 
+/**
+ * Type guard for gallery blocks that carry a usable `images` array.
+ * Galleries without one are handled separately in `convertBlock`.
+ */
 function isGalleryBlock(block: PortableTextBlock): block is PortableTextGalleryBlock {
 	return block._type === "gallery" && "images" in block && Array.isArray(block.images);
 }
 
+const isString = (value: unknown) => typeof value === "string";
+const isFrameDimension = (value: unknown) =>
+	typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 10_000;
+
+const IFRAME_BLOCK_FIELDS = new Map<string, (value: unknown) => boolean>([
+	["_type", () => true],
+	["_key", () => true],
+	["src", isString],
+	["title", isString],
+	["width", isFrameDimension],
+	["height", isFrameDimension],
+	["allow", isString],
+	["allowFullscreen", (value) => typeof value === "boolean"],
+]);
+
+/**
+ * An `iframe` block with other fields, or with values of other types, belongs
+ * to a plugin and stays a generic block.
+ */
+function isIframeBlock(block: PortableTextBlock): block is PortableTextIframeBlock {
+	return (
+		block._type === "iframe" &&
+		typeof block.src === "string" &&
+		Object.entries(block).every(
+			([key, value]) => value === undefined || (IFRAME_BLOCK_FIELDS.get(key)?.(value) ?? false),
+		)
+	);
+}
+
+/**
+ * Type guard for code blocks
+ */
 function isCodeBlock(block: PortableTextBlock): block is PortableTextCodeBlock {
 	return block._type === "code";
 }
 
-function convertBlock(block: PortableTextBlock): ProseMirrorNode | null {
+/**
+ * Convert a single Portable Text block to ProseMirror node
+ */
+function convertBlock(
+	block: PortableTextBlock,
+	path: string,
+	preserveIdentity: boolean,
+): ProseMirrorNode | null {
 	if (isTextBlock(block)) {
-		return convertTextBlock(block);
+		return convertTextBlock(block, preserveIdentity);
 	}
 	if (isImageBlock(block)) {
-		return convertImage(block);
+		return convertImage(block, preserveIdentity);
 	}
 	if (block._type === "image") {
-		return convertMalformedImage(block);
+		// Malformed image block (no asset wrapper) — extract url from top level
+		return convertMalformedImage(block, preserveIdentity);
 	}
 	if (isGalleryBlock(block)) {
 		return {
 			type: "gallery",
-			attrs: {
-				images: sanitizeGalleryImages(block.images),
-				columns: typeof block.columns === "number" ? block.columns : undefined,
-			},
+			attrs: identityAttrs(
+				{
+					images: sanitizeGalleryImages(block.images),
+					columns: typeof block.columns === "number" ? block.columns : undefined,
+				},
+				block._key,
+				preserveIdentity,
+			),
 		};
 	}
 	if (isCodeBlock(block)) {
-		return convertCodeBlock(block);
+		return convertCodeBlock(block, preserveIdentity);
 	}
 	if (block._type === "htmlBlock") {
-		const hb = block as PortableTextBlock & { html?: string };
 		return {
 			type: "htmlBlock",
-			attrs: { html: hb.html || "" },
+			attrs: identityAttrs({ ...htmlBlockFields(block) }, block._key, preserveIdentity),
+		};
+	}
+	if (isIframeBlock(block)) {
+		const { _type, _key, ...attrs } = block;
+		return { type: "iframeBlock", attrs: identityAttrs(attrs, _key, preserveIdentity) };
+	}
+	if (isPortableTextVideoBlock(block)) {
+		return {
+			type: "videoBlock",
+			attrs: identityAttrs(videoNodeAttrs(block), block._key, preserveIdentity),
 		};
 	}
 	if (block._type === "break") {
-		return { type: "horizontalRule" };
+		return {
+			type: "horizontalRule",
+			attrs: identityAttrs(undefined, block._key, preserveIdentity),
+		};
+	}
+	if (block._type === "gallery") {
+		if (preserveIdentity) {
+			return {
+				type: PORTABLE_TEXT_BLOCK_NODE,
+				attrs: { [PORTABLE_TEXT_BLOCK_ATTR]: block },
+			};
+		}
+		return {
+			type: "paragraph",
+			content: [
+				{
+					type: "text",
+					text: `[Unknown block type: ${block._type}]`,
+					marks: [{ type: "code" }],
+				},
+			],
+		};
+	}
+	if (preserveIdentity) {
+		return {
+			type: PORTABLE_TEXT_BLOCK_NODE,
+			attrs: { [PORTABLE_TEXT_BLOCK_ATTR]: block },
+		};
+	}
+	if (block._type === "table") {
+		const result = portableTextTableToProseMirror(block, {
+			path,
+			createKey: generateKey,
+			spansToInline: (content, markDefs) => convertSpans(content, markDefs, preserveIdentity),
+		});
+		if (!result.ok) {
+			throw new UnsafePortableTextTableError(result.reason, result.raw, result.renderFallback);
+		}
+		return result.node;
 	}
 	return {
 		type: "paragraph",
@@ -193,11 +364,19 @@ function convertBlock(block: PortableTextBlock): ProseMirrorNode | null {
 	};
 }
 
-function convertTextBlock(block: PortableTextTextBlock): ProseMirrorNode | null {
+/**
+ * Convert text block to ProseMirror paragraph or heading
+ */
+function convertTextBlock(
+	block: PortableTextTextBlock,
+	preserveIdentity: boolean,
+): ProseMirrorNode | null {
 	const { style = "normal", children, markDefs = [] } = block;
 
-	const content = convertSpans(children, markDefs);
+	// Convert children to ProseMirror nodes
+	const content = convertSpans(children, markDefs, preserveIdentity);
 
+	// Determine node type based on style
 	switch (style) {
 		case "h1":
 		case "h2":
@@ -208,10 +387,14 @@ function convertTextBlock(block: PortableTextTextBlock): ProseMirrorNode | null 
 			const level = parseInt(style.substring(1), 10);
 			return {
 				type: "heading",
-				attrs: {
-					level,
-					...(block.textAlign ? { textAlign: block.textAlign } : {}),
-				},
+				attrs: identityAttrs(
+					{
+						level,
+						...(block.textAlign ? { textAlign: block.textAlign } : {}),
+					},
+					block._key,
+					preserveIdentity,
+				),
 				content: content.length > 0 ? content : undefined,
 			};
 		}
@@ -219,6 +402,7 @@ function convertTextBlock(block: PortableTextTextBlock): ProseMirrorNode | null 
 		case "blockquote":
 			return {
 				type: "blockquote",
+				attrs: identityAttrs(undefined, block._key, preserveIdentity),
 				content: [
 					{
 						type: "paragraph",
@@ -231,17 +415,26 @@ function convertTextBlock(block: PortableTextTextBlock): ProseMirrorNode | null 
 		default:
 			return {
 				type: "paragraph",
-				attrs: block.textAlign ? { textAlign: block.textAlign } : undefined,
+				attrs: identityAttrs(
+					block.textAlign ? { textAlign: block.textAlign } : undefined,
+					block._key,
+					preserveIdentity,
+				),
 				content: content.length > 0 ? content : undefined,
 			};
 	}
 }
 
+/**
+ * Convert list items to ProseMirror list
+ */
 function convertList(
 	items: PortableTextTextBlock[],
 	listType: "bullet" | "number",
 	context: string,
+	preserveIdentity: boolean,
 ): ProseMirrorNode {
+	// Group items by level
 	const rootItems: ProseMirrorNode[] = [];
 	let i = 0;
 
@@ -250,6 +443,7 @@ function convertList(
 		const level = item.level || 1;
 
 		if (level === 1) {
+			// Collect nested items for this root item
 			const nestedItems: PortableTextTextBlock[] = [];
 			i++;
 
@@ -259,10 +453,19 @@ function convertList(
 			}
 
 			rootItems.push(
-				convertListItem(item, nestedItems, listType, `${context}:${rootItems.length}`),
+				convertListItem(
+					item,
+					nestedItems,
+					listType,
+					`${context}:${rootItems.length}`,
+					preserveIdentity,
+				),
 			);
 		} else {
-			rootItems.push(convertListItem(item, [], listType, `${context}:${rootItems.length}`));
+			// Orphan nested item - treat as root
+			rootItems.push(
+				convertListItem(item, [], listType, `${context}:${rootItems.length}`, preserveIdentity),
+			);
 			i++;
 		}
 	}
@@ -277,21 +480,35 @@ function convertList(
 	};
 }
 
+/**
+ * Convert a single list item to ProseMirror
+ */
 function convertListItem(
 	item: PortableTextTextBlock,
 	nestedItems: PortableTextTextBlock[],
 	parentListType: "bullet" | "number",
 	context: string,
+	preserveIdentity: boolean,
 ): ProseMirrorNode {
 	const content: ProseMirrorNode[] = [];
 
-	const spans = convertSpans(item.children, item.markDefs || []);
+	// Add paragraph content
+	const spans = convertSpans(item.children, item.markDefs || [], preserveIdentity);
 	content.push({
 		type: "paragraph",
+		attrs: identityAttrs(undefined, item._key, preserveIdentity),
 		content: spans.length > 0 ? spans : undefined,
 	});
 
+	// Handle nested items
 	if (nestedItems.length > 0) {
+		// The shallowest level in `nestedItems` is the effective root of this
+		// item's nested subtree. A new sub-list only starts when we hit
+		// another block at that root level with a different `listItem` type;
+		// deeper blocks (level > minLevel) belong to the current group as
+		// descendants regardless of their own `listItem`. A deep mixed tree
+		// like `bullet L1 → number L2 → bullet L3 → number L2` stays nested
+		// under B(L2) and preserves its original level on round-trip.
 		let minLevel = Infinity;
 		for (const ni of nestedItems) {
 			const level = ni.level || 2;
@@ -313,12 +530,18 @@ function convertListItem(
 			);
 
 			if (nestedGroup.length > 0) {
+				// Decrease level for nested conversion
 				const adjustedGroup = nestedGroup.map((ni) => ({
 					...ni,
 					level: (ni.level || 2) - 1,
 				}));
 				content.push(
-					convertList(adjustedGroup, anchorType, `${context}:nested:${j - nestedGroup.length}`),
+					convertList(
+						adjustedGroup,
+						anchorType,
+						`${context}:nested:${j - nestedGroup.length}`,
+						preserveIdentity,
+					),
 				);
 			}
 		}
@@ -330,35 +553,59 @@ function convertListItem(
 	};
 }
 
+/**
+ * Convert Portable Text spans to ProseMirror text nodes
+ */
 function convertSpans(
 	spans: PortableTextSpan[],
 	markDefs: PortableTextMarkDef[],
+	preserveIdentity: boolean,
 ): ProseMirrorNode[] {
 	const nodes: ProseMirrorNode[] = [];
 	const markDefsMap = new Map(markDefs.map((md) => [md._key, md]));
 
 	for (const span of spans) {
 		if (span._type !== "span") continue;
+		const referencedMarkDefs = markDefs.filter((markDef) => span.marks?.includes(markDef._key));
 
+		// Handle newlines in text
 		const parts = span.text.split("\n");
 
 		for (let i = 0; i < parts.length; i++) {
 			const text = parts[i];
 
+			// Add text node
 			if (text.length > 0) {
 				const marks = convertMarks(span.marks || [], markDefsMap);
+				if (preserveIdentity) {
+					marks.push({
+						type: PORTABLE_TEXT_SPAN_MARK,
+						attrs: { key: span._key, markDefs: referencedMarkDefs },
+					});
+				}
 				const node: ProseMirrorNode = {
 					type: "text",
 					text,
 				};
-				if (marks.length > 0) {
-					node.marks = marks;
-				}
+				if (marks.length > 0) node.marks = marks;
 				nodes.push(node);
 			}
 
+			// Add hard break between parts (not after last)
 			if (i < parts.length - 1) {
-				nodes.push({ type: "hardBreak" });
+				nodes.push(
+					preserveIdentity
+						? {
+								type: "hardBreak",
+								marks: [
+									{
+										type: PORTABLE_TEXT_SPAN_MARK,
+										attrs: { key: span._key, markDefs: referencedMarkDefs },
+									},
+								],
+							}
+						: { type: "hardBreak" },
+				);
 			}
 		}
 	}
@@ -366,6 +613,9 @@ function convertSpans(
 	return nodes;
 }
 
+/**
+ * Convert Portable Text marks to ProseMirror marks
+ */
 function convertMarks(
 	marks: string[],
 	markDefs: Map<string, PortableTextMarkDef>,
@@ -403,6 +653,7 @@ function convertMarks(
 				break;
 
 			default: {
+				// Check if it's a mark definition reference
 				const markDef = markDefs.get(mark);
 				if (markDef?._type === "link") {
 					pmMarks.push({
@@ -425,59 +676,109 @@ function convertMarks(
 	return pmMarks;
 }
 
-function convertImage(block: PortableTextImageBlock): ProseMirrorNode {
+function imageAlignment(value: unknown): PortableTextImageBlock["alignment"] {
+	return value === "left" ||
+		value === "center" ||
+		value === "right" ||
+		value === "wide" ||
+		value === "full"
+		? value
+		: undefined;
+}
+
+function imageDimension(value: unknown): number | undefined {
+	return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+/**
+ * Convert image block to ProseMirror
+ */
+function convertImage(block: PortableTextImageBlock, preserveIdentity: boolean): ProseMirrorNode {
+	const { asset, alt, width, height } = resolveImageMedia(block);
 	return {
 		type: "image",
-		attrs: {
-			src: block.asset.url || block.asset._ref,
-			alt: block.alt || "",
-			title: block.caption || "",
-			mediaId: block.asset._ref,
-			provider: block.asset.provider,
-			width: block.width,
-			height: block.height,
-			displayWidth: block.displayWidth,
-			displayHeight: block.displayHeight,
-		},
+		attrs: identityAttrs(
+			{
+				src: asset.url || asset._ref,
+				alt: alt || "",
+				title: block.title || "",
+				caption: Object.hasOwn(block, "caption") ? block.caption || "" : block.title || "",
+				mediaId: asset._ref,
+				provider: asset.provider,
+				width: imageDimension(width),
+				height: imageDimension(height),
+				displayWidth: imageDimension(block.displayWidth),
+				displayHeight: imageDimension(block.displayHeight),
+				alignment: imageAlignment(block.alignment),
+				link: normalizeImageLink(block.link),
+			},
+			block._key,
+			preserveIdentity,
+		),
 	};
 }
 
-function convertMalformedImage(block: PortableTextBlock): ProseMirrorNode {
+/**
+ * Convert a malformed image block (missing `asset` wrapper) to ProseMirror.
+ * Handles blocks like `{ _type: "image", url: "...", alt: "..." }` that may
+ * originate from migrations or third-party imports.
+ */
+function convertMalformedImage(
+	block: PortableTextBlock,
+	preserveIdentity: boolean,
+): ProseMirrorNode {
+	// PortableTextUnknownBlock allows indexed access via [key: string]: unknown
 	const url = "url" in block && typeof block.url === "string" ? block.url : "";
 	const alt = "alt" in block && typeof block.alt === "string" ? block.alt : "";
-	const caption = "caption" in block && typeof block.caption === "string" ? block.caption : "";
-	const width = "width" in block && typeof block.width === "number" ? block.width : undefined;
-	const height = "height" in block && typeof block.height === "number" ? block.height : undefined;
-	const displayWidth =
-		"displayWidth" in block && typeof block.displayWidth === "number"
-			? block.displayWidth
-			: undefined;
-	const displayHeight =
-		"displayHeight" in block && typeof block.displayHeight === "number"
-			? block.displayHeight
-			: undefined;
+	const title = "title" in block && typeof block.title === "string" ? block.title : "";
+	const rawCaption = "caption" in block ? block.caption : undefined;
+	const caption = Object.hasOwn(block, "caption")
+		? typeof rawCaption === "string"
+			? rawCaption
+			: ""
+		: title;
+	const width = imageDimension("width" in block ? block.width : undefined);
+	const height = imageDimension("height" in block ? block.height : undefined);
+	const displayWidth = imageDimension("displayWidth" in block ? block.displayWidth : undefined);
+	const displayHeight = imageDimension("displayHeight" in block ? block.displayHeight : undefined);
 	return {
 		type: "image",
-		attrs: {
-			src: url,
-			alt,
-			title: caption,
-			mediaId: undefined,
-			provider: undefined,
-			width,
-			height,
-			displayWidth,
-			displayHeight,
-		},
+		attrs: identityAttrs(
+			{
+				src: url,
+				alt,
+				title,
+				caption,
+				mediaId: undefined,
+				provider: undefined,
+				width,
+				height,
+				displayWidth,
+				displayHeight,
+				alignment: imageAlignment("alignment" in block ? block.alignment : undefined),
+			},
+			block._key,
+			preserveIdentity,
+		),
 	};
 }
 
-function convertCodeBlock(block: PortableTextCodeBlock): ProseMirrorNode {
+/**
+ * Convert code block to ProseMirror
+ */
+function convertCodeBlock(
+	block: PortableTextCodeBlock,
+	preserveIdentity: boolean,
+): ProseMirrorNode {
 	return {
 		type: "codeBlock",
-		attrs: {
-			language: block.language || null,
-		},
+		attrs: identityAttrs(
+			{
+				language: block.language || null,
+			},
+			block._key,
+			preserveIdentity,
+		),
 		content: block.code ? [{ type: "text", text: block.code }] : undefined,
 	};
 }

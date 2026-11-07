@@ -2,21 +2,22 @@ import { GetUserInfoRes, Scope } from "@melody-auth/shared";
 import { Context } from "hono";
 import { env } from "hono/adapter";
 
-import { emailService, identityBridgeService, jwtService, kvService, roleService } from ".";
 import { errorConfig, messageConfig, typeConfig, variableConfig } from "../configs";
 import { baseDto, identityDto, userDto } from "../dtos";
 import {
-	orgModel,
 	roleModel,
 	userAppConsentModel,
 	userAttributeModel,
 	userAttributeValueModel,
 	userModel,
-	userOrgGroupModel,
-	userOrgModel,
 	userRoleModel,
 } from "../models";
 import { cryptoUtil, loggerUtil, requestUtil, timeUtil } from "../utils";
+import * as emailService from "./email";
+import * as identityBridgeService from "./identityBridge";
+import * as jwtService from "./jwt";
+import * as kvService from "./kv";
+import * as roleService from "./role";
 
 export const getUserInfo = async (
 	c: Context<typeConfig.Context>,
@@ -153,17 +154,7 @@ export const getUsers = async (
 	c: Context<typeConfig.Context>,
 	search: string | undefined,
 	pagination: typeConfig.Pagination | undefined,
-	orgId: number | undefined,
 ): Promise<userModel.PaginatedApiRecords> => {
-	let org: orgModel.Record | null = null;
-	if (orgId) {
-		org = await orgModel.getById(c.env.DB, orgId);
-		if (!org) {
-			loggerUtil.triggerLogger(c, loggerUtil.LoggerLevel.Warn, messageConfig.RequestError.NoOrg);
-			throw new errorConfig.NotFound(messageConfig.RequestError.NoOrg);
-		}
-	}
-
 	const searchObj = search
 		? {
 				column:
@@ -172,22 +163,11 @@ export const getUsers = async (
 			}
 		: undefined;
 
-	const scoped = await identityBridgeService.getCurrentProjectUsers(
-		c,
-		search,
-		pagination,
-		org?.slug,
-	);
+	const scoped = await identityBridgeService.getCurrentProjectUsers(c, search, pagination);
 	const users =
 		scoped?.users ??
 		(await userModel.getAll(c.env.DB, {
 			search: searchObj,
-			match: org
-				? {
-						column: "orgSlug",
-						value: org.slug,
-					}
-				: undefined,
 			pagination,
 		}));
 	const count =
@@ -195,12 +175,6 @@ export const getUsers = async (
 		(pagination
 			? await userModel.count(c.env.DB, {
 					search: searchObj,
-					match: org
-						? {
-								column: "orgSlug",
-								value: org.slug,
-							}
-						: undefined,
 				})
 			: users.length);
 
@@ -209,22 +183,6 @@ export const getUsers = async (
 	const result = users.map((user) => userModel.convertToApiRecord(user, enableNames));
 	return {
 		users: result,
-		count,
-	};
-};
-
-export const getOrgAllUsers = async (
-	c: Context<typeConfig.Context>,
-	pagination: typeConfig.Pagination | undefined,
-	orgId: number,
-): Promise<userModel.PaginatedApiRecords> => {
-	const { ENABLE_NAMES: enableNames } = env(c);
-
-	const users = await userModel.getAllByOrg(c.env.DB, orgId, enableNames, pagination);
-
-	const count = await userModel.countAllByOrg(c.env.DB, orgId);
-	return {
-		users,
 		count,
 	};
 };
@@ -251,13 +209,9 @@ export const getUserDetailByAuthId = async (
 		throw new errorConfig.NotFound(messageConfig.RequestError.NoUser);
 	}
 
-	const { ENABLE_NAMES: enableNames, ENABLE_ORG: enableOrg } = env(c);
+	const { ENABLE_NAMES: enableNames } = env(c);
 
 	const roles = await roleService.getUserRoles(c, user.id);
-
-	const org = user.orgSlug ? await orgModel.getBySlug(c.env.DB, user.orgSlug) : undefined;
-
-	const orgGroups = org ? await userOrgGroupModel.getAllByUser(c.env.DB, user.id) : [];
 
 	const { ENABLE_USER_ATTRIBUTE: enableUserAttribute } = env(c);
 	let attributes: Record<string, string> | undefined;
@@ -275,25 +229,9 @@ export const getUserDetailByAuthId = async (
 		}
 	}
 
-	const result = userModel.convertToApiRecordFull(
-		user,
-		enableNames,
-		enableOrg,
-		roles,
-		org,
-		orgGroups,
-		attributes,
-	);
+	const result = userModel.convertToApiRecordFull(user, enableNames, roles, attributes);
 	result.authId = authId;
 	return result;
-};
-
-export const getOrgForCreation = async (
-	c: Context<typeConfig.Context>,
-	orgSlug: string | null | undefined,
-) => {
-	const org = orgSlug ? await orgModel.getBySlug(c.env.DB, orgSlug) : null;
-	return org && org.allowPublicRegistration && !org.onlyUseForBrandingOverride ? org : null;
 };
 
 export const getPasswordlessUserOrCreate = async (
@@ -315,11 +253,8 @@ export const getPasswordlessUserOrCreate = async (
 		}
 	}
 
-	const org = await getOrgForCreation(c, bodyDto.org);
-
 	const newUser = await userModel.create(c.env.DB, {
 		authId: crypto.randomUUID(),
-		orgSlug: org?.slug ?? "",
 		email: bodyDto.email,
 		socialAccountId: null,
 		socialAccountType: null,
@@ -431,7 +366,6 @@ interface CreateAccountBody {
 	firstName: string | null;
 	lastName: string | null;
 	locale: typeConfig.Locale;
-	org?: string;
 }
 export const createAccountWithPassword = async (
 	c: Context<typeConfig.Context>,
@@ -444,8 +378,6 @@ export const createAccountWithPassword = async (
 		loggerUtil.triggerLogger(c, loggerUtil.LoggerLevel.Warn, messageConfig.RequestError.EmailTaken);
 		throw new errorConfig.Forbidden(messageConfig.RequestError.EmailTaken);
 	}
-
-	const org = await getOrgForCreation(c, bodyDto.org);
 
 	for (const [userAttributeId, value] of Object.entries(attributeValues)) {
 		const userAttribute = await userAttributeModel.getById(c.env.DB, Number(userAttributeId));
@@ -465,7 +397,6 @@ export const createAccountWithPassword = async (
 
 	const newUser = await userModel.create(c.env.DB, {
 		authId: crypto.randomUUID(),
-		orgSlug: org?.slug ?? "",
 		email: bodyDto.email,
 		socialAccountId: null,
 		socialAccountType: null,
@@ -491,7 +422,6 @@ export const processGoogleAccount = async (
 	c: Context<typeConfig.Context>,
 	googleUser: jwtService.GoogleUser,
 	locale: typeConfig.Locale,
-	org?: string,
 ) => {
 	const currentUser = await userModel.getGoogleUserByGoogleId(c.env.DB, googleUser.id);
 	if (currentUser && !currentUser.isActive) {
@@ -503,14 +433,11 @@ export const processGoogleAccount = async (
 		throw new errorConfig.Forbidden(messageConfig.RequestError.UserDisabled);
 	}
 
-	const orgRecord = await getOrgForCreation(c, org);
-
 	const user =
 		currentUser ??
 		(await userModel.create(c.env.DB, {
 			authId: crypto.randomUUID(),
 			email: googleUser.email,
-			orgSlug: orgRecord?.slug ?? "",
 			socialAccountId: googleUser.id,
 			socialAccountType: userModel.SocialAccountType.Google,
 			password: null,
@@ -525,46 +452,10 @@ export const processGoogleAccount = async (
 	return user;
 };
 
-export const processFacebookAccount = async (
-	c: Context<typeConfig.Context>,
-	facebookUser: jwtService.FacebookUser,
-	locale: typeConfig.Locale,
-	org?: string,
-) => {
-	const currentUser = await userModel.getFacebookUserByFacebookId(c.env.DB, facebookUser.id);
-	if (currentUser && !currentUser.isActive) {
-		loggerUtil.triggerLogger(
-			c,
-			loggerUtil.LoggerLevel.Warn,
-			messageConfig.RequestError.UserDisabled,
-		);
-		throw new errorConfig.Forbidden(messageConfig.RequestError.UserDisabled);
-	}
-
-	const orgRecord = await getOrgForCreation(c, org);
-
-	const user =
-		currentUser ??
-		(await userModel.create(c.env.DB, {
-			authId: crypto.randomUUID(),
-			email: null,
-			orgSlug: orgRecord?.slug ?? "",
-			socialAccountId: facebookUser.id,
-			socialAccountType: userModel.SocialAccountType.Facebook,
-			password: null,
-			locale,
-			emailVerified: 0,
-			firstName: facebookUser.firstName,
-			lastName: facebookUser.lastName,
-		}));
-	return user;
-};
-
 export const processGithubAccount = async (
 	c: Context<typeConfig.Context>,
 	githubUser: jwtService.GithubUser,
 	locale: typeConfig.Locale,
-	org?: string,
 ) => {
 	const currentUser = await userModel.getGithubUserByGithubId(c.env.DB, githubUser.id);
 	if (currentUser && !currentUser.isActive) {
@@ -576,13 +467,10 @@ export const processGithubAccount = async (
 		throw new errorConfig.Forbidden(messageConfig.RequestError.UserDisabled);
 	}
 
-	const orgRecord = await getOrgForCreation(c, org);
-
 	const user =
 		currentUser ??
 		(await userModel.create(c.env.DB, {
 			authId: crypto.randomUUID(),
-			orgSlug: orgRecord?.slug ?? "",
 			email: githubUser.email,
 			socialAccountId: githubUser.id,
 			socialAccountType: userModel.SocialAccountType.GitHub,
@@ -595,46 +483,10 @@ export const processGithubAccount = async (
 	return user;
 };
 
-export const processDiscordAccount = async (
-	c: Context<typeConfig.Context>,
-	discordUser: jwtService.DiscordUser,
-	locale: typeConfig.Locale,
-	org?: string,
-) => {
-	const currentUser = await userModel.getDiscordUserByDiscordId(c.env.DB, discordUser.id);
-	if (currentUser && !currentUser.isActive) {
-		loggerUtil.triggerLogger(
-			c,
-			loggerUtil.LoggerLevel.Warn,
-			messageConfig.RequestError.UserDisabled,
-		);
-		throw new errorConfig.Forbidden(messageConfig.RequestError.UserDisabled);
-	}
-
-	const orgRecord = await getOrgForCreation(c, org);
-
-	const user =
-		currentUser ??
-		(await userModel.create(c.env.DB, {
-			authId: crypto.randomUUID(),
-			orgSlug: orgRecord?.slug ?? "",
-			email: discordUser.email,
-			socialAccountId: discordUser.id,
-			socialAccountType: userModel.SocialAccountType.Discord,
-			password: null,
-			locale,
-			emailVerified: discordUser.emailVerified ? 1 : 0,
-			firstName: discordUser.firstName,
-			lastName: discordUser.lastName,
-		}));
-	return user;
-};
-
 export const processAppleAccount = async (
 	c: Context<typeConfig.Context>,
 	appleUser: jwtService.AppleUser,
 	locale: typeConfig.Locale,
-	org?: string,
 ) => {
 	const currentUser = await userModel.getAppleUserByAppleId(c.env.DB, appleUser.id);
 	if (currentUser && !currentUser.isActive) {
@@ -646,13 +498,10 @@ export const processAppleAccount = async (
 		throw new errorConfig.Forbidden(messageConfig.RequestError.UserDisabled);
 	}
 
-	const orgRecord = await getOrgForCreation(c, org);
-
 	const user =
 		currentUser ??
 		(await userModel.create(c.env.DB, {
 			authId: crypto.randomUUID(),
-			orgSlug: orgRecord?.slug ?? "",
 			email: appleUser.email,
 			socialAccountId: appleUser.id,
 			socialAccountType: userModel.SocialAccountType.Apple,
@@ -670,7 +519,6 @@ export const processOidcAccount = async (
 	oidcUser: jwtService.OidcUser,
 	provider: string,
 	locale: typeConfig.Locale,
-	org?: string,
 ) => {
 	const currentUser = await userModel.getOidcUserById(c.env.DB, oidcUser.id, provider);
 	if (currentUser && !currentUser.isActive) {
@@ -682,13 +530,10 @@ export const processOidcAccount = async (
 		throw new errorConfig.Forbidden(messageConfig.RequestError.UserDisabled);
 	}
 
-	const orgRecord = await getOrgForCreation(c, org);
-
 	const user =
 		currentUser ??
 		(await userModel.create(c.env.DB, {
 			authId: crypto.randomUUID(),
-			orgSlug: orgRecord?.slug ?? "",
 			email: null,
 			socialAccountId: oidcUser.id,
 			socialAccountType: provider as userModel.SocialAccountType,
@@ -697,49 +542,6 @@ export const processOidcAccount = async (
 			emailVerified: 0,
 			firstName: null,
 			lastName: null,
-		}));
-	return user;
-};
-
-export interface SamlUser {
-	userId: string;
-	email: string | null;
-	firstName: string | null;
-	lastName: string | null;
-}
-
-export const processSamlAccount = async (
-	c: Context<typeConfig.Context>,
-	samlUser: SamlUser,
-	idpName: string,
-	locale: typeConfig.Locale,
-	org?: string,
-) => {
-	const currentUser = await userModel.getSamlUserById(c.env.DB, samlUser.userId, idpName);
-	if (currentUser && !currentUser.isActive) {
-		loggerUtil.triggerLogger(
-			c,
-			loggerUtil.LoggerLevel.Warn,
-			messageConfig.RequestError.UserDisabled,
-		);
-		throw new errorConfig.Forbidden(messageConfig.RequestError.UserDisabled);
-	}
-
-	const orgRecord = await getOrgForCreation(c, org);
-
-	const user =
-		currentUser ??
-		(await userModel.create(c.env.DB, {
-			authId: crypto.randomUUID(),
-			orgSlug: orgRecord?.slug ?? "",
-			email: samlUser.email,
-			socialAccountId: samlUser.userId,
-			socialAccountType: `SAML_${idpName}` as userModel.SocialAccountType,
-			password: null,
-			locale,
-			emailVerified: 0,
-			firstName: samlUser.firstName,
-			lastName: samlUser.lastName,
 		}));
 	return user;
 };
@@ -811,7 +613,7 @@ export const sendPasswordReset = async (
 	const user = await userModel.getNormalUserByEmail(c.env.DB, email);
 	if (!user || !user.isActive) return true;
 
-	const resetCode = await emailService.sendPasswordReset(c, email, user.orgSlug, locale, user.id);
+	const resetCode = await emailService.sendPasswordReset(c, email, locale, user.id);
 
 	if (resetCode) {
 		await kvService.storePasswordResetCode(c.env.KV, user.id, resetCode);
@@ -948,11 +750,7 @@ export const enrollUserMfa = async (
 	authId: string,
 	mfaType: userModel.MfaType,
 ): Promise<userModel.Record> => {
-	const {
-		OTP_MFA_IS_REQUIRED: otpMfaRequired,
-		EMAIL_MFA_IS_REQUIRED: emailMfaRequired,
-		SMS_MFA_IS_REQUIRED: smsMfaRequired,
-	} = env(c);
+	const { OTP_MFA_IS_REQUIRED: otpMfaRequired, EMAIL_MFA_IS_REQUIRED: emailMfaRequired } = env(c);
 
 	const user = await identityBridgeService.resolveUserBySubject(c, authId);
 	if (!user) {
@@ -977,8 +775,6 @@ export const enrollUserMfa = async (
 			otpVerified: 0,
 		});
 	} else if (mfaType === userModel.MfaType.Email && !emailMfaRequired) {
-		return userModel.update(c.env.DB, user.id, { mfaTypes: [...user.mfaTypes, mfaType].join(",") });
-	} else if (mfaType === userModel.MfaType.Sms && !smsMfaRequired) {
 		return userModel.update(c.env.DB, user.id, { mfaTypes: [...user.mfaTypes, mfaType].join(",") });
 	}
 
@@ -1019,25 +815,11 @@ export const resetUserMfa = async (
 		await userModel.update(c.env.DB, user.id, {
 			mfaTypes: user.mfaTypes.filter((type) => type !== mfaType).join(","),
 		});
-	} else if (mfaType === userModel.MfaType.Sms) {
-		if (
-			!user.mfaTypes.includes(userModel.MfaType.Sms) &&
-			!user.smsPhoneNumber &&
-			!user.smsPhoneNumberVerified
-		)
-			return true;
-		await userModel.update(c.env.DB, user.id, {
-			mfaTypes: user.mfaTypes.filter((type) => type !== mfaType).join(","),
-			smsPhoneNumber: null,
-			smsPhoneNumberVerified: 0,
-		});
 	} else {
 		await userModel.update(c.env.DB, user.id, {
 			mfaTypes: "",
 			otpVerified: 0,
 			otpSecret: "",
-			smsPhoneNumber: null,
-			smsPhoneNumberVerified: 0,
 		});
 	}
 
@@ -1123,29 +905,12 @@ export const updateUser = async (
 	if (dto.lastName !== undefined) updateObj.lastName = dto.lastName;
 	if (dto.locale !== undefined) updateObj.locale = dto.locale;
 	if (dto.isActive !== undefined) updateObj.isActive = dto.isActive ? 1 : 0;
-	if (dto.orgSlug !== undefined) updateObj.orgSlug = dto.orgSlug;
-
-	if (updateObj.orgSlug?.trim()) {
-		const org = await orgModel.getBySlug(c.env.DB, updateObj.orgSlug);
-		const userInOrg = org?.id && (await userOrgModel.getByUserAndOrg(c.env.DB, user.id, org.id));
-		if (!userInOrg) {
-			throw new errorConfig.Forbidden(messageConfig.RequestError.UserNotInOrg);
-		}
-	}
-
-	if (
-		variableConfig.systemConfig.enableOrgGroup &&
-		updateObj.orgSlug &&
-		dto.orgSlug !== user.orgSlug
-	) {
-		await userOrgGroupModel.removeByUser(c.env.DB, user.id);
-	}
 
 	const updatedUser = Object.keys(updateObj).length
 		? await userModel.update(c.env.DB, user.id, updateObj)
 		: user;
 
-	const { ENABLE_NAMES: enableNames, ENABLE_ORG: enableOrg } = env(c);
+	const { ENABLE_NAMES: enableNames } = env(c);
 
 	const userRoles = await userRoleModel.getAllByUserId(c.env.DB, user.id);
 
@@ -1174,12 +939,6 @@ export const updateUser = async (
 	}
 
 	const roleNames = dto.roles ?? userRoles.map((userRole) => userRole.roleName);
-
-	const org = updatedUser.orgSlug
-		? await orgModel.getBySlug(c.env.DB, updatedUser.orgSlug)
-		: undefined;
-
-	const orgGroups = org ? await userOrgGroupModel.getAllByUser(c.env.DB, updatedUser.id) : [];
 
 	let attributeValuesByAttributeName: Record<string, string> | undefined;
 	if (attributeValues) {
@@ -1247,10 +1006,7 @@ export const updateUser = async (
 	return userModel.convertToApiRecordFull(
 		updatedUser,
 		enableNames,
-		enableOrg,
 		roleNames,
-		org,
-		orgGroups,
 		attributeValuesByAttributeName,
 	);
 };
@@ -1264,12 +1020,4 @@ export const deleteUser = async (c: Context<typeConfig.Context>, authId: string)
 	await userModel.remove(c.env.DB, user.id);
 	await userAppConsentModel.removeByUser(c.env.DB, user.id);
 	return true;
-};
-
-export const updateUserOrgSlug = async (
-	c: Context<typeConfig.Context>,
-	oldSlug: string,
-	newSlug: string,
-) => {
-	await userModel.updateOrgSlug(c.env.DB, oldSlug, newSlug);
 };

@@ -1,5 +1,17 @@
+/**
+ * Local Media Provider Runtime
+ *
+ * This is the runtime implementation loaded by the entrypoint.
+ * It wraps the existing MediaRepository and storage adapter.
+ *
+ * Note: This provider is special because it needs access to the database
+ * and storage adapter. The createMediaProvider function receives these
+ * via the config object, injected by the runtime.
+ */
+
 import type { Kysely } from "kysely";
 
+import { handleMediaDelete } from "../api/handlers/media.js";
 import { MediaRepository } from "../database/repositories/media.js";
 import type { Database } from "../database/types.js";
 import type { Storage } from "../index.js";
@@ -16,11 +28,22 @@ import type {
 
 export interface LocalMediaRuntimeConfig {
 	enabled?: boolean;
+	// These are injected by the runtime, not from user config
 	db?: Kysely<Database>;
+	/**
+	 * Resolver for the live connection, preferred over `db`. The runtime
+	 * injects it so a connection-backed adapter (Postgres over Hyperdrive)
+	 * serves provider queries from the current request-scoped connection in ALS
+	 * rather than a snapshot of the per-isolate singleton. Omitted for stateless
+	 * adapters (D1, Node SQLite), where `db` is used directly.
+	 */
 	getDb?: () => Kysely<Database>;
 	storage?: Storage;
 }
 
+/**
+ * Create the local media provider
+ */
 export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig> = (config) => {
 	const { db, storage } = config;
 
@@ -28,6 +51,9 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 		throw new Error("Local media provider requires database connection");
 	}
 
+	// Resolve the connection per operation (not captured once) so a
+	// connection-backed adapter uses the current event-scoped connection; falls
+	// back to the injected `db` for stateless adapters.
 	const resolveDb = config.getDb ?? (() => db);
 	const repo = () => new MediaRepository(resolveDb());
 
@@ -37,6 +63,7 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 				cursor: options.cursor,
 				limit: options.limit,
 				mimeType: options.mimeType,
+				// TODO: Add search support when capabilities.search is true
 			});
 
 			return {
@@ -52,6 +79,7 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 					blurhash: item.blurhash ?? undefined,
 					dominantColor: item.dominantColor ?? undefined,
 					alt: item.alt ?? undefined,
+					caption: item.caption ?? undefined,
 					previewUrl: `/_emdash/api/media/file/${item.storageKey}`,
 					meta: {
 						storageKey: item.storageKey,
@@ -80,6 +108,7 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 				blurhash: item.blurhash ?? undefined,
 				dominantColor: item.dominantColor ?? undefined,
 				alt: item.alt ?? undefined,
+				caption: item.caption ?? undefined,
 				previewUrl: `/_emdash/api/media/file/${item.storageKey}`,
 				meta: {
 					storageKey: item.storageKey,
@@ -95,22 +124,18 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 				throw new Error("Storage not configured for local media provider");
 			}
 
+			// This is handled by the existing media upload endpoint
+			// The provider interface is used by external providers
+			// For local, we delegate to the existing system
 			throw new Error("Local upload should use /_emdash/api/media endpoint");
 		},
 
 		async delete(id: string) {
-			const repoInstance = repo();
-			const item = await repoInstance.findById(id);
-			if (!item) return;
-
-			if (storage) {
-				try {
-					await storage.delete(item.storageKey);
-				} catch {}
+			const result = await handleMediaDelete(resolveDb(), id, storage);
+			if (!result.success) {
+				if (result.error.code === "NOT_FOUND") return;
+				throw new Error(result.error.message);
 			}
-
-			await repoInstance.delete(id);
-
 			invalidateSiteSettingsCache();
 		},
 
@@ -120,6 +145,8 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 			const src = `/_emdash/api/media/file/${storageKey}`;
 			const mimeType = value.mimeType || "";
 
+			// Prefer the first-class fields; fall back to `meta` for legacy snapshots
+			// stored before LQIP was promoted off the provider-specific `meta` bag.
 			const blurhash =
 				value.blurhash ??
 				(typeof value.meta?.blurhash === "string" ? value.meta.blurhash : undefined);
@@ -127,6 +154,7 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 				value.dominantColor ??
 				(typeof value.meta?.dominantColor === "string" ? value.meta.dominantColor : undefined);
 
+			// Determine embed type based on MIME type
 			if (mimeType.startsWith("image/")) {
 				return {
 					type: "image",
@@ -159,6 +187,7 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 				};
 			}
 
+			// Fallback: treat as image (for unknown types)
 			return {
 				type: "image",
 				src,
@@ -171,6 +200,7 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 		},
 
 		getThumbnailUrl(id: string, _mimeType?: string) {
+			// For local media, return the file URL
 			return `/_emdash/api/media/file/${id}`;
 		},
 	};
@@ -178,6 +208,9 @@ export const createMediaProvider: CreateMediaProviderFn<LocalMediaRuntimeConfig>
 	return provider;
 };
 
+/**
+ * Helper to convert a MediaRepository item to MediaProviderItem
+ */
 export function repoItemToProviderItem(item: {
 	id: string;
 	filename: string;
@@ -205,6 +238,7 @@ export function repoItemToProviderItem(item: {
 		blurhash: item.blurhash ?? undefined,
 		dominantColor: item.dominantColor ?? undefined,
 		alt: item.alt ?? undefined,
+		caption: item.caption ?? undefined,
 		previewUrl: `/_emdash/api/media/file/${item.storageKey}`,
 		meta: {
 			storageKey: item.storageKey,

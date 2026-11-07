@@ -11,7 +11,7 @@ export const workspaceSections = {
 		tabs: ["contacts", "lists", "segments", "fields", "forms", "suppressions"],
 	},
 	activity: { path: "/communication/statistics", tabs: ["messages", "statistics", "operations"] },
-	settings: { path: "/communication/settings", tabs: ["senders", "preferences"] },
+	settings: { path: "/communication/settings", tabs: ["senders", "preferences", "advanced"] },
 } as const;
 
 export type WorkspaceSection = keyof typeof workspaceSections;
@@ -22,10 +22,10 @@ const aliases: Record<string, string> = {
 	settings: "senders",
 	delivery: "senders",
 	email: "senders",
-	channels: "senders",
+	channels: "advanced",
 	languages: "preferences",
-	webhooks: "preferences",
-	"email-webhooks": "preferences",
+	webhooks: "advanced",
+	"email-webhooks": "advanced",
 	configuration: "senders",
 };
 

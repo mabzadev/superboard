@@ -134,7 +134,6 @@ export const postChangeEmailCode = async (c: Context<typeConfig.Context>) => {
     c,
     bodyDto.email,
     bodyDto.locale,
-    authInfo.user.orgSlug,
     { appId: authInfo.appId, userId: authInfo.user.id },
   )
   if (code) {

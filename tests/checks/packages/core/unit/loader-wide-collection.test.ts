@@ -12,6 +12,28 @@ import {
 	type DialectTestContext,
 } from "../utils/test-db.js";
 
+/**
+ * Regression test for #1600: loadEntry's SELECT shape on wide collections.
+ *
+ * When a per-collection `ec_*` table has many flat scalar columns (common when
+ * porting from WordPress / ACF or other builders where every section is a
+ * top-level field), the previous implementation did:
+ *
+ *   SELECT c.*, <5 SEO alias columns> FROM ec_table c LEFT JOIN _emdash_seo s
+ *
+ * On Cloudflare D1 the per-query result-set column limit (~100) made this
+ * fail with `D1_ERROR: too many columns in result set` for collections
+ * around 95+ user columns. The loader's try/catch wrapped it as a generic
+ * `Failed to load entry` error and the call site returned a silent `null`.
+ *
+ * The fix folds SEO into a single aggregated JSON column (`_emdash_seo`)
+ * mirroring how byline and taxonomy hydration already work: aggregate in SQL,
+ * expand in JS. One JSON column is one column, so the result-set width stays
+ * bounded at any collection schema width and the single round trip is
+ * preserved.
+ *
+ * Run on both dialects to keep parity with loader-seo.test.ts.
+ */
 describeEachDialect("Loader on wide-schema collections (#1600)", (dialect) => {
 	let ctx: DialectTestContext;
 	let seoRepo: SeoRepository;
@@ -22,6 +44,10 @@ describeEachDialect("Loader on wide-schema collections (#1600)", (dialect) => {
 		ctx = await setupForDialect(dialect);
 		const registry = new SchemaRegistry(ctx.db);
 
+		// Create a collection with SEO enabled and a large number of flat
+		// scalar fields. 95 user fields + 14 system columns + 5 SEO aliases
+		// would have been ~114 result-set columns under the old LEFT JOIN
+		// shape, well past D1's per-query limit.
 		await registry.createCollection({
 			slug: COLLECTION,
 			label: "Wide Collection",
@@ -39,6 +65,7 @@ describeEachDialect("Loader on wide-schema collections (#1600)", (dialect) => {
 				type: "string",
 			});
 		}
+		// Enable SEO so extractSeo() has somewhere to read from.
 		await ctx.db
 			.updateTable("_emdash_collections")
 			.set({ has_seo: 1 })
@@ -75,6 +102,7 @@ describeEachDialect("Loader on wide-schema collections (#1600)", (dialect) => {
 
 		expect(loaded).toBeDefined();
 		expect((loaded as { data: Record<string, unknown> }).data.title).toBe("Wide Entry");
+		// Spot-check a handful of user fields across the range.
 		const loadedData = (loaded as { data: Record<string, unknown> }).data;
 		expect(loadedData.field_1).toBe("value-1");
 		expect(loadedData.field_50).toBe("value-50");

@@ -1,3 +1,13 @@
+/**
+ * Backup archives — download / delete
+ *
+ * GET    /_emdash/api/settings/backups/archives/:name — download an archive.
+ * DELETE /_emdash/api/settings/backups/archives/:name — delete an archive.
+ *
+ * `name` is validated against the strict archive-filename pattern before it
+ * touches a storage key, so path traversal into other prefixes is impossible.
+ */
+
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

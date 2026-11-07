@@ -1,3 +1,8 @@
+/**
+ * Standalone invite acceptance page (not wrapped in admin Shell).
+ * Validates an invite token, then registers a passkey to complete signup.
+ */
+
 import { Input, Loader } from "@cloudflare/kumo";
 import { Trans } from "@lingui/react/macro";
 import { useLingui } from "@lingui/react/macro";
@@ -25,6 +30,7 @@ function handleInviteSuccess() {
 function RegisterStep({ inviteData, token }: RegisterStepProps) {
 	const { t } = useLingui();
 	const [name, setName] = React.useState("");
+	const [passkeyComplete, setPasskeyComplete] = React.useState(false);
 	const buttonProviders = useAuthProviderList().filter((p) => p.LoginButton);
 
 	return (
@@ -54,35 +60,40 @@ function RegisterStep({ inviteData, token }: RegisterStepProps) {
 				</p>
 			</div>
 
-			<Input label={t`Email`} value={inviteData.email} disabled className="bg-kumo-tint" />
+			<Input
+				dir="ltr"
+				label={t`Email`}
+				value={inviteData.email}
+				disabled
+				className="bg-kumo-tint"
+			/>
 
 			<Input
 				label={t`Your name (optional)`}
 				type="text"
 				value={name}
 				onChange={(e) => setName(e.target.value)}
-				placeholder="Jane Doe"
+				placeholder={t`Jane Doe`}
 				autoComplete="name"
 				autoFocus
 			/>
 
 			<div className="pt-4 border-t">
-				<h3 className="text-sm font-medium mb-3">{t`Create your passkey`}</h3>
-				<p className="text-sm text-kumo-subtle mb-4">
-					{t`Passkeys are a secure, passwordless way to sign in using your device's biometrics, PIN, or security key.`}
-				</p>
-
 				<PasskeyRegistration
 					optionsEndpoint="/_emdash/api/auth/invite/register-options"
 					verifyEndpoint="/_emdash/api/auth/invite/complete"
 					onSuccess={handleInviteSuccess}
-					buttonText={t`Create Account`}
 					additionalData={{ token, name: name || undefined }}
+					showEducation
+					showSuccessStep
+					successButtonText={t`Open the dashboard`}
+					onSuccessReady={() => setPasskeyComplete(true)}
 				/>
 			</div>
 
-			{buttonProviders.length > 0 && (
+			{!passkeyComplete && buttonProviders.length > 0 && (
 				<>
+					{/* Divider */}
 					<div className="relative">
 						<div className="absolute inset-0 flex items-center">
 							<span className="w-full border-t" />
@@ -92,6 +103,9 @@ function RegisterStep({ inviteData, token }: RegisterStepProps) {
 						</div>
 					</div>
 
+					{/* Accept the invite via an OAuth provider. The button carries the
+					    invite token; the callback only completes the invite when the
+					    provider-verified email matches the invited address. */}
 					<div
 						className={`grid gap-3 ${buttonProviders.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}
 					>

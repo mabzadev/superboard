@@ -1,3 +1,13 @@
+/**
+ * POST /_emdash/api/setup/dev-reset
+ *
+ * Development-only endpoint to reset setup state for testing.
+ * Clears the setup_complete flag and deletes all users,
+ * returning the site to the pre-setup state.
+ *
+ * ONLY available when import.meta.env.DEV is true.
+ */
+
 import type { APIRoute } from "astro";
 
 export const prerender = false;

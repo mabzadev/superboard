@@ -29,6 +29,8 @@ describe("generateConfigModule", () => {
 			trustedProxyHeaders: ["x-real-ip", "fly-client-ip"],
 			maxUploadSize: 52_428_800,
 		});
+		// The virtual module is `export default <JSON>` — eval by stripping
+		// the prefix and parsing.
 		const prefix = "export default ";
 		expect(source.startsWith(prefix)).toBe(true);
 		const json = source.slice(prefix.length).replace(/;$/, "");
@@ -98,28 +100,25 @@ describe("generateDialectModule", () => {
 
 describe("generateSchedulerModule", () => {
 	it("disables the timer for a Cloudflare production build (Cron Trigger drives it)", () => {
-		const out = generateSchedulerModule("@astrojs/cloudflare", "build");
+		const out = generateSchedulerModule("@astrojs/cloudflare");
 		expect(out).toContain("export const createScheduler = null");
 		expect(out).not.toContain("NodeCronScheduler");
 	});
 
-	it("keeps the Node timer in local dev even under the Cloudflare adapter", () => {
-		const out = generateSchedulerModule("@astrojs/cloudflare", "serve");
-		expect(out).toContain('import { NodeCronScheduler } from "emdash"');
-		expect(out).toContain("export function createScheduler(executor)");
-		expect(out).not.toContain("createScheduler = null");
+	it("does not emit a detached timer inside Cloudflare local dev", () => {
+		const out = generateSchedulerModule("@astrojs/cloudflare");
+		expect(out).toContain("export const createScheduler = null");
+		expect(out).not.toContain("NodeCronScheduler");
 	});
 
 	it("emits a NodeCronScheduler factory for non-Cloudflare adapters", () => {
-		for (const cmd of ["build", "serve", undefined] as const) {
-			const out = generateSchedulerModule("@astrojs/node", cmd);
-			expect(out).toContain('import { NodeCronScheduler } from "emdash"');
-			expect(out).not.toContain("createScheduler = null");
-		}
+		const out = generateSchedulerModule("@astrojs/node");
+		expect(out).toContain('import { NodeCronScheduler } from "emdash"');
+		expect(out).not.toContain("createScheduler = null");
 	});
 
 	it("emits a NodeCronScheduler factory when no adapter is configured", () => {
-		const out = generateSchedulerModule(undefined, "build");
+		const out = generateSchedulerModule(undefined);
 		expect(out).toContain("export function createScheduler(executor)");
 	});
 });
@@ -143,6 +142,7 @@ describe("generateEnvModule", () => {
 });
 
 describe("createVirtualModulesPlugin scheduler wiring", () => {
+	// Invoke a Vite plugin hook that may be a function or { handler } object.
 	function callHook<T>(hook: unknown, ...args: unknown[]): T {
 		const fn = typeof hook === "function" ? hook : (hook as { handler: unknown }).handler;
 		return (fn as (...a: unknown[]) => T)(...args);
@@ -153,30 +153,27 @@ describe("createVirtualModulesPlugin scheduler wiring", () => {
 		return (fn as (...a: unknown[]) => T).call(context, ...args);
 	}
 
-	function buildPlugin(
-		adapterName: string | undefined,
-		command: "dev" | "build" | "preview" | "sync",
-	): Plugin {
+	function buildPlugin(adapterName: string | undefined): Plugin {
 		const options = {
 			serializableConfig: {},
 			resolvedConfig: {},
 			pluginDescriptors: [],
 			astroConfig: { adapter: adapterName ? { name: adapterName } : undefined },
 		} as unknown as VitePluginOptions;
-		return createVirtualModulesPlugin(options, command);
+		return createVirtualModulesPlugin(options);
 	}
 
-	it("keeps the Node timer under the Cloudflare adapter during `astro dev` even when Vite reports command 'build'", () => {
-		const plugin = buildPlugin("@astrojs/cloudflare", "dev");
+	it("keeps the timer out of the Cloudflare worker during `astro dev`", () => {
+		const plugin = buildPlugin("@astrojs/cloudflare");
 		callHook(plugin.configResolved, { command: "build" });
 
 		const out = callHook<string>(plugin.load, RESOLVED_VIRTUAL_SCHEDULER_ID);
-		expect(out).toContain('import { NodeCronScheduler } from "emdash"');
-		expect(out).not.toContain("createScheduler = null");
+		expect(out).toContain("export const createScheduler = null");
+		expect(out).not.toContain("NodeCronScheduler");
 	});
 
 	it("disables the timer under the Cloudflare adapter for a production build", () => {
-		const plugin = buildPlugin("@astrojs/cloudflare", "build");
+		const plugin = buildPlugin("@astrojs/cloudflare");
 		callHook(plugin.configResolved, { command: "build" });
 
 		const out = callHook<string>(plugin.load, RESOLVED_VIRTUAL_SCHEDULER_ID);
@@ -185,7 +182,7 @@ describe("createVirtualModulesPlugin scheduler wiring", () => {
 	});
 
 	it("keeps the build timestamp stable across repeated loads", () => {
-		const plugin = buildPlugin("@astrojs/cloudflare", "build");
+		const plugin = buildPlugin("@astrojs/cloudflare");
 		callHook(plugin.configResolved, { command: "build" });
 
 		const first = callHook<string>(plugin.load, RESOLVED_VIRTUAL_BUILD_ID);
@@ -228,7 +225,7 @@ describe("createVirtualModulesPlugin scheduler wiring", () => {
 				pluginDescriptors: [],
 				astroConfig: { root: pathToFileURL(`${projectRoot}/`) },
 			} as unknown as VitePluginOptions;
-			const plugin = createVirtualModulesPlugin(options, "dev");
+			const plugin = createVirtualModulesPlugin(options);
 			const addWatchFile = vi.fn();
 
 			const source = callHookWithContext<string>(
@@ -239,6 +236,8 @@ describe("createVirtualModulesPlugin scheduler wiring", () => {
 
 			expect(source).toContain("export default { hooks: {} };");
 			expect(addWatchFile).toHaveBeenCalledOnce();
+			// Module resolution canonicalizes macOS' /var -> /private/var symlink.
+			// Compare the physical path so this contract is portable across hosts.
 			expect(addWatchFile).toHaveBeenCalledWith(realpathSync(entryPath));
 		} finally {
 			rmSync(projectRoot, { recursive: true, force: true });

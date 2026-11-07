@@ -1,6 +1,13 @@
-import { Button, Input, Loader, Select } from "@superboard/front-ui/kumo";
+import DeleteConfirm from "@superboard/front-ui/common/delete-confirm.js";
+import { Button, Loader, Select } from "@superboard/front-ui/kumo";
 import { usePublicConfig } from "@superboard/front-ui/lib/config.js";
 import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
+import {
+	SettingsActions,
+	SettingsRow,
+	SettingsTextField,
+} from "@superboard/front-ui/settings-form";
+import { Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -14,6 +21,7 @@ import {
 	getProviderWebhooks as getMarketingWebhooks,
 } from "../api/marketing/marketingService.js";
 import { useStudioI18n } from "./i18n.js";
+import { SettingsSubsection } from "./settings-ui.js";
 
 type Service = "email" | "marketing";
 type Webhook = { id: string; provider: string; service: Service };
@@ -41,6 +49,7 @@ export function ProviderWebhooks({ project }: { project: string }) {
 	const { apiUrl = "" } = usePublicConfig();
 	const [items, setItems] = useState<Webhook[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [adding, setAdding] = useState(false);
 	const [service, setService] = useState<Service>("email");
 	const [provider, setProvider] = useState("");
 	const [secret, setSecret] = useState("");
@@ -93,104 +102,152 @@ export function ProviderWebhooks({ project }: { project: string }) {
 			setBusy(false);
 		}
 	};
+	const close = () => {
+		setAdding(false);
+		setProvider("");
+		setSecret("");
+	};
 	return (
-		<section className="space-y-4 rounded-lg border border-kumo-line bg-kumo-base p-6">
-			<div>
-				<h2 className="text-lg font-semibold">{t("Provider webhooks")}</h2>
-				<p className="text-sm text-kumo-subtle">
-					{t(
-						"Give these URLs to your email provider so bounces, complaints and deliveries update your contacts automatically.",
-					)}
-				</p>
-			</div>
-			<form
-				className="flex flex-wrap items-end gap-3"
-				onSubmit={(event) => {
-					event.preventDefault();
-					void run(() => services[service].create(project, { provider, secret, enabled: true }))
-						.then((saved) => {
-							if (saved) {
-								setProvider("");
-								setSecret("");
-							}
-						})
-						.catch(() => undefined);
-				}}
+		<div className="space-y-4">
+			<SettingsSubsection
+				title={t("Receive provider events")}
+				description={t(
+					"Give these URLs to your email provider so bounces, complaints and deliveries update your contacts automatically.",
+				)}
 			>
-				<Select
-					label={t("Events for")}
-					value={service}
-					onValueChange={(value) => {
-						if (value === "email" || value === "marketing") setService(value);
-					}}
-					items={{
-						email: t(services.email.label),
-						marketing: t(services.marketing.label),
-					}}
-				/>
-				<Input
-					label={t("Provider identifier")}
-					value={provider}
-					required
-					onChange={(event) => {
-						setProvider(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_"));
-					}}
-				/>
-				<Input
-					type="password"
-					autoComplete="new-password"
-					label={t("Shared secret (minimum 16 characters)")}
-					value={secret}
-					required
-					onChange={(event) => {
-						setSecret(event.target.value);
-					}}
-				/>
-				<Button type="submit" disabled={busy || !provider || secret.length < 16}>
-					{t("Create endpoint")}
-				</Button>
-			</form>
-			{error && (
-				<p role="alert" className="text-kumo-danger">
-					{error}
-				</p>
-			)}
-			{loading ? (
-				<Loader />
-			) : items.length ? (
-				<div className="divide-y divide-kumo-line rounded-lg border border-kumo-line">
-					{items.map((item) => (
-						<div
+				{loading ? (
+					<SettingsRow>
+						<Loader />
+					</SettingsRow>
+				) : items.length ? (
+					items.map((item) => (
+						<SettingsRow
 							key={`${item.service}:${item.id}`}
-							className="flex flex-wrap items-center justify-between gap-3 p-4"
+							className="flex items-start justify-between gap-4 space-y-0"
 						>
-							<div className="min-w-0">
-								<p className="font-medium">
+							<div className="min-w-0 space-y-1">
+								<p className="text-sm font-medium">
 									{item.provider} · {t(services[item.service].label)}
 								</p>
-								<code className="break-all text-xs">
+								<code className="block break-all text-xs text-kumo-subtle">
 									{apiUrl}
 									{services[item.service].path}
 									{item.id}
 								</code>
 							</div>
-							<Button
-								size="sm"
-								variant="ghost"
-								disabled={busy}
-								aria-label={t("Delete {name}", { name: item.provider })}
-								onClick={() => void run(() => services[item.service].remove(project, item.id))}
+							<DeleteConfirm
+								title={t("Delete this provider webhook?")}
+								description={t(
+									"Your provider will no longer be able to report bounces and complaints to this URL.",
+								)}
+								onConfirm={async () => {
+									await run(() => services[item.service].remove(project, item.id));
+								}}
 							>
-								{t("Delete")}
-							</Button>
-						</div>
-					))}
-				</div>
-			) : (
-				<p className="text-sm text-kumo-subtle">
-					{t("No provider webhook yet. Create one if your provider reports bounces by webhook.")}
+								<Button
+									variant="ghost"
+									shape="square"
+									icon={Trash2}
+									disabled={busy}
+									aria-label={t("Delete {name}", { name: item.provider })}
+								/>
+							</DeleteConfirm>
+						</SettingsRow>
+					))
+				) : (
+					<SettingsRow>
+						<p className="text-sm text-kumo-subtle">
+							{t(
+								"No provider webhook yet. Create one if your provider reports bounces by webhook.",
+							)}
+						</p>
+					</SettingsRow>
+				)}
+			</SettingsSubsection>
+			{error && (
+				<p role="alert" className="text-sm text-kumo-danger">
+					{error}
 				</p>
 			)}
-		</section>
+			{adding ? (
+				<form
+					className="space-y-4"
+					onSubmit={(event) => {
+						event.preventDefault();
+						void run(() => services[service].create(project, { provider, secret, enabled: true }))
+							.then((saved) => {
+								if (saved) close();
+							})
+							.catch(() => undefined);
+					}}
+				>
+					<SettingsSubsection
+						title={t("New provider webhook")}
+						description={t("Each webhook receives the events of one service.")}
+					>
+						<SettingsRow>
+							<Select
+								className="w-full"
+								label={t("Events for")}
+								value={service}
+								onValueChange={(value) => {
+									if (value === "email" || value === "marketing") setService(value);
+								}}
+								items={{
+									email: t(services.email.label),
+									marketing: t(services.marketing.label),
+								}}
+							/>
+						</SettingsRow>
+						<SettingsRow>
+							<SettingsTextField
+								label={t("Provider identifier")}
+								value={provider}
+								required
+								onChange={(event) => {
+									setProvider(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_"));
+								}}
+							/>
+						</SettingsRow>
+						<SettingsRow>
+							<SettingsTextField
+								type="password"
+								autoComplete="new-password"
+								label={t("Shared secret (minimum 16 characters)")}
+								value={secret}
+								required
+								onChange={(event) => {
+									setSecret(event.target.value);
+								}}
+							/>
+						</SettingsRow>
+					</SettingsSubsection>
+					<SettingsActions>
+						<Button type="button" variant="ghost" onClick={close}>
+							{t("Cancel")}
+						</Button>
+						<Button
+							type="submit"
+							variant="primary"
+							disabled={busy || !provider || secret.length < 16}
+						>
+							{t("Create endpoint")}
+						</Button>
+					</SettingsActions>
+				</form>
+			) : (
+				<SettingsActions>
+					<Button
+						type="button"
+						icon={Plus}
+						onClick={() => {
+							setAdding(true);
+						}}
+					>
+						{t("Add a provider webhook")}
+					</Button>
+				</SettingsActions>
+			)}
+		</div>
 	);
 }

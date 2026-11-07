@@ -1,3 +1,7 @@
+/**
+ * PasskeyList - Displays a list of passkeys with actions
+ */
+
 import * as React from "react";
 
 import type { PasskeyInfo } from "../../lib/api";

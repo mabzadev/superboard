@@ -1,3 +1,11 @@
+/**
+ * Publisher byline for a registry package detail view.
+ *
+ * Public `@handle/slug` names and links are rendered by
+ * `RegistryPluginIdentity`; this component keeps the separately approved
+ * author-name or stable-DID fallback used by the "Published by" line.
+ */
+
 export interface PublisherIdentityProfile {
 	authors?: readonly { name?: unknown }[];
 }

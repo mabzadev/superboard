@@ -13,7 +13,7 @@ const messages = {
 		suspended: "Account suspended",
 		resume: "Reactivate account",
 		manage: "Manage identity",
-		features: "Profile, roles, organizations, MFA, passkeys, invitations, consent and blocked IPs.",
+		features: "Profile, roles, MFA, passkeys, invitations, consent and blocked IPs.",
 		unlinked: "This account has no linked directory identity.",
 		sessions: "Application sessions",
 		empty: "No sessions.",
@@ -32,8 +32,7 @@ const messages = {
 		suspended: "Compte suspendu",
 		resume: "Réactiver le compte",
 		manage: "Gérer l’identité",
-		features:
-			"Profil, rôles, organisations, MFA, passkeys, invitations, consentements et IP bloquées.",
+		features: "Profil, rôles, MFA, passkeys, invitations, consentements et IP bloquées.",
 		unlinked: "Ce compte n’a pas d’identité liée dans l’annuaire.",
 		sessions: "Sessions de l’application",
 		empty: "Aucune session.",

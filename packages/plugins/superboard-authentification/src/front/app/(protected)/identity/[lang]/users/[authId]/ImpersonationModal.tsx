@@ -125,9 +125,16 @@ const ImpersonationModal = ({
 						<p className="mt-4 text-red-500">{t("impersonateConsent")}</p>
 					)}
 					{isConsented && !refreshTokenStorage && selectedApp && (
-						<Button className="mt-4" onClick={handleImpersonate} data-testid="confirmImpersonate">
-							{t("confirmImpersonate")}
-						</Button>
+						<div className="mt-4 flex justify-end">
+							<Button
+								onClick={() => {
+									handleImpersonate().catch(() => undefined);
+								}}
+								data-testid="confirmImpersonate"
+							>
+								{t("confirmImpersonate")}
+							</Button>
+						</div>
 					)}
 					{refreshTokenStorage && (
 						<div className="mt-6">

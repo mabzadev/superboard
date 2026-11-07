@@ -1,3 +1,10 @@
+/**
+ * API handler implementations for EmDash REST endpoints
+ *
+ * Re-exports all handlers from their respective modules
+ */
+
+// Content handlers
 export {
 	handleContentList,
 	handleContentAuthors,
@@ -14,6 +21,7 @@ export {
 	handleContentCountTrashed,
 	handleContentSchedule,
 	handleContentUnschedule,
+	handleScheduledPolicyRejection,
 	handleContentPublish,
 	handleContentUnpublish,
 	handleContentCountScheduled,
@@ -23,6 +31,7 @@ export {
 	type TrashedContentItem,
 } from "./content.js";
 
+// Dashboard stats
 export {
 	handleDashboardStats,
 	type CollectionStats,
@@ -30,8 +39,13 @@ export {
 	type RecentItem,
 } from "./dashboard.js";
 
+// Core update check
+export { handleCoreUpdateStatus, type CoreUpdateStatus } from "./update-check.js";
+
+// Manifest generation
 export { generateManifest } from "./manifest.js";
 
+// Revision handlers
 export {
 	handleRevisionList,
 	handleRevisionGet,
@@ -40,11 +54,14 @@ export {
 	type RevisionResponse,
 } from "./revision.js";
 
+// Media handlers
 export {
 	handleMediaList,
 	handleMediaGet,
 	handleMediaCreate,
+	handleMediaRegisterUpload,
 	handleMediaUpdate,
+	handleMediaReplaceMetadata,
 	handleMediaDelete,
 	type MediaListResponse,
 	type MediaResponse,
@@ -73,9 +90,15 @@ export {
 	type MediaUsageProgress,
 	type MediaUsageProgressAdvanceResponse,
 	type MediaUsageRepairResponse,
+	type MediaUsageSiteSettingDetail,
 	type MediaUsageSourceDetail,
 	type MediaUsageSummary,
 } from "./media-usage.js";
+
+export {
+	handleMediaUsageActivationAdvance,
+	handleMediaUsageActivationStatus,
+} from "./media-usage-activation.js";
 
 export {
 	handleMediaUsageWorkList,
@@ -87,18 +110,19 @@ export {
 	type MediaUsageWorkRetryResponse,
 } from "./media-usage-work.js";
 
+// Schema handlers
 export {
 	handleSchemaCollectionList,
 	handleSchemaCollectionGet,
 	handleSchemaCollectionCreate,
 	handleSchemaCollectionUpdate,
 	handleSchemaCollectionDelete,
-	handleSchemaCollectionReorder,
 	handleSchemaFieldList,
 	handleSchemaFieldGet,
 	handleSchemaFieldCreate,
 	handleSchemaFieldUpdate,
 	handleSchemaFieldDelete,
+	handleSchemaCollectionReorder,
 	handleSchemaFieldReorder,
 	handleOrphanedTableList,
 	handleOrphanedTableRegister,
@@ -110,14 +134,27 @@ export {
 	type OrphanedTable,
 	type OrphanedTableListResponse,
 } from "./schema.js";
+export {
+	handleBlockTypeList,
+	handleBlockTypeGet,
+	handleBlockTypeCreate,
+	handleBlockTypeUpdate,
+	handleBlockTypeVersionActivate,
+	type BlockTypeListResponse,
+	type BlockTypeResponse,
+} from "./block-types.js";
 
+// SEO handlers
 export {
 	handleSitemapData,
+	handleSitemapIndexData,
 	type SitemapCollectionData,
 	type SitemapContentEntry,
 	type SitemapDataResponse,
+	type SitemapIndexEntry,
 } from "./seo.js";
 
+// Plugin handlers
 export {
 	handlePluginList,
 	handlePluginGet,
@@ -134,6 +171,7 @@ export {
 	type PluginSettingsResponse,
 } from "./plugin-settings.js";
 
+// Menu handlers
 export {
 	handleMenuList,
 	handleMenuCreate,
@@ -153,6 +191,7 @@ export {
 	type MenuSetItemsInput,
 } from "./menus.js";
 
+// Section handlers
 export {
 	handleSectionList,
 	handleSectionCreate,
@@ -162,8 +201,10 @@ export {
 	type SectionListResponse,
 } from "./sections.js";
 
+// Settings handlers
 export { handleSettingsGet, handleSettingsUpdate } from "./settings.js";
 
+// Taxonomy handlers
 export {
 	handleTaxonomyList,
 	handleTaxonomyGet,
@@ -186,9 +227,11 @@ export {
 	type TermGetResponse,
 } from "./taxonomies.js";
 
+// Marketplace handlers
 export {
 	handleMarketplaceInstall,
 	handleMarketplaceUpdate,
+	rollbackPluginUpdate,
 	handleMarketplaceUninstall,
 	handleMarketplaceUpdateCheck,
 	handleMarketplaceSearch,
@@ -198,10 +241,12 @@ export {
 	loadBundleFromR2,
 	type MarketplaceInstallResult,
 	type MarketplaceUpdateResult,
+	type PluginUpdateRollbackResult,
 	type MarketplaceUpdateCheck,
 	type MarketplaceUninstallResult,
 } from "./marketplace.js";
 
+// Registry handlers (experimental)
 export {
 	assertEnvCompatible,
 	assertSafeArtifactUrl,

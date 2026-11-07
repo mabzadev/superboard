@@ -1,3 +1,9 @@
+/**
+ * API Test Plugin - Admin Components
+ *
+ * Provides a dashboard widget and test page for exercising plugin APIs.
+ */
+
 import {
 	Play,
 	CheckCircle,
@@ -14,6 +20,10 @@ import {
 import type { PluginAdminExports } from "emdash";
 import { apiFetch, getErrorMessage, parseApiResponse } from "emdash/plugin-utils";
 import * as React from "react";
+
+// =============================================================================
+// Types
+// =============================================================================
 
 interface TestResult {
 	name: string;
@@ -32,6 +42,10 @@ interface ApiTestResults {
 	media: { available: boolean; canWrite: boolean; sampleCount: number };
 	http: { available: boolean; testStatus?: number; error?: string };
 }
+
+// =============================================================================
+// Dashboard Widget
+// =============================================================================
 
 function ApiTestWidget() {
 	const [lastRun, setLastRun] = React.useState<Date | null>(null);
@@ -118,6 +132,10 @@ function ApiTestWidget() {
 		</div>
 	);
 }
+
+// =============================================================================
+// Test Page
+// =============================================================================
 
 const API_TESTS = [
 	{
@@ -325,6 +343,10 @@ function TestPage() {
 		</div>
 	);
 }
+
+// =============================================================================
+// Exports
+// =============================================================================
 
 export const widgets: PluginAdminExports["widgets"] = {
 	"api-status": ApiTestWidget,

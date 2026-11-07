@@ -8,7 +8,6 @@ import { configSignal, errorSignal } from "./signals/index.js";
 type RedirectOptions = {
 	locale?: string;
 	policy?: string;
-	org?: string;
 	postLogoutRedirectUri?: string;
 };
 
@@ -78,7 +77,6 @@ async function redirectToIdentityPolicy(options: RedirectOptions): Promise<void>
 		authorize.searchParams.set("scope", "openid");
 		authorize.searchParams.set("locale", options.locale ?? "en");
 		if (options.policy) authorize.searchParams.set("policy", options.policy);
-		if (options.org) authorize.searchParams.set("org", options.org);
 		window.location.assign(authorize.toString());
 	} catch {
 		errorSignal.value = "The account policy could not be opened.";

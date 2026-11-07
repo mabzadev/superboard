@@ -1,10 +1,18 @@
+/**
+ * Tests for CLI seed commands
+ */
+
 import { mkdtemp, rm, writeFile, mkdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { runCommand } from "citty";
+import { consola } from "consola";
+import { sql } from "kysely";
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
 
 import { exportSeed } from "../../../../../../packages/core/src/cli/commands/export-seed.js";
+import { seedCommand } from "../../../../../../packages/core/src/cli/commands/seed.js";
 import { createDatabase } from "../../../../../../packages/core/src/database/connection.js";
 import { runMigrations } from "../../../../../../packages/core/src/database/migrations/runner.js";
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
@@ -26,6 +34,7 @@ describe("CLI Seed Commands", () => {
 
 	describe("seed file resolution", () => {
 		it("should resolve .emdash/seed.json by convention", async () => {
+			// Create convention seed file
 			const emdashDir = join(tempDir, ".emdash");
 			await mkdir(emdashDir);
 			const seedPath = join(emdashDir, "seed.json");
@@ -36,12 +45,14 @@ describe("CLI Seed Commands", () => {
 			};
 			await writeFile(seedPath, JSON.stringify(seed));
 
+			// Read it back
 			const content = await readFile(seedPath, "utf-8");
 			const parsed = JSON.parse(content);
 			expect(parsed.settings.title).toBe("Convention Seed");
 		});
 
 		it("should resolve seed from package.json emdash.seed", async () => {
+			// Create seed file in custom location
 			const customDir = join(tempDir, "custom");
 			await mkdir(customDir);
 			const seedPath = join(customDir, "my-seed.json");
@@ -52,6 +63,7 @@ describe("CLI Seed Commands", () => {
 			};
 			await writeFile(seedPath, JSON.stringify(seed));
 
+			// Create package.json referencing it
 			const pkg = {
 				name: "test-project",
 				emdash: {
@@ -60,6 +72,7 @@ describe("CLI Seed Commands", () => {
 			};
 			await writeFile(join(tempDir, "package.json"), JSON.stringify(pkg));
 
+			// Verify the referenced path works
 			const content = await readFile(seedPath, "utf-8");
 			const parsed = JSON.parse(content);
 			expect(parsed.settings.title).toBe("Package.json Seed");
@@ -101,7 +114,7 @@ describe("CLI Seed Commands", () => {
 				version: "1",
 				collections: [
 					{
-						slug: "",
+						slug: "", // Invalid: empty slug
 						label: "Posts",
 						fields: [],
 					},
@@ -191,16 +204,93 @@ describe("CLI Seed Commands", () => {
 					],
 				};
 
+				// First apply
 				const result1 = await applySeed(db, seed, {});
 				expect(result1.collections.created).toBe(1);
 				expect(result1.collections.skipped).toBe(0);
 
+				// Second apply - should skip
 				const result2 = await applySeed(db, seed, {});
 				expect(result2.collections.created).toBe(0);
 				expect(result2.collections.skipped).toBe(1);
 			} finally {
 				await db.destroy();
 			}
+		});
+	});
+
+	describe("emdash seed", () => {
+		const seed: SeedFile = {
+			version: "1",
+			collections: [
+				{
+					slug: "posts",
+					label: "Posts",
+					fields: [{ slug: "title", label: "Title", type: "string" }],
+				},
+			],
+			taxonomies: [
+				{
+					name: "topic",
+					label: "Topics",
+					hierarchical: false,
+					collections: ["posts"],
+					terms: [{ slug: "news", label: "News" }],
+				},
+			],
+			bylines: [{ id: "byline-1", slug: "ada", displayName: "Ada" }],
+			content: {
+				posts: [{ id: "post-1", slug: "hello", status: "published", data: { title: "Hello" } }],
+			},
+		};
+
+		let consolaLevel: number;
+
+		beforeAll(() => {
+			consolaLevel = consola.level;
+			consola.level = -999;
+		});
+
+		afterAll(() => {
+			consola.level = consolaLevel;
+		});
+
+		async function seedAndCount(...flags: string[]) {
+			const seedPath = join(tempDir, "seed.json");
+			await writeFile(seedPath, JSON.stringify(seed));
+			await runCommand(seedCommand, {
+				rawArgs: [seedPath, "--cwd", tempDir, "--database", "seed.db", ...flags],
+			});
+
+			const db = createDatabase({ url: `file:${join(tempDir, "seed.db")}` });
+			try {
+				const count = async (table: string) => {
+					const query = sql<{ n: number }>`SELECT COUNT(*) AS n FROM ${sql.ref(table)}`;
+					const { rows } = await query.execute(db);
+					return rows[0]?.n;
+				};
+				return {
+					collections: await count("_emdash_collections"),
+					posts: await count("ec_posts"),
+					bylines: await count("_emdash_bylines"),
+					terms: await count("taxonomies"),
+				};
+			} finally {
+				await db.destroy();
+			}
+		}
+
+		it("applies sample content by default", async () => {
+			expect(await seedAndCount()).toMatchObject({ posts: 1, bylines: 1, terms: 1 });
+		});
+
+		it("skips sample content with --no-content", async () => {
+			expect(await seedAndCount("--no-content")).toEqual({
+				collections: 1,
+				posts: 0,
+				bylines: 0,
+				terms: 0,
+			});
 		});
 	});
 
@@ -329,6 +419,7 @@ describe("CLI Seed Commands", () => {
 			try {
 				await runMigrations(db);
 
+				// Apply a seed first
 				const inputSeed: SeedFile = {
 					version: "1",
 					settings: { title: "Export Test" },
@@ -346,6 +437,8 @@ describe("CLI Seed Commands", () => {
 
 				await applySeed(db, inputSeed, {});
 
+				// Now export (simulating what export-seed does)
+				// For this test, we just verify the input seed validates
 				const validation = validateSeed(inputSeed);
 				expect(validation.valid).toBe(true);
 			} finally {

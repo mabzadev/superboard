@@ -4,15 +4,14 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
 	handleReferenceChildrenGet,
-	handleReferenceChildrenSet,
 	handleReferenceParentsGet,
+	setReferenceSelection,
 } from "../../../../../../packages/core/src/api/handlers/relations.js";
-import {
-	GET as getChildren,
-	POST as setChildren,
-} from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/[id]/references/[relation]/children.js";
+import { GET as getChildren } from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/[id]/references/[relation]/children.js";
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
 import { RelationRepository } from "../../../../../../packages/core/src/database/repositories/relation.js";
+import { RevisionRepository } from "../../../../../../packages/core/src/database/repositories/revision.js";
+import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 import {
 	describeEachDialect,
 	setupForDialectWithCollections,
@@ -37,6 +36,7 @@ function edgeCtx(
 	return { params, url, request, locals: { emdash: { db }, user } } as unknown as APIContext;
 }
 
+// setupForDialectWithCollections registers two collections: "post" and "page".
 describeEachDialect("reference children handlers", (dialect) => {
 	let ctx: DialectTestContext;
 
@@ -48,14 +48,28 @@ describeEachDialect("reference children handlers", (dialect) => {
 	});
 
 	async function makeRelation() {
+		// post (parent) -> page (child), viewed from the parent end by `related`,
+		// the field a selection is addressed through.
 		const repo = new RelationRepository(ctx.db);
-		return repo.create({
-			name: "related_pages",
+		const relation = await repo.create({
+			slug: "related_pages",
 			parentCollection: "post",
 			childCollection: "page",
 			parentLabel: "Post",
 			childLabel: "Related page",
 		});
+		await new SchemaRegistry(ctx.db).createField("post", {
+			slug: "related",
+			label: "Related",
+			type: "reference",
+			validation: { relation: relation.slug, relationSide: "parent", targetCollection: "page" },
+		});
+		return relation;
+	}
+
+	/** Write a parent's selection the way an entry save does. */
+	function selectChildren(parentId: string, childIds: string[]) {
+		return setReferenceSelection(ctx.db, "post", parentId, "related", childIds);
 	}
 
 	it("set then get returns resolved child entries in order", async () => {
@@ -65,16 +79,51 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const a = await content.create({ type: "page", slug: "a", data: { title: "A" } });
 		const b = await content.create({ type: "page", slug: "b", data: { title: "B" } });
 
-		const set = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [a.id, b.id]);
-		expect(set.success).toBe(true);
-		if (!set.success) return;
-		expect(set.data.children.map((c) => c.slug)).toEqual(["a", "b"]);
-		expect(set.data.children.map((c) => c.sortOrder)).toEqual([0, 1]);
-		expect(set.data.children.every((c) => c.collection === "page")).toBe(true);
+		expect((await selectChildren(parent.id, [a.id, b.id])).success).toBe(true);
 
 		const get = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
 		if (!get.success) return;
 		expect(get.data.children.map((c) => c.slug)).toEqual(["a", "b"]);
+		expect(get.data.children.map((c) => c.sortOrder)).toEqual([0, 1]);
+		expect(get.data.children.every((c) => c.collection === "page")).toBe(true);
+	});
+
+	it("resolved children take their title from the collection's titleField", async () => {
+		const registry = new SchemaRegistry(ctx.db);
+		await registry.createField("page", { slug: "headline", label: "Headline", type: "string" });
+		await registry.updateCollection("page", { titleField: "headline" });
+
+		const rel = await makeRelation();
+		const content = new ContentRepository(ctx.db);
+		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
+		const a = await content.create({
+			type: "page",
+			slug: "a",
+			data: { title: "A", headline: "Headline A" },
+		});
+
+		expect((await selectChildren(parent.id, [a.id])).success).toBe(true);
+
+		const get = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
+		if (!get.success) return;
+		expect(get.data.children[0]?.title).toBe("Headline A");
+	});
+
+	it("falls back to title when the titleField is empty on the entry", async () => {
+		const registry = new SchemaRegistry(ctx.db);
+		await registry.createField("page", { slug: "headline", label: "Headline", type: "string" });
+		await registry.updateCollection("page", { titleField: "headline" });
+
+		const rel = await makeRelation();
+		const content = new ContentRepository(ctx.db);
+		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
+		const a = await content.create({ type: "page", slug: "a", data: { title: "A" } });
+
+		expect((await selectChildren(parent.id, [a.id])).success).toBe(true);
+
+		const get = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
+		if (!get.success) return;
+		expect(get.data.children[0]?.title).toBe("A");
 	});
 
 	it("resolved children carry their actual locale", async () => {
@@ -83,9 +132,40 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
 		const a = await content.create({ type: "page", slug: "a", data: { title: "A" } });
 
-		const set = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [a.id]);
-		if (!set.success) return;
-		expect(set.data.children[0]?.locale).toBe("en");
+		expect((await selectChildren(parent.id, [a.id])).success).toBe(true);
+
+		const get = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
+		if (!get.success) return;
+		expect(get.data.children[0]?.locale).toBe("en");
+	});
+
+	it("a resolved child carries the translation group of the variant it resolved to", async () => {
+		const rel = await makeRelation();
+		const content = new ContentRepository(ctx.db);
+		const parent = await content.create({
+			type: "post",
+			slug: "p",
+			data: { title: "P" },
+			locale: "fr",
+		});
+		const en = await content.create({ type: "page", slug: "a", data: { title: "A" } });
+		const fr = await content.create({
+			type: "page",
+			slug: "a-fr",
+			data: { title: "A (fr)" },
+			locale: "fr",
+			translationOf: en.id,
+		});
+
+		expect((await selectChildren(parent.id, [en.id])).success).toBe(true);
+
+		const get = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
+		if (!get.success) return;
+		// The edge is keyed by group, so a `fr` parent resolves the `fr` variant —
+		// a different row id than the one that was linked. The group is what stays
+		// stable across those variants, so it rides along on the ref.
+		expect(get.data.children[0]?.id).toBe(fr.id);
+		expect(get.data.children[0]?.translationGroup).toBe(en.id);
 	});
 
 	it("children GET paginates with a cursor", async () => {
@@ -95,7 +175,7 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const a = await content.create({ type: "page", slug: "a", data: { title: "A" } });
 		const b = await content.create({ type: "page", slug: "b", data: { title: "B" } });
 		const c = await content.create({ type: "page", slug: "c", data: { title: "C" } });
-		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [a.id, b.id, c.id]);
+		await selectChildren(parent.id, [a.id, b.id, c.id]);
 
 		const page1 = await handleReferenceChildrenGet(
 			ctx.db,
@@ -122,13 +202,74 @@ describeEachDialect("reference children handlers", (dialect) => {
 		expect(page2.data.nextCursor).toBeUndefined();
 	});
 
+	it("children GET pages the staged selection for a drafts-aware caller", async () => {
+		const rel = await makeRelation();
+		const content = new ContentRepository(ctx.db);
+		const parent = await content.create({
+			type: "post",
+			slug: "p",
+			status: "published",
+			data: { title: "P" },
+		});
+		// Published, so the public read below resolves it rather than hiding it.
+		const a = await content.create({
+			type: "page",
+			slug: "a",
+			status: "published",
+			data: { title: "A" },
+		});
+		const b = await content.create({ type: "page", slug: "b", data: { title: "B" } });
+		const c = await content.create({ type: "page", slug: "c", data: { title: "C" } });
+
+		// Published links say [a]; the draft stages [b, c].
+		await selectChildren(parent.id, [a.id]);
+		const revision = await new RevisionRepository(ctx.db).create({
+			collection: "post",
+			entryId: parent.id,
+			data: { _references: { related: [b.translationGroup, c.translationGroup] } },
+		});
+		expect(await content.replaceDraftRevision("post", parent.id, revision.id, parent)).toBe(true);
+
+		const page1 = await handleReferenceChildrenGet(
+			ctx.db,
+			"post",
+			parent.id,
+			rel.id,
+			{ limit: 1 },
+			true,
+		);
+		if (!page1.success) throw new Error(page1.error.message);
+		expect(page1.data.children.map((ref) => ref.slug)).toEqual(["b"]);
+		expect(page1.data.nextCursor).toBeDefined();
+
+		// The cursor keeps walking the staged selection rather than falling back
+		// to the published links, which would mix the two.
+		const page2 = await handleReferenceChildrenGet(
+			ctx.db,
+			"post",
+			parent.id,
+			rel.id,
+			{ limit: 1, cursor: page1.data.nextCursor },
+			true,
+		);
+		if (!page2.success) throw new Error(page2.error.message);
+		expect(page2.data.children.map((ref) => ref.slug)).toEqual(["c"]);
+		expect(page2.data.nextCursor).toBeUndefined();
+
+		// A caller with no draft access still reads what is published.
+		const live = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, false);
+		if (!live.success) throw new Error(live.error.message);
+		expect(live.data.children.map((ref) => ref.slug)).toEqual(["a"]);
+	});
+
 	it("parents GET paginates over an unbounded backlink set", async () => {
 		const rel = await makeRelation();
 		const content = new ContentRepository(ctx.db);
 		const shared = await content.create({ type: "page", slug: "shared", data: { title: "S" } });
+		// Three posts all reference the same page.
 		for (const slug of ["p1", "p2", "p3"]) {
 			const parent = await content.create({ type: "post", slug, data: { title: slug } });
-			await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [shared.id]);
+			await selectChildren(parent.id, [shared.id]);
 		}
 
 		const page1 = await handleReferenceParentsGet(
@@ -182,9 +323,40 @@ describeEachDialect("reference children handlers", (dialect) => {
 		expect(result.error.code).toBe("NOT_FOUND");
 	});
 
+	it("parents resolves a relation by id or by slug", async () => {
+		// A reference field stores the relation's slug while the edges are keyed
+		// by its id, so both have to resolve — the backlinks sidebar reaches this
+		// handler with whichever it holds.
+		const rel = await makeRelation();
+		const content = new ContentRepository(ctx.db);
+		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
+		const child = await content.create({ type: "page", slug: "c", data: { title: "C" } });
+		await selectChildren(parent.id, [child.id]);
+
+		for (const identifier of [rel.id, rel.slug]) {
+			const result = await handleReferenceParentsGet(
+				ctx.db,
+				"page",
+				child.id,
+				identifier,
+				{},
+				true,
+			);
+			expect(result.success).toBe(true);
+			if (!result.success) return;
+			expect(result.data.parents.map((p) => p.slug)).toEqual(["p"]);
+		}
+
+		const unknown = await handleReferenceParentsGet(ctx.db, "page", child.id, "nope", {}, true);
+		expect(unknown.success).toBe(false);
+		if (unknown.success) return;
+		expect(unknown.error.code).toBe("NOT_FOUND");
+	});
+
 	it("entry on the wrong side (child collection) is VALIDATION_ERROR", async () => {
 		const rel = await makeRelation();
 		const content = new ContentRepository(ctx.db);
+		// A "page" entry is the child side, not the parent — children route rejects it.
 		const page = await content.create({ type: "page", slug: "x", data: { title: "X" } });
 		const result = await handleReferenceChildrenGet(ctx.db, "page", page.id, rel.id);
 		expect(result.success).toBe(false);
@@ -193,13 +365,12 @@ describeEachDialect("reference children handlers", (dialect) => {
 	});
 
 	it("a child whose collection != child_collection is rejected", async () => {
-		const rel = await makeRelation();
+		await makeRelation();
 		const content = new ContentRepository(ctx.db);
 		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
+		// Another post can't be a child (child_collection is "page").
 		const otherPost = await content.create({ type: "post", slug: "q", data: { title: "Q" } });
-		const result = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [
-			otherPost.id,
-		]);
+		const result = await selectChildren(parent.id, [otherPost.id]);
 		expect(result.success).toBe(false);
 		if (result.success) return;
 		expect(result.error.code).toBe("NOT_FOUND");
@@ -210,13 +381,37 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const content = new ContentRepository(ctx.db);
 		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
 		const child = await content.create({ type: "page", slug: "c", data: { title: "C" } });
-		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [child.id]);
+		await selectChildren(parent.id, [child.id]);
 
 		const result = await handleReferenceParentsGet(ctx.db, "page", child.id, rel.id, {}, true);
 		expect(result.success).toBe(true);
 		if (!result.success) return;
 		expect(result.data.parents.map((p) => p.slug)).toEqual(["p"]);
 		expect(result.data.parents.every((p) => p.collection === "post")).toBe(true);
+	});
+
+	it("resolved refs carry a display title from the entry's title field", async () => {
+		const rel = await makeRelation();
+		const content = new ContentRepository(ctx.db);
+		const parent = await content.create({
+			type: "post",
+			slug: "p",
+			data: { title: "Parent Title" },
+		});
+		const titled = await content.create({ type: "page", slug: "t", data: { title: "Titled" } });
+		// No title -> null, leaving the client to fall back to slug/id.
+		const untitled = await content.create({ type: "page", slug: "u", data: {} });
+		await selectChildren(parent.id, [titled.id, untitled.id]);
+
+		const children = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
+		expect(children.success).toBe(true);
+		if (!children.success) return;
+		expect(children.data.children.map((c) => c.title)).toEqual(["Titled", null]);
+
+		const parents = await handleReferenceParentsGet(ctx.db, "page", titled.id, rel.id, {}, true);
+		expect(parents.success).toBe(true);
+		if (!parents.success) return;
+		expect(parents.data.parents.map((p) => p.title)).toEqual(["Parent Title"]);
 	});
 
 	it("parents rejects an entry on the parent side", async () => {
@@ -237,8 +432,8 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const b = await content.create({ type: "page", slug: "b", data: { title: "B" } });
 		const c = await content.create({ type: "page", slug: "c", data: { title: "C" } });
 
-		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [a.id, b.id]);
-		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [c.id]);
+		await selectChildren(parent.id, [a.id, b.id]);
+		await selectChildren(parent.id, [c.id]);
 
 		const get = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
 		if (!get.success) return;
@@ -250,11 +445,9 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const content = new ContentRepository(ctx.db);
 		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
 		const a = await content.create({ type: "page", slug: "a", data: { title: "A" } });
-		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [a.id]);
+		await selectChildren(parent.id, [a.id]);
 
-		const cleared = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, []);
-		if (!cleared.success) return;
-		expect(cleared.data.children).toEqual([]);
+		expect((await selectChildren(parent.id, [])).success).toBe(true);
 
 		const get = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
 		if (!get.success) return;
@@ -276,14 +469,17 @@ describeEachDialect("reference children handlers", (dialect) => {
 			});
 			ids.push(child.id);
 		}
+		// Mix ids and slugs in the request to exercise both resolution paths.
 		const childIds = ids.map((id, i) => (i % 2 === 0 ? id : slugs[i]!));
 
-		const set = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, childIds);
-		expect(set.success).toBe(true);
-		if (!set.success) return;
-		expect(set.data.children).toHaveLength(50);
-		expect(set.data.nextCursor).toBeDefined();
-		expect(set.data.children.map((r) => r.sortOrder)).toEqual(
+		expect((await selectChildren(parent.id, childIds)).success).toBe(true);
+
+		const get = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
+		if (!get.success) return;
+		expect(get.data.children).toHaveLength(50); // first page
+		expect(get.data.nextCursor).toBeDefined();
+		// sort_order is positional over the full deduped set.
+		expect(get.data.children.map((r) => r.sortOrder)).toEqual(
 			Array.from({ length: 50 }, (_, i) => i),
 		);
 	});
@@ -304,7 +500,8 @@ describeEachDialect("reference children handlers", (dialect) => {
 			data: { title: "B" },
 			status: "published",
 		});
-		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [a.id, b.id]);
+		await selectChildren(parent.id, [a.id, b.id]);
+		// Hard-delete the underlying row so the edge dangles.
 		await ctx.db
 			.deleteFrom("ec_page" as never)
 			.where("id" as never, "=", a.id)
@@ -317,14 +514,18 @@ describeEachDialect("reference children handlers", (dialect) => {
 	});
 
 	it("a child collection dropped after the relation is created yields NOT_FOUND, not a 500", async () => {
-		const rel = await makeRelation();
+		await makeRelation();
 		const content = new ContentRepository(ctx.db);
 		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
 		const a = await content.create({ type: "page", slug: "a", data: { title: "A" } });
 
+		// Collection deletion drops the content table but does not cascade to the
+		// relation def, so the relation still points at a now-missing child table.
+		// The write path must surface a structured NOT_FOUND rather than 500 —
+		// mirroring the read path, which tolerates the missing table.
 		await ctx.db.schema.dropTable("ec_page").ifExists().execute();
 
-		const set = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [a.id]);
+		const set = await selectChildren(parent.id, [a.id]);
 		expect(set.success).toBe(false);
 		if (set.success) return;
 		expect(set.error.code).toBe("NOT_FOUND");
@@ -335,6 +536,10 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const content = new ContentRepository(ctx.db);
 		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
 
+		// The anchor entry lives in the parent collection. If that table is dropped
+		// (collection deletion doesn't cascade to relation defs), resolving the
+		// anchor must yield NOT_FOUND rather than a 500 — the symmetric case to the
+		// child-collection drop above, and consistent across children and parents.
 		await ctx.db.schema.dropTable("ec_post").ifExists().execute();
 
 		const childrenGet = await handleReferenceChildrenGet(
@@ -348,10 +553,11 @@ describeEachDialect("reference children handlers", (dialect) => {
 		expect(childrenGet.success).toBe(false);
 		if (!childrenGet.success) expect(childrenGet.error.code).toBe("NOT_FOUND");
 
-		const childrenSet = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, []);
+		const childrenSet = await selectChildren(parent.id, []);
 		expect(childrenSet.success).toBe(false);
 		if (!childrenSet.success) expect(childrenSet.error.code).toBe("NOT_FOUND");
 
+		// The parents endpoint anchors on the child side; drop that table too.
 		await ctx.db.schema.dropTable("ec_page").ifExists().execute();
 		const parentsGet = await handleReferenceParentsGet(
 			ctx.db,
@@ -374,6 +580,7 @@ describeEachDialect("reference children handlers", (dialect) => {
 			data: { title: "P" },
 			status: "published",
 		});
+		// Base64 of {"orderValue":"x","id":"y"} — structurally valid, semantically bad.
 		const cursor = Buffer.from(JSON.stringify({ orderValue: "x", id: "y" })).toString("base64url");
 		const result = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, { cursor });
 		expect(result.success).toBe(false);
@@ -382,6 +589,9 @@ describeEachDialect("reference children handlers", (dialect) => {
 	});
 });
 
+// The reference reads must honour the same draft-visibility boundary every other
+// content read enforces: a caller without `content:read_drafts` may not see
+// non-published entries — neither as resolved children/parents nor as the anchor.
 describeEachDialect("reference reads: draft visibility", (dialect) => {
 	let ctx: DialectTestContext;
 	beforeEach(async () => {
@@ -392,13 +602,24 @@ describeEachDialect("reference reads: draft visibility", (dialect) => {
 	});
 
 	async function makeRelation() {
-		return new RelationRepository(ctx.db).create({
-			name: "related_pages",
+		const relation = await new RelationRepository(ctx.db).create({
+			slug: "related_pages",
 			parentCollection: "post",
 			childCollection: "page",
 			parentLabel: "Post",
 			childLabel: "Related page",
 		});
+		await new SchemaRegistry(ctx.db).createField("post", {
+			slug: "related",
+			label: "Related",
+			type: "reference",
+			validation: { relation: relation.slug, relationSide: "parent", targetCollection: "page" },
+		});
+		return relation;
+	}
+
+	function selectChildren(parentId: string, childIds: string[]) {
+		return setReferenceSelection(ctx.db, "post", parentId, "related", childIds);
 	}
 
 	it("hides a draft child from a caller without draft access", async () => {
@@ -422,8 +643,9 @@ describeEachDialect("reference reads: draft visibility", (dialect) => {
 			data: { title: "Draft" },
 			status: "draft",
 		});
-		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [published.id, draft.id]);
+		await selectChildren(parent.id, [published.id, draft.id]);
 
+		// includeDrafts=false: only the published child is visible.
 		const subscriber = await handleReferenceChildrenGet(
 			ctx.db,
 			"post",
@@ -435,6 +657,7 @@ describeEachDialect("reference reads: draft visibility", (dialect) => {
 		if (!subscriber.success) return;
 		expect(subscriber.data.children.map((r) => r.slug)).toEqual(["pub"]);
 
+		// includeDrafts=true: both are visible.
 		const editor = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
 		if (!editor.success) return;
 		expect(
@@ -463,8 +686,8 @@ describeEachDialect("reference reads: draft visibility", (dialect) => {
 			data: { title: "DP" },
 			status: "draft",
 		});
-		await handleReferenceChildrenSet(ctx.db, "post", publishedParent.id, rel.id, [child.id]);
-		await handleReferenceChildrenSet(ctx.db, "post", draftParent.id, rel.id, [child.id]);
+		await selectChildren(publishedParent.id, [child.id]);
+		await selectChildren(draftParent.id, [child.id]);
 
 		const subscriber = await handleReferenceParentsGet(ctx.db, "page", child.id, rel.id, {}, false);
 		if (!subscriber.success) return;
@@ -493,6 +716,7 @@ describeEachDialect("reference reads: draft visibility", (dialect) => {
 		if (result.success) return;
 		expect(result.error.code).toBe("NOT_FOUND");
 
+		// A caller with draft access can still anchor on it.
 		const withDrafts = await handleReferenceChildrenGet(
 			ctx.db,
 			"post",
@@ -535,7 +759,7 @@ describeEachDialect("reference reads: draft visibility", (dialect) => {
 			data: { title: "Draft" },
 			status: "draft",
 		});
-		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [draft.id]);
+		await selectChildren(parent.id, [draft.id]);
 
 		const params = { collection: "post", id: parent.id, relation: rel.id };
 		const res = await getChildren(
@@ -556,10 +780,10 @@ describeEachDialect("reference children route (auth + ownership)", (dialect) => 
 		await teardownForDialect(ctx);
 	});
 
-	it("GET requires content:read; POST gates on parent ownership", async () => {
+	it("GET requires content:read", async () => {
 		const repo = new RelationRepository(ctx.db);
 		const rel = await repo.create({
-			name: "related_pages",
+			slug: "related_pages",
 			parentCollection: "post",
 			childCollection: "page",
 			parentLabel: "Post",
@@ -573,57 +797,12 @@ describeEachDialect("reference children route (auth + ownership)", (dialect) => 
 			authorId: "author-1",
 			status: "published",
 		});
-		const child = await content.create({ type: "page", slug: "c", data: { title: "C" } });
 		const params = { collection: "post", id: parent.id, relation: rel.id };
 
-		const denied = await setChildren(
-			edgeCtx(
-				ctx.db,
-				params,
-				{ id: "author-2", role: Role.AUTHOR as RoleLevel },
-				{
-					method: "POST",
-					body: { childIds: [child.id] },
-				},
-			),
-		);
-		expect(denied.status).toBe(403);
-
-		const ok = await setChildren(
-			edgeCtx(
-				ctx.db,
-				params,
-				{ id: "author-1", role: Role.AUTHOR as RoleLevel },
-				{
-					method: "POST",
-					body: { childIds: [child.id] },
-				},
-			),
-		);
-		expect(ok.status).toBe(200);
-
+		// Anyone with content:read can GET, which every signed-in role holds.
 		const read = await getChildren(
 			edgeCtx(ctx.db, params, { id: "sub", role: Role.SUBSCRIBER as RoleLevel }),
 		);
 		expect(read.status).toBe(200);
-	});
-
-	it("POST gates the edit permission before the existence lookup (no oracle)", async () => {
-		const repo = new RelationRepository(ctx.db);
-		const rel = await repo.create({
-			name: "related_pages",
-			parentCollection: "post",
-			childCollection: "page",
-			parentLabel: "Post",
-			childLabel: "Related page",
-		});
-		const fake = edgeCtx(
-			ctx.db,
-			{ collection: "post", id: "does-not-exist", relation: rel.id },
-			{ id: "sub", role: Role.SUBSCRIBER as RoleLevel },
-			{ method: "POST", body: { childIds: [] } },
-		);
-		const res = await setChildren(fake);
-		expect(res.status).toBe(403);
 	});
 });

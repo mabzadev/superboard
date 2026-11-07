@@ -1,15 +1,24 @@
 "use client";
 
+import DeleteConfirm from "@superboard/front-ui/common/delete-confirm.js";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
+import { InputArea, Select, SwitchField } from "@superboard/front-ui/kumo";
 import {
 	showErrorNotification,
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
+import { cn } from "@superboard/front-ui/lib/utils.js";
 import {
 	EmptyProject,
 	ModulePage,
 	moduleErrorMessage,
 } from "@superboard/front-ui/modules/ModulePage.js";
+import {
+	SettingsActions,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+} from "@superboard/front-ui/settings-form";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import {
@@ -20,8 +29,6 @@ import {
 	CardTitle,
 } from "@superboard/front-ui/ui/card.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
-import { Label } from "@superboard/front-ui/ui/label.js";
-import { Switch } from "@superboard/front-ui/ui/switch.js";
 import {
 	Table as FrontTable,
 	TableHeader as FrontTableHeader,
@@ -32,6 +39,7 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import {
 	Archive,
+	ChevronDown,
 	CirclePause,
 	CirclePlay,
 	GitBranch,
@@ -40,9 +48,16 @@ import {
 	RefreshCw,
 	Send,
 	Trash2,
-	Webhook,
 } from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import {
+	useCallback,
+	useEffect,
+	useState,
+	type Dispatch,
+	type FormEvent,
+	type ReactNode,
+	type SetStateAction,
+} from "react";
 
 import {
 	createMarketingChannelConnector,
@@ -69,6 +84,8 @@ import {
 	type MarketingJourneyInput,
 } from "../../api/marketing/marketingService.js";
 import { useStudioI18n } from "../../studio/i18n.js";
+import { useAutosave } from "../../studio/settings-autosave.js";
+import { StateBadge } from "../../studio/settings-ui.js";
 import { TriggerPicker, useEventLabel } from "../../studio/TriggerPicker.js";
 import { useWorkspaceTab } from "../../studio/workspace-navigation.js";
 import { JourneyCanvasEditor } from "./JourneyCanvasEditor.js";
@@ -602,6 +619,65 @@ export function MarketingJourneysPage() {
 	);
 }
 
+type ChannelKind = MarketingChannelConnector["channel"];
+type ChannelDraft = {
+	name: string;
+	channel: ChannelKind;
+	endpoint: string;
+	secret: string;
+	headersText: string;
+	enabled: boolean;
+};
+
+const channelLabels: Record<ChannelKind, string> = {
+	webhook: "Webhook",
+	sms: "SMS",
+	push: "Push",
+	whatsapp: "WhatsApp",
+	slack: "Slack",
+};
+
+function isChannelKind(value: unknown): value is ChannelKind {
+	return typeof value === "string" && Object.hasOwn(channelLabels, value);
+}
+
+function channelDraft(connector?: MarketingChannelConnector): ChannelDraft {
+	return {
+		name: connector?.name ?? "",
+		channel: connector?.channel ?? "webhook",
+		endpoint: connector?.endpoint_url ?? "",
+		secret: "",
+		headersText: connector ? JSON.stringify(connector.headers, null, 2) : "{}",
+		enabled: connector?.enabled ?? true,
+	};
+}
+
+function channelPayload(draft: ChannelDraft): MarketingChannelConnectorInput {
+	const headers = Object.fromEntries(
+		Object.entries(parseObject(draft.headersText, "Headers")).map(([key, value]) => [
+			key,
+			String(value),
+		]),
+	);
+	return {
+		name: draft.name.trim(),
+		channel: draft.channel,
+		endpoint_url: draft.endpoint.trim(),
+		headers,
+		enabled: draft.enabled,
+		...(draft.secret ? { secret: draft.secret } : {}),
+	};
+}
+
+function headersProblem(draft: ChannelDraft, t: ReturnType<typeof useStudioI18n>["t"]) {
+	try {
+		parseObject(draft.headersText, "Headers");
+		return null;
+	} catch (cause) {
+		return inputErrorMessage(cause, t);
+	}
+}
+
 export function MarketingChannelsPage() {
 	const { selectedProject } = useProjectSelection();
 	return <MarketingChannelsEditor key={selectedProject?.id} />;
@@ -611,14 +687,8 @@ function MarketingChannelsEditor() {
 	const { t } = useStudioI18n();
 	const { selectedProject } = useProjectSelection();
 	const [connectors, setConnectors] = useState<MarketingChannelConnector[]>([]);
-	const [editingId, setEditingId] = useState<string | null>(null);
-	const [name, setName] = useState("");
-	const [channel, setChannel] = useState<MarketingChannelConnector["channel"]>("webhook");
-	const [endpoint, setEndpoint] = useState("");
-	const [secret, setSecret] = useState("");
-	const [headersText, setHeadersText] = useState("{}");
-	const [enabled, setEnabled] = useState(true);
-	const [busy, setBusy] = useState(false);
+	const [openId, setOpenId] = useState<string | null>(null);
+	const [creating, setCreating] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
@@ -632,222 +702,325 @@ function MarketingChannelsEditor() {
 	}, [selectedProject]);
 	useEffect(() => void load(), [load]);
 
-	const reset = () => {
-		setEditingId(null);
-		setName("");
-		setChannel("webhook");
-		setEndpoint("");
-		setSecret("");
-		setHeadersText("{}");
-		setEnabled(true);
-	};
-
-	const edit = (connector: MarketingChannelConnector) => {
-		setEditingId(connector.id);
-		setName(connector.name);
-		setChannel(connector.channel);
-		setEndpoint(connector.endpoint_url);
-		setSecret("");
-		setHeadersText(JSON.stringify(connector.headers, null, 2));
-		setEnabled(connector.enabled);
-	};
-
-	const save = async (event: FormEvent) => {
-		event.preventDefault();
-		if (!selectedProject) return;
-		let headers: Record<string, string>;
-		try {
-			const parsed = parseObject(headersText, "Headers");
-			headers = Object.fromEntries(
-				Object.entries(parsed).map(([key, value]) => [key, String(value)]),
-			);
-		} catch (cause) {
-			showErrorNotification(inputErrorMessage(cause, t));
-			return;
-		}
-		const payload: MarketingChannelConnectorInput = {
-			name: name.trim(),
-			channel,
-			endpoint_url: endpoint.trim(),
-			headers,
-			enabled,
-			...(secret ? { secret } : {}),
-		};
-		setBusy(true);
-		try {
-			if (editingId) {
-				await updateMarketingChannelConnector(selectedProject.id, editingId, payload);
-				showSuccessNotification(t("Channel updated"));
-			} else {
-				await createMarketingChannelConnector(selectedProject.id, payload);
-				showSuccessNotification(t("Channel created"));
-			}
-			reset();
-			await load();
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
-		} finally {
-			setBusy(false);
-		}
-	};
-
-	const remove = async (connector: MarketingChannelConnector) => {
-		if (!selectedProject) return;
-		setBusy(true);
-		try {
-			await deleteMarketingChannelConnector(selectedProject.id, connector.id);
-			showSuccessNotification(t("Channel deleted"));
-			await load();
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
-		} finally {
-			setBusy(false);
-		}
-	};
-
+	if (!selectedProject) return <EmptyProject />;
+	const opened = connectors.find((connector) => connector.id === openId);
 	return (
-		<section className="space-y-4">
-			<div>
-				<h2 className="text-lg font-semibold">{t("Other channels")}</h2>
-				<p className="text-sm text-muted-foreground">
-					{t(
+		<div className="flex w-full flex-col gap-8">
+			<div className="space-y-4">
+				<SettingsSection
+					title={t("Other channels")}
+					description={t(
 						"Connect secure HTTPS destinations for SMS, push, WhatsApp, Slack and custom webhooks. Automations can then use them as steps.",
 					)}
-				</p>
-			</div>
-			{error && <p role="alert">{error}</p>}
-			{!selectedProject ? (
-				<EmptyProject />
-			) : (
-				<div className="space-y-6">
-					<Card>
-						<CardHeader>
-							<CardTitle>{editingId ? t("Edit channel") : t("Add a channel")}</CardTitle>
-							<CardDescription>
-								{t("Secrets are encrypted at rest and never returned by the API.")}
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<form className="space-y-4" onSubmit={save}>
-								<Field label={t("Name")}>
-									<Input
-										required
-										value={name}
-										onChange={(event) => setName(event.target.value)}
-										placeholder={t("Customer notifications")}
-									/>
-								</Field>
-								<Field label={t("Channel")}>
-									<select
-										className={selectClass}
-										value={channel}
-										onChange={(event) =>
-											setChannel(event.target.value as MarketingChannelConnector["channel"])
-										}
-									>
-										<option value="webhook">{t("Webhook")}</option>
-										<option value="sms">{t("SMS")}</option>
-										<option value="push">{t("Push")}</option>
-										<option value="whatsapp">{t("WhatsApp")}</option>
-										<option value="slack">{t("Slack")}</option>
-									</select>
-								</Field>
-								<Field label={t("HTTPS destination")}>
-									<Input
-										required
-										type="url"
-										value={endpoint}
-										onChange={(event) => setEndpoint(event.target.value)}
-										placeholder={t("https://provider.example/messages")}
-									/>
-								</Field>
-								<Field label={editingId ? t("New signing secret (optional)") : t("Signing secret")}>
-									<Input
-										type="password"
-										value={secret}
-										onChange={(event) => setSecret(event.target.value)}
-										autoComplete="new-password"
-									/>
-								</Field>
-								<Field label={t("Additional request headers")}>
-									<textarea
-										className={textareaClass}
-										rows={5}
-										value={headersText}
-										onChange={(event) => setHeadersText(event.target.value)}
-									/>
-								</Field>
-								<div className="flex items-center justify-between rounded-lg border p-3">
-									<Label htmlFor="connector-enabled">{t("Enabled")}</Label>
-									<Switch id="connector-enabled" checked={enabled} onCheckedChange={setEnabled} />
-								</div>
-								<div className="flex gap-2">
-									<Button type="submit" disabled={busy || !name.trim() || !endpoint.trim()}>
-										<Plus className="size-4" /> {editingId ? t("Save") : t("Add channel")}
-									</Button>
-									{editingId && (
-										<Button type="button" variant="outline" onClick={reset}>
-											{t("Cancel")}
-										</Button>
-									)}
-								</div>
-							</form>
-						</CardContent>
-					</Card>
-					<Card>
-						<CardHeader>
-							<CardTitle>{t("Connected channels")}</CardTitle>
-							<CardDescription>
-								{t("Journey deliveries carry an idempotency key and an HMAC signature.")}
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-3">
-							{connectors.map((connector) => (
-								<div
-									key={connector.id}
-									className="flex flex-col justify-between gap-4 rounded-xl border p-4 sm:flex-row sm:items-center"
+				>
+					{connectors.length ? (
+						connectors.map((connector) => (
+							<SettingsRow
+								key={connector.id}
+								className={cn("p-0", openId === connector.id && "bg-kumo-tint")}
+							>
+								<button
+									type="button"
+									className="flex w-full items-center justify-between gap-4 p-4 text-start"
+									aria-expanded={openId === connector.id}
+									onClick={() => {
+										setCreating(false);
+										setOpenId((current) => (current === connector.id ? null : connector.id));
+									}}
 								>
-									<div className="min-w-0">
-										<div className="flex items-center gap-2">
-											<Webhook className="size-4 text-muted-foreground" />
-											<span className="font-semibold">{connector.name}</span>
-											<Badge variant={connector.enabled ? "secondary" : "outline"}>
-												{t(connector.enabled ? "Enabled" : "Disabled")}
-											</Badge>
-										</div>
-										<p className="mt-1 truncate text-sm text-muted-foreground">
-											{t(labelize(connector.channel))} {t("·")} {connector.endpoint_url}
-										</p>
-										<p className="mt-1 text-xs text-muted-foreground">
+									<span className="min-w-0 space-y-0.5">
+										<span className="block text-sm font-medium">{connector.name}</span>
+										<span className="block truncate text-xs text-kumo-subtle">
+											{t(channelLabels[connector.channel])} {t("·")} {connector.endpoint_url}
+										</span>
+										<span className="block text-xs text-kumo-subtle">
 											{t(connector.secret_configured ? "Signed requests" : "Unsigned requests")}
-										</p>
-									</div>
-									<div className="flex gap-2">
-										<Button variant="outline" size="sm" onClick={() => edit(connector)}>
-											<Pencil className="size-4" /> {t("Edit")}
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon"
-											aria-label={t("Delete {name}", { name: connector.name })}
-											disabled={busy}
-											onClick={() => void remove(connector)}
-										>
-											<Trash2 className="size-4" />
-										</Button>
-									</div>
-								</div>
-							))}
-							{!connectors.length && (
-								<p className="py-8 text-center text-sm text-muted-foreground">
-									{t("No external channels connected yet.")}
-								</p>
-							)}
-						</CardContent>
-					</Card>
-				</div>
+										</span>
+									</span>
+									<span className="flex shrink-0 items-center gap-3">
+										<StateBadge state={connector.enabled ? "enabled" : "off"} />
+										<ChevronDown
+											aria-hidden
+											className={cn(
+												"size-4 text-kumo-subtle transition-transform",
+												openId === connector.id && "rotate-180",
+											)}
+										/>
+									</span>
+								</button>
+							</SettingsRow>
+						))
+					) : (
+						<SettingsRow>
+							<p className="text-sm text-kumo-subtle">{t("No external channels connected yet.")}</p>
+						</SettingsRow>
+					)}
+				</SettingsSection>
+				{error && (
+					<p role="alert" className="text-sm text-kumo-danger">
+						{error}
+					</p>
+				)}
+				{!creating && (
+					<SettingsActions>
+						<Button
+							variant="default"
+							icon={<Plus className="size-4" />}
+							onClick={() => {
+								setOpenId(null);
+								setCreating(true);
+							}}
+						>
+							{t("Add a channel")}
+						</Button>
+					</SettingsActions>
+				)}
+			</div>
+			{creating && (
+				<NewChannel
+					project={selectedProject.id}
+					onCancel={() => {
+						setCreating(false);
+					}}
+					onCreated={() => {
+						setCreating(false);
+						load().catch(() => undefined);
+					}}
+				/>
 			)}
-		</section>
+			{opened && (
+				<ChannelDetails
+					key={opened.id}
+					project={selectedProject.id}
+					connector={opened}
+					onSaved={() => void load()}
+					onClose={() => {
+						setOpenId(null);
+					}}
+				/>
+			)}
+		</div>
+	);
+}
+
+function NewChannel({
+	project,
+	onCancel,
+	onCreated,
+}: {
+	project: string;
+	onCancel(): void;
+	onCreated(): void;
+}) {
+	const { t } = useStudioI18n();
+	const [draft, setDraft] = useState(channelDraft);
+	const [busy, setBusy] = useState(false);
+	const problem = headersProblem(draft, t);
+	return (
+		<form
+			className="flex w-full flex-col gap-4"
+			onSubmit={(event) => {
+				event.preventDefault();
+				setBusy(true);
+				createMarketingChannelConnector(project, channelPayload(draft))
+					.then(() => {
+						showSuccessNotification(t("Channel created"));
+						onCreated();
+					})
+					.catch((cause: unknown) => {
+						showErrorNotification(moduleErrorMessage(cause));
+					})
+					.finally(() => {
+						setBusy(false);
+					});
+			}}
+		>
+			<ChannelFields
+				title={t("Add a channel")}
+				draft={draft}
+				problem={problem}
+				onChange={setDraft}
+			/>
+			<SettingsActions>
+				<Button type="button" variant="ghost" onClick={onCancel}>
+					{t("Cancel")}
+				</Button>
+				<Button
+					type="submit"
+					variant="primary"
+					loading={busy}
+					disabled={!draft.name.trim() || !draft.endpoint.trim() || Boolean(problem)}
+				>
+					{t("Add channel")}
+				</Button>
+			</SettingsActions>
+		</form>
+	);
+}
+
+function ChannelDetails({
+	project,
+	connector,
+	onSaved,
+	onClose,
+}: {
+	project: string;
+	connector: MarketingChannelConnector;
+	onSaved(): void;
+	onClose(): void;
+}) {
+	const { t } = useStudioI18n();
+	const [draft, setDraft] = useState(() => channelDraft(connector));
+	const problem = headersProblem(draft, t);
+	const { indicator } = useAutosave({
+		resourceKey: connector.id,
+		value: draft,
+		enabled: Boolean(draft.name.trim() && draft.endpoint.trim() && !problem),
+		save: async (next) => {
+			await updateMarketingChannelConnector(project, connector.id, channelPayload(next));
+			onSaved();
+		},
+	});
+	return (
+		<div className="flex w-full flex-col gap-4">
+			<ChannelFields
+				title={draft.name || t("Edit channel")}
+				draft={draft}
+				problem={problem}
+				editing
+				onChange={setDraft}
+			/>
+			<SettingsActions>
+				<Button variant="ghost" onClick={onClose}>
+					{t("Close")}
+				</Button>
+				<DeleteConfirm
+					title={t("Delete this channel?")}
+					description={t("Automation steps that use it can no longer deliver messages.")}
+					onConfirm={async () => {
+						try {
+							await deleteMarketingChannelConnector(project, connector.id);
+							showSuccessNotification(t("Channel deleted"));
+							onClose();
+							onSaved();
+						} catch (cause) {
+							showErrorNotification(moduleErrorMessage(cause));
+						}
+					}}
+				>
+					<Button
+						variant="outline"
+						className="text-destructive"
+						icon={<Trash2 className="size-4" />}
+						aria-label={t("Delete {name}", { name: connector.name })}
+					>
+						{t("Delete channel")}
+					</Button>
+				</DeleteConfirm>
+			</SettingsActions>
+			{indicator}
+		</div>
+	);
+}
+
+function ChannelFields({
+	title,
+	draft,
+	problem,
+	editing = false,
+	onChange,
+}: {
+	title: string;
+	draft: ChannelDraft;
+	problem: string | null;
+	editing?: boolean;
+	onChange: Dispatch<SetStateAction<ChannelDraft>>;
+}) {
+	const { t } = useStudioI18n();
+	const patch = (value: Partial<ChannelDraft>) => {
+		onChange((current) => ({ ...current, ...value }));
+	};
+	return (
+		<SettingsSection
+			title={title}
+			description={t("Secrets are encrypted at rest and never returned by the API.")}
+		>
+			<SettingsRow>
+				<SwitchField
+					label={t("Enabled")}
+					description={t("Automations can only use enabled channels.")}
+					checked={draft.enabled}
+					onCheckedChange={(enabled) => {
+						patch({ enabled });
+					}}
+				/>
+			</SettingsRow>
+			<SettingsRow>
+				<SettingsTextField
+					label={t("Name")}
+					required
+					placeholder={t("Customer notifications")}
+					value={draft.name}
+					onChange={(event) => {
+						patch({ name: event.target.value });
+					}}
+				/>
+			</SettingsRow>
+			<SettingsRow>
+				<Select
+					className="w-full"
+					label={t("Channel")}
+					value={draft.channel}
+					onValueChange={(channel) => {
+						if (isChannelKind(channel)) patch({ channel });
+					}}
+					items={Object.fromEntries(
+						Object.entries(channelLabels).map(([key, label]) => [key, t(label)]),
+					)}
+				/>
+			</SettingsRow>
+			<SettingsRow>
+				<SettingsTextField
+					label={t("HTTPS destination")}
+					required
+					type="url"
+					placeholder={t("https://provider.example/messages")}
+					value={draft.endpoint}
+					onChange={(event) => {
+						patch({ endpoint: event.target.value });
+					}}
+				/>
+			</SettingsRow>
+			<SettingsRow>
+				<SettingsTextField
+					label={editing ? t("New signing secret (optional)") : t("Signing secret")}
+					description={t("Journey deliveries carry an idempotency key and an HMAC signature.")}
+					type="password"
+					autoComplete="new-password"
+					value={draft.secret}
+					onChange={(event) => {
+						patch({ secret: event.target.value });
+					}}
+				/>
+			</SettingsRow>
+			<SettingsRow>
+				<InputArea
+					label={t("Additional request headers")}
+					description={t("A JSON object of header names and values.")}
+					className="font-mono"
+					rows={5}
+					value={draft.headersText}
+					onChange={(event) => {
+						patch({ headersText: event.target.value });
+					}}
+				/>
+				{problem && (
+					<p role="alert" className="text-sm text-kumo-danger">
+						{problem}
+					</p>
+				)}
+			</SettingsRow>
+		</SettingsSection>
 	);
 }
 

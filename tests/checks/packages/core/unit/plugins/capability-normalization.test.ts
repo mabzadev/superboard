@@ -1,3 +1,14 @@
+/**
+ * Capability Normalization Tests
+ *
+ * Tests the deprecation alias layer for plugin capability names. The runtime
+ * never sees deprecated names — `normalizeCapability()` rewrites them at
+ * every external boundary (definePlugin, adaptSandboxEntry, marketplace
+ * diff). These tests pin the rename map and the normalization helpers so
+ * that the alias layer keeps working until the deprecated names are
+ * removed in the next minor.
+ */
+
 import { describe, it, expect } from "vitest";
 
 import {
@@ -5,11 +16,19 @@ import {
 	isDeprecatedCapability,
 	normalizeCapabilities,
 	normalizeCapability,
+	normalizePluginCapabilities,
+	PLUGIN_CAPABILITY_IMPLICATIONS,
 } from "../../../../../../packages/core/src/plugins/types.js";
-import type { DeprecatedPluginCapability } from "../../../../../../packages/core/src/plugins/types.js";
+import type {
+	DeprecatedPluginCapability,
+	PluginCapability,
+} from "../../../../../../packages/core/src/plugins/types.js";
 
 describe("CAPABILITY_RENAMES", () => {
 	it("maps every deprecated name to its current replacement", () => {
+		// Pin the rename table — if the deprecation table changes, this test
+		// catches the drift. Anyone adding a deprecation should update
+		// this case explicitly.
 		expect(CAPABILITY_RENAMES).toEqual({
 			"network:fetch": "network:request",
 			"network:fetch:any": "network:request:unrestricted",
@@ -25,6 +44,7 @@ describe("CAPABILITY_RENAMES", () => {
 	});
 
 	it("is frozen — cannot be mutated at runtime", () => {
+		// `Object.freeze` makes the rename table tamper-proof.
 		expect(Object.isFrozen(CAPABILITY_RENAMES)).toBe(true);
 	});
 });
@@ -49,6 +69,8 @@ describe("isDeprecatedCapability", () => {
 			"hooks.email-transport:register",
 			"hooks.email-events:register",
 			"hooks.page-fragments:register",
+			"redirects:read",
+			"redirects:write",
 		];
 		for (const cap of current) {
 			expect(isDeprecatedCapability(cap)).toBe(false);
@@ -62,6 +84,12 @@ describe("isDeprecatedCapability", () => {
 	});
 
 	it("does not match Object.prototype keys", () => {
+		// Regression: an `in` check against CAPABILITY_RENAMES would
+		// also match inherited properties. Using `Object.prototype.hasOwnProperty`
+		// (or `Object.hasOwn`) keeps the check scoped to own properties.
+		// Without the guard, `normalizeCapability("toString")` would return
+		// the prototype function reference, breaking the contract that
+		// unknown strings are returned as-is.
 		expect(isDeprecatedCapability("toString")).toBe(false);
 		expect(isDeprecatedCapability("constructor")).toBe(false);
 		expect(isDeprecatedCapability("hasOwnProperty")).toBe(false);
@@ -93,11 +121,16 @@ describe("normalizeCapability", () => {
 	});
 
 	it("passes through unknown strings unchanged", () => {
+		// Downstream validators throw on unknown capabilities; the
+		// normalizer's job is purely to translate the alias map.
 		expect(normalizeCapability("invalid:capability")).toBe("invalid:capability");
 		expect(normalizeCapability("")).toBe("");
 	});
 
 	it("returns Object.prototype keys as-is (does not return prototype values)", () => {
+		// Regression: with an `in` check, `normalizeCapability("toString")`
+		// would have returned `Object.prototype.toString` (a function).
+		// The own-property guard ensures we always return a string.
 		expect(normalizeCapability("toString")).toBe("toString");
 		expect(normalizeCapability("constructor")).toBe("constructor");
 		expect(normalizeCapability("__proto__")).toBe("__proto__");
@@ -119,12 +152,16 @@ describe("normalizeCapabilities", () => {
 	});
 
 	it("deduplicates by canonical name when both old and new are present", () => {
+		// A plugin migrating from old to new might transiently declare
+		// both — the normalizer must not produce duplicates.
 		const result = normalizeCapabilities(["read:content", "content:read"]);
 
 		expect(result).toEqual(["content:read"]);
 	});
 
 	it("deduplicates two deprecated names that map to the same current name", () => {
+		// Defensive: if someone declares the same alias twice, the result
+		// must still contain it only once.
 		const result = normalizeCapabilities(["read:content", "read:content"]);
 
 		expect(result).toEqual(["content:read"]);
@@ -147,6 +184,42 @@ describe("normalizeCapabilities", () => {
 		const once = normalizeCapabilities(input);
 		const twice = normalizeCapabilities(once);
 
+		expect(twice).toEqual(once);
+	});
+});
+
+describe("normalizePluginCapabilities", () => {
+	it("does not make editor draft patch imply read", () => {
+		expect(normalizePluginCapabilities(["admin.editor-draft:patch"])).toEqual([
+			"admin.editor-draft:patch",
+		]);
+	});
+
+	it.each(PLUGIN_CAPABILITY_IMPLICATIONS)("implies %s -> %s", (granted, implied) => {
+		expect(normalizePluginCapabilities([granted])).toEqual([granted, implied]);
+	});
+
+	it.each([
+		["write:content", "content:write", "content:read"],
+		["write:media", "media:write", "media:read"],
+		["network:fetch:any", "network:request:unrestricted", "network:request"],
+	] as const)("normalizes alias %s before applying implications", (alias, canonical, implied) => {
+		expect(normalizePluginCapabilities([alias])).toEqual([canonical, implied]);
+	});
+
+	it("deduplicates explicit implied capabilities in stable order", () => {
+		expect(
+			normalizePluginCapabilities(["redirects:read", "redirects:write", "redirects:read"]),
+		).toEqual(["redirects:read", "redirects:write"]);
+	});
+
+	it("is idempotent and does not mutate its input", () => {
+		const input: PluginCapability[] = ["write:content", "redirects:write", "network:fetch:any"];
+		const snapshot = [...input];
+		const once = normalizePluginCapabilities(input);
+		const twice = normalizePluginCapabilities(once);
+
+		expect(input).toEqual(snapshot);
 		expect(twice).toEqual(once);
 	});
 });

@@ -1,3 +1,10 @@
+/**
+ * Comment detail slide-over panel.
+ *
+ * Shows full comment body, author details, moderation metadata,
+ * and status change buttons.
+ */
+
 import { Badge, Button } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { X, Check, Trash, Warning, UserCircle, EnvelopeSimple } from "@phosphor-icons/react";
@@ -5,6 +12,7 @@ import * as React from "react";
 import type { ComponentProps } from "react";
 
 import type { AdminComment, CommentStatus } from "../../lib/api/comments.js";
+import { formatDate } from "../../lib/utils.js";
 
 export interface CommentDetailProps {
 	comment: AdminComment;
@@ -23,8 +31,9 @@ export function CommentDetail({
 	isAdmin,
 	isStatusPending,
 }: CommentDetailProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
 
+	// Close on Escape
 	React.useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
 			if (e.key === "Escape" && !e.defaultPrevented) {
@@ -40,9 +49,12 @@ export function CommentDetail({
 
 	return (
 		<>
+			{/* Backdrop */}
 			<div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />
 
+			{/* Panel */}
 			<div className="fixed inset-y-0 end-0 z-50 w-full max-w-lg overflow-y-auto bg-kumo-base border-s shadow-lg">
+				{/* Header */}
 				<div className="flex items-center justify-between border-b px-6 py-4">
 					<h2 className="text-lg font-semibold">{t`Comment Detail`}</h2>
 					<Button variant="ghost" shape="square" onClick={onClose} aria-label={t`Close`}>
@@ -50,14 +62,19 @@ export function CommentDetail({
 					</Button>
 				</div>
 
+				{/* Content */}
 				<div className="space-y-6 p-6">
+					{/* Status */}
 					<div className="flex items-center justify-between">
 						<CommentStatusBadge status={comment.status} />
 						<span className="text-sm text-kumo-subtle">
-							{date.toLocaleDateString()} {date.toLocaleTimeString()}
+							<bdi>
+								{formatDate(date, i18n.locale, { dateStyle: "medium", timeStyle: "short" })}
+							</bdi>
 						</span>
 					</div>
 
+					{/* Author info */}
 					<div className="rounded-lg border bg-kumo-base p-4 space-y-3">
 						<h3 className="text-sm font-semibold text-kumo-subtle uppercase tracking-wider">
 							{t`Author`}
@@ -75,6 +92,7 @@ export function CommentDetail({
 						</div>
 					</div>
 
+					{/* Comment body */}
 					<div className="rounded-lg border bg-kumo-base p-4 space-y-3">
 						<h3 className="text-sm font-semibold text-kumo-subtle uppercase tracking-wider">
 							{t`Comment`}
@@ -82,6 +100,7 @@ export function CommentDetail({
 						<p className="text-sm whitespace-pre-wrap break-words">{comment.body}</p>
 					</div>
 
+					{/* Content reference */}
 					<div className="rounded-lg border bg-kumo-base p-4 space-y-2">
 						<h3 className="text-sm font-semibold text-kumo-subtle uppercase tracking-wider">
 							{t`Content`}
@@ -92,32 +111,34 @@ export function CommentDetail({
 						</p>
 						<p className="text-sm">
 							<span className="text-kumo-subtle">{t`Content ID:`}</span>{" "}
-							<code className="bg-kumo-tint px-1.5 py-0.5 rounded text-xs">
+							<code dir="ltr" className="bg-kumo-tint px-1.5 py-0.5 rounded text-xs">
 								{comment.contentId}
 							</code>
 						</p>
 						{comment.parentId && (
 							<p className="text-sm">
 								<span className="text-kumo-subtle">{t`Reply to:`}</span>{" "}
-								<code className="bg-kumo-tint px-1.5 py-0.5 rounded text-xs">
+								<code dir="ltr" className="bg-kumo-tint px-1.5 py-0.5 rounded text-xs">
 									{comment.parentId}
 								</code>
 							</p>
 						)}
 					</div>
 
+					{/* Moderation metadata */}
 					{comment.moderationMetadata && Object.keys(comment.moderationMetadata).length > 0 && (
 						<div className="rounded-lg border bg-kumo-base p-4 space-y-3">
 							<h3 className="text-sm font-semibold text-kumo-subtle uppercase tracking-wider">
 								{t`Moderation Signals`}
 							</h3>
-							<pre className="text-xs bg-kumo-tint rounded p-3 overflow-x-auto">
+							<pre dir="ltr" className="text-xs bg-kumo-tint rounded p-3 overflow-x-auto">
 								{JSON.stringify(comment.moderationMetadata, null, 2)}
 							</pre>
 						</div>
 					)}
 				</div>
 
+				{/* Footer actions */}
 				<div className="border-t px-6 py-4 space-y-3">
 					<div className="flex gap-2">
 						{comment.status !== "approved" && (

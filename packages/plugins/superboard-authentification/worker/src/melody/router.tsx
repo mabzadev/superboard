@@ -4,8 +4,8 @@ import { logger } from 'hono/logger'
 import { env } from 'hono/adapter'
 import {
   oauthRoute, userRoute, userAttributeRoute, identityRoute,
-  otherRoute, appRoute, appBannerRoute, roleRoute, scopeRoute,
-  orgRoute, embeddedRoute, samlRoute, logRoute, orgGroupRoute,
+  otherRoute, appRoute, roleRoute, scopeRoute,
+  embeddedRoute, logRoute,
 } from './routes'
 import { setupMiddleware } from './middlewares'
 import {
@@ -45,19 +45,7 @@ export const loadRouters = (app: Hono<typeConfig.Context>) => {
   )
   app.route(
     '/',
-    orgRoute,
-  )
-  app.route(
-    '/',
-    orgGroupRoute,
-  )
-  app.route(
-    '/',
     appRoute,
-  )
-  app.route(
-    '/',
-    appBannerRoute,
   )
   app.route(
     '/',
@@ -70,10 +58,6 @@ export const loadRouters = (app: Hono<typeConfig.Context>) => {
   app.route(
     '/',
     logRoute,
-  )
-  app.route(
-    '/',
-    samlRoute,
   )
   app.route(
     '/',

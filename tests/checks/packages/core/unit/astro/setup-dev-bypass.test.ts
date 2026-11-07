@@ -1,3 +1,11 @@
+/**
+ * Dev-bypass seed gating.
+ *
+ * The route seeds sample data by default; `?content=0` (or `false`) applies
+ * schema/structure only so an agent or test harness can start from a clean
+ * site without deleting seeded entries afterwards.
+ */
+
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -151,6 +159,7 @@ describe("setup dev-bypass seed gating", () => {
 		expect(await countRows(db, "taxonomies")).toBe(0);
 		expect(await countRows(db, "_emdash_bylines")).toBe(0);
 
+		// Schema and structure still apply
 		const collections = await db
 			.selectFrom("_emdash_collections")
 			.select("slug")
