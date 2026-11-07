@@ -151,15 +151,15 @@ describe("expired download cleanup", () => {
 		const pages = [
 			{
 				objects: [
-					{ key: "links_data_a.csv", customMetadata: { expiresAt: past } },
-					{ key: "links_data_b.csv", customMetadata: { expiresAt: future } },
-					{ key: "manual.csv", customMetadata: {} },
+					{ key: "files/links_data_a.csv", customMetadata: { expiresAt: past } },
+					{ key: "files/links_data_b.csv", customMetadata: { expiresAt: future } },
+					{ key: "files/manual.csv", customMetadata: {} },
 				],
 				truncated: true,
 				cursor: "page-2",
 			},
 			{
-				objects: [{ key: "activity_data_c.csv", customMetadata: { expiresAt: past } }],
+				objects: [{ key: "files/activity_data_c.csv", customMetadata: { expiresAt: past } }],
 				truncated: false,
 			},
 		];
@@ -177,10 +177,22 @@ describe("expired download cleanup", () => {
 
 		expect(count).toBe(2);
 		expect(listOptions).toEqual([
-			{ cursor: undefined, limit: 100, delimiter: "/", include: ["customMetadata"] },
-			{ cursor: "page-2", limit: 100, delimiter: "/", include: ["customMetadata"] },
+			{
+				cursor: undefined,
+				limit: 100,
+				delimiter: "/",
+				include: ["customMetadata"],
+				prefix: "files/",
+			},
+			{
+				cursor: "page-2",
+				limit: 100,
+				delimiter: "/",
+				include: ["customMetadata"],
+				prefix: "files/",
+			},
 		]);
-		expect(deleted).toEqual([["links_data_a.csv"], ["activity_data_c.csv"]]);
+		expect(deleted).toEqual([["files/links_data_a.csv"], ["files/activity_data_c.csv"]]);
 		expect(db.calls.map((call) => call.args)).toEqual([
 			["links_data_a.csv"],
 			["activity_data_c.csv"],

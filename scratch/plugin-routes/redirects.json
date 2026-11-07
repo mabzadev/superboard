@@ -1,0 +1,554 @@
+[
+	{
+		"path": "/system/audit?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/core/audit?tab=details",
+		"expected": "/core/audit?tab=details"
+	},
+	{
+		"path": "/system/content?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/data/content?tab=details",
+		"expected": "/data/content?tab=details"
+	},
+	{
+		"path": "/products/offerings?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/monetization/offerings?tab=details",
+		"expected": "/monetization/offerings?tab=details"
+	},
+	{
+		"path": "/app/android-setup?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/core/android-setup?tab=details",
+		"expected": "/core/android-setup?tab=details"
+	},
+	{
+		"path": "/app/ios-setup?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/core/ios-setup?tab=details",
+		"expected": "/core/ios-setup?tab=details"
+	},
+	{
+		"path": "/app/libraries?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/core/libraries?tab=details",
+		"expected": "/core/libraries?tab=details"
+	},
+	{
+		"path": "/app/web-setup?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/core/web-setup?tab=details",
+		"expected": "/core/web-setup?tab=details"
+	},
+	{
+		"path": "/project-settings?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/core/settings?tab=details",
+		"expected": "/core/settings?tab=details"
+	},
+	{
+		"path": "/accept-invite?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/accept-invite?tab=details",
+		"expected": "/auth/accept-invite?tab=details"
+	},
+	{
+		"path": "/account?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/account?tab=details",
+		"expected": "/auth/account?tab=details"
+	},
+	{
+		"path": "/app/access-key?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/access-key?tab=details",
+		"expected": "/auth/access-key?tab=details"
+	},
+	{
+		"path": "/app/customers?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/customers?tab=details",
+		"expected": "/auth/customers?tab=details"
+	},
+	{
+		"path": "/app/members?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/users?tab=details",
+		"expected": "/auth/users?tab=details"
+	},
+	{
+		"path": "/app/profile?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/profile?tab=details",
+		"expected": "/auth/profile?tab=details"
+	},
+	{
+		"path": "/app/referrals?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/referrals?tab=details",
+		"expected": "/auth/referrals?tab=details"
+	},
+	{
+		"path": "/app/users?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/users?tab=details",
+		"expected": "/auth/users?tab=details"
+	},
+	{
+		"path": "/identity?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth?tab=details",
+		"expected": "/auth?tab=details"
+	},
+	{
+		"path": "/identity/fr?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth?tab=details&lang=fr",
+		"expected": "/auth?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/account?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/account-policies?tab=details&lang=fr",
+		"expected": "/auth/account-policies?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/apps?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/apps?tab=details&lang=fr",
+		"expected": "/auth/apps?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/apps/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/apps/example-id?tab=details&lang=fr",
+		"expected": "/auth/apps/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/apps/banners/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/apps/banners/example-id?tab=details&lang=fr",
+		"expected": "/auth/apps/banners/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/apps/banners/new?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/apps/banners/new?tab=details&lang=fr",
+		"expected": "/auth/apps/banners/new?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/apps/new?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/apps/new?tab=details&lang=fr",
+		"expected": "/auth/apps/new?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/dashboard?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/settings?tab=details&lang=fr",
+		"expected": "/auth/settings?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/logs?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/logs?tab=details&lang=fr",
+		"expected": "/auth/logs?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/logs/email/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/logs/email/example-id?tab=details&lang=fr",
+		"expected": "/auth/logs/email/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/logs/sign-in/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/logs/sign-in/example-id?tab=details&lang=fr",
+		"expected": "/auth/logs/sign-in/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/logs/sms/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/logs/sms/example-id?tab=details&lang=fr",
+		"expected": "/auth/logs/sms/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/orgs?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/orgs?tab=details&lang=fr",
+		"expected": "/auth/orgs?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/orgs/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/orgs/example-id?tab=details&lang=fr",
+		"expected": "/auth/orgs/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/orgs/new?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/orgs/new?tab=details&lang=fr",
+		"expected": "/auth/orgs/new?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/roles?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/roles?tab=details&lang=fr",
+		"expected": "/auth/roles?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/roles/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/roles/example-id?tab=details&lang=fr",
+		"expected": "/auth/roles/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/roles/new?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/roles/new?tab=details&lang=fr",
+		"expected": "/auth/roles/new?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/saml?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/saml?tab=details&lang=fr",
+		"expected": "/auth/saml?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/saml/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/saml/example-id?tab=details&lang=fr",
+		"expected": "/auth/saml/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/saml/new?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/saml/new?tab=details&lang=fr",
+		"expected": "/auth/saml/new?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/scopes?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/scopes?tab=details&lang=fr",
+		"expected": "/auth/scopes?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/scopes/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/scopes/example-id?tab=details&lang=fr",
+		"expected": "/auth/scopes/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/scopes/new?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/scopes/new?tab=details&lang=fr",
+		"expected": "/auth/scopes/new?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/user-attributes?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/user-attributes?tab=details&lang=fr",
+		"expected": "/auth/user-attributes?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/user-attributes/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/user-attributes/example-id?tab=details&lang=fr",
+		"expected": "/auth/user-attributes/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/user-attributes/new?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/user-attributes/new?tab=details&lang=fr",
+		"expected": "/auth/user-attributes/new?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/users?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/directory/users?tab=details&lang=fr",
+		"expected": "/auth/directory/users?tab=details&lang=fr"
+	},
+	{
+		"path": "/identity/fr/users/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/directory/users/example-id?tab=details&lang=fr",
+		"expected": "/auth/directory/users/example-id?tab=details&lang=fr"
+	},
+	{
+		"path": "/login?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/login?tab=details",
+		"expected": "/auth/login?tab=details"
+	},
+	{
+		"path": "/new_password?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/new-password?tab=details",
+		"expected": "/auth/new-password?tab=details"
+	},
+	{
+		"path": "/register?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/register?tab=details",
+		"expected": "/auth/register?tab=details"
+	},
+	{
+		"path": "/register/with_email?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/register/with-email?tab=details",
+		"expected": "/auth/register/with-email?tab=details"
+	},
+	{
+		"path": "/reset_password?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/auth/reset-password?tab=details",
+		"expected": "/auth/reset-password?tab=details"
+	},
+	{
+		"path": "/?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/analytics/home?tab=details",
+		"expected": "/analytics/home?tab=details"
+	},
+	{
+		"path": "/analytics/dashboards?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/analytics?tab=details",
+		"expected": "/analytics?tab=details"
+	},
+	{
+		"path": "/app?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/analytics/app?tab=details",
+		"expected": "/analytics/app?tab=details"
+	},
+	{
+		"path": "/dashboard?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/analytics?tab=details",
+		"expected": "/analytics?tab=details"
+	},
+	{
+		"path": "/products/customers?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/monetization/customers?tab=details",
+		"expected": "/monetization/customers?tab=details"
+	},
+	{
+		"path": "/products/entitlements?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/monetization/entitlements?tab=details",
+		"expected": "/monetization/entitlements?tab=details"
+	},
+	{
+		"path": "/products/purchases?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/monetization/purchases?tab=details",
+		"expected": "/monetization/purchases?tab=details"
+	},
+	{
+		"path": "/dynamic-links/campaigns?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/dynamic-links/campaigns?tab=details",
+		"expected": "/acquisition/dynamic-links/campaigns?tab=details"
+	},
+	{
+		"path": "/dynamic-links/campaigns/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/dynamic-links/campaigns/example-id?tab=details",
+		"expected": "/acquisition/dynamic-links/campaigns/example-id?tab=details"
+	},
+	{
+		"path": "/dynamic-links/domain?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/dynamic-links/domain?tab=details",
+		"expected": "/acquisition/dynamic-links/domain?tab=details"
+	},
+	{
+		"path": "/dynamic-links/links?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/dynamic-links?tab=details",
+		"expected": "/acquisition/dynamic-links?tab=details"
+	},
+	{
+		"path": "/dynamic-links/redirect-rules?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/dynamic-links/redirect-rules?tab=details",
+		"expected": "/acquisition/dynamic-links/redirect-rules?tab=details"
+	},
+	{
+		"path": "/dynamic-links/social-media-preview?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/dynamic-links/social-media-preview?tab=details",
+		"expected": "/acquisition/dynamic-links/social-media-preview?tab=details"
+	},
+	{
+		"path": "/dynamic-links/tracking?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/dynamic-links/tracking?tab=details",
+		"expected": "/acquisition/dynamic-links/tracking?tab=details"
+	},
+	{
+		"path": "/system/email?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/communication/email?tab=details",
+		"expected": "/communication/email?tab=details"
+	},
+	{
+		"path": "/system/files?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/data/files?tab=details",
+		"expected": "/data/files?tab=details"
+	},
+	{
+		"path": "/flows?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/overview?tab=details",
+		"expected": "/acquisition/overview?tab=details"
+	},
+	{
+		"path": "/flows/components?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/components?tab=details",
+		"expected": "/acquisition/components?tab=details"
+	},
+	{
+		"path": "/flows/launchpad?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/launchpad?tab=details",
+		"expected": "/acquisition/launchpad?tab=details"
+	},
+	{
+		"path": "/flows/settings/environments?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/settings/environments?tab=details",
+		"expected": "/acquisition/settings/environments?tab=details"
+	},
+	{
+		"path": "/flows/settings/localization?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/settings/localization?tab=details",
+		"expected": "/acquisition/settings/localization?tab=details"
+	},
+	{
+		"path": "/flows/settings/sdk?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/settings/sdk?tab=details",
+		"expected": "/acquisition/settings/sdk?tab=details"
+	},
+	{
+		"path": "/flows/users?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/users?tab=details",
+		"expected": "/acquisition/users?tab=details"
+	},
+	{
+		"path": "/flows/users/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/users/example-id?tab=details",
+		"expected": "/acquisition/users/example-id?tab=details"
+	},
+	{
+		"path": "/flows/workflows?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/workflows?tab=details",
+		"expected": "/acquisition/workflows?tab=details"
+	},
+	{
+		"path": "/flows/workflows/example-id?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/workflows/example-id?tab=details",
+		"expected": "/acquisition/workflows/example-id?tab=details"
+	},
+	{
+		"path": "/system/gateway?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/core/gateway?tab=details",
+		"expected": "/core/gateway?tab=details"
+	},
+	{
+		"path": "/marketing/campaigns?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/communication/campaigns?tab=details",
+		"expected": "/communication/campaigns?tab=details"
+	},
+	{
+		"path": "/marketing/channels?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/communication/channels?tab=details",
+		"expected": "/communication/channels?tab=details"
+	},
+	{
+		"path": "/marketing/email?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/communication/marketing-email?tab=details",
+		"expected": "/communication/marketing-email?tab=details"
+	},
+	{
+		"path": "/marketing/in-app-messages?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/communication/in-app-messages?tab=details",
+		"expected": "/communication/in-app-messages?tab=details"
+	},
+	{
+		"path": "/marketing/journeys?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/communication/journeys?tab=details",
+		"expected": "/communication/journeys?tab=details"
+	},
+	{
+		"path": "/marketing/settings?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/communication/settings?tab=details",
+		"expected": "/communication/settings?tab=details"
+	},
+	{
+		"path": "/marketing/statistics?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/communication/statistics?tab=details",
+		"expected": "/communication/statistics?tab=details"
+	},
+	{
+		"path": "/message-preview-craft?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/communication/message-preview?tab=details",
+		"expected": "/communication/message-preview?tab=details"
+	},
+	{
+		"path": "/mcp/authorize?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/core/mcp/authorize?tab=details",
+		"expected": "/core/mcp/authorize?tab=details"
+	},
+	{
+		"path": "/infrastructure?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/core/infrastructure?tab=details",
+		"expected": "/core/infrastructure?tab=details"
+	},
+	{
+		"path": "/onboardings?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/onboardings?tab=details",
+		"expected": "/acquisition/onboardings?tab=details"
+	},
+	{
+		"path": "/onboardings/statistics?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/onboardings/statistics?tab=details",
+		"expected": "/acquisition/onboardings/statistics?tab=details"
+	},
+	{
+		"path": "/paywalls?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/paywalls?tab=details",
+		"expected": "/acquisition/paywalls?tab=details"
+	},
+	{
+		"path": "/paywalls/statistics?tab=details",
+		"status": 308,
+		"location": "http://127.0.0.1:4321/acquisition/paywalls/statistics?tab=details",
+		"expected": "/acquisition/paywalls/statistics?tab=details"
+	}
+]

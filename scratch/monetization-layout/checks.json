@@ -1,0 +1,442 @@
+{
+	"mobile": [
+		{
+			"locale": "fr",
+			"path": "products",
+			"aligned": true,
+			"mainFits": true,
+			"title": "Produits",
+			"titleBeforeSelector": true
+		},
+		{
+			"locale": "fr",
+			"path": "products/products",
+			"aligned": true,
+			"mainFits": true,
+			"title": "Produits",
+			"titleBeforeSelector": true
+		},
+		{
+			"locale": "fr",
+			"path": "offerings",
+			"aligned": true,
+			"mainFits": true,
+			"title": "Offres",
+			"titleBeforeSelector": true
+		},
+		{
+			"locale": "fr",
+			"path": "entitlements",
+			"aligned": true,
+			"mainFits": true,
+			"title": "Droits d’accès",
+			"titleBeforeSelector": true
+		},
+		{
+			"locale": "fr",
+			"path": "customers",
+			"aligned": null,
+			"mainFits": true,
+			"title": "Clients",
+			"titleBeforeSelector": null
+		},
+		{
+			"locale": "fr",
+			"path": "purchases",
+			"aligned": null,
+			"mainFits": true,
+			"title": "Achats",
+			"titleBeforeSelector": null
+		},
+		{
+			"locale": "fr",
+			"path": "settings",
+			"aligned": null,
+			"mainFits": true,
+			"title": "Paramètres de monétisation",
+			"titleBeforeSelector": null
+		},
+		{
+			"locale": "en",
+			"path": "products",
+			"aligned": true,
+			"mainFits": true,
+			"title": "Products",
+			"titleBeforeSelector": true
+		},
+		{
+			"locale": "en",
+			"path": "products/products",
+			"aligned": true,
+			"mainFits": true,
+			"title": "Products",
+			"titleBeforeSelector": true
+		},
+		{
+			"locale": "en",
+			"path": "offerings",
+			"aligned": true,
+			"mainFits": true,
+			"title": "Offerings",
+			"titleBeforeSelector": true
+		},
+		{
+			"locale": "en",
+			"path": "entitlements",
+			"aligned": true,
+			"mainFits": true,
+			"title": "Entitlements",
+			"titleBeforeSelector": true
+		},
+		{
+			"locale": "en",
+			"path": "customers",
+			"aligned": null,
+			"mainFits": true,
+			"title": "Customers",
+			"titleBeforeSelector": null
+		},
+		{
+			"locale": "en",
+			"path": "purchases",
+			"aligned": null,
+			"mainFits": true,
+			"title": "Purchases",
+			"titleBeforeSelector": null
+		},
+		{
+			"locale": "en",
+			"path": "settings",
+			"aligned": null,
+			"mainFits": true,
+			"title": "Monetization Settings",
+			"titleBeforeSelector": null
+		}
+	],
+	"desktop": [
+		{
+			"locale": "fr",
+			"path": "products",
+			"aligned": true,
+			"fits": true,
+			"ordered": true
+		},
+		{
+			"locale": "fr",
+			"path": "products",
+			"catalog": "existing",
+			"aligned": true,
+			"ordered": true
+		},
+		{
+			"locale": "fr",
+			"path": "products/products",
+			"aligned": true,
+			"fits": true,
+			"ordered": true
+		},
+		{
+			"locale": "fr",
+			"path": "products/products",
+			"catalog": "existing",
+			"aligned": true,
+			"ordered": true
+		},
+		{
+			"locale": "fr",
+			"path": "offerings",
+			"aligned": true,
+			"fits": true,
+			"ordered": true
+		},
+		{
+			"locale": "fr",
+			"path": "offerings",
+			"catalog": "existing",
+			"aligned": true,
+			"ordered": true
+		},
+		{
+			"locale": "fr",
+			"path": "entitlements",
+			"aligned": true,
+			"fits": true,
+			"ordered": true
+		},
+		{
+			"locale": "fr",
+			"path": "entitlements",
+			"catalog": "existing",
+			"aligned": true,
+			"ordered": true
+		},
+		{
+			"locale": "fr",
+			"path": "customers",
+			"aligned": null,
+			"fits": true,
+			"ordered": null
+		},
+		{
+			"locale": "fr",
+			"path": "purchases",
+			"aligned": null,
+			"fits": true,
+			"ordered": null
+		},
+		{
+			"locale": "fr",
+			"path": "settings",
+			"aligned": null,
+			"fits": true,
+			"ordered": null
+		},
+		{
+			"locale": "en",
+			"path": "products",
+			"aligned": true,
+			"fits": true,
+			"ordered": true
+		},
+		{
+			"locale": "en",
+			"path": "products",
+			"catalog": "existing",
+			"aligned": true,
+			"ordered": true
+		},
+		{
+			"locale": "en",
+			"path": "products/products",
+			"aligned": true,
+			"fits": true,
+			"ordered": true
+		},
+		{
+			"locale": "en",
+			"path": "products/products",
+			"catalog": "existing",
+			"aligned": true,
+			"ordered": true
+		},
+		{
+			"locale": "en",
+			"path": "offerings",
+			"aligned": true,
+			"fits": true,
+			"ordered": true
+		},
+		{
+			"locale": "en",
+			"path": "offerings",
+			"catalog": "existing",
+			"aligned": true,
+			"ordered": true
+		},
+		{
+			"locale": "en",
+			"path": "entitlements",
+			"aligned": true,
+			"fits": true,
+			"ordered": true
+		},
+		{
+			"locale": "en",
+			"path": "entitlements",
+			"catalog": "existing",
+			"aligned": true,
+			"ordered": true
+		},
+		{
+			"locale": "en",
+			"path": "customers",
+			"aligned": null,
+			"fits": true,
+			"ordered": null
+		},
+		{
+			"locale": "en",
+			"path": "purchases",
+			"aligned": null,
+			"fits": true,
+			"ordered": null
+		},
+		{
+			"locale": "en",
+			"path": "settings",
+			"aligned": null,
+			"fits": true,
+			"ordered": null
+		}
+	],
+	"settings": [
+		{
+			"width": 1280,
+			"locale": "fr",
+			"tab": "Général",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 1280,
+			"locale": "fr",
+			"tab": "Produits",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 1280,
+			"locale": "fr",
+			"tab": "Passerelles",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 1280,
+			"locale": "fr",
+			"tab": "Configuration",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 1280,
+			"locale": "en",
+			"tab": "General",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 1280,
+			"locale": "en",
+			"tab": "Products",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 1280,
+			"locale": "en",
+			"tab": "Gateways",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 1280,
+			"locale": "en",
+			"tab": "Configuration",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 390,
+			"locale": "fr",
+			"tab": "Général",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 390,
+			"locale": "fr",
+			"tab": "Produits",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 390,
+			"locale": "fr",
+			"tab": "Passerelles",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 390,
+			"locale": "fr",
+			"tab": "Configuration",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 390,
+			"locale": "en",
+			"tab": "General",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 390,
+			"locale": "en",
+			"tab": "Products",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 390,
+			"locale": "en",
+			"tab": "Gateways",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 390,
+			"locale": "en",
+			"tab": "Configuration",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 320,
+			"locale": "fr",
+			"tab": "Général",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 320,
+			"locale": "fr",
+			"tab": "Produits",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 320,
+			"locale": "fr",
+			"tab": "Passerelles",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 320,
+			"locale": "fr",
+			"tab": "Configuration",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 320,
+			"locale": "en",
+			"tab": "General",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 320,
+			"locale": "en",
+			"tab": "Products",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 320,
+			"locale": "en",
+			"tab": "Gateways",
+			"fits": true,
+			"tabsBelowTitle": true
+		},
+		{
+			"width": 320,
+			"locale": "en",
+			"tab": "Configuration",
+			"fits": true,
+			"tabsBelowTitle": true
+		}
+	]
+}

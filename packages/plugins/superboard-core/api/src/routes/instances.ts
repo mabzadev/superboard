@@ -2,6 +2,7 @@ import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono, type Context } from "hono";
 
+import { applicationFilesBucket } from "../lib/application-files-bucket";
 import { getRequestAuthUserId } from "../lib/auth";
 import { hashPassword } from "../lib/crypto";
 import { getOrCreateProject } from "../lib/db";
@@ -346,7 +347,10 @@ async function deleteInstanceTree(env: Env, instanceId: number) {
 
 	if (env.R2) {
 		for (const row of fileRows.results || []) {
-			if (row.file_key) await env.R2.delete(row.file_key).catch(() => undefined);
+			if (row.file_key)
+				await applicationFilesBucket(env.R2)
+					.delete(row.file_key)
+					.catch(() => undefined);
 		}
 	}
 

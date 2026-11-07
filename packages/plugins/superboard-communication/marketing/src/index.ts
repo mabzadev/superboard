@@ -34,6 +34,7 @@ import { growthRoutes, runGrowthSchedules } from "./growth";
 import { marketingIdentityHashCandidates } from "./identity";
 import { dispatchDueJourneyEnrollments, journeyRoutes } from "./journeys";
 import { deliverabilityRates, recordLinkClick } from "./link-analytics";
+import { mediaBucket } from "./media-bucket";
 import { doubleOptInListIds, doubleOptInRoutes, queueDoubleOptIns } from "./optin";
 import { preferenceCenterRoutes, renderPreferenceCenter } from "./preferences";
 import { handleMarketingQueue, isMarketingQueueJob } from "./queue";
@@ -1311,8 +1312,8 @@ app.post("/internal/v1/media", async (c) => {
 	if (!/^(image|video|audio)\//.test(contentType) && contentType !== "application/pdf")
 		throw failure("media_type_invalid", "Unsupported media content type");
 	const id = crypto.randomUUID();
-	const objectKey = `marketing/${project.projectId}/${id}/${filename}`;
-	await c.env.MEDIA.put(objectKey, bytes, {
+	const objectKey = `${project.projectId}/${id}/${filename}`;
+	await mediaBucket(c.env).put(objectKey, bytes, {
 		httpMetadata: { contentType },
 		customMetadata: { projectId: String(project.projectId), mediaId: id },
 	});
@@ -1331,7 +1332,7 @@ app.post("/internal/v1/media", async (c) => {
 			)
 			.run();
 	} catch (error) {
-		await c.env.MEDIA.delete(objectKey);
+		await mediaBucket(c.env).delete(objectKey);
 		throw error;
 	}
 	return c.json(
@@ -1349,7 +1350,7 @@ app.post("/internal/v1/media", async (c) => {
 
 app.get("/internal/v1/media/:mediaId", async (c) => {
 	const row = await media(c.env.DB, c.get("project").projectId, c.req.param("mediaId"));
-	const object = await c.env.MEDIA.get(String(row.object_key));
+	const object = await mediaBucket(c.env).get(String(row.object_key));
 	if (!object) throw failure("media_not_found", "Media file not found", 404);
 	const headers = new Headers({
 		"cache-control": "private, no-store",
@@ -1363,7 +1364,7 @@ app.get("/internal/v1/media/:mediaId", async (c) => {
 app.delete("/internal/v1/media/:mediaId", async (c) => {
 	const projectId = c.get("project").projectId;
 	const row = await media(c.env.DB, projectId, c.req.param("mediaId"));
-	await c.env.MEDIA.delete(String(row.object_key));
+	await mediaBucket(c.env).delete(String(row.object_key));
 	await c.env.DB.prepare("DELETE FROM marketing_media WHERE project_id = ? AND id = ?")
 		.bind(projectId, row.id)
 		.run();

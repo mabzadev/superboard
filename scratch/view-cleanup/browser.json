@@ -1,0 +1,460 @@
+[
+	{
+		"path": "/auth/users",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Application users"],
+		"failures": []
+	},
+	{
+		"path": "/auth/apps",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Applications"],
+		"failures": []
+	},
+	{
+		"path": "/auth/logs",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Journaux", "Journaux des emails", "Journaux des SMS", "Journaux de connexion"],
+		"failures": []
+	},
+	{
+		"path": "/monetization/customers",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/monetization/offerings",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/monetization/entitlements",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/workflows",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/components",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/launchpad",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/settings/environments",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/redirect-rules",
+		"lang": "fr",
+		"error": "page.goto: net::ERR_ABORTED at http://127.0.0.1:4321/acquisition/dynamic-links/redirect-rules?lang=fr"
+	},
+	{
+		"path": "/acquisition/dynamic-links",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/campaigns",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/domain",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/tracking",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/social-media-preview",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/in-app-messages",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/campaigns",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/marketing-email",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/journeys",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/statistics",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/channels",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/settings",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/data/content",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/email",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/data/files",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/notifications",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/paywalls",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Paywalls"],
+		"error": "locator.innerText: Error: strict mode violation: locator('main') resolved to 2 elements:"
+	},
+	{
+		"path": "/acquisition/paywalls/statistics",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/auth/settings",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/monetization/purchases",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/monetization/products/products",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/users",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/auth/users",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/auth/apps",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/monetization/offerings",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/monetization/entitlements",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/monetization/customers",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Customers"],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/workflows",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/launchpad",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/auth/logs",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Logs", "Email Logs", "SMS Logs", "Sign-in Logs"],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/components",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/settings/environments",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/redirect-rules",
+		"lang": "en",
+		"error": "page.goto: net::ERR_ABORTED at http://127.0.0.1:4321/acquisition/dynamic-links/redirect-rules?lang=en"
+	},
+	{
+		"path": "/acquisition/dynamic-links",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/campaigns",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/social-media-preview",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/domain",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/tracking",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/in-app-messages",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/marketing-email",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/campaigns",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/journeys",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/statistics",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/channels",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/settings",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/data/content",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/email",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/data/files",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/communication/notifications",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/paywalls",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/paywalls/statistics",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/auth/settings",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/monetization/products/products",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/monetization/purchases",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	},
+	{
+		"path": "/acquisition/users",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"failures": []
+	}
+]

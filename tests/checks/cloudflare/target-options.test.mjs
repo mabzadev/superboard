@@ -189,9 +189,14 @@ test("the new-application template produces a complete valid custom target", asy
 	});
 
 	await assert.doesNotReject(validateTarget(manifest));
-	assert.notEqual(
-		manifest.environments.development.r2.name,
-		manifest.environments.development.siteMedia.name,
+	const environment = manifest.environments.development;
+	assert.deepEqual(
+		new Set(
+			[environment.siteMedia, environment.r2, ...Object.values(environment.moduleR2)].map(
+				({ name }) => name,
+			),
+		),
+		new Set(["superboard-sample-development-dev-files"]),
 	);
 	assert.equal(
 		manifest.environments.development.customD1.name,

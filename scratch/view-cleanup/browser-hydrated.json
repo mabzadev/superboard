@@ -1,0 +1,528 @@
+[
+	{
+		"path": "/auth/users",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Application users"],
+		"text": "Application users\n\nAuthentication, linked Google or Apple identities, sessions, subscriptions, entitlements and paywall activity.\n\nComptes\nProfils et installations\nAttributs\nParrainages\nAccount search",
+		"failures": []
+	},
+	{
+		"path": "/auth/apps",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Applications"],
+		"text": "Applications\nCréer\nApplications\nAnnuaire de connexion\nRôles\nPermissions\nOrganisations\nSSO\nNom\tID Client\tStatut\tType\t\nBannières d'application\nCréer\nTexte de la bannière\tType de bannière\tStatut de la ba",
+		"failures": []
+	},
+	{
+		"path": "/auth/logs",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Journaux", "Journaux des emails", "Journaux des SMS", "Journaux de connexion"],
+		"text": "Journaux\nJournaux des emails\nNettoyer\nDestinataire\tSuccès\tHeure\t\nJournaux des SMS\nNettoyer\nDestinataire\tSuccès\tHeure\t\nJournaux de connexion\nNettoyer\nID utilisateur\tHeure\t",
+		"failures": []
+	},
+	{
+		"path": "/monetization/customers",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Clients"],
+		"text": "Clients\n\nIdentités d’application, abonnements, droits d’accès, soldes, transactions et activité du paywall.\n\nCustomer search\nResults are isolated to the selected SuperBoard project.\nRefresh\nCustomers\n",
+		"failures": []
+	},
+	{
+		"path": "/monetization/offerings",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Offres"],
+		"text": "Offres\n\nGérez les packages et les offres résolues par le SDK.\n\n0 Offres\nOffre\nOffres (emplacements SDK)\nNouvelle offre\nOffre\tIdentifiant\tEmplacement\tPriorité\tPackages\tÉtat\t\nAucune offre configurée.",
+		"failures": []
+	},
+	{
+		"path": "/monetization/entitlements",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Droits d’accès"],
+		"text": "Droits d’accès\n\nUn droit d’accès représente un niveau d’accès, des fonctionnalités ou du contenu dont bénéficie un client. De nombreux projets n’ont qu’un seul droit d’accès, par exemple « Accès Pro »",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/workflows",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Workflows"],
+		"text": "Workflows\n\nCréez, versionnez, publiez et analysez les expériences produit.\n\nNouveau workflow\nScénarios automatisés\nVue d’ensemble des automatisations\nTous les statuts\nToutes les origines\nNom\tStatut\tOr",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/launchpad",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Launchpad"],
+		"text": "Launchpad\n\nOrdonnez les groupes, priorités et limites de concurrence par environnement.\n\nNouveau groupe",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/components",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Composants"],
+		"text": "Composants\n\nGérez Basics V2 et les bibliothèques personnalisées sans mise à jour silencieuse.\n\nNouvelle bibliothèque de composants",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Dynamic links"],
+		"text": "Dynamic links\n\nCreate, route and measure links across every platform and acquisition source.\n\nLiens\nCampagnes de liens\nRègles de redirection\nDomaines des liens\nAperçus sociaux\nSuivi des clics\nActive\nA",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/campaigns",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Campaigns"],
+		"text": "Campaigns\n\nMeasure every acquisition campaign from link view to referred customer and revenue.\n\nLiens\nCampagnes de liens\nRègles de redirection\nDomaines des liens\nAperçus sociaux\nSuivi des clics\nActive",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/settings/environments",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Paramètres d’acquisition"],
+		"text": "Paramètres d’acquisition\n\nGérez les environnements de publication, les intégrations SDK, les règles de localisation et la configuration du plugin.\n\nEnvironnements\nSDK\nLocalisation\nConfiguration\nNouvel",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/redirect-rules",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Redirect Rules"],
+		"text": "Redirect Rules\n\nResolve the first matching platform rule by priority, then fall back to the link destination.\n\nLiens\nCampagnes de liens\nRègles de redirection\nDomaines des liens\nAperçus sociaux\nSuivi d",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/domain",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Domain"],
+		"text": "Domain\n\nServe branded dynamic links only after ownership has been verified through DNS.\n\nLiens\nCampagnes de liens\nRègles de redirection\nDomaines des liens\nAperçus sociaux\nSuivi des clics\nAdd a branded",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/social-media-preview",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Social Media Preview"],
+		"text": "Social Media Preview\n\nDesign the default Open Graph card shown when a dynamic link is shared.\n\nLiens\nCampagnes de liens\nRègles de redirection\nDomaines des liens\nAperçus sociaux\nSuivi des clics\nDefault",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/tracking",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Tracking"],
+		"text": "Tracking\n\nInspect attributed link events and control consent-aware collection by project.\n\nLiens\nCampagnes de liens\nRègles de redirection\nDomaines des liens\nAperçus sociaux\nSuivi des clics\nAug 23, 202",
+		"failures": []
+	},
+	{
+		"path": "/communication/in-app-messages",
+		"lang": "fr",
+		"status": 200,
+		"heading": [],
+		"text": "Active\nAll users\nColumns\nCreate Message\nTitle\tSubtitle\tPlatform\tViews\tTarget\tAuto display\tPush notification\tDate\n\n\nje test\n\n\t\n\nfdfd\n\n\t\niOS\nAndroid\n\t\n\n-\n\n\t\nExisting users\n\t\n\nNo\n\n\t\n\nYes\n\n\t\n\n2026/09/17\n\n",
+		"failures": []
+	},
+	{
+		"path": "/communication/marketing-email",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["E-mails marketing"],
+		"text": "E-mails marketing\n\nCréez, traduisez et envoyez des messages adaptés à chaque client.\n\nCréer un modèle\nVue d’ensemble\nCampagnes\nAutomatisations\nContacts\nModèles\nEnvois\nParamètres\n\nModèles\n\n3\n\nTraductio",
+		"failures": []
+	},
+	{
+		"path": "/communication/journeys",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Parcours marketing"],
+		"text": "Parcours marketing\n\nCréez des parcours clients à partir des événements du produit, avec versions et reprise de progression.\n\nCréer un parcours\nChaque enregistrement crée une version. Les parcours en c",
+		"failures": []
+	},
+	{
+		"path": "/communication/campaigns",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Campagnes"],
+		"text": "Campagnes\n\nCréez, traduisez et envoyez des messages adaptés à chaque client.\n\nCréer un modèle\nVue d’ensemble\nCampagnes\nAutomatisations\nContacts\nModèles\nEnvois\nParamètres\nCampagnes\nCréer une campagne\nC",
+		"failures": []
+	},
+	{
+		"path": "/communication/channels",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Canaux marketing"],
+		"text": "Canaux marketing\n\nGérez les canaux dans les paramètres Communication.\n\nCanaux marketing",
+		"failures": []
+	},
+	{
+		"path": "/communication/statistics",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Résultats marketing"],
+		"text": "Résultats marketing\n\nSuivez les envois, ouvertures, clics, rejets, signalements et désabonnements.\n\nHeure\nJour\nSemaine\nMois\nToutes les campagnes\nActualiser\nÉvolution dans le temps\n0 périodes mesurées\n",
+		"failures": []
+	},
+	{
+		"path": "/communication/settings",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Paramètres Communication"],
+		"text": "Paramètres Communication\nParamètres d’envoi\nWebhooks marketing\nE-mail transactionnel\nWebhooks e-mail\nLangues\nCanaux marketing\nConfiguration\nExpéditeurs\nExpéditeur\nTLS\nSTARTTLS\nSans chiffrement\nDisponi",
+		"failures": []
+	},
+	{
+		"path": "/data/content",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Contenu"],
+		"text": "Contenu\nParamètres des contenus\nCollection\nLangue du contenu\nGérer les types de contenu dans EmDash\nCréer la collection de documentsTaxonomies",
+		"failures": []
+	},
+	{
+		"path": "/communication/email",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Emails"],
+		"text": "Emails\n\nCréez, traduisez et envoyez des messages adaptés à chaque client.\n\nCréer un modèle\nVue d’ensemble\nCampagnes\nAutomatisations\nContacts\nModèles\nEnvois\nParamètres\nCampagnes et parcours\nEmails syst",
+		"failures": []
+	},
+	{
+		"path": "/data/files",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Fichiers"],
+		"text": "Fichiers\nParamètres des fichiers\n\n0 · 0 octets\n\nChoisir un fichier\nTransférer\nCorbeille\nNettoyer les transferts incomplets expirés\nNom\tOctets\t\n\nAucun fichier",
+		"failures": []
+	},
+	{
+		"path": "/communication/notifications",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Notifications push"],
+		"text": "Notifications push\nTitre\nMessage\nCréer la notification\nje test\n\nfdfd\n\nPage précédente\nPage suivante",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/paywalls",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Paywalls"],
+		"error": "locator.innerText: Error: strict mode violation: locator('main') resolved to 2 elements:"
+	},
+	{
+		"path": "/auth/settings",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Paramètres d’authentification"],
+		"text": "Paramètres d’authentification\n\nGérez la connexion et les règles des comptes de cette instance. Les modifications enregistrées s’appliquent aux prochaines requêtes d’authentification.\n\nGénéral\nConnexio",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/paywalls/statistics",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Résultats des paywalls"],
+		"text": "Résultats des paywalls\n\nConversions, revenus et événements des 30 derniers jours.\n\nÉcrans d’abonnement\nRésultats des écrans d’abonnement\nFrom\nTo\nTimezone\nInterval\nHour\nDay\nWeek\nMonth\nPlatform\nAll plat",
+		"failures": []
+	},
+	{
+		"path": "/monetization/products/products",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Produits"],
+		"text": "Produits\n\nGérez le catalogue des produits du store.\n\nParamètres des produits\niOS (3)\nAndroid (3)\nTest (0)\nProduit\niOS (Apple App Store)\nNouveau produit iOS\nProduit\tIdentifiant\tType\tStatut\t\nPremium iOS",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/users",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Utilisateurs"],
+		"text": "Utilisateurs\n\nConsultez les propriétés, l’état des workflows et le journal complet.\n\nTous les environnements\nHash utilisateur\tPlateforme\tLangue\tPays\tEn cours\tDernière activité\t\nActions\n\nChargement de ",
+		"failures": []
+	},
+	{
+		"path": "/monetization/purchases",
+		"lang": "fr",
+		"status": 200,
+		"heading": ["Achats"],
+		"text": "Achats\n\nAchats, abonnements, restaurations, remboursements et historique financier.\n\nParamètres des achats\nAchats historiques\n\nImportez les achats et abonnements existants de Products. Vous pouvez rep",
+		"failures": []
+	},
+	{
+		"path": "/auth/users",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Application users"],
+		"text": "Application users\n\nAuthentication, linked Google or Apple identities, sessions, subscriptions, entitlements and paywall activity.\n\nAccounts\nProfiles and installations\nAttributes\nReferrals\nAccount sear",
+		"failures": []
+	},
+	{
+		"path": "/auth/apps",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Apps"],
+		"text": "Apps\nCreate\nApplications\nSign-in directory\nRoles\nPermissions\nOrganizations\nSSO\nName\tClient ID\tStatus\tType\t\nApp Banners\nCreate\nBanner Text\tBanner Type\tBanner Status\t",
+		"failures": []
+	},
+	{
+		"path": "/auth/logs",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Logs", "Email Logs", "SMS Logs", "Sign-in Logs"],
+		"text": "Logs\nEmail Logs\nClean\nReceiver\tSuccess\tTime\t\nSMS Logs\nClean\nReceiver\tSuccess\tTime\t\nSign-in Logs\nClean\nUser ID\tTime\t",
+		"failures": []
+	},
+	{
+		"path": "/monetization/customers",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Customers"],
+		"text": "Customers\n\nApplication identities, subscriptions, entitlements, balances, transactions and paywall activity.\n\nCustomer search\nResults are isolated to the selected SuperBoard project.\nRefresh\nCustomers",
+		"failures": []
+	},
+	{
+		"path": "/monetization/offerings",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Offerings"],
+		"text": "Offerings\n\nManage packages and SDK-resolved offerings.\n\n0 Offerings\nOffering\nOfferings (SDK Placements)\nNew offering\nOffering\tIdentifier\tPlacement\tPriority\tPackages\tState\t\nNo offerings configured.",
+		"failures": []
+	},
+	{
+		"path": "/monetization/entitlements",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Entitlements"],
+		"text": "Entitlements\n\nAn entitlement represents a level of access, features, or content that a customer is \"entitled\" to. Many projects only have one entitlement, for example, \"Pro access\".\n\nAll\nActive\nInacti",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/workflows",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Workflows"],
+		"text": "Workflows\n\nCreate, version, publish and analyze product experiences.\n\nNew workflow\nWorkflows\nWorkflows overview\nAll statuses\nAll origins\nName\tStatus\tOrigin\tVersions\tEnvironments\tUpdated\t\nActions\n\n\ntes",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/launchpad",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Launchpad"],
+		"text": "Launchpad\n\nOrder workflow groups, priorities and concurrency for every environment.\n\nNew group\n\nNothing here yet\n\nWorkflows outside Launchpad still start immediately when eligible.\n\nNew group",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/components",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Components"],
+		"text": "Components\n\nManage Basics V2 and custom component libraries without silently updating instances.\n\nNew component library\nBasics V2\n\nbasics-v2 · basics-v2\n\nEnabled\nCard\ncard · v1\ncontinue\nclose\n\n71 CSS ",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Dynamic links"],
+		"text": "Dynamic links\n\nCreate, route and measure links across every platform and acquisition source.\n\nLinks\nLink campaigns\nRedirect rules\nLink domains\nSocial previews\nClick tracking\nActive\nAug 23, 2026 - Sep ",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/settings/environments",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Acquisition settings"],
+		"text": "Acquisition settings\n\nManage release environments, SDK integrations, localization rules and plugin configuration.\n\nEnvironments\nSDK\nLocalization\nConfiguration\nNew environment\nProduction\nProduction\npro",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/campaigns",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Campaigns"],
+		"text": "Campaigns\n\nMeasure every acquisition campaign from link view to referred customer and revenue.\n\nLinks\nLink campaigns\nRedirect rules\nLink domains\nSocial previews\nClick tracking\nActive\nAug 23, 2026 - Se",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/redirect-rules",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Redirect Rules"],
+		"text": "Redirect Rules\n\nResolve the first matching platform rule by priority, then fall back to the link destination.\n\nLinks\nLink campaigns\nRedirect rules\nLink domains\nSocial previews\nClick tracking\nPlatform ",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/domain",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Domain"],
+		"text": "Domain\n\nServe branded dynamic links only after ownership has been verified through DNS.\n\nLinks\nLink campaigns\nRedirect rules\nLink domains\nSocial previews\nClick tracking\nAdd a branded domain\nUse a dedi",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/social-media-preview",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Social Media Preview"],
+		"text": "Social Media Preview\n\nDesign the default Open Graph card shown when a dynamic link is shared.\n\nLinks\nLink campaigns\nRedirect rules\nLink domains\nSocial previews\nClick tracking\nDefault metadata\nIndividu",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/dynamic-links/tracking",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Tracking"],
+		"text": "Tracking\n\nInspect attributed link events and control consent-aware collection by project.\n\nLinks\nLink campaigns\nRedirect rules\nLink domains\nSocial previews\nClick tracking\nAug 23, 2026 - Sep 22, 2026\nP",
+		"failures": []
+	},
+	{
+		"path": "/communication/in-app-messages",
+		"lang": "en",
+		"status": 200,
+		"heading": [],
+		"text": "Active\nAll users\nColumns\nCreate Message\nTitle\tSubtitle\tPlatform\tViews\tTarget\tAuto display\tPush notification\tDate\n\n\nje test\n\n\t\n\nfdfd\n\n\t\niOS\nAndroid\n\t\n\n-\n\n\t\nExisting users\n\t\n\nNo\n\n\t\n\nYes\n\n\t\n\n2026/09/17\n\n",
+		"failures": []
+	},
+	{
+		"path": "/communication/marketing-email",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Marketing email"],
+		"text": "Marketing email\n\nCreate, localize and deliver messages that fit each customer.\n\nCreate a template\nOverview\nCampaigns\nAutomations\nContacts\nTemplates\nDeliveries\nSettings\n\nTemplates\n\n3\n\nReady translation",
+		"failures": []
+	},
+	{
+		"path": "/communication/journeys",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Marketing journeys"],
+		"text": "Marketing journeys\n\nTurn product events into versioned, resumable email and omnichannel customer journeys.\n\nCreate journey\nEach save creates an immutable version. Active enrollments keep the version t",
+		"failures": []
+	},
+	{
+		"path": "/communication/channels",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Marketing channels"],
+		"text": "Marketing channels\n\nManage channels in Communication settings.\n\nMarketing channels",
+		"failures": []
+	},
+	{
+		"path": "/communication/campaigns",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Campaigns"],
+		"text": "Campaigns\n\nCreate, localize and deliver messages that fit each customer.\n\nCreate a template\nOverview\nCampaigns\nAutomations\nContacts\nTemplates\nDeliveries\nSettings\nCampaigns\nCreate campaign\nCampaign\tSta",
+		"failures": []
+	},
+	{
+		"path": "/communication/statistics",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Marketing statistics"],
+		"text": "Marketing statistics\n\nDelivery, opens, clicks, bounces, complaints, unsubscribes and campaign progression.\n\nHour\nDay\nWeek\nMonth\nAll campaigns\nRefresh\nSubscribers\n0\nEnabled Subscribers\n0\nCampaigns\n0\nRu",
+		"failures": []
+	},
+	{
+		"path": "/communication/settings",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Communication settings"],
+		"text": "Communication settings\nDelivery settings\nMarketing webhooks\nTransactional email\nEmail webhooks\nLanguages\nMarketing channels\nConfiguration\nSender identities\nSender identity\n\nAmazon SES managed delivery",
+		"failures": []
+	},
+	{
+		"path": "/data/content",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Content"],
+		"text": "Content\nContent settings\nCollection\nContent language\nManage content types in EmDash\nCreate document collectionTaxonomies",
+		"failures": []
+	},
+	{
+		"path": "/communication/email",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Emails"],
+		"text": "Emails\n\nCreate, localize and deliver messages that fit each customer.\n\nCreate a template\nOverview\nCampaigns\nAutomations\nContacts\nTemplates\nDeliveries\nSettings\nCampaigns and journeys\nSystem and transac",
+		"failures": []
+	},
+	{
+		"path": "/data/files",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Files"],
+		"text": "Files\nFile settings\n\n0 · 0 bytes\n\nChoose a file\nUpload\nTrash\nClean expired incomplete uploads\nName\tBytes\t\n\nNo files",
+		"failures": []
+	},
+	{
+		"path": "/communication/notifications",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Push notifications"],
+		"text": "Push notifications\nTitle\nMessage\nCreate notification\nje test\n\nfdfd\n\nPrevious page\nNext page",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/paywalls",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Paywalls"],
+		"error": "locator.innerText: Error: strict mode violation: locator('main') resolved to 2 elements:"
+	},
+	{
+		"path": "/acquisition/paywalls/statistics",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Paywall statistics"],
+		"text": "Paywall statistics\n\nConversion, revenue and event performance for the last 30 days.\n\nPaywalls\nPaywalls results\nFrom\nTo\nTimezone\nInterval\nHour\nDay\nWeek\nMonth\nPlatform\nAll platforms\niOS\nAndroid\nWeb\nPlac",
+		"failures": []
+	},
+	{
+		"path": "/auth/settings",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Authentication settings"],
+		"text": "Authentication settings\n\nManage sign-in and account rules for this instance. Saved changes apply to subsequent authentication requests.\n\nGeneral\nSign-in\nSecurity\nProviders\nAdvanced\nConfiguration\nGener",
+		"failures": []
+	},
+	{
+		"path": "/monetization/products/products",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Products"],
+		"text": "Products\n\nManage the store product catalog.\n\nProduct settings\niOS (3)\nAndroid (3)\nTest (0)\nProduct\niOS (Apple App Store)\nNew iOS product\nProduct\tIdentifier\tType\tStatus\t\nPremium iOS — 1 mois\nDémonstrat",
+		"failures": []
+	},
+	{
+		"path": "/monetization/purchases",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Purchases"],
+		"text": "Purchases\n\nPurchases, subscriptions, restorations, refunds and financial history.\n\nPurchase settings\nHistorical purchases\n\nImport existing purchases and subscriptions from Products. An interrupted imp",
+		"failures": []
+	},
+	{
+		"path": "/acquisition/users",
+		"lang": "en",
+		"status": 200,
+		"heading": ["Users"],
+		"text": "Users\n\nInspect user properties, workflow state and the complete activity journal.\n\nAll environments\nUser hash\tPlatform\tLocale\tCountry\tIn progress\tLast seen\t\nActions\n\n\n\nNothing here yet\n\nUsers appear o",
+		"failures": []
+	}
+]

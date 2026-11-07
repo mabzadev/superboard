@@ -262,7 +262,7 @@ test("production backup retention rejects corrupted remote objects before deploy
 	try {
 		const objects = new Map();
 		const env = {
-			SUPERBOARD_BACKUP_R2_BUCKET: "fixture-backups",
+			SUPERBOARD_BACKUP_R2_BUCKET: "fixture-files",
 			SUPERBOARD_BACKUP_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
 		};
 		const input = {
@@ -288,6 +288,7 @@ test("production backup retention rejects corrupted remote objects before deploy
 			/BUILD_BACKUP_VERIFICATION_FAILED/u,
 		);
 		assert.equal(objects.size, 1);
+		assert.match([...objects.keys()][0], /^fixture-files\/backups\/mabza-development\//u);
 		assert.ok(![...objects.values()][0].includes(Buffer.from("CREATE TABLE")));
 	} finally {
 		await rm(directory, { recursive: true, force: true });

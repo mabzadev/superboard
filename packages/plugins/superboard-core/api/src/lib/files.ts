@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { applicationFilesBucket } from "./application-files-bucket.js";
 import type { Env } from "../types.js";
 
 type CsvExportOptions = {
@@ -36,7 +37,7 @@ export async function storeCsvDownload(c: Pick<Context<{ Bindings: Env }>, "env"
   const bytes = new TextEncoder().encode(options.csv);
   const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
-  await env.R2.put(key, bytes, {
+  await applicationFilesBucket(env.R2).put(key, bytes, {
     httpMetadata: {
       contentType: 'text/csv; charset=utf-8',
       contentDisposition: `attachment; filename="${name}"`,
@@ -68,12 +69,12 @@ export async function storeCsvDownload(c: Pick<Context<{ Bindings: Env }>, "env"
 
 export async function readCsvDownload(env: Env, key: string): Promise<Response | null> {
   if (!env.R2) throw new Error('R2 bucket is not configured');
-  const object = await env.R2.get(key);
+  const object = await applicationFilesBucket(env.R2).get(key);
   if (!object) return null;
 
   const expiresAt = object.customMetadata?.expiresAt;
   if (expiresAt && Date.parse(expiresAt) <= Date.now()) {
-    await env.R2.delete(key).catch(() => undefined);
+    await applicationFilesBucket(env.R2).delete(key).catch(() => undefined);
     return null;
   }
 

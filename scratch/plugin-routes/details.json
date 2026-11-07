@@ -1,0 +1,26 @@
+[
+	{
+		"path": "/auth/roles/1",
+		"lang": "fr",
+		"status": 200,
+		"inputs": 2
+	},
+	{
+		"path": "/auth/scopes/1",
+		"lang": "fr",
+		"status": 200,
+		"inputs": 3
+	},
+	{
+		"path": "/auth/roles/1",
+		"lang": "en",
+		"status": 200,
+		"inputs": 2
+	},
+	{
+		"path": "/auth/scopes/1",
+		"lang": "en",
+		"status": 200,
+		"inputs": 3
+	}
+]

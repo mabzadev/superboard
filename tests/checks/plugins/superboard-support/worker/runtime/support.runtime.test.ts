@@ -2,6 +2,7 @@ import {
 	signProjectContext,
 	type InternalProjectContext,
 } from "@superboard/contracts/project-context";
+import { R2_FOLDERS } from "@superboard/contracts/r2";
 import { parseSupportRealtimeEvent } from "@superboard/contracts/support";
 import {
 	createExecutionContext,
@@ -794,7 +795,7 @@ describe("Support in the Workers runtime", () => {
 		});
 
 		const attachmentKey = `attachments/12/runtime/${conversationId}/proof.txt`;
-		await env.ATTACHMENTS.put(attachmentKey, "attachment proof", {
+		await env.ATTACHMENTS.put(`${R2_FOLDERS.support}${attachmentKey}`, "attachment proof", {
 			httpMetadata: { contentType: "text/plain" },
 			customMetadata: { conversationId, uploadedBy: "runtime-test" },
 		});
@@ -892,13 +893,17 @@ describe("Support in the Workers runtime", () => {
 		expect(createdResponse.status).toBe(201);
 		const created = await createdResponse.json<{ data: { id: string } }>();
 		const attachmentKey = `attachments/12/erasure/${created.data.id}/private.txt`;
-		await env.ATTACHMENTS.put(attachmentKey, "private support attachment", {
-			httpMetadata: { contentType: "text/plain" },
-			customMetadata: {
-				conversationId: created.data.id,
-				uploadedBy: subject,
+		await env.ATTACHMENTS.put(
+			`${R2_FOLDERS.support}${attachmentKey}`,
+			"private support attachment",
+			{
+				httpMetadata: { contentType: "text/plain" },
+				customMetadata: {
+					conversationId: created.data.id,
+					uploadedBy: subject,
+				},
 			},
-		});
+		);
 		const room = env.CONVERSATIONS.getByName(created.data.id);
 		const message = await room.fetch(
 			new Request("https://room.internal/messages", {
@@ -960,7 +965,7 @@ describe("Support in the Workers runtime", () => {
 		);
 		expect(replay.headers.get("idempotency-replayed")).toBe("true");
 
-		expect(await env.ATTACHMENTS.head(attachmentKey)).toBeNull();
+		expect(await env.ATTACHMENTS.head(`${R2_FOLDERS.support}${attachmentKey}`)).toBeNull();
 		const [conversations, contacts, audit] = await env.DB.batch([
 			env.DB.prepare(
 				"SELECT COUNT(*) total FROM conversations WHERE project_id = 12 AND external_user_id = ?",
@@ -1589,7 +1594,7 @@ describe("Support in the Workers runtime", () => {
 
 		const exportStorageKey = `exports/12/${exported.data.id}.json`;
 		await env.ATTACHMENTS.put(
-			exportStorageKey,
+			`${R2_FOLDERS.support}${exportStorageKey}`,
 			JSON.stringify({ data: [{ id: "contact-exported" }] }),
 			{
 				httpMetadata: { contentType: "application/json" },

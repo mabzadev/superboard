@@ -1,0 +1,483 @@
+[
+	{
+		"id": "01M25JRNY78CDVPZ5S6TWB372H",
+		"path": "/auth/users",
+		"replacement": "/auth/users",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRNY78CDVPZ5S6TWB372H"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP0Z0ASDA4FMHQ6VQQM2",
+		"path": "/identity/:lang/apps",
+		"replacement": "/auth/apps",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP0Z0ASDA4FMHQ6VQQM2"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP1KC2BGSYYE5JP6F5G9",
+		"path": "/identity/:lang/logs",
+		"replacement": "/auth/logs",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP1KC2BGSYYE5JP6F5G9"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP2JM10PNC2QCNFE2Q5E",
+		"path": "/products/customers",
+		"replacement": "/monetization/customers",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP2JM10PNC2QCNFE2Q5E"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP2XKWPDCTSMC1GGT12V",
+		"path": "/products/offerings",
+		"replacement": "/monetization/offerings",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP2XKWPDCTSMC1GGT12V"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP34JB01QZE6Y8KVK0KX",
+		"path": "/products/entitlements",
+		"replacement": "/monetization/entitlements",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP34JB01QZE6Y8KVK0KX"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP3GSK0QDH5NRQGH603S",
+		"path": "/flows/workflows",
+		"replacement": "/acquisition/workflows",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP3GSK0QDH5NRQGH603S"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP3QA3PFGD86AVGM22QS",
+		"path": "/flows/launchpad",
+		"replacement": "/acquisition/launchpad",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP3QA3PFGD86AVGM22QS"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP42ECQW6BZ93JAAKZ01",
+		"path": "/flows/components",
+		"replacement": "/acquisition/components",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP42ECQW6BZ93JAAKZ01"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP4AHGVCQ38ZXTCHQ6DE",
+		"path": "/flows/settings/environments",
+		"replacement": "/acquisition/settings/environments",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP4AHGVCQ38ZXTCHQ6DE"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP4Z5JGYATH2TGJ8EKV6",
+		"path": "/dynamic-links/links",
+		"replacement": "/acquisition/dynamic-links",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP4Z5JGYATH2TGJ8EKV6"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP555QDDRAV4A0FD9879",
+		"path": "/dynamic-links/campaigns",
+		"replacement": "/acquisition/dynamic-links/campaigns",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP555QDDRAV4A0FD9879"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP5CRFGAYGT52S1WCC04",
+		"path": "/dynamic-links/redirect-rules",
+		"replacement": "/acquisition/dynamic-links/redirect-rules",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP5CRFGAYGT52S1WCC04"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP5HNVX0DSHQX0GGG2E0",
+		"path": "/dynamic-links/domain",
+		"replacement": "/acquisition/dynamic-links/domain",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP5HNVX0DSHQX0GGG2E0"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP5QV6NT005X61VFKKXD",
+		"path": "/dynamic-links/social-media-preview",
+		"replacement": "/acquisition/dynamic-links/social-media-preview",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP5QV6NT005X61VFKKXD"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP5WCSRENYVW8WR54GCA",
+		"path": "/dynamic-links/tracking",
+		"replacement": "/acquisition/dynamic-links/tracking",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP5WCSRENYVW8WR54GCA"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP8B4GZNXVV8QP3PPS6Z",
+		"path": "/marketing/in-app-messages",
+		"replacement": "/communication/in-app-messages",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP8B4GZNXVV8QP3PPS6Z"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP8JYBZF6R9HW25NY29A",
+		"path": "/marketing/email",
+		"replacement": "/communication/marketing-email",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP8JYBZF6R9HW25NY29A"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP8RRJ7ZYJMZBX84EPHZ",
+		"path": "/marketing/campaigns",
+		"replacement": "/communication/campaigns",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP8RRJ7ZYJMZBX84EPHZ"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP91ADDDKBS7TJ9TQX5J",
+		"path": "/marketing/journeys",
+		"replacement": "/communication/journeys",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP91ADDDKBS7TJ9TQX5J"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP97AKR1MMGXHEQMG4GF",
+		"path": "/marketing/channels",
+		"replacement": "/communication/channels",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP97AKR1MMGXHEQMG4GF"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP9EJQVBBSVX55QKTC8D",
+		"path": "/marketing/statistics",
+		"replacement": "/communication/statistics",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP9EJQVBBSVX55QKTC8D"
+			}
+		}
+	},
+	{
+		"id": "01M25JRP9PJH4WNMANGRA5NZPJ",
+		"path": "/marketing/settings",
+		"replacement": "/communication/settings",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRP9PJH4WNMANGRA5NZPJ"
+			}
+		}
+	},
+	{
+		"id": "01M25JRQ5QMZ1Z06Y7T06ZXMEJ",
+		"path": "/system/content",
+		"replacement": "/data/content",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRQ5QMZ1Z06Y7T06ZXMEJ"
+			}
+		}
+	},
+	{
+		"id": "01M25JRQBAV11ZDBBKK4HTH9F9",
+		"path": "/dynamic-links/campaigns/:id",
+		"replacement": "/acquisition/dynamic-links/campaigns/:id",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRQBAV11ZDBBKK4HTH9F9"
+			}
+		}
+	},
+	{
+		"id": "01M25JRQBG7HP1TH3PSDVKSRQN",
+		"path": "/system/email",
+		"replacement": "/communication/email",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRQBG7HP1TH3PSDVKSRQN"
+			}
+		}
+	},
+	{
+		"id": "01M25JRQBPSY64875MZD3AF56V",
+		"path": "/system/files",
+		"replacement": "/data/files",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRQBPSY64875MZD3AF56V"
+			}
+		}
+	},
+	{
+		"id": "01M25JRQBWC65GS89572EFZ0GQ",
+		"path": "/flows/workflows/:id",
+		"replacement": "/acquisition/workflows/:id",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRQBWC65GS89572EFZ0GQ"
+			}
+		}
+	},
+	{
+		"id": "01M25JRQC1QQNFDE6GRFG7YPVH",
+		"path": "/flows/users/:id",
+		"replacement": "/acquisition/users/:id",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRQC1QQNFDE6GRFG7YPVH"
+			}
+		}
+	},
+	{
+		"id": "01M25JRQCA421YPXA8VPD8YB9X",
+		"path": "/notifications",
+		"replacement": "/communication/notifications",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRQCA421YPXA8VPD8YB9X"
+			}
+		}
+	},
+	{
+		"id": "01M25JRQDHDJRJPTY4BNQKBAGS",
+		"path": "/paywalls",
+		"replacement": "/acquisition/paywalls",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRQDHDJRJPTY4BNQKBAGS"
+			}
+		}
+	},
+	{
+		"id": "01M25JRQDQ9D8DKCBF4TYXYZ3R",
+		"path": "/paywalls/statistics",
+		"replacement": "/acquisition/paywalls/statistics",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M25JRQDQ9D8DKCBF4TYXYZ3R"
+			}
+		}
+	},
+	{
+		"id": "01M2WF7YXBC8HK2KM4PTN5B03D",
+		"path": "/identity/:lang/settings",
+		"replacement": "/auth/settings",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M2WF7YXBC8HK2KM4PTN5B03D"
+			}
+		}
+	},
+	{
+		"id": "01M2Z7T5JD9NQ9NMMQYAMM0P5D",
+		"path": "/products/products",
+		"replacement": "/monetization/products/products",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M2Z7T5JD9NQ9NMMQYAMM0P5D"
+			}
+		}
+	},
+	{
+		"id": "01M2Z7T5JWVNJQVV2KX9JPSX4Z",
+		"path": "/app/users",
+		"replacement": "/auth/users",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M2Z7T5JWVNJQVV2KX9JPSX4Z"
+			}
+		}
+	},
+	{
+		"id": "01M32HCZJ19SZAX14GT8GPFQ5X",
+		"path": "/products/purchases",
+		"replacement": "/monetization/purchases",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M32HCZJ19SZAX14GT8GPFQ5X"
+			}
+		}
+	},
+	{
+		"id": "01M32HCZJRF4E13EHH1JTF6VJ9",
+		"path": "/flows/users",
+		"replacement": "/acquisition/users",
+		"status": 200,
+		"body": {
+			"success": true,
+			"data": {
+				"deleted": true,
+				"id": "01M32HCZJRF4E13EHH1JTF6VJ9"
+			}
+		}
+	}
+]

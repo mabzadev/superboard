@@ -242,7 +242,7 @@ export function installationRegistry(env, fetchImpl = fetch) {
 					registrationHash,
 					target,
 					initial: true,
-					backupBucket: `superboard-${target.target}-backups`,
+					backupBucket: target.environments.production.r2.name,
 					backupKey: secret,
 				},
 				undefined,

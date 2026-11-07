@@ -1,11 +1,41 @@
-import { env, SELF } from "cloudflare:test";
+import { createMessageBatch, env, SELF } from "cloudflare:test";
 import { signProjectContext } from "@superboard/contracts/project-context";
+import { R2_FOLDERS } from "@superboard/contracts/r2";
 import { describe, expect, it } from "vitest";
+
+import { consumeFlowEvents } from "../../../../../../packages/plugins/superboard-acquisition/flows/src/queue/consumer";
 
 const secret = "flows-runtime-secret";
 const projectRef = "10-test";
 
 describe("Flows Worker runtime", () => {
+  it("quarantines dead letters under the flows folder of the shared bucket", async () => {
+    const key = "v1/dead-letters/project=10/dead-letter-runtime.json";
+    const batch = createMessageBatch("superboard-flows-events-dlq", [
+      {
+        id: "dead-letter-runtime",
+        timestamp: new Date(),
+        attempts: 5,
+        body: {
+          schemaVersion: 1,
+          eventId: "dead-letter-runtime",
+          projectId: 10,
+          projectRef,
+          environmentId: "runtime-environment",
+          userIdHash: "a".repeat(64),
+          name: "enter",
+          occurredAt: new Date().toISOString(),
+        },
+      },
+    ]);
+
+    await consumeFlowEvents(batch, env);
+
+    expect(await env.ARCHIVE.head(key)).toBeNull();
+    const archived = await env.ARCHIVE.get(`${R2_FOLDERS.flows}${key}`);
+    await expect(archived?.json()).resolves.toMatchObject({ attempts: 5 });
+  });
+
   it("requires signed project context on administrative and legacy routes", async () => {
     expect(
       (await SELF.fetch(`https://flows.internal/internal/v1/projects/${projectRef}/project`)).status,

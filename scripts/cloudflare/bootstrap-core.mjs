@@ -184,6 +184,7 @@ export function buildCloudflareBootstrapPlan({
 	const resources = [];
 	const operations = [];
 	const blockers = [];
+	const createdBuckets = new Set();
 	for (const resource of desired) {
 		const inventory = inventories[resource.kind];
 		if (!Array.isArray(inventory)) {
@@ -310,6 +311,11 @@ export function buildCloudflareBootstrapPlan({
 			}
 			continue;
 		}
+		if (resource.kind === "r2" && createdBuckets.has(resource.name)) {
+			resources.push(resourceState(resource, "create", null));
+			continue;
+		}
+		if (resource.kind === "r2") createdBuckets.add(resource.name);
 		const operation = operationFor("create", resource, null);
 		operations.push(operation);
 		resources.push(resourceState(resource, "create", null));
@@ -507,7 +513,7 @@ function assertUniqueDesiredResources(resources) {
 		}
 		keys.add(resource.key);
 		const identity = `${resource.kind}:${resource.name}`;
-		if (namesByKind.has(identity)) {
+		if (namesByKind.has(identity) && resource.kind !== "r2") {
 			throw new Error(`Duplicate desired Cloudflare resource ${identity}`);
 		}
 		namesByKind.add(identity);

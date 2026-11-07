@@ -2,6 +2,7 @@ import { createFetchRouter } from "@superboard/contracts/route-registry";
 import { DurableObject } from "cloudflare:workers";
 import { parseMessageInput, readJsonObject } from "./validation";
 import type { Actor, Conversation, Env } from "./types";
+import { attachmentsBucket } from "./attachments-bucket";
 import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
 import { runConversationAutomations } from "./workflows";
 import { publishSupportEvent } from "./webhooks";
@@ -172,7 +173,7 @@ export class ConversationRoom extends DurableObject<Env> {
     const attachmentObjects = await Promise.all(
       input.attachments.map(async (attachment) => ({
         input: attachment,
-        object: await this.env.ATTACHMENTS.head(attachment.key),
+        object: await attachmentsBucket(this.env).head(attachment.key),
       })),
     );
     for (const attachment of attachmentObjects) {

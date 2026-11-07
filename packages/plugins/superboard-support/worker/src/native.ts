@@ -2,6 +2,7 @@ import { registerRouter } from "@superboard/contracts/route-registry";
 import { isSafePublicHttpsUrl } from "@superboard/contracts/url-security";
 import { Hono } from "hono";
 
+import { attachmentsBucket } from "./attachments-bucket";
 import { startIntegrationOAuth } from "./integration-oauth";
 import {
 	nativeIntegrationCredentialState,
@@ -1684,7 +1685,7 @@ native.get("/:projectId/reports/exports/:id/download", async (c) => {
 	if (row.status !== "completed" || typeof row.storage_key !== "string" || !row.storage_key) {
 		throw failure("support_report_export_not_ready", "Support report export is not ready", 409);
 	}
-	const object = await c.env.ATTACHMENTS.get(row.storage_key);
+	const object = await attachmentsBucket(c.env).get(row.storage_key);
 	if (!object)
 		throw failure(
 			"support_report_export_unavailable",

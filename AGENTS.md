@@ -438,6 +438,12 @@ In libraries used in a Worker but not themselves Workers, install `@cloudflare/w
 
 TypeScript: target ES2023, module `preserve`, strict mode with `noUncheckedIndexedAccess`, `noImplicitOverride`, `verbatimModuleSyntax`.
 
+# Local Dev Server
+
+`pnpm site:dev` serves SuperBoard Site at `http://localhost:4321`, bound to `127.0.0.1`. On the `mabzawork` machine, Tailscale Serve exposes it to the tailnet at `https://mabzawork.tailfa2cd9.ts.net:8443` (tailnet only). Give this URL when someone needs to open the site from another device. The admin lives at `/_emdash/admin` on both origins.
+
+If `tailscale serve status` no longer lists port 8443, restore the mapping with `tailscale serve --bg --https=8443 http://127.0.0.1:4321`.
+
 # Dev Bypass for Browser Testing
 
 Passkey auth can't be automated in browser tests. Two dev-only endpoints (`import.meta.env.DEV` only, 403 in prod):

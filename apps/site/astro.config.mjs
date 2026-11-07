@@ -2,6 +2,7 @@ import cloudflare from "@astrojs/cloudflare";
 import react from "@astrojs/react";
 import { d1, r2, sandbox } from "@emdash-cms/cloudflare";
 import { cloudflareEmail } from "@emdash-cms/cloudflare/plugins";
+import { R2_FOLDERS } from "@superboard/contracts/r2";
 import { defineConfig } from "astro/config";
 import emdash from "emdash/astro";
 
@@ -62,7 +63,7 @@ export default defineConfig({
 		emdash({
 			middleware: { outer: new URL("./src/mcp-middleware.ts", import.meta.url) },
 			database: d1({ binding: "DB", session: "disabled" }),
-			storage: r2({ binding: "MEDIA" }),
+			storage: r2({ binding: "MEDIA", prefix: R2_FOLDERS.site }),
 			plugins: [
 				cloudflareEmail({
 					from: { email: emailFromAddress, name: emailFromName },

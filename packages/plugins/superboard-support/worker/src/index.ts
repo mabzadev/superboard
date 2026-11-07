@@ -13,6 +13,7 @@ import {
 	type SupportPrincipal,
 	type SupportRole,
 } from "./access";
+import { attachmentsBucket } from "./attachments-bucket";
 import {
 	requireInternal,
 	requireProject,
@@ -1467,7 +1468,7 @@ app.delete("/internal/v1/projects/:projectId/application/users/:userId", async (
 		}
 	}
 	for (let index = 0; index < attachments.results.length; index += 1_000) {
-		await c.env.ATTACHMENTS.delete(
+		await attachmentsBucket(c.env).delete(
 			attachments.results.slice(index, index + 1_000).map((attachment) => attachment.storage_key),
 		);
 	}
@@ -2793,8 +2794,8 @@ async function storeAttachment(
 				409,
 			);
 		}
-		if (!(await env.ATTACHMENTS.head(existing.storage_key))) {
-			await env.ATTACHMENTS.put(existing.storage_key, bytes, {
+		if (!(await attachmentsBucket(env).head(existing.storage_key))) {
+			await attachmentsBucket(env).put(existing.storage_key, bytes, {
 				httpMetadata: { contentType },
 				customMetadata: { conversationId: conversation.id, uploadedBy: uploaderHash },
 			});
@@ -2826,7 +2827,7 @@ async function storeAttachment(
 	if (!inserted) {
 		throw failure("idempotency_conflict", "Attachment upload is already being processed", 409);
 	}
-	await env.ATTACHMENTS.put(key, bytes, {
+	await attachmentsBucket(env).put(key, bytes, {
 		httpMetadata: { contentType },
 		customMetadata: {
 			conversationId: conversation.id,
@@ -2895,7 +2896,7 @@ async function attachmentResponse(
 			attachment_content_type: string | null;
 		}>();
 	if (!message) throw failure("attachment_not_found", "Attachment not found", 404);
-	const object = await env.ATTACHMENTS.get(message.attachment_key);
+	const object = await attachmentsBucket(env).get(message.attachment_key);
 	if (!object) throw failure("attachment_not_found", "Attachment not found", 404);
 	const headers = new Headers();
 	object.writeHttpMetadata(headers);

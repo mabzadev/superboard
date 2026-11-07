@@ -15,14 +15,38 @@ import {
 import { loadTarget } from "../../../scripts/cloudflare/target.mjs";
 import { targetWithoutResourceIds } from "../../fixtures/cloudflare/factories.mjs";
 
+test("bootstrap creates a bucket shared by several modules once", async () => {
+	const { target: source } = await loadTarget("mabza-development");
+	const target = structuredClone(source);
+	const environment = target.environments.development;
+	environment.siteMedia.name = "superboard-files";
+	environment.r2.name = "superboard-files";
+	for (const resource of Object.values(environment.moduleR2)) resource.name = "superboard-files";
+
+	const plan = buildCloudflareBootstrapPlan({
+		target,
+		environment: "development",
+		accountId: "a".repeat(32),
+		inventories: { d1: [], kv: [], r2: [], queue: [], vectorize: [] },
+	});
+
+	assert.deepEqual(
+		plan.operations.filter(({ kind }) => kind === "r2").map(({ name }) => name),
+		["superboard-files"],
+	);
+	assert.ok(
+		plan.resources
+			.filter(({ kind }) => kind === "r2")
+			.every(({ key, state }) => key && state === "create"),
+	);
+});
+
 test("bootstrap inventory is derived from enabled target features", async () => {
 	const { target } = await loadTarget("mabza-development");
 	const resources = desiredCloudflareResources(target, "development");
 	assert.equal(new Set(resources.map(({ key }) => key)).size, resources.length);
-	assert.equal(
-		new Set(resources.map(({ kind, name }) => `${kind}:${name}`)).size,
-		resources.length,
-	);
+	const unshared = resources.filter(({ kind }) => kind !== "r2");
+	assert.equal(new Set(unshared.map(({ kind, name }) => `${kind}:${name}`)).size, unshared.length);
 	assert.equal(
 		resources.some(({ key }) => key === "messagingD1"),
 		false,
@@ -352,7 +376,9 @@ function inventoriesFor(resources) {
 				title: resource.name,
 			});
 		} else if (resource.kind === "r2") {
-			inventories.r2.push({ name: resource.name });
+			if (!inventories.r2.some(({ name }) => name === resource.name)) {
+				inventories.r2.push({ name: resource.name });
+			}
 		} else if (resource.kind === "vectorize") {
 			inventories.vectorize.push({
 				name: resource.name,

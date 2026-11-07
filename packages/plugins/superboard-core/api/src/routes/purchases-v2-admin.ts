@@ -7,6 +7,7 @@ import {
 	persistAppleNotificationConfiguration,
 	readAppleNotificationConfiguration,
 } from "../lib/apple-notification-configuration";
+import { applicationFilesBucket } from "../lib/application-files-bucket";
 import {
 	identifyCustomer,
 	queueCustomerEntitlementChanged,
@@ -4520,7 +4521,7 @@ admin.get("/:projectId/exports/:id/download", async (c) => {
 				503,
 				true,
 			);
-		const object = await c.env.R2.get(job.r2_key);
+		const object = await applicationFilesBucket(c.env.R2).get(job.r2_key);
 		if (!object) throw purchasesError("export_file_not_found", "Export file not found", 404);
 		return new Response(object.body, {
 			headers: {

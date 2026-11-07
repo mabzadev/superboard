@@ -239,7 +239,7 @@
 				"id": "b00b7274-238a-4f5b-9fc3-d4321cf2a200"
 			},
 			"siteMedia": {
-				"name": "superboard-dev-site-media"
+				"name": "superboard-files"
 			},
 			"siteSessionKv": {
 				"name": "superboard-dev-site-session",
@@ -254,7 +254,7 @@
 				"id": "f961a6d6fb3440a4a45bd30d927d675d"
 			},
 			"r2": {
-				"name": "superboard-dev-files"
+				"name": "superboard-files"
 			},
 			"emailD1": {
 				"name": "superboard-dev-email-db",
@@ -314,16 +314,16 @@
 			},
 			"moduleR2": {
 				"support": {
-					"name": "superboard-dev-support-v2-attachments"
+					"name": "superboard-files"
 				},
 				"analytics": {
-					"name": "superboard-dev-analytics-events"
+					"name": "superboard-files"
 				},
 				"marketing": {
-					"name": "superboard-dev-marketing-media"
+					"name": "superboard-files"
 				},
 				"flows": {
-					"name": "superboard-dev-flows-archive"
+					"name": "superboard-files"
 				}
 			},
 			"moduleVectorize": {
@@ -390,7 +390,7 @@
 				"id": null
 			},
 			"siteMedia": {
-				"name": "superboard-local-site-media"
+				"name": "superboard-local-files"
 			},
 			"siteSessionKv": {
 				"name": "superboard-local-site-session",
@@ -465,16 +465,16 @@
 			},
 			"moduleR2": {
 				"support": {
-					"name": "superboard-local-support-v2-attachments"
+					"name": "superboard-local-files"
 				},
 				"analytics": {
-					"name": "superboard-local-analytics-events"
+					"name": "superboard-local-files"
 				},
 				"marketing": {
-					"name": "superboard-local-marketing-media"
+					"name": "superboard-local-files"
 				},
 				"flows": {
-					"name": "superboard-local-flows-archive"
+					"name": "superboard-local-files"
 				}
 			},
 			"moduleVectorize": {

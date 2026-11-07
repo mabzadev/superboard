@@ -1,0 +1,462 @@
+[
+	{
+		"path": "/system/audit?tab=details",
+		"expected": "/core/audit?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/system/content?tab=details",
+		"expected": "/data/content?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/products/offerings?tab=details",
+		"expected": "/monetization/offerings?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/android-setup?tab=details",
+		"expected": "/core/android-setup?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/ios-setup?tab=details",
+		"expected": "/core/ios-setup?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/libraries?tab=details",
+		"expected": "/core/libraries?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/web-setup?tab=details",
+		"expected": "/core/web-setup?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/project-settings?tab=details",
+		"expected": "/core/settings?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/accept-invite?tab=details",
+		"expected": "/auth/accept-invite?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/account?tab=details",
+		"expected": "/auth/account?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/access-key?tab=details",
+		"expected": "/auth/access-key?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/customers?tab=details",
+		"expected": "/auth/customers?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/members?tab=details",
+		"expected": "/auth/users?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/profile?tab=details",
+		"expected": "/auth/profile?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/referrals?tab=details",
+		"expected": "/auth/referrals?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app/users?tab=details",
+		"expected": "/auth/users?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/identity?tab=details",
+		"expected": "/auth?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr?tab=details",
+		"expected": "/auth?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/account?tab=details",
+		"expected": "/auth/account-policies?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/apps?tab=details",
+		"expected": "/auth/apps?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/apps/example-id?tab=details",
+		"expected": "/auth/apps/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/apps/banners/example-id?tab=details",
+		"expected": "/auth/apps/banners/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/apps/banners/new?tab=details",
+		"expected": "/auth/apps/banners/new?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/apps/new?tab=details",
+		"expected": "/auth/apps/new?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/dashboard?tab=details",
+		"expected": "/auth/settings?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/logs?tab=details",
+		"expected": "/auth/logs?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/logs/email/example-id?tab=details",
+		"expected": "/auth/logs/email/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/logs/sign-in/example-id?tab=details",
+		"expected": "/auth/logs/sign-in/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/logs/sms/example-id?tab=details",
+		"expected": "/auth/logs/sms/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/orgs?tab=details",
+		"expected": "/auth/orgs?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/orgs/example-id?tab=details",
+		"expected": "/auth/orgs/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/orgs/new?tab=details",
+		"expected": "/auth/orgs/new?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/roles?tab=details",
+		"expected": "/auth/roles?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/roles/example-id?tab=details",
+		"expected": "/auth/roles/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/roles/new?tab=details",
+		"expected": "/auth/roles/new?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/saml?tab=details",
+		"expected": "/auth/saml?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/saml/example-id?tab=details",
+		"expected": "/auth/saml/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/saml/new?tab=details",
+		"expected": "/auth/saml/new?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/scopes?tab=details",
+		"expected": "/auth/scopes?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/scopes/example-id?tab=details",
+		"expected": "/auth/scopes/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/scopes/new?tab=details",
+		"expected": "/auth/scopes/new?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/user-attributes?tab=details",
+		"expected": "/auth/user-attributes?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/user-attributes/example-id?tab=details",
+		"expected": "/auth/user-attributes/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/user-attributes/new?tab=details",
+		"expected": "/auth/user-attributes/new?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/users?tab=details",
+		"expected": "/auth/directory/users?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/identity/fr/users/example-id?tab=details",
+		"expected": "/auth/directory/users/example-id?tab=details&lang=fr",
+		"status": 308
+	},
+	{
+		"path": "/login?tab=details",
+		"expected": "/auth/login?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/new_password?tab=details",
+		"expected": "/auth/new-password?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/register?tab=details",
+		"expected": "/auth/register?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/register/with_email?tab=details",
+		"expected": "/auth/register/with-email?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/reset_password?tab=details",
+		"expected": "/auth/reset-password?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/?tab=details",
+		"expected": "/analytics/home?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/analytics/dashboards?tab=details",
+		"expected": "/analytics?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/app?tab=details",
+		"expected": "/analytics/app?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/dashboard?tab=details",
+		"expected": "/analytics?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/products/customers?tab=details",
+		"expected": "/monetization/customers?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/products/entitlements?tab=details",
+		"expected": "/monetization/entitlements?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/products/purchases?tab=details",
+		"expected": "/monetization/purchases?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/dynamic-links/campaigns?tab=details",
+		"expected": "/acquisition/dynamic-links/campaigns?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/dynamic-links/campaigns/example-id?tab=details",
+		"expected": "/acquisition/dynamic-links/campaigns/example-id?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/dynamic-links/domain?tab=details",
+		"expected": "/acquisition/dynamic-links/domain?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/dynamic-links/links?tab=details",
+		"expected": "/acquisition/dynamic-links?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/dynamic-links/redirect-rules?tab=details",
+		"expected": "/acquisition/dynamic-links/redirect-rules?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/dynamic-links/social-media-preview?tab=details",
+		"expected": "/acquisition/dynamic-links/social-media-preview?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/dynamic-links/tracking?tab=details",
+		"expected": "/acquisition/dynamic-links/tracking?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/system/email?tab=details",
+		"expected": "/communication/email?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/system/files?tab=details",
+		"expected": "/data/files?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows?tab=details",
+		"expected": "/acquisition/overview?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows/components?tab=details",
+		"expected": "/acquisition/components?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows/launchpad?tab=details",
+		"expected": "/acquisition/launchpad?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows/settings/environments?tab=details",
+		"expected": "/acquisition/settings/environments?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows/settings/localization?tab=details",
+		"expected": "/acquisition/settings/localization?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows/settings/sdk?tab=details",
+		"expected": "/acquisition/settings/sdk?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows/users?tab=details",
+		"expected": "/acquisition/users?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows/users/example-id?tab=details",
+		"expected": "/acquisition/users/example-id?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows/workflows?tab=details",
+		"expected": "/acquisition/workflows?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/flows/workflows/example-id?tab=details",
+		"expected": "/acquisition/workflows/example-id?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/system/gateway?tab=details",
+		"expected": "/core/gateway?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/marketing/campaigns?tab=details",
+		"expected": "/communication/campaigns?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/marketing/channels?tab=details",
+		"expected": "/communication/channels?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/marketing/email?tab=details",
+		"expected": "/communication/marketing-email?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/marketing/in-app-messages?tab=details",
+		"expected": "/communication/in-app-messages?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/marketing/journeys?tab=details",
+		"expected": "/communication/journeys?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/marketing/settings?tab=details",
+		"expected": "/communication/settings?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/marketing/statistics?tab=details",
+		"expected": "/communication/statistics?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/message-preview-craft?tab=details",
+		"expected": "/communication/message-preview?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/mcp/authorize?tab=details",
+		"expected": "/core/mcp/authorize?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/infrastructure?tab=details",
+		"expected": "/core/infrastructure?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/onboardings?tab=details",
+		"expected": "/acquisition/onboardings?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/onboardings/statistics?tab=details",
+		"expected": "/acquisition/onboardings/statistics?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/paywalls?tab=details",
+		"expected": "/acquisition/paywalls?tab=details",
+		"status": 308
+	},
+	{
+		"path": "/paywalls/statistics?tab=details",
+		"expected": "/acquisition/paywalls/statistics?tab=details",
+		"status": 308
+	}
+]

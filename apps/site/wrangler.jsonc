@@ -20,7 +20,7 @@
   "r2_buckets": [
     {
       "binding": "MEDIA",
-      "bucket_name": "superboard-local-site-media"
+      "bucket_name": "superboard-local-files"
     }
   ],
   "kv_namespaces": [
@@ -82,7 +82,7 @@
     "SUPERBOARD_PLUGIN_IDS": "[\"superboard-analytics\",\"superboard-audit\",\"superboard-billing\",\"superboard-content\",\"superboard-dynamic-links\",\"superboard-email\",\"superboard-files\",\"superboard-flows\",\"superboard-gateway\",\"superboard-marketing\",\"superboard-mcp\",\"superboard-observability\",\"superboard-onboardings\",\"superboard-paywalls\",\"superboard-products\",\"superboard-settings\",\"superboard-support\",\"superboard-user\"]",
     "SUPERBOARD_RELEASE_OPERATIONS": "enabled",
     "D1_EXPECTED_MIGRATION": "0063_plugin_manifest_refresh.sql",
-    "TARGET_ARTIFACT_CHECKSUM": "sha256:a8fe8f40d1d60653ca40fbac4f2aaa89377f105ade979b858d4c96d78ec82527"
+    "TARGET_ARTIFACT_CHECKSUM": "sha256:de13bec16040b27dc8590930e680dafd57d8350182172163c64663ffab9c1062"
   },
   "triggers": {
     "crons": [

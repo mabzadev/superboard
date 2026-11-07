@@ -11,6 +11,7 @@ import { Hono, type Context, type Next } from "hono";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
 import { FilesInputError } from "./errors.js";
+import { filesBucket } from "./files-bucket.js";
 import { handleOperatorFiles, operatorFileRoutes } from "./operator.js";
 
 export type FilesEnv = Cloudflare.Env;
@@ -67,7 +68,7 @@ app.get("/health", async (c) => {
 				users_with_files: number;
 			}>(),
 			inspectSqlSchemaHealth(c.env.DB, c.env.D1_EXPECTED_MIGRATION),
-			c.env.FILES.head("superboard/readiness"),
+			filesBucket(c.env).head("superboard/readiness"),
 		]);
 		const maximum = maximumBytes(c.env);
 		const contentTypes = allowedContentTypes(c.env);
@@ -191,21 +192,21 @@ app.post("/v1/files", async (c) => {
 		const fixed = new FixedLengthStream(contentLength);
 		const piping = boundedBody.pipeTo(fixed.writable);
 		const stored = await Promise.allSettled([
-			c.env.FILES.put(objectKey, fixed.readable, metadata),
+			filesBucket(c.env).put(objectKey, fixed.readable, metadata),
 			piping,
 		]);
 		if (stored[1].status === "rejected") throw stored[1].reason;
 		if (stored[0].status === "rejected") throw stored[0].reason;
 		object = stored[0].value;
 	} else {
-		object = await c.env.FILES.put(
+		object = await filesBucket(c.env).put(
 			objectKey,
 			await readBytesLimited(new Response(boundedBody), maximum),
 			metadata,
 		);
 	}
 	if (byteSize === 0) {
-		await c.env.FILES.delete(objectKey);
+		await filesBucket(c.env).delete(objectKey);
 		return error("file_empty", "A non-empty file is required", 422);
 	}
 	try {
@@ -216,7 +217,7 @@ app.post("/v1/files", async (c) => {
 			.bind(id, c.get("userId"), objectKey, filename, contentType, byteSize, object.etag)
 			.run();
 	} catch (cause) {
-		await c.env.FILES.delete(objectKey).catch(() => undefined);
+		await filesBucket(c.env).delete(objectKey).catch(() => undefined);
 		throw cause;
 	}
 	return json(
@@ -241,7 +242,7 @@ app.get("/v1/files/:id", async (c) => {
 app.get("/v1/files/:id/content", async (c) => {
 	const row = await ownedFile(c.env.DB, c.get("userId"), c.req.param("id"));
 	if (!row) return error("file_not_found", "File was not found", 404);
-	return serveFile(c.env.FILES, row, c.req.header("range"));
+	return serveFile(filesBucket(c.env), row, c.req.header("range"));
 });
 
 async function serveFile(
@@ -279,7 +280,7 @@ async function serveFile(
 app.delete("/v1/files/:id", async (c) => {
 	const row = await ownedFile(c.env.DB, c.get("userId"), c.req.param("id"));
 	if (!row) return error("file_not_found", "File was not found", 404);
-	await c.env.FILES.delete(row.object_key);
+	await filesBucket(c.env).delete(row.object_key);
 	await c.env.DB.prepare("DELETE FROM application_files WHERE id=? AND user_id=?")
 		.bind(row.id, c.get("userId"))
 		.run();
@@ -328,7 +329,7 @@ app.get("/v1/downloads/:ticket", async (c) => {
 	if (!row || !(await constantTimeEqual(await sha256(row.user_id), payload.ownerHash))) {
 		return error("file_not_found", "File was not found", 404);
 	}
-	return serveFile(c.env.FILES, row, c.req.header("range"));
+	return serveFile(filesBucket(c.env), row, c.req.header("range"));
 });
 
 app.delete("/internal/v1/users/:id", async (c) => {
@@ -346,7 +347,7 @@ app.delete("/internal/v1/users/:id", async (c) => {
 				.all<{ id: string; object_key: string }>()
 		).results;
 		if (rows.length === 0) break;
-		await c.env.FILES.delete(rows.map((row) => row.object_key));
+		await filesBucket(c.env).delete(rows.map((row) => row.object_key));
 		const placeholders = rows.map(() => "?").join(",");
 		await c.env.DB.prepare(
 			`DELETE FROM application_files WHERE user_id=? AND id IN (${placeholders})`,

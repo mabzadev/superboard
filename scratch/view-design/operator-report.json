@@ -1,0 +1,146 @@
+[
+	{
+		"path": "/login",
+		"locale": "fr",
+		"theme": "light",
+		"screenshot": "guest-fr-light-_login.png"
+	},
+	{
+		"path": "/register",
+		"locale": "fr",
+		"theme": "light",
+		"screenshot": "guest-fr-light-_register.png"
+	},
+	{
+		"path": "/register/with_email",
+		"locale": "fr",
+		"theme": "light",
+		"screenshot": "guest-fr-light-_register_with_email.png"
+	},
+	{
+		"path": "/reset_password",
+		"locale": "fr",
+		"theme": "light",
+		"screenshot": "guest-fr-light-_reset_password.png"
+	},
+	{
+		"path": "/new_password",
+		"locale": "fr",
+		"theme": "light",
+		"screenshot": "guest-fr-light-_new_password.png"
+	},
+	{
+		"path": "/accept-invite",
+		"locale": "fr",
+		"theme": "light",
+		"screenshot": "guest-fr-light-_accept-invite.png"
+	},
+	{
+		"path": "/login",
+		"locale": "fr",
+		"theme": "dark",
+		"screenshot": "guest-fr-dark-_login.png"
+	},
+	{
+		"path": "/register",
+		"locale": "fr",
+		"theme": "dark",
+		"screenshot": "guest-fr-dark-_register.png"
+	},
+	{
+		"path": "/register/with_email",
+		"locale": "fr",
+		"theme": "dark",
+		"screenshot": "guest-fr-dark-_register_with_email.png"
+	},
+	{
+		"path": "/reset_password",
+		"locale": "fr",
+		"theme": "dark",
+		"screenshot": "guest-fr-dark-_reset_password.png"
+	},
+	{
+		"path": "/new_password",
+		"locale": "fr",
+		"theme": "dark",
+		"screenshot": "guest-fr-dark-_new_password.png"
+	},
+	{
+		"path": "/accept-invite",
+		"locale": "fr",
+		"theme": "dark",
+		"screenshot": "guest-fr-dark-_accept-invite.png"
+	},
+	{
+		"path": "/login",
+		"locale": "en",
+		"theme": "light",
+		"screenshot": "guest-en-light-_login.png"
+	},
+	{
+		"path": "/register",
+		"locale": "en",
+		"theme": "light",
+		"screenshot": "guest-en-light-_register.png"
+	},
+	{
+		"path": "/register/with_email",
+		"locale": "en",
+		"theme": "light",
+		"screenshot": "guest-en-light-_register_with_email.png"
+	},
+	{
+		"path": "/reset_password",
+		"locale": "en",
+		"theme": "light",
+		"screenshot": "guest-en-light-_reset_password.png"
+	},
+	{
+		"path": "/new_password",
+		"locale": "en",
+		"theme": "light",
+		"screenshot": "guest-en-light-_new_password.png"
+	},
+	{
+		"path": "/accept-invite",
+		"locale": "en",
+		"theme": "light",
+		"screenshot": "guest-en-light-_accept-invite.png"
+	},
+	{
+		"path": "/login",
+		"locale": "en",
+		"theme": "dark",
+		"screenshot": "guest-en-dark-_login.png"
+	},
+	{
+		"path": "/register",
+		"locale": "en",
+		"theme": "dark",
+		"screenshot": "guest-en-dark-_register.png"
+	},
+	{
+		"path": "/register/with_email",
+		"locale": "en",
+		"theme": "dark",
+		"screenshot": "guest-en-dark-_register_with_email.png"
+	},
+	{
+		"path": "/reset_password",
+		"locale": "en",
+		"theme": "dark",
+		"screenshot": "guest-en-dark-_reset_password.png"
+	},
+	{
+		"path": "/new_password",
+		"locale": "en",
+		"theme": "dark",
+		"screenshot": "guest-en-dark-_new_password.png"
+	},
+	{
+		"path": "/accept-invite",
+		"locale": "en",
+		"theme": "dark",
+		"screenshot": "guest-en-dark-_accept-invite.png"
+	}
+]

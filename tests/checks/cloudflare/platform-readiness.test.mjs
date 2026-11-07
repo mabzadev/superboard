@@ -97,7 +97,7 @@ test("Site storage IDs block readiness independently and together", async () => 
 	}
 });
 
-test("Site media isolation requires both named buckets and rejects shared storage", async () => {
+test("Site media isolation requires both named buckets and accepts one bucket split by folders", async () => {
 	const { target: source } = await loadTarget("mabza-development");
 	const missingSite = structuredClone(source);
 	delete missingSite.environments.development.siteMedia;
@@ -105,9 +105,9 @@ test("Site media isolation requires both named buckets and rejects shared storag
 	const missingApi = structuredClone(source);
 	delete missingApi.environments.development.r2;
 	assert.equal(targetReadiness(missingApi, "development").acceptance.frontMediaIsolated, false);
-	const shared = structuredClone(source);
-	shared.environments.development.siteMedia.name = shared.environments.development.r2.name;
-	assert.equal(targetReadiness(shared, "development").acceptance.frontMediaIsolated, false);
+	const separate = structuredClone(source);
+	separate.environments.development.siteMedia.name = "superboard-dev-site-media";
+	assert.equal(targetReadiness(separate, "development").acceptance.frontMediaIsolated, true);
 	assert.equal(targetReadiness(source, "development").acceptance.frontMediaIsolated, true);
 });
 

@@ -166,7 +166,7 @@ export async function applyRenderedChatwoot({
 			if (!key || key.startsWith("/") || key.split("/").includes(".."))
 				throw new Error(`Invalid R2 storage key at upload ${position}`);
 			if (checkpoint.uploads[key]?.sha256 === object.sha256) continue;
-			const objectPath = `${rendered.uploads.bucket_name}/${key}`;
+			const objectPath = `${rendered.uploads.bucket_name}/support/${key}`;
 			execute(
 				"npx",
 				[
