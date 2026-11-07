@@ -1,7 +1,7 @@
 import type { Caller } from "../platform/caller.js";
 import type { DataEnv } from "../platform/env.js";
 import { DataError, isRecord, nowIso } from "../platform/http.js";
-import { assertAllowed, ownerScope } from "../platform/policy.js";
+import { allows, assertAllowed, ownerScope, type AccessRule } from "../platform/policy.js";
 import {
 	cursorClause,
 	encodeCursor,
@@ -115,44 +115,58 @@ export async function insertRows(
 		throw new DataError(422, "batch_invalid", `Insert 1 to ${MAXIMUM_BATCH} rows at once`);
 	const now = nowIso();
 	const quoted = quoteIdentifier(physicalTable(projectId, table.name));
-	const updateOwner = options.upsert ? ownerScope(table.rules.update, caller) : null;
-	const statements = inputs.map((input) => {
+	const existing = options.upsert
+		? await existingOwners(env, quoted, inputs)
+		: new Map<string, string | null>();
+	const updateOwner = ownerScope(table.rules.update, caller);
+	const planned = inputs.map((input) => {
+		const id = isRecord(input) && typeof input.id === "string" ? input.id.toLowerCase() : null;
+		if (id !== null && existing.has(id)) {
+			if (updateOwner !== null && existing.get(id) !== updateOwner)
+				throw new DataError(
+					409,
+					"upsert_denied",
+					"An existing row cannot be updated by this caller",
+				);
+			const changes = { ...(input as Record<string, unknown>) };
+			delete changes.id;
+			if (caller.role !== "service" && changes.owner_id === caller.userId) delete changes.owner_id;
+			const assignments = updateValues(table, caller, changes, { allowEmpty: true });
+			assignments.set("updated_at", now);
+			const names = [...assignments.keys()];
+			return {
+				event: "UPDATE" as const,
+				statement: env.DB.prepare(
+					`UPDATE ${quoted} SET ${names.map((name) => `${quoteIdentifier(name)} = ?`).join(", ")} WHERE "id" = ? RETURNING *`,
+				).bind(...assignments.values(), id),
+			};
+		}
 		const values = insertValues(table, caller, input, now);
 		const names = [...values.keys()];
-		const columns = names.map(quoteIdentifier).join(", ");
-		const placeholders = names.map(() => "?").join(", ");
-		let sql = `INSERT INTO ${quoted} (${columns}) VALUES (${placeholders})`;
-		const bound = [...values.values()];
-		if (options.upsert) {
-			const updates = names
-				.filter((name) => !["id", "owner_id", "created_at"].includes(name))
-				.map((name) => `${quoteIdentifier(name)} = excluded.${quoteIdentifier(name)}`);
-			sql += ` ON CONFLICT("id") DO UPDATE SET ${updates.join(", ")}`;
-			if (updateOwner !== null) {
-				sql += ` WHERE ${quoted}."owner_id" = ?`;
-				bound.push(updateOwner);
-			}
-		}
-		if (bound.length > MAXIMUM_BOUND_PARAMETERS)
+		if (names.length > MAXIMUM_BOUND_PARAMETERS)
 			throw new DataError(422, "query_too_complex", "The row has too many values");
-		return env.DB.prepare(`${sql} RETURNING *`).bind(...bound);
+		return {
+			event: "INSERT" as const,
+			statement: env.DB.prepare(
+				`INSERT INTO ${quoted} (${names.map(quoteIdentifier).join(", ")}) VALUES (${names.map(() => "?").join(", ")}) RETURNING *`,
+			).bind(...values.values()),
+		};
 	});
 	let results: D1Result<Row>[];
 	try {
-		results = await env.DB.batch<Row>(statements);
+		results = await env.DB.batch<Row>(planned.map((entry) => entry.statement));
 	} catch (cause) {
 		throw constraintError(cause);
 	}
-	const rows = results.map((result) => {
+	const written = results.map((result) => {
 		const row = result.results[0];
-		if (!row)
-			throw new DataError(409, "upsert_denied", "An existing row cannot be updated by this caller");
+		if (!row) throw new DataError(409, "row_conflict", "The row changed during the write; retry");
 		return serializeRow(table, row, null);
 	});
 	return {
-		rows,
-		changes: rows.map((row) => ({
-			event: row.created_at === now || !options.upsert ? "INSERT" : "UPDATE",
+		rows: written.map((row) => visibleRow(table, caller, row)),
+		changes: written.map((row, index) => ({
+			event: planned[index]?.event ?? "INSERT",
 			record: row,
 			old_record: null,
 		})),
@@ -174,12 +188,7 @@ export async function updateRows(
 		sql: [...assignments.keys()].map((name) => `${quoteIdentifier(name)} = ?`).join(", "),
 		values: [...assignments.values()],
 	};
-	const target = selectionFragment(
-		projectId,
-		table,
-		selection,
-		ownerScope(table.rules.update, caller),
-	);
+	const target = selectionFragment(projectId, table, selection, caller, table.rules.update);
 	if (set.values.length + target.values.length > MAXIMUM_BOUND_PARAMETERS)
 		throw new DataError(422, "query_too_complex", "The update has too many values");
 	let results: Row[];
@@ -194,7 +203,10 @@ export async function updateRows(
 	}
 	if ("id" in selection && results.length === 0) throw notFound();
 	const rows = results.map((row) => serializeRow(table, row, null));
-	return { rows, changes: rows.map((row) => ({ event: "UPDATE", record: row, old_record: null })) };
+	return {
+		rows: rows.map((row) => visibleRow(table, caller, row)),
+		changes: rows.map((row) => ({ event: "UPDATE", record: row, old_record: null })),
+	};
 }
 
 export async function deleteRows(
@@ -205,12 +217,7 @@ export async function deleteRows(
 	selection: { id: string } | { params: URLSearchParams },
 ): Promise<WriteResult> {
 	assertAllowed(table.rules.delete, caller, "delete rows");
-	const target = selectionFragment(
-		projectId,
-		table,
-		selection,
-		ownerScope(table.rules.delete, caller),
-	);
+	const target = selectionFragment(projectId, table, selection, caller, table.rules.delete);
 	const { results } = await env.DB.prepare(
 		`DELETE FROM ${quoteIdentifier(physicalTable(projectId, table.name))}${target.sql} RETURNING *`,
 	)
@@ -218,7 +225,10 @@ export async function deleteRows(
 		.all<Row>();
 	if ("id" in selection && results.length === 0) throw notFound();
 	const rows = results.map((row) => serializeRow(table, row, null));
-	return { rows, changes: rows.map((row) => ({ event: "DELETE", record: null, old_record: row })) };
+	return {
+		rows: rows.map((row) => visibleRow(table, caller, row)),
+		changes: rows.map((row) => ({ event: "DELETE", record: null, old_record: row })),
+	};
 }
 
 export function serializeRow(table: TableDefinition, row: Row, select: string[] | null): Row {
@@ -261,7 +271,12 @@ function insertValues(table: TableDefinition, caller: Caller, input: unknown, no
 	return values;
 }
 
-function updateValues(table: TableDefinition, caller: Caller, input: unknown) {
+function updateValues(
+	table: TableDefinition,
+	caller: Caller,
+	input: unknown,
+	options: { allowEmpty?: boolean } = {},
+) {
 	if (!isRecord(input)) throw new DataError(422, "row_invalid", "Body must be a JSON object");
 	rejectUnknownKeys(table, input, ["owner_id"]);
 	const values = new Map<string, unknown>();
@@ -281,7 +296,8 @@ function updateValues(table: TableDefinition, caller: Caller, input: unknown) {
 			values.set(column.name, null);
 		} else values.set(column.name, storedValue(column, coerceValue(column, value)));
 	}
-	if (values.size === 0) throw new DataError(422, "update_empty", "Nothing to update");
+	if (values.size === 0 && !options.allowEmpty)
+		throw new DataError(422, "update_empty", "Nothing to update");
 	return values;
 }
 
@@ -317,17 +333,54 @@ function selectionFragment(
 	projectId: number,
 	table: TableDefinition,
 	selection: { id: string } | { params: URLSearchParams },
-	owner: string | null,
+	caller: Caller,
+	rule: AccessRule,
 ): SqlFragment {
-	if ("id" in selection) return where([idFragment(selection.id), ownerFragment(owner)]);
+	const owner = ownerFragment(ownerScope(rule, caller));
+	if ("id" in selection) return where([idFragment(selection.id), owner]);
 	if (!hasFilters(selection.params))
 		throw new DataError(422, "filter_required", "Add at least one filter to change several rows");
-	const scope = where([parseFilters(selection.params, table), ownerFragment(owner)]);
+	assertAllowed(table.rules.read, caller, "filter rows");
+	const scope = where([
+		parseFilters(selection.params, table),
+		owner,
+		ownerFragment(ownerScope(table.rules.read, caller)),
+	]);
 	const quoted = quoteIdentifier(physicalTable(projectId, table.name));
 	return {
 		sql: ` WHERE "id" IN (SELECT "id" FROM ${quoted}${scope.sql} ORDER BY "id" LIMIT ${MAXIMUM_BATCH})`,
 		values: scope.values,
 	};
+}
+
+function visibleRow(table: TableDefinition, caller: Caller, row: Row): Row {
+	const owner = ownerScope(table.rules.read, caller);
+	return allows(table.rules.read, caller) && (owner === null || row.owner_id === owner)
+		? row
+		: { id: row.id };
+}
+
+async function existingOwners(
+	env: DataEnv,
+	quotedTable: string,
+	inputs: unknown[],
+): Promise<Map<string, string | null>> {
+	const ids = inputs.flatMap((input) =>
+		isRecord(input) && typeof input.id === "string" && UUID_PATTERN.test(input.id)
+			? [input.id.toLowerCase()]
+			: [],
+	);
+	const owners = new Map<string, string | null>();
+	for (let index = 0; index < ids.length; index += 90) {
+		const chunk = ids.slice(index, index + 90);
+		const { results } = await env.DB.prepare(
+			`SELECT "id", "owner_id" FROM ${quotedTable} WHERE "id" IN (${chunk.map(() => "?").join(", ")})`,
+		)
+			.bind(...chunk)
+			.all<{ id: string; owner_id: string | null }>();
+		for (const row of results) owners.set(row.id, row.owner_id);
+	}
+	return owners;
 }
 
 function idFragment(id: string): SqlFragment {

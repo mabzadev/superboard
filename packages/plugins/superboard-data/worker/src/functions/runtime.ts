@@ -153,7 +153,15 @@ export async function invokeFunction(
 	let outcome: "ok" | "error" | "timeout" = "ok";
 	let failure: string | null = null;
 	try {
-		response = await withTimeout(worker.getEntrypoint().fetch(request), definition.timeout_ms);
+		const received = await withTimeout(
+			worker.getEntrypoint().fetch(request),
+			definition.timeout_ms,
+		);
+		const empty = [101, 204, 205, 304].includes(received.status);
+		response = new Response(
+			empty ? null : boundedBody(received.body, definition.timeout_ms - (Date.now() - started)),
+			received,
+		);
 		if (response.headers.get(ERROR_HEADER) || response.status >= 500) outcome = "error";
 	} catch (cause) {
 		outcome = cause instanceof TimeoutError ? "timeout" : "error";
@@ -176,6 +184,9 @@ export async function invokeFunction(
 	const headers = new Headers(response.headers);
 	headers.delete(LOG_HEADER);
 	headers.delete(ERROR_HEADER);
+	headers.delete("set-cookie");
+	headers.set("content-security-policy", "sandbox");
+	headers.set("x-content-type-options", "nosniff");
 	headers.set("x-superboard-run-id", runId);
 	const durationMs = Date.now() - started;
 	deferral.waitUntil(
@@ -205,11 +216,10 @@ export async function invokeFunction(
 	};
 }
 
-export async function runDueSchedules(
-	env: DataEnv,
-	deferral: Deferral,
-	now = new Date(),
-): Promise<number> {
+export async function runDueSchedules(env: DataEnv, now = new Date()): Promise<number> {
+	const records: Promise<unknown>[] = [];
+	const collector: Deferral = { waitUntil: (promise) => records.push(promise) };
+	const runs: Promise<unknown>[] = [];
 	const { results } = await env.DB.prepare(
 		`SELECT project_id, name, cron, next_run_at FROM data_function_schedules
 		 WHERE enabled = 1 AND next_run_at <= ? ORDER BY next_run_at LIMIT 25`,
@@ -237,8 +247,8 @@ export async function runDueSchedules(
 			.run();
 		if (!claimed.meta.changes) continue;
 		started += 1;
-		deferral.waitUntil(
-			invokeFunction(env, deferral, {
+		runs.push(
+			invokeFunction(env, collector, {
 				projectId: Number(schedule.project_id),
 				name: schedule.name,
 				caller: null,
@@ -253,6 +263,8 @@ export async function runDueSchedules(
 				}),
 		);
 	}
+	await Promise.allSettled(runs);
+	await Promise.allSettled(records);
 	return started;
 }
 
@@ -278,6 +290,7 @@ function functionRequest(options: {
 	);
 	url.search = source.search;
 	const headers = new Headers(options.request.headers);
+	headers.delete("cookie");
 	for (const name of Array.from(headers.keys()))
 		if (
 			/^x-(superboard-|internal|project|context|instance|environment|actor|operator|role)/u.test(
@@ -301,6 +314,18 @@ function functionRequest(options: {
 }
 
 class TimeoutError extends Error {}
+
+function boundedBody(
+	body: ReadableStream<Uint8Array> | null,
+	milliseconds: number,
+): ReadableStream<Uint8Array> | null {
+	if (!body) return null;
+	const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+	void body
+		.pipeTo(writable, { signal: AbortSignal.timeout(Math.max(1, milliseconds)) })
+		.catch(() => undefined);
+	return readable;
+}
 
 async function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
 	let timer: ReturnType<typeof setTimeout> | undefined;

@@ -6,6 +6,7 @@ import {
 	dropColumn,
 	dropTable,
 	listTables,
+	parseRules,
 	parseTableInput,
 	sameColumn,
 	updateColumn,
@@ -40,14 +41,24 @@ export async function applySchema(
 ): Promise<SchemaPlan> {
 	if (!isRecord(body) || !Array.isArray(body.tables))
 		throw new DataError(422, "schema_invalid", "Schema must contain a tables array");
-	const desired = body.tables.map(parseTableInput);
+	const current = new Map((await listTables(env, projectId)).map((table) => [table.name, table]));
+	const desired = body.tables.map((raw) => {
+		const table = parseTableInput(raw);
+		const existing = current.get(table.name);
+		if (!existing || !isRecord(raw)) return table;
+		return {
+			...table,
+			label: raw.label === undefined ? existing.label : table.label,
+			rules: parseRules(raw.rules, existing.rules),
+			realtime: raw.realtime === undefined ? existing.realtime : table.realtime,
+		};
+	});
 	const names = new Set<string>();
 	for (const table of desired) {
 		if (names.has(table.name))
 			throw new DataError(422, "table_duplicate", `Table ${table.name} is declared twice`);
 		names.add(table.name);
 	}
-	const current = new Map((await listTables(env, projectId)).map((table) => [table.name, table]));
 	const changes = plan(desired, current, body.prune === true);
 	const destructive = changes.filter((change) => change.destructive);
 	if (destructive.length && !options.allowDestructive && !options.dryRun)

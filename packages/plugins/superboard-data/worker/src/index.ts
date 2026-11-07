@@ -38,6 +38,7 @@ type FileRow = {
 };
 
 const jwks = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+const ERASURE_BUDGET_MS = 7_000;
 const app = registerRouter(new Hono<{ Bindings: FilesEnv; Variables: Variables }>(), {
 	service: "files",
 	module: "index.app",
@@ -364,11 +365,12 @@ app.delete("/internal/v1/users/:id", async (c) => {
 		return error("unauthorized", "Internal authentication is required", 401);
 	}
 	const userId = c.req.param("id");
+	const deadline = Date.now() + ERASURE_BUDGET_MS;
 	let deleted = 0;
-	while (true) {
+	while (Date.now() < deadline) {
 		const rows = (
 			await c.env.DB.prepare(
-				"SELECT id,object_key FROM application_files WHERE user_id=? ORDER BY id LIMIT 1000",
+				"SELECT id,object_key FROM application_files WHERE user_id=? ORDER BY id LIMIT 90",
 			)
 				.bind(userId)
 				.all<{ id: string; object_key: string }>()
@@ -383,7 +385,21 @@ app.delete("/internal/v1/users/:id", async (c) => {
 			.run();
 		deleted += rows.length;
 	}
-	return json({ deleted, data: await eraseApplicationUser(c.env, userId) });
+	const erasure = await eraseApplicationUser(c.env, userId, deadline);
+	if (Date.now() >= deadline || !erasure.complete)
+		return json(
+			{
+				error: {
+					code: "erasure_incomplete",
+					message: "Erasure is still in progress; retry",
+					retryable: true,
+				},
+				deleted,
+				data: erasure.summary,
+			},
+			503,
+		);
+	return json({ deleted, data: erasure.summary });
 });
 
 function remoteJwks(url: string) {
@@ -655,9 +671,9 @@ function json(value: unknown, status = 200) {
 	});
 }
 
-async function scheduled(_controller: ScheduledController, env: FilesEnv, ctx: ExecutionContext) {
+async function scheduled(_controller: ScheduledController, env: FilesEnv) {
 	const tasks = {
-		schedules: runDueSchedules(env, ctx),
+		schedules: runDueSchedules(env),
 		uploads: abortExpiredUploads(env),
 		runs: pruneRuns(env),
 	};

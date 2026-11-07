@@ -1,4 +1,4 @@
-import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
 import { runDueSchedules } from "../../../../../../packages/plugins/superboard-data/worker/src/functions/runtime";
@@ -150,10 +150,8 @@ describe("Functions", () => {
 		await env.DB.prepare("UPDATE data_function_schedules SET next_run_at = ? WHERE name = 'hello'")
 			.bind(new Date(Date.now() - 60_000).toISOString())
 			.run();
-		const context = createExecutionContext();
-		expect(await runDueSchedules(env, context)).toBe(1);
-		expect(await runDueSchedules(env, context)).toBe(0);
-		await waitOnExecutionContext(context);
+		expect(await runDueSchedules(env)).toBe(1);
+		expect(await runDueSchedules(env)).toBe(0);
 		const [run] = await runs("hello");
 		expect(run).toMatchObject({
 			trigger: "schedule",

@@ -14,7 +14,11 @@ export interface RequestOptions {
 	projectId?: number;
 }
 
-export async function applicationToken(userId: string, projectId = PROJECT_ID): Promise<string> {
+export async function applicationToken(
+	userId: string,
+	projectId = PROJECT_ID,
+	expiresIn = "5m",
+): Promise<string> {
 	const jwk = JSON.parse(env.TEST_SIGNING_JWK) as JWK;
 	return new SignJWT({ type: "application_access", pid: projectId, sid: `session-${userId}` })
 		.setProtectedHeader({ alg: "ES256", kid: jwk.kid })
@@ -22,7 +26,7 @@ export async function applicationToken(userId: string, projectId = PROJECT_ID): 
 		.setIssuer("https://sdk.example.test/v1/auth")
 		.setAudience("superboard-test.application")
 		.setIssuedAt()
-		.setExpirationTime("5m")
+		.setExpirationTime(expiresIn)
 		.sign(await importJWK(jwk, "ES256"));
 }
 
@@ -53,10 +57,17 @@ function body(options: RequestOptions, headers: Headers): BodyInit | null {
 	return JSON.stringify(options.body);
 }
 
-export async function sdk(path: string, options: RequestOptions & { user?: string } = {}) {
+export async function sdk(
+	path: string,
+	options: RequestOptions & { user?: string; tokenExpiresIn?: string } = {},
+) {
 	const method = options.method ?? "GET";
 	const headers = await contextHeaders(method, path, options.projectId ?? PROJECT_ID, false);
-	if (options.user) headers.set("authorization", `Bearer ${await applicationToken(options.user)}`);
+	if (options.user)
+		headers.set(
+			"authorization",
+			`Bearer ${await applicationToken(options.user, PROJECT_ID, options.tokenExpiresIn)}`,
+		);
 	for (const [name, value] of Object.entries(options.headers ?? {})) headers.set(name, value);
 	return SELF.fetch(`${ORIGIN}${path}`, { method, headers, body: body(options, headers) });
 }

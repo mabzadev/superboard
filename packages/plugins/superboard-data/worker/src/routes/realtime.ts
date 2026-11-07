@@ -25,19 +25,27 @@ interface Ticket {
 	p: number;
 	r: Role;
 	u: string | null;
+	s: number;
 	e: number;
 }
+
+const MAXIMUM_SESSION_SECONDS = 3_600;
 
 realtimeRoutes.defineRoute({ id: "data:realtime:ticket" }).post(
 	"/v1/realtime/tickets",
 	action("realtime-ticket", async (c) => {
 		const caller = await resolveCaller(c.req.raw, c.env, deferralOf(c));
 		if (!c.env.REALTIME) throw unavailable();
-		const expires = Math.floor(Date.now() / 1000) + TICKET_SECONDS;
+		const now = Math.floor(Date.now() / 1000);
+		const expires = now + TICKET_SECONDS;
 		const ticket = await signToken(c.env, TICKET_PURPOSE, {
 			p: caller.projectId,
 			r: caller.role,
 			u: caller.userId,
+			s: Math.min(
+				caller.sessionExpiresAt ?? Number.MAX_SAFE_INTEGER,
+				now + MAXIMUM_SESSION_SECONDS,
+			),
 			e: expires,
 		} satisfies Ticket);
 		const origin = publicOrigin(c.env).replace(/^http/u, "ws");
@@ -69,7 +77,12 @@ realtimeRoutes
 				throw new DataError(401, "ticket_invalid", "Realtime ticket is invalid or expired");
 			const stub = realtimeStub(c.env, ticket.p);
 			if (!stub) throw unavailable();
-			const identity: RealtimeIdentity = { projectId: ticket.p, role: ticket.r, userId: ticket.u };
+			const identity: RealtimeIdentity = {
+				projectId: ticket.p,
+				role: ticket.r,
+				userId: ticket.u,
+				expiresAt: ticket.s * 1000,
+			};
 			return stub.fetch("https://realtime.internal/connect", {
 				headers: { upgrade: "websocket", [IDENTITY_HEADER]: JSON.stringify(identity) },
 			});

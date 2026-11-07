@@ -34,7 +34,7 @@ const FORWARDED_HEADERS = [
 	"sec-websocket-extensions",
 ];
 const INTERNAL_HEADER =
-	/^(x-internal|x-project|x-instance|x-environment|x-actor|x-operator|x-role|x-context|x-superboard-|host$|cf-)/iu;
+	/^(x-internal|x-project|x-instance|x-environment|x-actor|x-operator|x-role|x-context|x-superboard-|host$|cookie$|cf-)/iu;
 const SELF_AUTHENTICATED = [
 	/^\/v1\/storage\/signed\/[^/]+$/u,
 	/^\/v1\/storage\/public\//u,
@@ -77,7 +77,7 @@ export async function proxyDataService(
 				module: "files",
 				method,
 				pathname: target.pathname,
-				requestId: request.headers.get("x-request-id") ?? crypto.randomUUID(),
+				requestId: requestId(request),
 				issuedAt: Math.floor(Date.now() / 1000),
 			},
 			token,
@@ -122,8 +122,13 @@ function forwardedHeaders(request: Request, functionCall: boolean): Headers {
 
 function timeoutFor(path: string): number {
 	if (path.startsWith("/v1/functions/")) return 310_000;
-	if (path.startsWith("/v1/storage/")) return 120_000;
+	if (path.startsWith("/v1/storage/")) return 300_000;
 	return 60_000;
+}
+
+function requestId(request: Request): string {
+	const provided = request.headers.get("x-request-id") ?? "";
+	return /^[A-Za-z0-9._:-]{1,128}$/u.test(provided) ? provided : crypto.randomUUID();
 }
 
 function failure(status: number, code: string, message: string, retryable: boolean): Response {

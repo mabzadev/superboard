@@ -155,10 +155,30 @@ describe("Realtime visibility", () => {
 		old_record: null,
 	};
 	it("follows the read rule of the table", () => {
-		const alice = { projectId: 1, role: "authenticated" as const, userId: "alice" };
-		const bob = { projectId: 1, role: "authenticated" as const, userId: "bob" };
-		const visitor = { projectId: 1, role: "anon" as const, userId: null };
-		const server = { projectId: 1, role: "service" as const, userId: null };
+		const alice = {
+			projectId: 1,
+			role: "authenticated" as const,
+			userId: "alice",
+			expiresAt: Number.MAX_SAFE_INTEGER,
+		};
+		const bob = {
+			projectId: 1,
+			role: "authenticated" as const,
+			userId: "bob",
+			expiresAt: Number.MAX_SAFE_INTEGER,
+		};
+		const visitor = {
+			projectId: 1,
+			role: "anon" as const,
+			userId: null,
+			expiresAt: Number.MAX_SAFE_INTEGER,
+		};
+		const server = {
+			projectId: 1,
+			role: "service" as const,
+			userId: null,
+			expiresAt: Number.MAX_SAFE_INTEGER,
+		};
 		expect(changeVisible("owner", alice, change)).toBe(true);
 		expect(changeVisible("owner", bob, change)).toBe(false);
 		expect(changeVisible("authenticated", bob, change)).toBe(true);

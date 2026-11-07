@@ -16,7 +16,7 @@ export type ColumnType = (typeof COLUMN_TYPES)[number];
 export const SYSTEM_COLUMNS = ["id", "owner_id", "created_at", "updated_at"] as const;
 export type SystemColumn = (typeof SYSTEM_COLUMNS)[number];
 
-const NAME_PATTERN = /^[a-z][a-z0-9_]{0,47}$/u;
+const NAME_PATTERN = /^[a-z](?:[a-z0-9]|_(?!_)){0,47}$/u;
 const MAXIMUM_TABLES = 200;
 const MAXIMUM_COLUMNS = 64;
 const MAXIMUM_LABEL_LENGTH = 120;
@@ -98,7 +98,7 @@ export function assertName(value: unknown, kind: "table" | "column"): asserts va
 		throw new DataError(
 			422,
 			`${kind}_name_invalid`,
-			`A ${kind} name starts with a lowercase letter and contains up to 48 lowercase letters, digits or underscores`,
+			`A ${kind} name starts with a lowercase letter and contains up to 48 lowercase letters, digits or single underscores`,
 		);
 }
 

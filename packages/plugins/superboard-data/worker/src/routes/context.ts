@@ -2,7 +2,7 @@ import type { Context } from "hono";
 
 import type { DataEnv, Deferral } from "../platform/env.js";
 import { immediate } from "../platform/env.js";
-import { failure } from "../platform/http.js";
+import { DataError, failure } from "../platform/http.js";
 
 export type DataContext = Context<{ Bindings: DataEnv }>;
 
@@ -31,7 +31,12 @@ export function searchParams(c: DataContext): URLSearchParams {
 }
 
 export function wildcardPath(c: DataContext, prefix: string): string {
-	const pathname = decodeURIComponent(new URL(c.req.url).pathname);
+	let pathname: string;
+	try {
+		pathname = decodeURIComponent(new URL(c.req.url).pathname);
+	} catch {
+		throw new DataError(422, "path_invalid", "The path is not valid percent-encoding");
+	}
 	return pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
 }
 

@@ -83,7 +83,10 @@ Chaque table, bucket et collection de vecteurs porte une règle par opération :
 Une nouvelle table utilise `owner` pour les quatre opérations. Une insertion
 par un rôle `authenticated` fixe `owner_id` à son `sub` ; seul le rôle
 `service` peut choisir `owner_id`. Une ligne invisible pour l'appelant répond
-`404`, jamais `403`.
+`404`, jamais `403`. Une écriture renvoie seulement l'`id` des lignes que la
+règle de lecture cache à l'appelant, et une écriture filtrée ne vise que les
+lignes qu'il peut lire. Un utilisateur d'application connecté anonymement a le
+rôle `authenticated`.
 
 ## Base de données
 
@@ -136,7 +139,8 @@ Paramètres de requête, inspirés de PostgREST :
 - `limit` : 50 par défaut, 100 au plus ; `cursor` : curseur opaque ;
 - `count=exact` : ajoute `count` à la réponse ;
 - `upsert=true` sur `POST` : met à jour la ligne de même `id` quand la règle de
-  mise à jour l'autorise.
+  mise à jour l'autorise, en ne modifiant que les colonnes fournies. Un lot
+  refusé n'écrit aucune ligne.
 
 Une liste renvoie `{ "items": [...], "nextCursor"?: "...", "count"?: n }`.
 Une ligne renvoie l'objet seul. Une écriture filtrée sans filtre est refusée
@@ -174,6 +178,11 @@ l'API d'hibernation. Une connexion multiplexe plusieurs canaux.
 Messages du client : `join`, `leave`, `broadcast`, `presence`,
 `presence_untrack`, `ping`. Messages du serveur : `joined`, `error`,
 `broadcast`, `presence_state`, `presence_diff`, `change`, `pong`.
+
+Une connexion se ferme avec le code `4001` à l'expiration du jeton qui a servi
+au ticket, au plus tard après une heure, et avec le code `4003` pour un
+visiteur anonyme quand le projet cesse de les accepter. Le client se reconnecte
+avec un nouveau ticket.
 
 Les canaux `db:<table>` sont réservés aux changements d'une table dont le temps
 réel est activé. Le hub filtre chaque événement `change` selon la règle de
@@ -229,6 +238,9 @@ exécutions planifiées vers `scheduled`.
 | `PUT`, `DELETE /v1/data/manage/functions/:name/schedule` | Planifie ou retire la planification |
 
 L'accès d'appel d'une fonction est `public`, `authenticated` ou `service`.
+Les fonctions partagent l'origine SDK : leurs requêtes ne reçoivent pas les
+cookies, leurs réponses perdent `Set-Cookie` et portent
+`Content-Security-Policy: sandbox`.
 Les variables sont stockées en clair ; les secrets sont chiffrés en AES-GCM avec
 une clé dérivée de `DATA_ENCRYPTION_KEY`, ne sont jamais relus par l'API et ne
 sont disponibles que si ce secret est configuré. Le déclencheur Cron du Worker

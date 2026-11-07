@@ -24,8 +24,10 @@ const CONTENT_TYPE_PATTERN = /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/u;
 const MINIMUM_PART_BYTES = 5 * 1024 * 1024;
 const UPLOAD_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
+const MAXIMUM_PATH_BYTES = 900;
+
 export function assertPath(path: string): void {
-	if (!PATH_PATTERN.test(path))
+	if (!PATH_PATTERN.test(path) || new TextEncoder().encode(path).byteLength > MAXIMUM_PATH_BYTES)
 		throw new DataError(422, "path_invalid", "Object path is invalid", { path });
 }
 
@@ -338,15 +340,24 @@ export async function completeUpload(
 	const upload = await ownedUpload(env, caller, bucket, uploadId);
 	const parts = await uploadParts(env, upload.id);
 	if (parts.length === 0) throw new DataError(422, "upload_empty", "Send at least one part first");
+	if (parts.reduce((total, part) => total + Number(part.size), 0) > bucket.max_bytes)
+		throw tooLarge(bucket.max_bytes);
 	const existing = await findObject(env, caller.projectId, bucket.name, upload.path);
 	assertReplaceable(caller, bucket, existing, upload.upsert === 1);
+	const key = objectKey(caller.projectId, bucket.name, upload.path);
 	const stored = await filesBucket(env)
-		.resumeMultipartUpload(
-			objectKey(caller.projectId, bucket.name, upload.path),
-			upload.r2_upload_id,
-		)
+		.resumeMultipartUpload(key, upload.r2_upload_id)
 		.complete(parts.map((part) => ({ partNumber: part.part_number, etag: part.etag })));
 	await deleteUploadRows(env, upload.id);
+	if (stored.size > bucket.max_bytes) {
+		await filesBucket(env).delete(key);
+		await env.DB.prepare(
+			"DELETE FROM data_objects WHERE project_id = ? AND bucket = ? AND path = ?",
+		)
+			.bind(caller.projectId, bucket.name, upload.path)
+			.run();
+		throw tooLarge(bucket.max_bytes);
+	}
 	return recordObject(
 		env,
 		caller,
@@ -537,6 +548,14 @@ function objectFromRow(row: ObjectRow): StoredObject {
 		created_at: row.created_at,
 		updated_at: row.updated_at,
 	};
+}
+
+function tooLarge(maximum: number) {
+	return new DataError(
+		413,
+		"object_too_large",
+		`Objects of this bucket have at most ${maximum} bytes`,
+	);
 }
 
 function objectNotFound() {

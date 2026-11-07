@@ -212,6 +212,7 @@ function bucketSettings(
 				: parseAccessRule(rulesInput.delete, "rules.delete"),
 	};
 	if (isPublic) rules.read = "public";
+	else if (fallback.public && rulesInput.read === undefined) rules.read = "owner";
 	return {
 		public: isPublic,
 		max_bytes: maximum,

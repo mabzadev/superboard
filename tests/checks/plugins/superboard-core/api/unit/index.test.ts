@@ -623,6 +623,7 @@ describe("unified public SDK routing", () => {
 						...sdkHeaders,
 						"x-custom": "kept",
 						"x-superboard-user-id": "mallory",
+						cookie: "session=secret",
 						"content-type": "application/json",
 					},
 					body: "{}",
@@ -635,6 +636,7 @@ describe("unified public SDK routing", () => {
 			expect(new URL(forwarded?.url ?? "").pathname).toBe("/v1/functions/hello/greet");
 			expect(forwarded?.headers.get("x-custom")).toBe("kept");
 			expect(forwarded?.headers.get("x-superboard-user-id")).toBeNull();
+			expect(forwarded?.headers.get("cookie")).toBeNull();
 			expect(forwarded?.headers.get("x-internal-token")).toBe("files-secret");
 		});
 	});

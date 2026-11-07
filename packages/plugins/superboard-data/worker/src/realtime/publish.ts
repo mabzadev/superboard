@@ -30,5 +30,11 @@ export function publishChanges(
 export function invalidateRealtime(env: DataEnv, deferral: Deferral, projectId: number): void {
 	const stub = realtimeStub(env, projectId);
 	if (stub)
-		deferral.waitUntil(stub.fetch("https://realtime.internal/invalidate", { method: "POST" }));
+		deferral.waitUntil(
+			stub.fetch("https://realtime.internal/invalidate", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ projectId }),
+			}),
+		);
 }

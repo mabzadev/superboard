@@ -17,6 +17,7 @@ export interface Caller {
 	userId: string | null;
 	keyId: string | null;
 	operatorId: string | null;
+	sessionExpiresAt?: number;
 }
 
 const applicationKeySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
@@ -34,11 +35,11 @@ export async function resolveCaller(
 	if (bearer?.startsWith("sb_secret_")) return serviceCaller(env, bearer, deferral);
 	const context = await projectContext(request, env);
 	if (!bearer) return caller(context.projectId, "anon", null);
-	return caller(
-		context.projectId,
-		"authenticated",
-		await verifyApplicationToken(env, bearer, context.projectId),
-	);
+	const token = await verifyApplicationToken(env, bearer, context.projectId);
+	return {
+		...caller(context.projectId, "authenticated", token.userId),
+		sessionExpiresAt: token.expiresAt,
+	};
 }
 
 export async function resolveServiceCaller(
@@ -94,18 +95,18 @@ async function verifyApplicationToken(
 	env: DataEnv,
 	token: string,
 	projectId: number,
-): Promise<string> {
+): Promise<{ userId: string; expiresAt?: number }> {
 	try {
 		const verified = await jwtVerify(token, applicationKeys(env.AUTH_GATEWAY_JWKS_URL), {
 			issuer: env.AUTH_GATEWAY_ISSUER,
 			audience: env.APPLICATION_AUDIENCE,
 			algorithms: ["ES256"],
 		});
-		const { sub, type, pid } = verified.payload;
+		const { sub, type, pid, exp } = verified.payload;
 		if (!sub || type !== "application_access") throw new Error("token_invalid");
 		if (Number(pid) !== projectId)
 			throw new DataError(401, "token_project_mismatch", "Token belongs to another project");
-		return String(sub);
+		return { userId: String(sub), ...(typeof exp === "number" ? { expiresAt: exp } : {}) };
 	} catch (cause) {
 		if (cause instanceof DataError) throw cause;
 		throw new DataError(401, "unauthorized", "Authentication is invalid or expired");

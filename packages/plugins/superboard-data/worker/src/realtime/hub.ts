@@ -10,6 +10,7 @@ export interface RealtimeIdentity {
 	projectId: number;
 	role: Role;
 	userId: string | null;
+	expiresAt: number;
 }
 
 interface Attachment extends RealtimeIdentity {
@@ -34,6 +35,7 @@ export class RealtimeHub {
 	private readonly sql: SqlStorage;
 	private readonly tables = new Map<string, { table: TableDefinition | null; expires: number }>();
 	private settings: { value: ProjectSettings; expires: number } | null = null;
+	private readonly closing = new Set<string>();
 
 	constructor(
 		private readonly ctx: DurableObjectState,
@@ -71,6 +73,13 @@ export class RealtimeHub {
 		if (url.pathname === "/invalidate" && request.method === "POST") {
 			this.tables.clear();
 			this.settings = null;
+			const body = (await request.json()) as { projectId?: unknown };
+			if (Number.isSafeInteger(body.projectId)) {
+				const settings = await this.projectSettings(Number(body.projectId));
+				if (!settings.realtime_anonymous)
+					for (const [socket, attachment] of this.liveSockets().values())
+						if (attachment.role === "anon") this.close(socket, 4003, "anonymous_disabled");
+			}
 			return new Response(null, { status: 204 });
 		}
 		return new Response(null, { status: 404 });
@@ -103,6 +112,7 @@ export class RealtimeHub {
 
 	private async handleMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
 		const attachment = socket.deserializeAttachment() as Attachment;
+		if (attachment.expiresAt <= Date.now()) return this.close(socket, 4001, "session_expired");
 		const text = typeof message === "string" ? message : new TextDecoder().decode(message);
 		if (text.length > MAXIMUM_MESSAGE_BYTES) return send(socket, errorMessage("message_too_large"));
 		let parsed: unknown;
@@ -290,12 +300,34 @@ export class RealtimeHub {
 		return delivered;
 	}
 
-	private members(channel: string): [WebSocket, Attachment][] {
+	private liveSockets(): Map<string, [WebSocket, Attachment]> {
 		const live = new Map<string, [WebSocket, Attachment]>();
+		const now = Date.now();
 		for (const socket of this.ctx.getWebSockets()) {
 			const attachment = socket.deserializeAttachment() as Attachment | null;
-			if (attachment) live.set(attachment.id, [socket, attachment]);
+			if (!attachment || this.closing.has(attachment.id)) continue;
+			if (attachment.expiresAt <= now) this.close(socket, 4001, "session_expired");
+			else live.set(attachment.id, [socket, attachment]);
 		}
+		return live;
+	}
+
+	private close(socket: WebSocket, code: number, reason: string): void {
+		const attachment = socket.deserializeAttachment() as Attachment | null;
+		if (!attachment || this.closing.has(attachment.id)) return;
+		this.closing.add(attachment.id);
+		try {
+			this.disconnect(socket);
+			socket.close(code, reason);
+		} catch {
+			// The socket is already closing.
+		} finally {
+			this.closing.delete(attachment.id);
+		}
+	}
+
+	private members(channel: string): [WebSocket, Attachment][] {
+		const live = this.liveSockets();
 		const members: [WebSocket, Attachment][] = [];
 		for (const { socket_id } of this.sql
 			.exec<{ socket_id: string }>("SELECT socket_id FROM subscriptions WHERE channel = ?", channel)
@@ -308,14 +340,20 @@ export class RealtimeHub {
 	}
 
 	private presences(channel: string): Record<string, unknown[]> {
+		const live = this.liveSockets();
 		const presences: Record<string, unknown[]> = {};
 		for (const row of this.sql
-			.exec<{ presence_key: string; presence_state: string }>(
-				"SELECT presence_key, presence_state FROM subscriptions WHERE channel = ? AND presence_state IS NOT NULL",
+			.exec<{ socket_id: string; presence_key: string; presence_state: string }>(
+				"SELECT socket_id, presence_key, presence_state FROM subscriptions WHERE channel = ? AND presence_state IS NOT NULL",
 				channel,
 			)
-			.toArray())
+			.toArray()) {
+			if (!live.has(row.socket_id)) {
+				this.sql.exec("DELETE FROM subscriptions WHERE socket_id = ?", row.socket_id);
+				continue;
+			}
 			(presences[row.presence_key] ??= []).push(JSON.parse(row.presence_state) as unknown);
+		}
 		return presences;
 	}
 
@@ -390,9 +428,15 @@ function parseIdentity(value: string | null): RealtimeIdentity | null {
 			isRecord(parsed) &&
 			Number.isSafeInteger(parsed.projectId) &&
 			(parsed.role === "anon" || parsed.role === "authenticated" || parsed.role === "service") &&
-			(parsed.userId === null || typeof parsed.userId === "string")
+			(parsed.userId === null || typeof parsed.userId === "string") &&
+			Number.isSafeInteger(parsed.expiresAt)
 		)
-			return { projectId: Number(parsed.projectId), role: parsed.role, userId: parsed.userId };
+			return {
+				projectId: Number(parsed.projectId),
+				role: parsed.role,
+				userId: parsed.userId,
+				expiresAt: Number(parsed.expiresAt),
+			};
 	} catch {
 		return null;
 	}
