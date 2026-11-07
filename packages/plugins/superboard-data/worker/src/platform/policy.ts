@@ -5,8 +5,8 @@ export const ACCESS_RULES = ["public", "authenticated", "owner", "service"] as c
 export type AccessRule = (typeof ACCESS_RULES)[number];
 
 export function parseAccessRule(value: unknown, field: string): AccessRule {
-	if (typeof value === "string" && (ACCESS_RULES as readonly string[]).includes(value))
-		return value as AccessRule;
+	const rule = ACCESS_RULES.find((candidate) => candidate === value);
+	if (rule) return rule;
 	throw new DataError(422, "rule_invalid", `${field} must be one of ${ACCESS_RULES.join(", ")}`);
 }
 

@@ -15,7 +15,7 @@ import {
 	type TableInput,
 } from "./schema.js";
 
-export interface SchemaChange {
+interface SchemaChange {
 	action:
 		| "create_table"
 		| "update_table"
@@ -28,7 +28,7 @@ export interface SchemaChange {
 	destructive: boolean;
 }
 
-export interface SchemaPlan {
+interface SchemaPlan {
 	changes: SchemaChange[];
 	applied: boolean;
 }

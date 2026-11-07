@@ -5,7 +5,7 @@ import { DataError, boundedInteger, isRecord, nowIso } from "../platform/http.js
 import { assertAllowed, ownerScope } from "../platform/policy.js";
 import { MAXIMUM_REQUEST_BYTES, contentTypeAllowed, type Bucket } from "./buckets.js";
 
-export interface StoredObject {
+interface StoredObject {
 	bucket: string;
 	path: string;
 	owner_id: string | null;
@@ -22,6 +22,7 @@ type ObjectRow = Omit<StoredObject, "size"> & { byte_size: number };
 const PATH_PATTERN = /^(?!\/)(?!.*\/\/)(?!.*(?:^|\/)\.{1,2}(?:\/|$))[^\x00-\x1f\x7f\\]{1,512}$/u;
 const CONTENT_TYPE_PATTERN = /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/u;
 const MINIMUM_PART_BYTES = 5 * 1024 * 1024;
+const IMAGE_FITS = ["scale-down", "contain", "cover", "crop", "pad"] as const;
 const UPLOAD_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
 const MAXIMUM_PATH_BYTES = 900;
@@ -35,7 +36,7 @@ export function objectKey(projectId: number, bucket: string, path: string): stri
 	return `storage/${projectId}/${bucket}/${path}`;
 }
 
-export function contentType(value: string | null | undefined): string {
+function contentType(value: string | null | undefined): string {
 	const [base = ""] = (value ?? "application/octet-stream").split(";", 1);
 	const type = base.trim().toLowerCase();
 	if (!CONTENT_TYPE_PATTERN.test(type))
@@ -179,7 +180,8 @@ export async function objectResponse(
 	if (transform && env.IMAGES) {
 		const source = await filesBucket(env).get(key);
 		if (!source) throw objectNotFound();
-		const result = await env.IMAGES.input(source.body)
+		const bytes = source.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>());
+		const result = await env.IMAGES.input(bytes)
 			.transform(transform.transform)
 			.output({ format: transform.format, quality: transform.quality });
 		const response = result.response();
@@ -512,8 +514,9 @@ function imageTransform(
 		const value = params.get(name);
 		return value === null ? undefined : boundedInteger(value, 0, 1, 4096, "transform_invalid");
 	};
-	const fit = params.get("fit") ?? "scale-down";
-	if (!["scale-down", "contain", "cover", "crop", "pad"].includes(fit))
+	const requestedFit = params.get("fit") ?? "scale-down";
+	const fit = IMAGE_FITS.find((candidate) => candidate === requestedFit);
+	if (!fit)
 		throw new DataError(422, "transform_invalid", "fit is scale-down, contain, cover, crop or pad");
 	const formats: Record<string, ImageOutputOptions["format"]> = {
 		webp: "image/webp",
@@ -530,7 +533,7 @@ function imageTransform(
 		transform: {
 			width: dimension("width"),
 			height: dimension("height"),
-			fit: fit as ImageTransform["fit"],
+			fit,
 		},
 		format,
 		quality,

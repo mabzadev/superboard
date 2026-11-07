@@ -1,4 +1,10 @@
-import { DataError, base64UrlDecode, base64UrlEncode, boundedInteger } from "../platform/http.js";
+import {
+	DataError,
+	base64UrlDecode,
+	base64UrlEncode,
+	boundedInteger,
+	isRecord,
+} from "../platform/http.js";
 import {
 	coerceValue,
 	quoteIdentifier,
@@ -8,7 +14,7 @@ import {
 	type TableDefinition,
 } from "./schema.js";
 
-export const RESERVED_PARAMETERS = new Set([
+const RESERVED_PARAMETERS = new Set([
 	"select",
 	"order",
 	"limit",
@@ -19,11 +25,10 @@ export const RESERVED_PARAMETERS = new Set([
 ]);
 
 const OPERATORS = ["eq", "neq", "gt", "gte", "lt", "lte", "like", "ilike", "in", "is"] as const;
-type Operator = (typeof OPERATORS)[number];
 const MAXIMUM_BOUND_PARAMETERS = 90;
 const MAXIMUM_IN_VALUES = 50;
 
-export interface QueryColumn {
+interface QueryColumn {
 	name: string;
 	type: ColumnType;
 }
@@ -33,12 +38,12 @@ export interface SqlFragment {
 	values: unknown[];
 }
 
-export interface OrderSpec {
+interface OrderSpec {
 	column: string;
 	direction: "asc" | "desc";
 }
 
-export function queryColumns(table: TableDefinition): Map<string, QueryColumn> {
+function queryColumns(table: TableDefinition): Map<string, QueryColumn> {
 	const columns = new Map<string, QueryColumn>([
 		["id", { name: "id", type: "uuid" }],
 		["owner_id", { name: "owner_id", type: "text" }],
@@ -133,12 +138,14 @@ export function cursorClause(
 	table: TableDefinition,
 ): SqlFragment | null {
 	if (!raw) return null;
-	let parsed: { c?: unknown; d?: unknown; v?: unknown; i?: unknown };
+	let decoded: unknown;
 	try {
-		parsed = JSON.parse(new TextDecoder().decode(base64UrlDecode(raw))) as typeof parsed;
+		decoded = JSON.parse(new TextDecoder().decode(base64UrlDecode(raw)));
 	} catch {
 		throw new DataError(422, "cursor_invalid", "cursor is invalid");
 	}
+	if (!isRecord(decoded)) throw new DataError(422, "cursor_invalid", "cursor is invalid");
+	const parsed = decoded;
 	if (parsed.c !== order.column || parsed.d !== order.direction || typeof parsed.i !== "string")
 		throw new DataError(422, "cursor_invalid", "cursor does not match this order");
 	const after = order.direction === "asc" ? ">" : "<";
@@ -163,9 +170,10 @@ function filterClause(column: QueryColumn, raw: string): SqlFragment {
 	const negated = raw.startsWith("not.");
 	const expression = negated ? raw.slice(4) : raw;
 	const separator = expression.indexOf(".");
-	const operator = (separator < 0 ? expression : expression.slice(0, separator)) as Operator;
+	const name = separator < 0 ? expression : expression.slice(0, separator);
 	const operand = separator < 0 ? "" : expression.slice(separator + 1);
-	if (!(OPERATORS as readonly string[]).includes(operator))
+	const operator = OPERATORS.find((candidate) => candidate === name);
+	if (!operator)
 		throw new DataError(
 			422,
 			"filter_operator_invalid",

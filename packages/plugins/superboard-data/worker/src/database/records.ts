@@ -1,6 +1,6 @@
 import type { Caller } from "../platform/caller.js";
 import type { DataEnv } from "../platform/env.js";
-import { DataError, isRecord, nowIso } from "../platform/http.js";
+import { DataError, isRecord, nowIso, parseJsonValue } from "../platform/http.js";
 import { allows, assertAllowed, ownerScope, type AccessRule } from "../platform/policy.js";
 import {
 	cursorClause,
@@ -30,7 +30,7 @@ export interface RowChange {
 	old_record: Row | null;
 }
 
-export interface WriteResult {
+interface WriteResult {
 	rows: Row[];
 	changes: RowChange[];
 }
@@ -121,14 +121,14 @@ export async function insertRows(
 	const updateOwner = ownerScope(table.rules.update, caller);
 	const planned = inputs.map((input) => {
 		const id = isRecord(input) && typeof input.id === "string" ? input.id.toLowerCase() : null;
-		if (id !== null && existing.has(id)) {
+		if (isRecord(input) && id !== null && existing.has(id)) {
 			if (updateOwner !== null && existing.get(id) !== updateOwner)
 				throw new DataError(
 					409,
 					"upsert_denied",
 					"An existing row cannot be updated by this caller",
 				);
-			const changes = { ...(input as Record<string, unknown>) };
+			const changes = { ...input };
 			delete changes.id;
 			if (caller.role !== "service" && changes.owner_id === caller.userId) delete changes.owner_id;
 			const assignments = updateValues(table, caller, changes, { allowEmpty: true });
@@ -231,7 +231,7 @@ export async function deleteRows(
 	};
 }
 
-export function serializeRow(table: TableDefinition, row: Row, select: string[] | null): Row {
+function serializeRow(table: TableDefinition, row: Row, select: string[] | null): Row {
 	const output: Row = {};
 	const types = new Map(table.columns.map((column) => [column.name, column.type]));
 	for (const [name, value] of Object.entries(row)) {
@@ -239,7 +239,8 @@ export function serializeRow(table: TableDefinition, row: Row, select: string[] 
 		const type = types.get(name);
 		if (value === null || value === undefined) output[name] = null;
 		else if (type === "boolean") output[name] = Number(value) === 1;
-		else if (type === "json") output[name] = JSON.parse(String(value)) as unknown;
+		else if (type === "json")
+			output[name] = typeof value === "string" ? parseJsonValue(value) : value;
 		else if (type === "integer" || type === "number") output[name] = Number(value);
 		else output[name] = value;
 	}

@@ -5,14 +5,14 @@ import { objectKey } from "./storage/objects.js";
 
 const BATCH = 90;
 
-export interface ErasureSummary {
+interface ErasureSummary {
 	rows: number;
 	objects: number;
 	uploads: number;
 	vectors: number;
 }
 
-export interface ErasureResult {
+interface ErasureResult {
 	complete: boolean;
 	summary: ErasureSummary;
 }

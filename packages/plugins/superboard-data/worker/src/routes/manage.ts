@@ -472,11 +472,11 @@ operator.route("realtime-stats").get(
 	operator.handle("realtime-stats", async (c, caller) => {
 		const stub = realtimeStub(c.env, caller.projectId);
 		if (!stub) return json({ available: false, connections: 0, channels: [] });
-		const stats = (await readJsonLimited(
+		const stats = await readJsonLimited(
 			await stub.fetch("https://realtime.internal/stats"),
 			65_536,
-		)) as Record<string, unknown>;
-		return json({ available: true, ...stats });
+		);
+		return json({ available: true, ...(isRecord(stats) ? stats : {}) });
 	}),
 );
 operator.route("rows-list").get(

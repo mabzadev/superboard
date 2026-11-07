@@ -22,7 +22,7 @@ export interface Caller {
 
 const applicationKeySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
-export function bearerToken(request: Request): string | null {
+function bearerToken(request: Request): string | null {
 	return request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/iu)?.[1] ?? null;
 }
 

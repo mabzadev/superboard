@@ -22,15 +22,16 @@ export async function verifyToken<T extends { e: number }>(
 	purpose: string,
 	token: string,
 	maximumLifetimeSeconds: number,
+	guard: (value: unknown) => value is T,
 ): Promise<T | null> {
 	if (token.length > 4_096) return null;
 	const [body, signature, extra] = token.split(".");
 	if (!body || !signature || extra !== undefined) return null;
-	let parsed: T;
+	let parsed: unknown;
 	let signatureBytes: Uint8Array<ArrayBuffer>;
 	try {
 		signatureBytes = base64UrlDecode(signature);
-		parsed = JSON.parse(new TextDecoder().decode(base64UrlDecode(body))) as T;
+		parsed = JSON.parse(new TextDecoder().decode(base64UrlDecode(body)));
 	} catch {
 		return null;
 	}
@@ -46,8 +47,7 @@ export async function verifyToken<T extends { e: number }>(
 	const now = Math.floor(Date.now() / 1000);
 	if (
 		!valid ||
-		typeof parsed !== "object" ||
-		parsed === null ||
+		!guard(parsed) ||
 		!Number.isSafeInteger(parsed.e) ||
 		parsed.e <= now ||
 		parsed.e > now + maximumLifetimeSeconds

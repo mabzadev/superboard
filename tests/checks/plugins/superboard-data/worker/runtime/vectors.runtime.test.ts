@@ -32,9 +32,9 @@ function cosine(left: number[], right: number[]): number {
 	let a = 0;
 	let b = 0;
 	left.forEach((value, index) => {
-		dot += value * right[index]!;
+		dot += value * right[index];
 		a += value * value;
-		b += right[index]! * right[index]!;
+		b += right[index] * right[index];
 	});
 	return dot / Math.sqrt(a * b);
 }

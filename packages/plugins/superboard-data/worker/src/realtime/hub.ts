@@ -58,9 +58,9 @@ export class RealtimeHub {
 		const url = new URL(request.url);
 		if (url.pathname === "/connect") return this.connect(request);
 		if (url.pathname === "/publish" && request.method === "POST")
-			return this.publish((await request.json()) as PublishedChanges);
+			return this.publish(await request.json<PublishedChanges>());
 		if (url.pathname === "/broadcast" && request.method === "POST") {
-			const body = (await request.json()) as { channel: string; event: string; payload: unknown };
+			const body = await request.json<{ channel: string; event: string; payload: unknown }>();
 			const delivered = this.deliver(body.channel, {
 				type: "broadcast",
 				channel: body.channel,
@@ -73,7 +73,7 @@ export class RealtimeHub {
 		if (url.pathname === "/invalidate" && request.method === "POST") {
 			this.tables.clear();
 			this.settings = null;
-			const body = (await request.json()) as { projectId?: unknown };
+			const body = await request.json<{ projectId?: unknown }>();
 			if (Number.isSafeInteger(body.projectId)) {
 				const settings = await this.projectSettings(Number(body.projectId));
 				if (!settings.realtime_anonymous)
@@ -104,44 +104,65 @@ export class RealtimeHub {
 		if (!identity) return Response.json({ error: { code: "identity_invalid" } }, { status: 400 });
 		if (this.ctx.getWebSockets().length >= MAXIMUM_CONNECTIONS)
 			return Response.json({ error: { code: "realtime_capacity" } }, { status: 503 });
-		const [client, server] = Object.values(new WebSocketPair()) as [WebSocket, WebSocket];
+		const pair = new WebSocketPair();
+		const client = pair[0];
+		const server = pair[1];
 		this.ctx.acceptWebSocket(server);
 		server.serializeAttachment({ id: crypto.randomUUID(), ...identity } satisfies Attachment);
 		return new Response(null, { status: 101, webSocket: client });
 	}
 
 	private async handleMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
-		const attachment = socket.deserializeAttachment() as Attachment;
-		if (attachment.expiresAt <= Date.now()) return this.close(socket, 4001, "session_expired");
+		const attachment = attachmentOf(socket);
+		if (!attachment || attachment.expiresAt <= Date.now()) {
+			this.close(socket, 4001, "session_expired");
+			return;
+		}
 		const text = typeof message === "string" ? message : new TextDecoder().decode(message);
-		if (text.length > MAXIMUM_MESSAGE_BYTES) return send(socket, errorMessage("message_too_large"));
+		if (text.length > MAXIMUM_MESSAGE_BYTES) {
+			send(socket, errorMessage("message_too_large"));
+			return;
+		}
 		let parsed: unknown;
 		try {
 			parsed = JSON.parse(text);
 		} catch {
-			return send(socket, errorMessage("message_invalid"));
+			send(socket, errorMessage("message_invalid"));
+			return;
 		}
-		if (!isRecord(parsed) || typeof parsed.type !== "string")
-			return send(socket, errorMessage("message_invalid"));
+		if (!isRecord(parsed) || typeof parsed.type !== "string") {
+			send(socket, errorMessage("message_invalid"));
+			return;
+		}
 		const ref = typeof parsed.ref === "string" ? parsed.ref : undefined;
-		if (parsed.type === "ping") return send(socket, { type: "pong", ref });
+		if (parsed.type === "ping") {
+			send(socket, { type: "pong", ref });
+			return;
+		}
 		const channel = typeof parsed.channel === "string" ? parsed.channel : "";
-		if (!CHANNEL_PATTERN.test(channel))
-			return send(socket, errorMessage("channel_invalid", channel, ref));
+		if (!CHANNEL_PATTERN.test(channel)) {
+			send(socket, errorMessage("channel_invalid", channel, ref));
+			return;
+		}
 		switch (parsed.type) {
 			case "join":
 				return this.join(socket, attachment, channel, parsed, ref);
 			case "leave":
 				this.leave(attachment.id, channel);
-				return send(socket, { type: "left", channel, ref });
+				send(socket, { type: "left", channel, ref });
+				return;
 			case "broadcast":
-				return this.broadcast(socket, attachment, channel, parsed, ref);
+				this.broadcast(socket, attachment, channel, parsed, ref);
+				return;
 			case "presence":
-				return this.track(socket, attachment, channel, parsed.state, ref);
+				this.track(socket, attachment, channel, parsed.state, ref);
+				return;
 			case "presence_untrack":
-				return this.track(socket, attachment, channel, null, ref);
+				this.track(socket, attachment, channel, null, ref);
+				return;
 			default:
-				return send(socket, errorMessage("message_type_invalid", channel, ref));
+				send(socket, errorMessage("message_type_invalid", channel, ref));
+				return;
 		}
 	}
 
@@ -153,15 +174,20 @@ export class RealtimeHub {
 		ref: string | undefined,
 	): Promise<void> {
 		const denied = await this.authorize(attachment, channel);
-		if (denied) return send(socket, errorMessage(denied, channel, ref));
+		if (denied) {
+			send(socket, errorMessage(denied, channel, ref));
+			return;
+		}
 		const joined = this.sql
 			.exec<{ total: number }>(
 				"SELECT COUNT(*) AS total FROM subscriptions WHERE socket_id = ?",
 				attachment.id,
 			)
 			.one().total;
-		if (joined >= MAXIMUM_CHANNELS_PER_SOCKET)
-			return send(socket, errorMessage("channel_limit", channel, ref));
+		if (joined >= MAXIMUM_CHANNELS_PER_SOCKET) {
+			send(socket, errorMessage("channel_limit", channel, ref));
+			return;
+		}
 		const config = isRecord(message.config) ? message.config : {};
 		const presence = isRecord(config.presence) ? config.presence : {};
 		const key =
@@ -187,12 +213,18 @@ export class RealtimeHub {
 		message: Record<string, unknown>,
 		ref: string | undefined,
 	): void {
-		if (channel.startsWith("db:"))
-			return send(socket, errorMessage("channel_read_only", channel, ref));
-		if (!this.subscribed(attachment.id, channel))
-			return send(socket, errorMessage("channel_not_joined", channel, ref));
-		if (typeof message.event !== "string" || !/^[A-Za-z0-9:_.-]{1,64}$/u.test(message.event))
-			return send(socket, errorMessage("event_invalid", channel, ref));
+		if (channel.startsWith("db:")) {
+			send(socket, errorMessage("channel_read_only", channel, ref));
+			return;
+		}
+		if (!this.subscribed(attachment.id, channel)) {
+			send(socket, errorMessage("channel_not_joined", channel, ref));
+			return;
+		}
+		if (typeof message.event !== "string" || !/^[A-Za-z0-9:_.-]{1,64}$/u.test(message.event)) {
+			send(socket, errorMessage("event_invalid", channel, ref));
+			return;
+		}
 		this.deliver(
 			channel,
 			{ type: "broadcast", channel, event: message.event, payload: message.payload ?? null },
@@ -208,8 +240,10 @@ export class RealtimeHub {
 		state: unknown,
 		ref: string | undefined,
 	): void {
-		if (channel.startsWith("db:"))
-			return send(socket, errorMessage("channel_read_only", channel, ref));
+		if (channel.startsWith("db:")) {
+			send(socket, errorMessage("channel_read_only", channel, ref));
+			return;
+		}
 		const row = this.sql
 			.exec<{ presence_key: string; presence_state: string | null }>(
 				"SELECT presence_key, presence_state FROM subscriptions WHERE socket_id = ? AND channel = ?",
@@ -217,10 +251,15 @@ export class RealtimeHub {
 				channel,
 			)
 			.toArray()[0];
-		if (!row) return send(socket, errorMessage("channel_not_joined", channel, ref));
+		if (!row) {
+			send(socket, errorMessage("channel_not_joined", channel, ref));
+			return;
+		}
 		const serialized = state === null ? null : JSON.stringify(state ?? {});
-		if (serialized && serialized.length > MAXIMUM_PRESENCE_BYTES)
-			return send(socket, errorMessage("presence_too_large", channel, ref));
+		if (serialized && serialized.length > MAXIMUM_PRESENCE_BYTES) {
+			send(socket, errorMessage("presence_too_large", channel, ref));
+			return;
+		}
 		this.sql.exec(
 			"UPDATE subscriptions SET presence_state = ? WHERE socket_id = ? AND channel = ?",
 			serialized,
@@ -257,7 +296,7 @@ export class RealtimeHub {
 	}
 
 	private disconnect(socket: WebSocket): void {
-		const attachment = socket.deserializeAttachment() as Attachment | null;
+		const attachment = attachmentOf(socket);
 		if (!attachment) return;
 		const channels = this.sql
 			.exec<{ channel: string }>(
@@ -304,7 +343,7 @@ export class RealtimeHub {
 		const live = new Map<string, [WebSocket, Attachment]>();
 		const now = Date.now();
 		for (const socket of this.ctx.getWebSockets()) {
-			const attachment = socket.deserializeAttachment() as Attachment | null;
+			const attachment = attachmentOf(socket);
 			if (!attachment || this.closing.has(attachment.id)) continue;
 			if (attachment.expiresAt <= now) this.close(socket, 4001, "session_expired");
 			else live.set(attachment.id, [socket, attachment]);
@@ -313,7 +352,7 @@ export class RealtimeHub {
 	}
 
 	private close(socket: WebSocket, code: number, reason: string): void {
-		const attachment = socket.deserializeAttachment() as Attachment | null;
+		const attachment = attachmentOf(socket);
 		if (!attachment || this.closing.has(attachment.id)) return;
 		this.closing.add(attachment.id);
 		try {
@@ -420,10 +459,28 @@ export function changeVisible(
 	return owner !== null && owner === identity.userId;
 }
 
+function attachmentOf(socket: WebSocket): Attachment | null {
+	const value: unknown = socket.deserializeAttachment();
+	return isRecord(value) && typeof value.id === "string" && isIdentity(value)
+		? { ...value, id: value.id }
+		: null;
+}
+
+function isIdentity(
+	value: Record<string, unknown>,
+): value is Record<string, unknown> & RealtimeIdentity {
+	return (
+		Number.isSafeInteger(value.projectId) &&
+		(value.role === "anon" || value.role === "authenticated" || value.role === "service") &&
+		(value.userId === null || typeof value.userId === "string") &&
+		Number.isSafeInteger(value.expiresAt)
+	);
+}
+
 function parseIdentity(value: string | null): RealtimeIdentity | null {
 	if (!value) return null;
 	try {
-		const parsed = JSON.parse(value) as unknown;
+		const parsed: unknown = JSON.parse(value);
 		if (
 			isRecord(parsed) &&
 			Number.isSafeInteger(parsed.projectId) &&

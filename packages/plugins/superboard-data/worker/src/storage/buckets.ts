@@ -1,8 +1,8 @@
 import type { DataEnv } from "../platform/env.js";
-import { DataError, isRecord, nowIso } from "../platform/http.js";
+import { DataError, isRecord, nowIso, parseJsonValue, stringArray } from "../platform/http.js";
 import { parseAccessRule, type AccessRule } from "../platform/policy.js";
 
-export const MAXIMUM_OBJECT_BYTES = 5 * 1024 * 1024 * 1024;
+const MAXIMUM_OBJECT_BYTES = 5 * 1024 * 1024 * 1024;
 export const MAXIMUM_REQUEST_BYTES = 100 * 1024 * 1024;
 const DEFAULT_BUCKET_BYTES = 50 * 1024 * 1024;
 const NAME_PATTERN = /^[a-z0-9][a-z0-9_-]{0,62}$/u;
@@ -216,7 +216,7 @@ function bucketSettings(
 	return {
 		public: isPublic,
 		max_bytes: maximum,
-		allowed_types: [...new Set(types as string[])],
+		allowed_types: [...new Set(stringArray(types))],
 		rules,
 	};
 }
@@ -226,7 +226,7 @@ function bucketFromRow(row: BucketRow): Bucket {
 		name: row.name,
 		public: Number(row.public) === 1,
 		max_bytes: Number(row.max_bytes),
-		allowed_types: JSON.parse(row.allowed_types_json) as string[],
+		allowed_types: stringArray(parseJsonValue(row.allowed_types_json)),
 		rules: { read: row.read_rule, write: row.write_rule, delete: row.delete_rule },
 		created_at: row.created_at,
 		updated_at: row.updated_at,

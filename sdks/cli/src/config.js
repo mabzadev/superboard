@@ -6,7 +6,7 @@ import { UsageError } from "./errors.js";
 
 const SECRET_KEY_PATTERN = /^sb_secret_[A-Za-z0-9_-]{43}$/u;
 
-export function configPath(env) {
+function configPath(env) {
 	const base = env.XDG_CONFIG_HOME || join(homedir(), ".config");
 	return join(base, "superboard", "config.json");
 }
@@ -40,7 +40,7 @@ export function validateKey(value) {
 	return value;
 }
 
-export async function readConfig(env) {
+async function readConfig(env) {
 	try {
 		const parsed = JSON.parse(await readFile(configPath(env), "utf8"));
 		return parsed && typeof parsed === "object" ? parsed : {};

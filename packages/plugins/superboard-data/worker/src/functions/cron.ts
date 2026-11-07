@@ -5,7 +5,7 @@ interface Field {
 	wildcard: boolean;
 }
 
-export interface CronExpression {
+interface CronExpression {
 	minute: Field;
 	hour: Field;
 	day: Field;

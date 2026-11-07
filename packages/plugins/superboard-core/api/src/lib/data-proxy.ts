@@ -13,7 +13,7 @@ export const DATA_FAMILIES = [
 	"ai",
 	"manage",
 ] as const;
-export type DataFamily = (typeof DATA_FAMILIES)[number];
+type DataFamily = (typeof DATA_FAMILIES)[number];
 
 const FORWARDED_HEADERS = [
 	"authorization",

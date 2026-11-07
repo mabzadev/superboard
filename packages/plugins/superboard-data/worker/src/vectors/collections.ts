@@ -1,9 +1,18 @@
 import type { Caller } from "../platform/caller.js";
 import type { DataEnv } from "../platform/env.js";
-import { DataError, boundedInteger, isRecord, nowIso, sha256Hex } from "../platform/http.js";
+import {
+	DataError,
+	boundedInteger,
+	isRecord,
+	jsonRecord,
+	nowIso,
+	sha256Hex,
+	stringArray,
+	scalarText,
+} from "../platform/http.js";
 import { assertAllowed, ownerScope, parseAccessRule, type AccessRule } from "../platform/policy.js";
 
-export const EMBEDDING_MODEL = "@cf/baai/bge-m3";
+const EMBEDDING_MODEL = "@cf/baai/bge-m3" satisfies keyof AiModels;
 export const EMBEDDING_DIMENSIONS = 1024;
 
 const NAME_PATTERN = /^[a-z][a-z0-9_-]{0,39}$/u;
@@ -13,7 +22,7 @@ const MAXIMUM_TEXT_LENGTH = 8_000;
 const MAXIMUM_METADATA_BYTES = 4_096;
 const MAXIMUM_COLLECTIONS = 50;
 
-export interface VectorCollection {
+interface VectorCollection {
 	name: string;
 	rules: { read: AccessRule; write: AccessRule };
 	item_count?: number;
@@ -163,22 +172,18 @@ export async function deleteCollection(
 		.run();
 }
 
-export async function embedTexts(env: DataEnv, texts: string[]): Promise<number[][]> {
+async function embedTexts(env: DataEnv, texts: string[]): Promise<number[][]> {
 	if (!env.AI) throw unavailable();
 	if (texts.length === 0) return [];
-	const output = (await env.AI.run(
-		EMBEDDING_MODEL as keyof AiModels,
-		{ text: texts } as never,
-	)) as {
-		data?: number[][];
-	};
-	if (!Array.isArray(output.data) || output.data.length !== texts.length)
+	const output: unknown = await env.AI.run(EMBEDDING_MODEL, { text: texts });
+	const data = isRecord(output) ? output.data : undefined;
+	if (!isEmbeddingList(data) || data.length !== texts.length)
 		throw new DataError(
 			502,
 			"embedding_failed",
 			"The embedding model returned an unexpected result",
 		);
-	return output.data;
+	return data;
 }
 
 export async function upsertItems(
@@ -273,13 +278,7 @@ export async function queryItems(
 	const index = vectorIndex(env);
 	assertAllowed(collection.rules.read, caller, "read this collection");
 	if (!isRecord(body)) throw new DataError(422, "query_invalid", "Body must be an object");
-	const topK = boundedInteger(
-		body.top_k === undefined ? null : String(body.top_k),
-		10,
-		1,
-		50,
-		"top_k_invalid",
-	);
+	const topK = boundedInteger(scalarText(body.top_k), 10, 1, 50, "top_k_invalid");
 	let vector: number[] | undefined;
 	if (Array.isArray(body.values)) vector = parseValues(body.values);
 	else if (
@@ -311,7 +310,7 @@ export async function queryItems(
 	for (const match of matches.matches) {
 		const row = rows.get(match.id);
 		if (!row || (owner !== null && row.owner_id !== owner)) continue;
-		const metadata = JSON.parse(row.metadata_json) as Record<string, unknown>;
+		const metadata = jsonRecord(row.metadata_json);
 		if (!Object.entries(filter).every(([key, value]) => metadata[key] === value)) continue;
 		items.push({
 			id: row.id,
@@ -360,7 +359,7 @@ export async function embeddings(env: DataEnv, caller: Caller, body: unknown) {
 		)
 	)
 		throw new DataError(422, "input_invalid", `input is a string or 1 to ${MAXIMUM_ITEMS} strings`);
-	const vectors = await embedTexts(env, texts as string[]);
+	const vectors = await embedTexts(env, stringArray(texts));
 	return {
 		model: EMBEDDING_MODEL,
 		dimensions: EMBEDDING_DIMENSIONS,
@@ -401,10 +400,19 @@ function parseValues(value: unknown): number[] {
 	if (
 		!Array.isArray(value) ||
 		value.length !== EMBEDDING_DIMENSIONS ||
-		value.some((item) => typeof item !== "number" || !Number.isFinite(item))
+		!value.every((item): item is number => typeof item === "number" && Number.isFinite(item))
 	)
 		throw new DataError(422, "values_invalid", `values has ${EMBEDDING_DIMENSIONS} finite numbers`);
-	return value as number[];
+	return value;
+}
+
+function isEmbeddingList(value: unknown): value is number[][] {
+	return (
+		Array.isArray(value) &&
+		value.every(
+			(vector) => Array.isArray(vector) && vector.every((item) => typeof item === "number"),
+		)
+	);
 }
 
 function parseMetadata(value: unknown): Record<string, unknown> {

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { ApiError, UsageError } from "../errors.js";
 import { schemaPlan, table } from "../format.js";
 
-export function schemaFromTables(tables) {
+function schemaFromTables(tables) {
 	return {
 		tables: tables.map((definition) => ({
 			name: definition.name,

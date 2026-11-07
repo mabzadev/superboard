@@ -4,7 +4,7 @@ import { Hono } from "hono";
 
 import { resolveCaller, resolveServiceCaller, type Role } from "../platform/caller.js";
 import type { DataEnv } from "../platform/env.js";
-import { DataError, json, readJsonObject } from "../platform/http.js";
+import { DataError, isRecord, json, readJsonObject } from "../platform/http.js";
 import { publicOrigin, signToken, verifyToken } from "../platform/signing.js";
 import { IDENTITY_HEADER, type RealtimeIdentity } from "../realtime/hub.js";
 import { realtimeStub } from "../realtime/publish.js";
@@ -30,6 +30,17 @@ interface Ticket {
 }
 
 const MAXIMUM_SESSION_SECONDS = 3_600;
+
+function isTicket(value: unknown): value is Ticket {
+	return (
+		isRecord(value) &&
+		Number.isSafeInteger(value.p) &&
+		(value.r === "anon" || value.r === "authenticated" || value.r === "service") &&
+		(value.u === null || typeof value.u === "string") &&
+		Number.isSafeInteger(value.s) &&
+		Number.isSafeInteger(value.e)
+	);
+}
 
 realtimeRoutes.defineRoute({ id: "data:realtime:ticket" }).post(
 	"/v1/realtime/tickets",
@@ -67,11 +78,12 @@ realtimeRoutes
 		action("realtime-connect", async (c) => {
 			if (c.req.header("upgrade")?.toLowerCase() !== "websocket")
 				throw new DataError(426, "websocket_required", "Open this URL as a WebSocket");
-			const ticket = await verifyToken<Ticket>(
+			const ticket = await verifyToken(
 				c.env,
 				TICKET_PURPOSE,
 				c.req.query("ticket") ?? "",
 				TICKET_SECONDS,
+				isTicket,
 			);
 			if (!ticket)
 				throw new DataError(401, "ticket_invalid", "Realtime ticket is invalid or expired");

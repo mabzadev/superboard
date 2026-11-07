@@ -242,7 +242,7 @@ describe("Application database", () => {
 		const applied = await service("/v1/manage/schema", secret, { method: "POST", body: schema });
 		expect(await jsonOf(applied)).toMatchObject({ applied: true });
 
-		const shrunk = { tables: [{ ...schema.tables[0], columns: [schema.tables[0]!.columns[0]] }] };
+		const shrunk = { tables: [{ ...schema.tables[0], columns: [schema.tables[0].columns[0]] }] };
 		const refused = await service("/v1/manage/schema", secret, { method: "POST", body: shrunk });
 		expect(refused.status).toBe(409);
 		expect(await jsonOf(refused)).toMatchObject({ error: { code: "destructive_changes" } });

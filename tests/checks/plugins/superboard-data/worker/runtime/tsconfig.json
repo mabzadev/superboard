@@ -1,0 +1,7 @@
+{
+	"extends": "../../../../../../packages/plugins/superboard-data/worker/tsconfig.runtime.json",
+	"include": [
+		"./**/*.ts",
+		"../../../../../../packages/plugins/superboard-data/worker/worker-configuration.d.ts"
+	]
+}

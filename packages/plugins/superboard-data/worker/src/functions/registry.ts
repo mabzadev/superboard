@@ -1,10 +1,20 @@
 import type { DataEnv } from "../platform/env.js";
-import { DataError, boundedInteger, isRecord, nowIso, sha256Hex } from "../platform/http.js";
+import {
+	DataError,
+	boundedInteger,
+	isRecord,
+	nowIso,
+	sha256Hex,
+	parseJsonValue,
+	scalarText,
+	stringArray,
+	stringRecord,
+} from "../platform/http.js";
 import { nextRun, parseCron } from "./cron.js";
 import { decryptSecrets, encryptSecrets, secretsAvailable } from "./secrets.js";
 
-export const FUNCTION_ACCESS = ["public", "authenticated", "service"] as const;
-export type FunctionAccess = (typeof FUNCTION_ACCESS)[number];
+const FUNCTION_ACCESS = ["public", "authenticated", "service"] as const;
+type FunctionAccess = (typeof FUNCTION_ACCESS)[number];
 
 const NAME_PATTERN = /^[a-z][a-z0-9-]{0,47}$/u;
 const VARIABLE_PATTERN = /^[A-Z][A-Z0-9_]{0,63}$/u;
@@ -15,14 +25,14 @@ const KEPT_VERSIONS = 10;
 const MAXIMUM_FUNCTIONS = 100;
 const RESERVED_VARIABLES = new Set(["SUPERBOARD_API_URL", "SUPERBOARD_PROJECT_ID"]);
 
-export interface FunctionSchedule {
+interface FunctionSchedule {
 	cron: string;
 	enabled: boolean;
 	next_run_at: string;
 	last_run_at: string | null;
 }
 
-export interface FunctionDefinition {
+interface FunctionDefinition {
 	name: string;
 	access: FunctionAccess;
 	active_version: number | null;
@@ -34,7 +44,7 @@ export interface FunctionDefinition {
 	updated_at: string;
 }
 
-export interface FunctionVersion {
+interface FunctionVersion {
 	version: number;
 	source_hash: string;
 	created_by: string | null;
@@ -57,7 +67,7 @@ type FunctionRow = {
 	last_run_at: string | null;
 };
 
-export function assertFunctionName(name: string): void {
+function assertFunctionName(name: string): void {
 	if (!NAME_PATTERN.test(name))
 		throw new DataError(
 			422,
@@ -78,7 +88,7 @@ export async function listFunctions(
 	return results.map(definitionFromRow);
 }
 
-export async function getFunction(
+async function getFunction(
 	env: DataEnv,
 	projectId: number,
 	name: string,
@@ -155,11 +165,12 @@ export async function deployFunction(
 				"The first deployment needs source code",
 			);
 	}
-	const access = body.access === undefined ? (current?.access ?? "authenticated") : body.access;
-	if (typeof access !== "string" || !(FUNCTION_ACCESS as readonly string[]).includes(access))
+	const requestedAccess = body.access ?? current?.access ?? "authenticated";
+	const access = FUNCTION_ACCESS.find((candidate) => candidate === requestedAccess);
+	if (!access)
 		throw new DataError(422, "function_access_invalid", `access is ${FUNCTION_ACCESS.join(", ")}`);
 	const timeout = boundedInteger(
-		body.timeout_ms === undefined ? String(current?.timeout_ms ?? 30_000) : String(body.timeout_ms),
+		scalarText(body.timeout_ms) ?? String(current?.timeout_ms ?? 30_000),
 		30_000,
 		1_000,
 		300_000,
@@ -349,7 +360,7 @@ export async function listRuns(
 	return {
 		items: results.map(({ logs_json, ...run }) => ({
 			...run,
-			logs: JSON.parse(logs_json) as unknown,
+			logs: parseJsonValue(logs_json),
 		})),
 	};
 }
@@ -384,8 +395,8 @@ function definitionFromRow(row: FunctionRow): FunctionDefinition {
 		access: row.access,
 		active_version: row.active_version === null ? null : Number(row.active_version),
 		timeout_ms: Number(row.timeout_ms),
-		vars: JSON.parse(row.vars_json) as Record<string, string>,
-		secret_names: JSON.parse(row.secret_names_json) as string[],
+		vars: stringRecord(parseJsonValue(row.vars_json)),
+		secret_names: stringArray(parseJsonValue(row.secret_names_json)),
 		schedule:
 			row.cron === null || row.next_run_at === null
 				? null

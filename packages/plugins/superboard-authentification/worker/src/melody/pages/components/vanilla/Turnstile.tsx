@@ -37,7 +37,7 @@ function whenTurnstileLoads(callback: (api: TurnstileApi) => void): () => void {
 	return () => script?.removeEventListener("load", listener);
 }
 
-export interface TurnstileProps {
+interface TurnstileProps {
 	siteKey: string;
 	locale: typeConfig.Locale;
 	resetCount: number;
@@ -54,10 +54,18 @@ const Turnstile = ({ siteKey, locale, resetCount, onToken }: TurnstileProps) => 
 			const id = api.render(container.current, {
 				sitekey: siteKey,
 				language: locale,
-				callback: (token: string) => onToken(token),
-				"expired-callback": () => onToken(null),
-				"error-callback": () => onToken(null),
-				"timeout-callback": () => onToken(null),
+				callback: (token: string) => {
+					onToken(token);
+				},
+				"expired-callback": () => {
+					onToken(null);
+				},
+				"error-callback": () => {
+					onToken(null);
+				},
+				"timeout-callback": () => {
+					onToken(null);
+				},
 			});
 			widget.current = id ? { api, id } : null;
 		});

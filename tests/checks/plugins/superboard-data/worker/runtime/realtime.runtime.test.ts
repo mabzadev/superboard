@@ -29,7 +29,7 @@ class Client {
 
 	next(predicate: (message: Message) => boolean, timeout = 2_000): Promise<Message> {
 		const index = this.messages.findIndex(predicate);
-		if (index >= 0) return Promise.resolve(this.messages.splice(index, 1)[0]!);
+		if (index >= 0) return Promise.resolve(this.messages.splice(index, 1)[0]);
 		return new Promise((resolve, reject) => {
 			const timer = setTimeout(() => reject(new Error("realtime message timeout")), timeout);
 			this.waiters.push({
@@ -65,7 +65,8 @@ async function connect(user?: string): Promise<Client> {
 		headers: { upgrade: "websocket" },
 	});
 	expect(response.status).toBe(101);
-	return new Client(response.webSocket!);
+	if (!response.webSocket) throw new Error("The realtime endpoint did not open a WebSocket");
+	return new Client(response.webSocket);
 }
 
 const pause = (milliseconds: number) =>

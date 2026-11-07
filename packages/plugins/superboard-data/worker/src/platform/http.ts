@@ -109,3 +109,32 @@ export async function sha256Hex(value: string | Uint8Array): Promise<string> {
 export function nowIso(): string {
 	return new Date().toISOString();
 }
+
+export function scalarText(value: unknown): string | null {
+	if (value === undefined || value === null) return null;
+	if (typeof value === "number" || typeof value === "string") return String(value);
+	return "invalid";
+}
+
+export function parseJsonValue(text: string): unknown {
+	return JSON.parse(text);
+}
+
+export function jsonRecord(text: string): Record<string, unknown> {
+	const value = parseJsonValue(text);
+	return isRecord(value) ? value : {};
+}
+
+export function stringRecord(value: unknown): Record<string, string> {
+	const output: Record<string, string> = {};
+	if (isRecord(value))
+		for (const [key, item] of Object.entries(value))
+			if (typeof item === "string") output[key] = item;
+	return output;
+}
+
+export function stringArray(value: unknown): string[] {
+	return Array.isArray(value)
+		? value.filter((item): item is string => typeof item === "string")
+		: [];
+}

@@ -7,7 +7,7 @@ import { nextRun } from "./cron.js";
 import { activeSource, requireFunction } from "./registry.js";
 import { decryptSecrets } from "./secrets.js";
 
-export type Trigger = "http" | "schedule" | "test";
+type Trigger = "http" | "schedule" | "test";
 
 const COMPATIBILITY_DATE = "2026-08-08";
 const LOG_HEADER = "x-superboard-logs";
@@ -91,7 +91,7 @@ export default {
 };
 `;
 
-export interface InvocationResult {
+interface InvocationResult {
 	response: Response;
 	runId: string;
 	logs: unknown[];
@@ -218,7 +218,11 @@ export async function invokeFunction(
 
 export async function runDueSchedules(env: DataEnv, now = new Date()): Promise<number> {
 	const records: Promise<unknown>[] = [];
-	const collector: Deferral = { waitUntil: (promise) => records.push(promise) };
+	const collector: Deferral = {
+		waitUntil(promise) {
+			records.push(promise);
+		},
+	};
 	const runs: Promise<unknown>[] = [];
 	const { results } = await env.DB.prepare(
 		`SELECT project_id, name, cron, next_run_at FROM data_function_schedules
@@ -333,7 +337,9 @@ async function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promis
 		return await Promise.race([
 			promise,
 			new Promise<never>((_, reject) => {
-				timer = setTimeout(() => reject(new TimeoutError("timeout")), milliseconds);
+				timer = setTimeout(() => {
+					reject(new TimeoutError("timeout"));
+				}, milliseconds);
 			}),
 		]);
 	} finally {

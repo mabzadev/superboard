@@ -33,7 +33,7 @@ interface Token {
 	value: string;
 }
 
-export interface SqlResult {
+interface SqlResult {
 	columns: string[];
 	rows: unknown[][];
 	truncated: boolean;
@@ -101,7 +101,7 @@ async function assertProjectTables(env: DataEnv, projectId: number, tokens: Toke
 	}
 }
 
-export function tokenize(query: string): Token[] {
+function tokenize(query: string): Token[] {
 	const tokens: Token[] = [];
 	let index = 0;
 	const quoted = (close: string, kind: TokenKind) => {

@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.runtime.json",
     "test": "vitest run && vitest run --config vitest.runtime.config.ts",
     "test:runtime": "vitest run --config vitest.runtime.config.ts"
   },

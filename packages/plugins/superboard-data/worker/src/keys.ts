@@ -6,7 +6,7 @@ const NAME_PATTERN = /^[\p{L}\p{N} ._-]{1,64}$/u;
 const MAXIMUM_ACTIVE_KEYS = 20;
 const LAST_USED_RESOLUTION_MS = 60_000;
 
-export interface ServiceKey {
+interface ServiceKey {
 	id: string;
 	name: string;
 	hint: string;

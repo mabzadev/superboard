@@ -692,6 +692,7 @@ describe("platform status", () => {
 			licensePath: "sdks/flutterflow/LICENSE",
 		});
 		expect(body.data.libraries.map((library: { id: string }) => library.id).toSorted()).toEqual([
+			"cli",
 			"flutter",
 			"flutterflow",
 			"tauri",

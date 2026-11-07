@@ -1,6 +1,9 @@
+import { readJsonLimited } from "@superboard/contracts/request-body";
+
 const siteverifyUrl = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const verificationTimeoutMs = 5_000;
 const maximumTokenLength = 2_048;
+const maximumResponseBytes = 16_384;
 const tokenFields = ["captcha_token", "cf-turnstile-response"] as const;
 const configurationErrorCodes = new Set([
 	"internal-error",
@@ -13,7 +16,7 @@ export const turnstileScriptId = "superboard-turnstile";
 export const turnstileScriptUrl =
 	"https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
-export type CaptchaRejection = "captcha_required" | "captcha_failed" | "captcha_unavailable";
+type CaptchaRejection = "captcha_required" | "captcha_failed" | "captcha_unavailable";
 
 interface CaptchaConfiguration {
 	siteKey: string;
@@ -45,7 +48,7 @@ export function captchaConfiguration(env: object): CaptchaConfiguration | null {
 	return siteKey && secret ? { siteKey, secret } : null;
 }
 
-export function captchaToken(headers: Headers, body: Record<string, unknown>): string | null {
+function captchaToken(headers: Headers, body: Record<string, unknown>): string | null {
 	for (const candidate of [
 		headers.get(captchaTokenHeader),
 		...tokenFields.map((field) => body[field]),
@@ -90,7 +93,7 @@ async function verify(
 			console.error(`[identity-captcha] Turnstile answered with status ${response.status}`);
 			return "captcha_unavailable";
 		}
-		outcome = await response.json();
+		outcome = await readJsonLimited(response, maximumResponseBytes);
 	} catch (cause) {
 		console.error(
 			`[identity-captcha] Turnstile could not be reached: ${cause instanceof Error ? cause.name : "unknown"}`,

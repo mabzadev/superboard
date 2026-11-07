@@ -1,5 +1,11 @@
 import type { DataEnv } from "../platform/env.js";
-import { DataError, base64UrlDecode, base64UrlEncode } from "../platform/http.js";
+import {
+	DataError,
+	base64UrlDecode,
+	base64UrlEncode,
+	parseJsonValue,
+	stringRecord,
+} from "../platform/http.js";
 
 const keys = new Map<string, Promise<CryptoKey>>();
 
@@ -34,7 +40,7 @@ export async function decryptSecrets(
 		await encryptionKey(env),
 		combined.slice(12),
 	);
-	return JSON.parse(new TextDecoder().decode(plaintext)) as Record<string, string>;
+	return stringRecord(parseJsonValue(new TextDecoder().decode(plaintext)));
 }
 
 function encryptionKey(env: DataEnv): Promise<CryptoKey> {

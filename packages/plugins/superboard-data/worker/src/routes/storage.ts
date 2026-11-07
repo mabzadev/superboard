@@ -3,7 +3,14 @@ import { Hono } from "hono";
 
 import { resolveCaller, type Caller } from "../platform/caller.js";
 import type { DataEnv } from "../platform/env.js";
-import { DataError, boundedInteger, json, readJsonObject } from "../platform/http.js";
+import {
+	DataError,
+	boundedInteger,
+	isRecord,
+	json,
+	readJsonObject,
+	scalarText,
+} from "../platform/http.js";
 import { allows } from "../platform/policy.js";
 import { publicOrigin, signToken, verifyToken } from "../platform/signing.js";
 import { getBucket, listBuckets, requireBucket } from "../storage/buckets.js";
@@ -50,6 +57,18 @@ interface SignedObject {
 	k: string;
 	t?: Record<string, string>;
 	e: number;
+}
+
+function isSignedObject(value: unknown): value is SignedObject {
+	return (
+		isRecord(value) &&
+		Number.isSafeInteger(value.p) &&
+		typeof value.b === "string" &&
+		typeof value.k === "string" &&
+		(value.t === undefined ||
+			(isRecord(value.t) && Object.values(value.t).every((item) => typeof item === "string"))) &&
+		Number.isSafeInteger(value.e)
+	);
 }
 
 async function bucketContext(
@@ -132,16 +151,16 @@ storageRoutes.defineRoute({ id: "data:storage:sign" }).post(
 		const object = await readableObject(c.env, caller, bucket, objectPath(c, "sign"));
 		const body = await readJsonObject(c.req.raw, 4_096);
 		const seconds = boundedInteger(
-			body.expires_in === undefined ? null : String(body.expires_in),
+			scalarText(body.expires_in),
 			3_600,
 			1,
 			MAXIMUM_SIGNED_SECONDS,
 			"expires_in_invalid",
 		);
 		const transform: Record<string, string> = {};
-		if (body.transform && typeof body.transform === "object")
+		if (isRecord(body.transform))
 			for (const key of TRANSFORM_KEYS) {
-				const value = (body.transform as Record<string, unknown>)[key];
+				const value = body.transform[key];
 				if (typeof value === "string" || typeof value === "number") transform[key] = String(value);
 			}
 		const expires = Math.floor(Date.now() / 1000) + seconds;
@@ -162,11 +181,12 @@ storageRoutes.defineRoute({ id: "data:storage:sign" }).post(
 storageRoutes.defineRoute({ id: "data:storage:signed", access: "public" }).get(
 	"/v1/storage/signed/:token",
 	action("storage-signed", async (c) => {
-		const token = await verifyToken<SignedObject>(
+		const token = await verifyToken(
 			c.env,
 			SIGNED_PURPOSE,
 			param(c, "token"),
 			MAXIMUM_SIGNED_SECONDS,
+			isSignedObject,
 		);
 		if (!token) throw new DataError(401, "signature_invalid", "Signed URL is invalid or expired");
 		const object = await findObject(c.env, token.p, token.b, token.k);

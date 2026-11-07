@@ -3,10 +3,20 @@ import { SELF, env } from "cloudflare:test";
 import { SignJWT, importJWK, type JWK } from "jose";
 
 export const PROJECT_ID = 12;
-export const INSTANCE_ID = 3;
+const INSTANCE_ID = 3;
 const ORIGIN = "https://files.internal";
 
-export interface RequestOptions {
+function isJwk(value: unknown): value is JWK & { kid: string } {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"kty" in value &&
+		"kid" in value &&
+		typeof value.kid === "string"
+	);
+}
+
+interface RequestOptions {
 	method?: string;
 	body?: unknown;
 	raw?: BodyInit | null;
@@ -14,12 +24,13 @@ export interface RequestOptions {
 	projectId?: number;
 }
 
-export async function applicationToken(
+async function applicationToken(
 	userId: string,
 	projectId = PROJECT_ID,
 	expiresIn = "5m",
 ): Promise<string> {
-	const jwk = JSON.parse(env.TEST_SIGNING_JWK) as JWK;
+	const jwk: unknown = JSON.parse(env.TEST_SIGNING_JWK);
+	if (!isJwk(jwk)) throw new Error("TEST_SIGNING_JWK is not a JSON Web Key");
 	return new SignJWT({ type: "application_access", pid: projectId, sid: `session-${userId}` })
 		.setProtectedHeader({ alg: "ES256", kid: jwk.kid })
 		.setSubject(userId)
@@ -105,7 +116,7 @@ export async function createKey(name = "server"): Promise<string> {
 	const response = await operator("/keys", { method: "POST", body: { name } });
 	if (response.status !== 201)
 		throw new Error(`key creation failed: ${response.status} ${await response.text()}`);
-	return ((await response.json()) as { secret: string }).secret;
+	return (await response.json<{ secret: string }>()).secret;
 }
 
 export async function ensureTable(definition: Record<string, unknown>) {
@@ -119,5 +130,5 @@ export async function ensureTable(definition: Record<string, unknown>) {
 }
 
 export async function jsonOf<T = Record<string, unknown>>(response: Response): Promise<T> {
-	return (await response.json()) as T;
+	return response.json<T>();
 }

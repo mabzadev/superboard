@@ -13,8 +13,7 @@ export const COLUMN_TYPES = [
 ] as const;
 export type ColumnType = (typeof COLUMN_TYPES)[number];
 
-export const SYSTEM_COLUMNS = ["id", "owner_id", "created_at", "updated_at"] as const;
-export type SystemColumn = (typeof SYSTEM_COLUMNS)[number];
+const SYSTEM_COLUMNS = ["id", "owner_id", "created_at", "updated_at"] as const;
 
 const NAME_PATTERN = /^[a-z](?:[a-z0-9]|_(?!_)){0,47}$/u;
 const MAXIMUM_TABLES = 200;
@@ -93,7 +92,7 @@ export function quoteIdentifier(identifier: string): string {
 	return `"${identifier}"`;
 }
 
-export function assertName(value: unknown, kind: "table" | "column"): asserts value is string {
+function assertName(value: unknown, kind: "table" | "column"): asserts value is string {
 	if (typeof value !== "string" || !NAME_PATTERN.test(value))
 		throw new DataError(
 			422,
@@ -102,7 +101,7 @@ export function assertName(value: unknown, kind: "table" | "column"): asserts va
 		);
 }
 
-export function sqliteType(type: ColumnType): string {
+function sqliteType(type: ColumnType): string {
 	if (type === "integer" || type === "boolean") return "INTEGER";
 	if (type === "number") return "REAL";
 	return "TEXT";
@@ -155,18 +154,18 @@ export function parseTableInput(value: unknown): TableInput {
 	};
 }
 
-export function parseColumnInput(value: unknown, position: number): ColumnDefinition {
+function parseColumnInput(value: unknown, position: number): ColumnDefinition {
 	if (!isRecord(value)) throw new DataError(422, "column_invalid", "Column must be an object");
 	assertName(value.name, "column");
 	if ((SYSTEM_COLUMNS as readonly string[]).includes(value.name))
 		throw new DataError(422, "column_reserved", `${value.name} is a system column`);
-	if (typeof value.type !== "string" || !(COLUMN_TYPES as readonly string[]).includes(value.type))
+	const type = COLUMN_TYPES.find((candidate) => candidate === value.type);
+	if (!type)
 		throw new DataError(
 			422,
 			"column_type_invalid",
 			`Column type must be one of ${COLUMN_TYPES.join(", ")}`,
 		);
-	const type = value.type as ColumnType;
 	const nullable = parseBoolean(value.nullable, true, "nullable");
 	const unique = parseBoolean(value.unique, false, "unique");
 	const column: ColumnDefinition = {
