@@ -3545,6 +3545,9 @@ importers:
         specifier: ^6.2.2
         version: 6.2.10
     devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: catalog:workers
+        version: 0.20.3(@cloudflare/workers-types@5.20260828.1)(@vitest/runner@4.1.12)(@vitest/snapshot@4.1.12)(vitest@4.1.12)
       '@cloudflare/workers-types':
         specifier: catalog:workers
         version: 5.20260828.1

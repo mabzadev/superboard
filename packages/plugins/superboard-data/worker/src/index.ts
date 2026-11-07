@@ -1,7 +1,7 @@
-import { withRouteManifest } from "@superboard/contracts/route-manifest";
-import { mountRegisteredRouter, registerRouter } from "@superboard/contracts/route-registry";
 import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import { readBytesLimited } from "@superboard/contracts/request-body";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { mountRegisteredRouter, registerRouter } from "@superboard/contracts/route-registry";
 import {
 	constantTimeEqual,
 	configuredSecrets,
@@ -12,7 +12,14 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 
 import { FilesInputError } from "./errors.js";
 import { filesBucket } from "./files-bucket.js";
+import { pruneRuns, runDueSchedules } from "./functions/runtime.js";
 import { handleOperatorFiles, operatorFileRoutes } from "./operator.js";
+import { databaseRoutes } from "./routes/database.js";
+import { functionRoutes, vectorRoutes } from "./routes/functions.js";
+import { manageRoutes, operatorDataRoutes } from "./routes/manage.js";
+import { realtimeRoutes } from "./routes/realtime.js";
+import { storageRoutes } from "./routes/storage.js";
+import { abortExpiredUploads } from "./storage/objects.js";
 
 export type FilesEnv = Cloudflare.Env;
 
@@ -30,7 +37,24 @@ type FileRow = {
 };
 
 const jwks = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
-const app = registerRouter(new Hono<{ Bindings: FilesEnv; Variables: Variables }>(), {"service":"files","module":"index.app","pluginId":"superboard-files","surface":"internal","access":"framework"});
+const app = registerRouter(new Hono<{ Bindings: FilesEnv; Variables: Variables }>(), {
+	service: "files",
+	module: "index.app",
+	pluginId: "superboard-files",
+	surface: "internal",
+	access: "framework",
+});
+
+for (const router of [
+	databaseRoutes,
+	storageRoutes,
+	realtimeRoutes,
+	functionRoutes,
+	vectorRoutes,
+	manageRoutes,
+	operatorDataRoutes,
+])
+	app.route("/", router);
 
 mountRegisteredRouter(app, operatorFileRoutes, (c: FilesContext) =>
 	handleOperatorFiles(c.req.raw, c.env, {
@@ -217,7 +241,9 @@ app.post("/v1/files", async (c) => {
 			.bind(id, c.get("userId"), objectKey, filename, contentType, byteSize, object.etag)
 			.run();
 	} catch (cause) {
-		await filesBucket(c.env).delete(objectKey).catch(() => undefined);
+		await filesBucket(c.env)
+			.delete(objectKey)
+			.catch(() => undefined);
 		throw cause;
 	}
 	return json(
@@ -628,7 +654,26 @@ function json(value: unknown, status = 200) {
 	});
 }
 
-export default withRouteManifest((app), [app], {"service":"files","pluginId":"superboard-files"});
+async function scheduled(_controller: ScheduledController, env: FilesEnv, ctx: ExecutionContext) {
+	const tasks = {
+		schedules: runDueSchedules(env, ctx),
+		uploads: abortExpiredUploads(env),
+		runs: pruneRuns(env),
+	};
+	await Promise.all(
+		Object.entries(tasks).map(([name, task]) =>
+			task.catch((cause: unknown) => {
+				console.error(`[data-cron] ${name} failed`, cause);
+			}),
+		),
+	);
+}
+
+export default withRouteManifest(Object.assign(app, { scheduled }), [app], {
+	service: "files",
+	pluginId: "superboard-files",
+});
+export { RealtimeHub } from "./realtime/hub.js";
 export {
 	allowedContentTypes,
 	assertAllowedContentType,
