@@ -466,7 +466,7 @@ function collectionNotFound(name: string) {
 	return new DataError(404, "collection_not_found", `Collection ${name} does not exist`);
 }
 
-function vectorIndex(env: DataEnv): Vectorize {
+function vectorIndex(env: DataEnv): NonNullable<DataEnv["VECTORS"]> {
 	if (!env.AI || !env.VECTORS) throw unavailable();
 	return env.VECTORS;
 }

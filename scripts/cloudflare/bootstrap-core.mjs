@@ -103,6 +103,7 @@ export function desiredCloudflareResources(target, environment) {
 	}
 	for (const [resourceKey, resource] of Object.entries(resources.moduleVectorize ?? {}).filter(
 		([resourceKey]) =>
+			resourceKey === "dataVectors" ||
 			DOMAIN_SERVICES.some(
 				(service) =>
 					target.features[service] &&
@@ -453,6 +454,9 @@ function vectorizeResource(key, label, resource) {
 			dimensions: resource.dimensions,
 			metric: resource.metric,
 			...(resource.description ? { description: resource.description } : {}),
+			...(resource.metadataIndexes?.length
+				? { metadataIndexes: resource.metadataIndexes.map((index) => ({ ...index })) }
+				: {}),
 		},
 		manifestId: null,
 		legacyName: resource.legacyName === true,
@@ -477,6 +481,9 @@ function operationFor(type, resource, remoteId) {
 		endpoint: definition.endpoint,
 		idField: definition.idField,
 		body: definition.createBody(resource),
+		...(resource.configuration?.metadataIndexes
+			? { metadataIndexes: resource.configuration.metadataIndexes }
+			: {}),
 	};
 }
 

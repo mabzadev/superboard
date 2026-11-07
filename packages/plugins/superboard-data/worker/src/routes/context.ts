@@ -6,7 +6,7 @@ import { failure } from "../platform/http.js";
 
 export type DataContext = Context<{ Bindings: DataEnv }>;
 
-export const DATA_PLUGIN_ID = "superboard-data";
+export const DATA_PLUGIN_ID = "superboard-files";
 
 export function deferralOf(c: DataContext): Deferral {
 	try {

@@ -1,3 +1,4 @@
+import { readJsonLimited } from "@superboard/contracts/request-body";
 import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
@@ -99,7 +100,7 @@ realtimeRoutes.defineRoute({ id: "data:realtime:broadcast" }).post(
 				payload: body.payload ?? null,
 			}),
 		});
-		return json(await response.json());
+		return json(await readJsonLimited(response, 4_096));
 	}),
 );
 

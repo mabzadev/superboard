@@ -516,6 +516,110 @@ describe("unified public SDK routing", () => {
 		expect(requests[0]?.url).toBe("https://service.internal/v1/files?limit=7");
 		expect(requests[0]?.headers.get("authorization")).toBe("Bearer application-session");
 	});
+	describe("application data", () => {
+		const sdkHeaders = {
+			"PROJECT-KEY": "mobile-prod-key",
+			PLATFORM: "web",
+			IDENTIFIER: "app.example.test",
+		};
+		function filesService() {
+			const requests: Request[] = [];
+			const service = {
+				fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+					requests.push(new Request(input, { method: init?.method, headers: init?.headers }));
+					return Response.json({ items: [] });
+				},
+			} as unknown as Fetcher;
+			return { requests, service };
+		}
+		const dataEnv = (service: Fetcher) => ({
+			...unified(),
+			FILES_SERVICE: service,
+			FILES_INTERNAL_TOKEN: "files-secret",
+		});
+
+		it("signs the resolved project for SDK calls to the database", async () => {
+			const { requests, service } = filesService();
+			const response = await worker.fetch(
+				new Request("https://sdk.test/v1/data/db/todos?title=eq.milk", {
+					headers: { ...sdkHeaders, Authorization: "Bearer application-session" },
+				}),
+				dataEnv(service),
+				{} as ExecutionContext,
+			);
+			expect(response.status).toBe(200);
+			const forwarded = requests[0];
+			expect(forwarded?.url).toBe("https://files.internal/v1/db/todos?title=eq.milk");
+			expect(forwarded?.headers.get("authorization")).toBe("Bearer application-session");
+			const verified = await verifyInternalProjectContextRequest(
+				forwarded!,
+				"files-secret",
+				"files",
+			);
+			expect(verified).toMatchObject({ ok: true, context: { projectId: 101, instanceId: 10 } });
+		});
+
+		it("refuses SDK calls without project credentials", async () => {
+			const { requests, service } = filesService();
+			const response = await worker.fetch(
+				new Request("https://sdk.test/v1/data/storage/list/avatars"),
+				dataEnv(service),
+				{} as ExecutionContext,
+			);
+			expect(response.status).toBe(401);
+			expect(requests).toHaveLength(0);
+		});
+
+		it("forwards server keys and public objects without a project context", async () => {
+			const { requests, service } = filesService();
+			for (const [path, authorization] of [
+				["/v1/data/manage/tables", "Bearer sb_secret_example"],
+				["/v1/data/storage/public/101/assets/logo.png", undefined],
+				["/v1/data/openapi.json", "Bearer sb_secret_example"],
+			] as const) {
+				const response = await worker.fetch(
+					new Request(
+						`https://sdk.test${path}`,
+						authorization ? { headers: { Authorization: authorization } } : {},
+					),
+					dataEnv(service),
+					{} as ExecutionContext,
+				);
+				expect(response.status).toBe(200);
+			}
+			expect(requests.map((request) => new URL(request.url).pathname)).toEqual([
+				"/v1/manage/tables",
+				"/v1/storage/public/101/assets/logo.png",
+				"/v1/openapi.json",
+			]);
+			expect(requests.every((request) => !request.headers.has("x-internal-token"))).toBe(true);
+		});
+
+		it("passes custom headers to functions without internal ones", async () => {
+			const { requests, service } = filesService();
+			const response = await worker.fetch(
+				new Request("https://sdk.test/v1/data/functions/hello/greet", {
+					method: "POST",
+					headers: {
+						...sdkHeaders,
+						"x-custom": "kept",
+						"x-superboard-user-id": "mallory",
+						"content-type": "application/json",
+					},
+					body: "{}",
+				}),
+				dataEnv(service),
+				{} as ExecutionContext,
+			);
+			expect(response.status).toBe(200);
+			const forwarded = requests[0];
+			expect(new URL(forwarded?.url ?? "").pathname).toBe("/v1/functions/hello/greet");
+			expect(forwarded?.headers.get("x-custom")).toBe("kept");
+			expect(forwarded?.headers.get("x-superboard-user-id")).toBeNull();
+			expect(forwarded?.headers.get("x-internal-token")).toBe("files-secret");
+		});
+	});
+
 	it("requires project credentials before canonical sign-in reaches Identity", async () => {
 		const fetch = vi.fn(async () => Response.json({ unexpected: true }));
 		const response = await worker.fetch(

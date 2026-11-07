@@ -1,3 +1,8 @@
+import {
+	RequestBodyError,
+	readJsonLimited,
+	readTextLimited,
+} from "@superboard/contracts/request-body";
 import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
@@ -67,6 +72,8 @@ import {
 } from "./context.js";
 
 type Resolver = (c: DataContext) => Promise<Caller>;
+
+const MAXIMUM_INVOKE_BODY = 65_536;
 
 function confirmation(c: DataContext): string | null {
 	return searchParams(c).get("confirm");
@@ -361,12 +368,17 @@ function managementRouter(options: {
 				request: new Request("https://functions.internal/", { method, headers, body: payload }),
 				path: typeof body.path === "string" ? body.path : "/",
 			});
-			const text = await result.response.text();
+			const text = await readTextLimited(result.response, MAXIMUM_INVOKE_BODY).catch(
+				(cause: unknown) => {
+					if (cause instanceof RequestBodyError) return "";
+					throw cause;
+				},
+			);
 			return json({
 				run_id: result.runId,
 				status: result.response.status,
 				headers: Object.fromEntries(result.response.headers),
-				body: text.slice(0, 65_536),
+				body: text,
 				logs: result.logs,
 				duration_ms: result.durationMs,
 			});
@@ -460,10 +472,10 @@ operator.route("realtime-stats").get(
 	operator.handle("realtime-stats", async (c, caller) => {
 		const stub = realtimeStub(c.env, caller.projectId);
 		if (!stub) return json({ available: false, connections: 0, channels: [] });
-		const stats = (await (await stub.fetch("https://realtime.internal/stats")).json()) as Record<
-			string,
-			unknown
-		>;
+		const stats = (await readJsonLimited(
+			await stub.fetch("https://realtime.internal/stats"),
+			65_536,
+		)) as Record<string, unknown>;
 		return json({ available: true, ...stats });
 	}),
 );

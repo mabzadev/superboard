@@ -1,16 +1,13 @@
 import type { FilesEnv } from "../index.js";
 
-export type DataEnv = FilesEnv & {
-	FILES_INTERNAL_TOKEN_PREVIOUS?: string;
-	FILES_DOWNLOAD_SIGNING_KEY_PREVIOUS?: string;
-	DATA_ENCRYPTION_KEY?: string;
-	DATA_PUBLIC_ORIGIN?: string;
-	REALTIME?: DurableObjectNamespace;
-	LOADER?: WorkerLoader;
-	IMAGES?: ImagesBinding;
-	AI?: Ai;
-	VECTORS?: Vectorize;
-};
+type OptionalBinding = "REALTIME" | "LOADER" | "IMAGES" | "AI" | "VECTORS" | "DATA_PUBLIC_ORIGIN";
+
+export type DataEnv = Omit<FilesEnv, OptionalBinding> &
+	Partial<Pick<FilesEnv, OptionalBinding>> & {
+		FILES_INTERNAL_TOKEN_PREVIOUS?: string;
+		FILES_DOWNLOAD_SIGNING_KEY_PREVIOUS?: string;
+		DATA_ENCRYPTION_KEY?: string;
+	};
 
 export interface Deferral {
 	waitUntil(promise: Promise<unknown>): void;

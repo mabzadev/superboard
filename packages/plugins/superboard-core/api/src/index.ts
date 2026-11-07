@@ -36,6 +36,7 @@ import {
 	dispatchBillingServiceJob,
 	purchasesJwksFromBillingAuthority,
 } from "./lib/billing-service";
+import { DATA_FAMILIES, dataInternalPath, proxyDataService } from "./lib/data-proxy.js";
 import { delegatedAppOwner } from "./lib/delegated-route-owner.js";
 import { isSsoEnabled } from "./lib/deployment";
 import { deploymentRoutes, deploymentWebOrigins } from "./lib/deployment-routes.js";
@@ -498,9 +499,7 @@ app
 		if (url.pathname.startsWith("/auth/hosted/")) {
 			const hostedPath = url.pathname.slice("/auth/hosted".length);
 			if (
-				!/^\/(?:oauth2\/v1\/|identity\/v1\/|embedded-auth\/v1\/)/u.test(
-					hostedPath,
-				) &&
+				!/^\/(?:oauth2\/v1\/|identity\/v1\/|embedded-auth\/v1\/)/u.test(hostedPath) &&
 				![
 					"/client.js",
 					"/client.css",
@@ -569,6 +568,41 @@ app
 			`/v1/downloads/${encodeURIComponent(c.req.param("ticket"))}`,
 		),
 	);
+app
+	.defineRoute({
+		id: "api:data:openapi-proxy",
+		pluginId: "superboard-files",
+		surface: "sdk",
+		access: "sdk-key",
+		destination: { service: "files", path: "/v1/openapi.json" },
+		exposures: [{ surface: "sdk", path: "/v1/data/openapi.json" }],
+	})
+	.get("/api/v1/app-data/openapi.json", (c) => proxyDataService(c, "/v1/openapi.json"));
+app
+	.defineRoute({
+		id: "api:data:realtime-connect-proxy",
+		pluginId: "superboard-files",
+		surface: "sdk",
+		access: "public",
+		transport: "websocket",
+		destination: { service: "files", path: "/v1/realtime/connect" },
+		exposures: [{ surface: "sdk", path: "/v1/data/realtime/connect" }],
+	})
+	.get("/api/v1/app-data/realtime/connect", (c) => proxyDataService(c, "/v1/realtime/connect"));
+for (const family of DATA_FAMILIES)
+	app
+		.defineRoute({
+			id: `api:data:${family}-proxy`,
+			pluginId: "superboard-files",
+			surface: "sdk",
+			access: "sdk-key",
+			destination: { service: "files", path: `/v1/${family}/*` },
+			exposures: [{ surface: "sdk", path: `/v1/data/${family}/*` }],
+		})
+		.all(`/api/v1/app-data/${family}/*`, (c) => {
+			const internalPath = dataInternalPath(family, new URL(c.req.url).pathname);
+			return internalPath ? proxyDataService(c, internalPath) : c.notFound();
+		});
 app.route("/api/v1/users", usersRoutes);
 app.route("/api/v1/instances", instancesRoutes);
 app.route("/api/v1/projects", projectsRoutes);

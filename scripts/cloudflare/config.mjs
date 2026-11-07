@@ -881,6 +881,7 @@ function filesConfig() {
 			AUTH_GATEWAY_JWKS_URL: target.authGateway.jwksUrl,
 			MAX_FILE_BYTES: String(target.filePolicy.maxBytes),
 			FILES_PUBLIC_ORIGIN: `https://${target.domains.files}${target.domains.files === target.domains.sdk ? "/v1/data" : ""}`,
+			DATA_PUBLIC_ORIGIN: `https://${target.domains.sdk}/v1/data`,
 			DOWNLOAD_TICKET_TTL_SECONDS: String(target.filePolicy.downloadTicketTtlSeconds),
 			ALLOWED_FILE_CONTENT_TYPES_JSON: JSON.stringify(target.filePolicy.allowedContentTypes),
 		},
@@ -894,6 +895,19 @@ function filesConfig() {
 			},
 		],
 		r2_buckets: [{ binding: "FILES", bucket_name: resources.r2.name }],
+		durable_objects: { bindings: [{ name: "REALTIME", class_name: "RealtimeHub" }] },
+		migrations: [{ tag: "data-realtime-v1", new_sqlite_classes: ["RealtimeHub"] }],
+		worker_loaders: [{ binding: "LOADER" }],
+		images: { binding: "IMAGES" },
+		...(resources.moduleVectorize?.dataVectors
+			? {
+					ai: { binding: "AI" },
+					vectorize: [
+						{ binding: "VECTORS", index_name: resources.moduleVectorize.dataVectors.name },
+					],
+				}
+			: {}),
+		...(preflight ? {} : { triggers: { crons: ["* * * * *"] } }),
 	};
 }
 

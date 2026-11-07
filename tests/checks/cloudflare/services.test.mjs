@@ -116,6 +116,7 @@ test("the declarative registry exposes exactly nine domain services", () => {
 		"FILES_INTERNAL_TOKEN_PREVIOUS",
 		"FILES_DOWNLOAD_SIGNING_KEY",
 		"FILES_DOWNLOAD_SIGNING_KEY_PREVIOUS",
+		"DATA_ENCRYPTION_KEY",
 	]);
 	assert.equal(PLATFORM_SERVICE_SECRETS.dashboard, undefined);
 	assert.deepEqual(PLATFORM_SERVICE_SECRETS.mcp, []);
