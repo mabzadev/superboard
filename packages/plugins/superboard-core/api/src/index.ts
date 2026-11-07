@@ -179,12 +179,23 @@ const corsMiddleware = cors({
 		"X-SuperBoard-Widget-Signature",
 		"X-SuperBoard-Widget-Timestamp",
 		"X-Filename",
+		"X-Upsert",
+		"Range",
+		"If-Match",
+		"If-None-Match",
 		"ENVIRONMENT",
 		"LINKSQUARED",
 		"x-maintenance-key",
 		"x-diagnostics-key",
 	],
-	exposeHeaders: ["Content-Disposition", "X-Request-Id"],
+	exposeHeaders: [
+		"Content-Disposition",
+		"X-Request-Id",
+		"Content-Range",
+		"Content-Length",
+		"ETag",
+		"X-SuperBoard-Run-Id",
+	],
 });
 app
 	.defineRoute({

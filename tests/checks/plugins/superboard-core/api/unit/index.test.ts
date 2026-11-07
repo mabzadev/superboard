@@ -595,6 +595,25 @@ describe("unified public SDK routing", () => {
 			expect(requests.every((request) => !request.headers.has("x-internal-token"))).toBe(true);
 		});
 
+		it("lets browsers send storage headers and read range responses", async () => {
+			const response = await worker.fetch(
+				new Request("https://sdk.test/v1/data/storage/object/avatars/me.png", {
+					method: "OPTIONS",
+					headers: {
+						Origin: "https://app.example.test",
+						"Access-Control-Request-Method": "PUT",
+						"Access-Control-Request-Headers": "x-upsert, range, if-none-match",
+					},
+				}),
+				{ ...unified(), CORS_ORIGINS_JSON: '["https://app.example.test"]' },
+				{} as ExecutionContext,
+			);
+			expect(response.status).toBe(204);
+			const allowed = (response.headers.get("access-control-allow-headers") ?? "").toLowerCase();
+			for (const header of ["x-upsert", "range", "if-none-match"])
+				expect(allowed).toContain(header);
+		});
+
 		it("passes custom headers to functions without internal ones", async () => {
 			const { requests, service } = filesService();
 			const response = await worker.fetch(
