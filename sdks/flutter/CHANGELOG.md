@@ -1,5 +1,14 @@
 ## 4.0.0 (unreleased)
 
+- Add `SuperBoardData` for the application data served under `/v1/data`:
+  filtered, paginated table queries and writes; object upload, download,
+  listing, signed and public URLs, and resumable multipart uploads with
+  progress; one realtime socket for broadcast, presence, and table changes
+  with heartbeat and automatic re-join; function calls; vector indexing and
+  search; and text embeddings. Import
+  `package:superboard_flutter/superboard_data.dart`, also exported by
+  `superboard_flutter.dart`. These calls need a SuperBoard server that serves
+  the `/v1/data` database, storage, realtime, functions, and vectors routes.
 - Report a purchase or restore that another App User ID owns with
   `SuperBoardPurchasesErrorCode.receiptAlreadyInUse`, and add
   `SuperBoardPurchaseResult.isReceiptAlreadyInUse` to check it. Restore results
