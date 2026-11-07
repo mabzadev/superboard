@@ -1,0 +1,192 @@
+{
+	"catalogSize": 156,
+	"parameterizedRoutes": [
+		"/dynamic-links/campaigns/:id",
+		"/acquisition/workflows/:id",
+		"/acquisition/users/:id",
+		"/flows/workflows/:id",
+		"/flows/users/:id",
+		"/identity/:lang/users/:authId",
+		"/identity/:lang/apps/:id",
+		"/identity/:lang/apps/banners/:id",
+		"/identity/:lang/orgs/:id",
+		"/identity/:lang/roles/:id",
+		"/identity/:lang/scopes/:id",
+		"/identity/:lang/user-attributes/:id",
+		"/identity/:lang/saml/:id",
+		"/identity/:lang/logs/email/:id",
+		"/identity/:lang/logs/sign-in/:id",
+		"/identity/:lang/logs/sms/:id"
+	],
+	"detailPaths": [],
+	"results": [
+		{
+			"path": "/communication/settings",
+			"locale": "fr",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Paramètres marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_settings-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/marketing/settings",
+			"locale": "fr",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Paramètres marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_marketing_settings-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/settings",
+			"locale": "fr",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Paramètres marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_settings-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/marketing/settings",
+			"locale": "fr",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Paramètres marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_marketing_settings-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/settings",
+			"locale": "en",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Marketing settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_settings-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/marketing/settings",
+			"locale": "en",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Marketing settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_marketing_settings-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/settings",
+			"locale": "en",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Marketing settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_settings-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/marketing/settings",
+			"locale": "en",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Marketing settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_marketing_settings-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		}
+	]
+}

@@ -1,0 +1,62 @@
+[
+	{
+		"path": "/auth/login",
+		"locale": "en",
+		"status": 200
+	},
+	{
+		"path": "/auth/accept-invite",
+		"locale": "en",
+		"status": 200
+	},
+	{
+		"path": "/auth/new-password",
+		"locale": "en",
+		"status": 200
+	},
+	{
+		"path": "/auth/register",
+		"locale": "en",
+		"status": 200
+	},
+	{
+		"path": "/auth/register/with-email",
+		"locale": "en",
+		"status": 200
+	},
+	{
+		"path": "/auth/reset-password",
+		"locale": "en",
+		"status": 200
+	},
+	{
+		"path": "/auth/login",
+		"locale": "fr",
+		"status": 200
+	},
+	{
+		"path": "/auth/accept-invite",
+		"locale": "fr",
+		"status": 200
+	},
+	{
+		"path": "/auth/new-password",
+		"locale": "fr",
+		"status": 200
+	},
+	{
+		"path": "/auth/register",
+		"locale": "fr",
+		"status": 200
+	},
+	{
+		"path": "/auth/register/with-email",
+		"locale": "fr",
+		"status": 200
+	},
+	{
+		"path": "/auth/reset-password",
+		"locale": "fr",
+		"status": 200
+	}
+]

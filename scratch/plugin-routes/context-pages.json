@@ -1,0 +1,22 @@
+[
+	{
+		"path": "/communication/message-preview",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/core/mcp/authorize",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/communication/message-preview",
+		"lang": "en",
+		"status": 200
+	},
+	{
+		"path": "/core/mcp/authorize",
+		"lang": "en",
+		"status": 200
+	}
+]

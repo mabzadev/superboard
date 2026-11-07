@@ -1,0 +1,92 @@
+[
+	{
+		"path": "/auth/roles/1",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/data/files",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/monetization/products",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/communication/campaigns",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/acquisition/workflows",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/support/inbox",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/analytics/events",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/core/settings",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/auth/profile",
+		"lang": "fr",
+		"status": 200
+	},
+	{
+		"path": "/auth/roles/1",
+		"lang": "en",
+		"status": 200
+	},
+	{
+		"path": "/data/files",
+		"lang": "en",
+		"status": 200
+	},
+	{
+		"path": "/monetization/products",
+		"lang": "en",
+		"status": 200
+	},
+	{
+		"path": "/communication/campaigns",
+		"lang": "en",
+		"status": 200
+	},
+	{
+		"path": "/acquisition/workflows",
+		"lang": "en",
+		"status": 200
+	},
+	{
+		"path": "/support/inbox",
+		"lang": "en",
+		"status": 200
+	},
+	{
+		"path": "/analytics/events",
+		"lang": "en",
+		"status": 200
+	},
+	{
+		"path": "/core/settings",
+		"lang": "en",
+		"status": 200
+	},
+	{
+		"path": "/auth/profile",
+		"lang": "en",
+		"status": 200
+	}
+]

@@ -1,0 +1,57 @@
+[
+	{
+		"name": "iPhone 16 Pro",
+		"portrait": {
+			"height": 874,
+			"width": 402
+		},
+		"landscape": {
+			"height": 402,
+			"width": 874
+		}
+	},
+	{
+		"name": "iPhone 16 Pro Max",
+		"portrait": {
+			"height": 956,
+			"width": 440
+		},
+		"landscape": {
+			"height": 440,
+			"width": 956
+		}
+	},
+	{
+		"name": "iPhone 15 Pro",
+		"portrait": {
+			"height": 852,
+			"width": 393
+		},
+		"landscape": {
+			"height": 393,
+			"width": 852
+		}
+	},
+	{
+		"name": "iPhone SE",
+		"portrait": {
+			"height": 667,
+			"width": 375
+		},
+		"landscape": {
+			"height": 375,
+			"width": 667
+		}
+	},
+	{
+		"name": "iPad Pro 11″",
+		"portrait": {
+			"height": 1194,
+			"width": 834
+		},
+		"landscape": {
+			"height": 834,
+			"width": 1194
+		}
+	}
+]

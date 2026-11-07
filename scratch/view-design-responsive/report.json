@@ -1,0 +1,1380 @@
+{
+	"catalogSize": 156,
+	"parameterizedRoutes": [
+		"/dynamic-links/campaigns/:id",
+		"/acquisition/workflows/:id",
+		"/acquisition/users/:id",
+		"/flows/workflows/:id",
+		"/flows/users/:id",
+		"/identity/:lang/users/:authId",
+		"/identity/:lang/apps/:id",
+		"/identity/:lang/apps/banners/:id",
+		"/identity/:lang/orgs/:id",
+		"/identity/:lang/roles/:id",
+		"/identity/:lang/scopes/:id",
+		"/identity/:lang/user-attributes/:id",
+		"/identity/:lang/saml/:id",
+		"/identity/:lang/logs/email/:id",
+		"/identity/:lang/logs/sign-in/:id",
+		"/identity/:lang/logs/sms/:id"
+	],
+	"detailPaths": [],
+	"results": [
+		{
+			"path": "/data/files",
+			"locale": "fr",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Fichiers",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_data_files-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/notifications",
+			"locale": "fr",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Notifications push",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_notifications-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/auth/settings",
+			"locale": "fr",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_auth_settings-0.png"
+				},
+				{
+					"state": "Général",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_auth_settings-1.png"
+				},
+				{
+					"state": "Connexion",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_auth_settings-2.png"
+				},
+				{
+					"state": "Sécurité",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_auth_settings-3.png"
+				},
+				{
+					"state": "Fournisseurs",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_auth_settings-4.png"
+				},
+				{
+					"state": "Avancé",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_auth_settings-5.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/onboardings",
+			"locale": "fr",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_onboardings-0.png"
+				},
+				{
+					"state": "Création",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_onboardings-1.png"
+				},
+				{
+					"state": "Parcours",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_onboardings-2.png"
+				},
+				{
+					"state": "Langues",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_onboardings-3.png"
+				},
+				{
+					"state": "Simulation",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 18,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_onboardings-4.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/monetization/products",
+			"locale": "fr",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Produits",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_monetization_products-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/support/inbox",
+			"locale": "fr",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Inbox",
+					"fontSize": "22px",
+					"inset": 24,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_support_inbox-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/marketing-email",
+			"locale": "fr",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_marketing-email-0.png"
+				},
+				{
+					"state": "Vue d’ensemble",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_marketing-email-1.png"
+				},
+				{
+					"state": "Campagnes",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_marketing-email-2.png"
+				},
+				{
+					"state": "Automatisations",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_marketing-email-3.png"
+				},
+				{
+					"state": "Contacts",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_marketing-email-4.png"
+				},
+				{
+					"state": "Modèles",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_marketing-email-5.png"
+				},
+				{
+					"state": "Envois",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_marketing-email-6.png"
+				},
+				{
+					"state": "Paramètres",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-light-_communication_marketing-email-7.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/data/files",
+			"locale": "fr",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Fichiers",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_data_files-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/notifications",
+			"locale": "fr",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Notifications push",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_notifications-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/auth/settings",
+			"locale": "fr",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_auth_settings-0.png"
+				},
+				{
+					"state": "Général",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_auth_settings-1.png"
+				},
+				{
+					"state": "Connexion",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_auth_settings-2.png"
+				},
+				{
+					"state": "Sécurité",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_auth_settings-3.png"
+				},
+				{
+					"state": "Fournisseurs",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_auth_settings-4.png"
+				},
+				{
+					"state": "Avancé",
+					"title": "Paramètres d’authentification",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_auth_settings-5.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/onboardings",
+			"locale": "fr",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_onboardings-0.png"
+				},
+				{
+					"state": "Création",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_onboardings-1.png"
+				},
+				{
+					"state": "Parcours",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_onboardings-2.png"
+				},
+				{
+					"state": "Langues",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_onboardings-3.png"
+				},
+				{
+					"state": "Simulation",
+					"title": "Parcours d’accueil",
+					"fontSize": "22px",
+					"inset": 18,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_onboardings-4.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/monetization/products",
+			"locale": "fr",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Produits",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_monetization_products-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/support/inbox",
+			"locale": "fr",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Inbox",
+					"fontSize": "22px",
+					"inset": 24,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_support_inbox-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/marketing-email",
+			"locale": "fr",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_marketing-email-0.png"
+				},
+				{
+					"state": "Vue d’ensemble",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_marketing-email-1.png"
+				},
+				{
+					"state": "Campagnes",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_marketing-email-2.png"
+				},
+				{
+					"state": "Automatisations",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_marketing-email-3.png"
+				},
+				{
+					"state": "Contacts",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_marketing-email-4.png"
+				},
+				{
+					"state": "Modèles",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_marketing-email-5.png"
+				},
+				{
+					"state": "Envois",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_marketing-email-6.png"
+				},
+				{
+					"state": "Paramètres",
+					"title": "E-mails marketing",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "fr-dark-_communication_marketing-email-7.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/notifications",
+			"locale": "en",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Push notifications",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_notifications-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/data/files",
+			"locale": "en",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Files",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_data_files-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/auth/settings",
+			"locale": "en",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_auth_settings-0.png"
+				},
+				{
+					"state": "General",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_auth_settings-1.png"
+				},
+				{
+					"state": "Sign-in",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_auth_settings-2.png"
+				},
+				{
+					"state": "Security",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_auth_settings-3.png"
+				},
+				{
+					"state": "Providers",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_auth_settings-4.png"
+				},
+				{
+					"state": "Advanced",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_auth_settings-5.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/onboardings",
+			"locale": "en",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_onboardings-0.png"
+				},
+				{
+					"state": "Design",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_onboardings-1.png"
+				},
+				{
+					"state": "Journey",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_onboardings-2.png"
+				},
+				{
+					"state": "Languages",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_onboardings-3.png"
+				},
+				{
+					"state": "Preview",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_onboardings-4.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/monetization/products",
+			"locale": "en",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Products",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_monetization_products-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/support/inbox",
+			"locale": "en",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Inbox",
+					"fontSize": "22px",
+					"inset": 24,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_support_inbox-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/marketing-email",
+			"locale": "en",
+			"theme": "light",
+			"states": [
+				{
+					"state": "page",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_marketing-email-0.png"
+				},
+				{
+					"state": "Overview",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_marketing-email-1.png"
+				},
+				{
+					"state": "Campaigns",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_marketing-email-2.png"
+				},
+				{
+					"state": "Automations",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_marketing-email-3.png"
+				},
+				{
+					"state": "Contacts",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_marketing-email-4.png"
+				},
+				{
+					"state": "Templates",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_marketing-email-5.png"
+				},
+				{
+					"state": "Deliveries",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_marketing-email-6.png"
+				},
+				{
+					"state": "Settings",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "light",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-light-_communication_marketing-email-7.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/notifications",
+			"locale": "en",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Push notifications",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_notifications-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/data/files",
+			"locale": "en",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Files",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_data_files-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/onboardings",
+			"locale": "en",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_onboardings-0.png"
+				},
+				{
+					"state": "Design",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_onboardings-1.png"
+				},
+				{
+					"state": "Journey",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_onboardings-2.png"
+				},
+				{
+					"state": "Languages",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_onboardings-3.png"
+				},
+				{
+					"state": "Preview",
+					"title": "Onboardings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_onboardings-4.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/auth/settings",
+			"locale": "en",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_auth_settings-0.png"
+				},
+				{
+					"state": "General",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_auth_settings-1.png"
+				},
+				{
+					"state": "Sign-in",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_auth_settings-2.png"
+				},
+				{
+					"state": "Security",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_auth_settings-3.png"
+				},
+				{
+					"state": "Providers",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_auth_settings-4.png"
+				},
+				{
+					"state": "Advanced",
+					"title": "Authentication settings",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_auth_settings-5.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/monetization/products",
+			"locale": "en",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Products",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_monetization_products-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/support/inbox",
+			"locale": "en",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Inbox",
+					"fontSize": "22px",
+					"inset": 24,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_support_inbox-0.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		},
+		{
+			"path": "/communication/marketing-email",
+			"locale": "en",
+			"theme": "dark",
+			"states": [
+				{
+					"state": "page",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_marketing-email-0.png"
+				},
+				{
+					"state": "Overview",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_marketing-email-1.png"
+				},
+				{
+					"state": "Campaigns",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_marketing-email-2.png"
+				},
+				{
+					"state": "Automations",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_marketing-email-3.png"
+				},
+				{
+					"state": "Contacts",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_marketing-email-4.png"
+				},
+				{
+					"state": "Templates",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_marketing-email-5.png"
+				},
+				{
+					"state": "Deliveries",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_marketing-email-6.png"
+				},
+				{
+					"state": "Settings",
+					"title": "Marketing email",
+					"fontSize": "22px",
+					"inset": 20,
+					"loadedTheme": "dark",
+					"overflow": false,
+					"kumoButtons": 0,
+					"viewErrors": [],
+					"failures": [],
+					"screenshot": "en-dark-_communication_marketing-email-7.png"
+				}
+			],
+			"errors": [],
+			"status": 200
+		}
+	]
+}
