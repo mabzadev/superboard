@@ -270,8 +270,9 @@ Sans les bindings `AI` et `VECTORS`, ces routes répondent `503`
 
 Un CAPTCHA Cloudflare Turnstile facultatif protège l'inscription et la
 connexion par mot de passe, sur les pages hébergées et sur les routes SDK. Il
-se règle dans les paramètres d'authentification (clé de site visible, secret
-stocké chiffré).
+se règle dans l'onglet Avancé des paramètres d'authentification. La clé de site
+s'y saisit ; le secret `TURNSTILE_SECRET_KEY` est un secret de déploiement du
+Worker d'identité, dont le Front affiche seulement la présence.
 
 ## Bindings et déploiement
 

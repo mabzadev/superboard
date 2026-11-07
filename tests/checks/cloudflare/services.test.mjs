@@ -110,6 +110,7 @@ test("the declarative registry exposes exactly nine domain services", () => {
 		"FILES_INTERNAL_TOKEN",
 		"INTERNAL_API_TOKEN",
 		"INTERNAL_API_TOKEN_PREVIOUS",
+		"TURNSTILE_SECRET_KEY",
 	]);
 	assert.deepEqual(PLATFORM_SERVICE_SECRETS.files, [
 		"FILES_INTERNAL_TOKEN",
