@@ -71,7 +71,10 @@ describe("SuperBoard Files Worker", () => {
 			}),
 		);
 		expect(response.status).toBe(200);
-		await expect(response.json()).resolves.toEqual({ deleted: 0 });
+		await expect(response.json()).resolves.toEqual({
+			deleted: 0,
+			data: { rows: 0, objects: 0, uploads: 0, vectors: 0 },
+		});
 	});
 
 	it("issues owner-scoped short-lived download tickets for internal processors", async () => {

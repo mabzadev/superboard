@@ -23,6 +23,7 @@ export interface InitialProps {
   appleClientId: string;
   oidcProviders: string[];
   enableUserAttribute: boolean;
+  captchaSiteKey: string;
 }
 
 const useInitialProps = () => {
@@ -63,6 +64,7 @@ const useInitialProps = () => {
         appName: 'appName' in intialProps ? String(intialProps.appName) : '',
         allowPasskey: 'allowPasskey' in intialProps ? Boolean(intialProps.allowPasskey) : false,
         allowRecoveryCode: 'allowRecoveryCode' in intialProps ? Boolean(intialProps.allowRecoveryCode) : false,
+        captchaSiteKey: 'captchaSiteKey' in intialProps ? String(intialProps.captchaSiteKey) : '',
       }
     },
     [],

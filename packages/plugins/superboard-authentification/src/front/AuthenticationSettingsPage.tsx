@@ -20,6 +20,7 @@ import {
 	settingsLayout,
 	settingsTabs,
 	settingTab,
+	captchaKeys,
 	signInProviders,
 	type SettingItem,
 	type SettingsSection,
@@ -332,6 +333,7 @@ function ItemView({ item, context }: { item: SettingItem; context: ItemContext }
 				))}
 			</>
 		);
+	if (item.kind === "captcha") return <CaptchaView context={context} />;
 	if (item.kind === "links") return <LinksView context={context} />;
 	if (item.kind === "switch" && item.when && !item.when(context.values)) return null;
 	return (
@@ -521,6 +523,16 @@ function DurationField({
 	);
 }
 
+type SettingStatus = "off" | "incomplete" | "secretMissing" | "enabled";
+
+function StatusBadge({ status, t }: { status: SettingStatus; t: Translate }) {
+	return (
+		<Badge variant={status === "enabled" ? "success" : status === "off" ? "default" : "warning"}>
+			{t(`status:${status}`)}
+		</Badge>
+	);
+}
+
 function providerConfigured(provider: SignInProvider, values: AuthenticationSettings) {
 	const primary = values[provider.keys[0] ?? ""];
 	return Array.isArray(primary)
@@ -536,7 +548,7 @@ function ProviderView({ provider, context }: { provider: SignInProvider; context
 		provider.secret !== undefined &&
 		deployment !== undefined &&
 		!deployment.providerSecrets[provider.secret];
-	const status = !enabled
+	const status: SettingStatus = !enabled
 		? "off"
 		: !configured
 			? "incomplete"
@@ -551,13 +563,7 @@ function ProviderView({ provider, context }: { provider: SignInProvider; context
 						? t("provider:oidc")
 						: t("provider:switch", { provider: provider.name })
 				}
-				trailing={<Badge
-						variant={
-							status === "enabled" ? "success" : status === "off" ? "default" : "warning"
-						}
-					>
-						{t(`status:${status}`)}
-					</Badge>}
+				trailing={<StatusBadge status={status} t={t} />}
 				checked={enabled}
 				onCheckedChange={(next) => {
 					context.setProviderOpen(provider.id, next);
@@ -587,6 +593,53 @@ function ProviderView({ provider, context }: { provider: SignInProvider; context
 							{t("provider:secretMissing", { provider: provider.name })}
 						</p>
 					)}
+				</div>
+			)}
+		</div>
+	);
+}
+
+function CaptchaView({ context }: { context: ItemContext }) {
+	const { values, change, t, deployment } = context;
+	const [enabledKey, siteKeyKey] = captchaKeys;
+	const enabled = values[enabledKey] === true;
+	const siteKey = values[siteKeyKey];
+	const configured = typeof siteKey === "string" && siteKey.trim() !== "";
+	const secretMissing = deployment !== undefined && deployment.captchaSecret !== true;
+	const status: SettingStatus = !enabled
+		? "off"
+		: !configured
+			? "incomplete"
+			: secretMissing
+				? "secretMissing"
+				: "enabled";
+	return (
+		<div className="space-y-3 p-4" data-setting="captcha">
+			<SwitchField
+				label={t(enabledKey)}
+				trailing={<StatusBadge status={status} t={t} />}
+				checked={enabled}
+				onCheckedChange={(next) => {
+					change(enabledKey, next);
+				}}
+			/>
+			{enabled && (
+				<div className="ms-5 space-y-3 border-s border-kumo-line ps-4">
+					<TextField
+						name={siteKeyKey}
+						label={t(siteKeyKey)}
+						value={siteKey}
+						listHelp={t("listHelp")}
+						onChange={(value) => {
+							change(siteKeyKey, value);
+						}}
+					/>
+					<div className="space-y-1">
+						<p className="text-sm font-medium">{t("captcha:secret")}</p>
+						<p className={secretMissing ? "text-sm text-kumo-warning" : "text-xs text-kumo-subtle"}>
+							{t(secretMissing ? "captcha:secretMissing" : "captcha:secretStored")}
+						</p>
+					</div>
 				</div>
 			)}
 		</div>

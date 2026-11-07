@@ -9,26 +9,53 @@ import {
 } from "@superboard/contracts/authentication-settings";
 import { readJsonObjectLimited, RequestBodyError } from "@superboard/contracts/request-body";
 
+import { hasCaptchaSecret } from "./captcha.js";
 import type { IdentityEnv } from "./types.js";
 
 interface ConfigurationRow {
 	revision: number;
 	values_json: string;
+	extended_values_json: string | null;
 	updated_at: string;
+}
+
+/**
+ * Settings added after identity workers began validating `values_json` strictly. They live in
+ * `extended_values_json` because an older worker rejects the whole configuration on an unknown key.
+ */
+const extendedSettingKeys = new Set(["ENABLE_CAPTCHA", "TURNSTILE_SITE_KEY"]);
+
+function storedValues(row: ConfigurationRow): AuthenticationSettings {
+	const values: unknown = JSON.parse(row.values_json);
+	const extended: unknown = row.extended_values_json ? JSON.parse(row.extended_values_json) : {};
+	return {
+		...validateAuthenticationSettings(withoutRetiredAuthenticationSettings(values)),
+		...validateAuthenticationSettings(extended),
+	};
+}
+
+function storageColumns(values: AuthenticationSettings) {
+	const entries = Object.entries(values);
+	return {
+		values: JSON.stringify(
+			Object.fromEntries(entries.filter(([key]) => !extendedSettingKeys.has(key))),
+		),
+		extended: JSON.stringify(
+			Object.fromEntries(entries.filter(([key]) => extendedSettingKeys.has(key))),
+		),
+	};
 }
 
 async function storedConfiguration(env: IdentityEnv) {
 	const realm = env.IDENTITY_REALM || "reference-production";
 	const row = await env.DB.prepare(
-		"SELECT revision,values_json,updated_at FROM identity_configuration WHERE realm=?",
+		"SELECT revision,values_json,extended_values_json,updated_at FROM identity_configuration WHERE realm=?",
 	)
 		.bind(realm)
 		.first<ConfigurationRow>();
 	return {
 		revision: row?.revision ?? 0,
-		values: row
-			? validateAuthenticationSettings(withoutRetiredAuthenticationSettings(JSON.parse(row.values_json)))
-			: {},
+		values: row ? storedValues(row) : {},
 		updatedAt: row?.updated_at ?? null,
 	};
 }
@@ -58,7 +85,7 @@ function deploymentStatus(env: IdentityEnv): AuthenticationDeploymentStatus {
 		const secret: unknown = Reflect.get(env, `${provider.toUpperCase()}_AUTH_CLIENT_SECRET`);
 		return typeof secret === "string" && secret.trim() !== "";
 	});
-	return { providerSecrets };
+	return { providerSecrets, captchaSecret: hasCaptchaSecret(env) };
 }
 
 export async function authenticationSettingsResponse(
@@ -86,22 +113,24 @@ export async function authenticationSettingsResponse(
 			return reply({ error: { code: "configuration_conflict" } }, 409);
 		const changes = validateAuthenticationSettings(body.values);
 		const values: AuthenticationSettings = { ...current.values, ...changes };
+		const columns = storageColumns(values);
 		const revision = current.revision + 1;
 		const now = new Date().toISOString();
 		const operation = crypto.randomUUID();
 		const results = await env.DB.batch([
-			env.DB.prepare(`INSERT INTO identity_configuration (realm,revision,values_json,operation_id,updated_at)
-			 VALUES (?,?,?,?,?) ON CONFLICT(realm) DO UPDATE SET revision=excluded.revision,values_json=excluded.values_json,operation_id=excluded.operation_id,updated_at=excluded.updated_at
+			env.DB.prepare(`INSERT INTO identity_configuration (realm,revision,values_json,extended_values_json,operation_id,updated_at)
+			 VALUES (?,?,?,?,?,?) ON CONFLICT(realm) DO UPDATE SET revision=excluded.revision,values_json=excluded.values_json,extended_values_json=excluded.extended_values_json,operation_id=excluded.operation_id,updated_at=excluded.updated_at
 			 WHERE identity_configuration.revision=?`).bind(
 				env.IDENTITY_REALM,
 				revision,
-				JSON.stringify(values),
+				columns.values,
+				columns.extended,
 				operation,
 				now,
 				current.revision,
 			),
-			env.DB.prepare(`INSERT INTO identity_configuration_history (realm,revision,values_json,operator_id,operation_id,created_at)
-			 SELECT realm,revision,values_json,?,operation_id,updated_at FROM identity_configuration WHERE realm=? AND operation_id=?`).bind(
+			env.DB.prepare(`INSERT INTO identity_configuration_history (realm,revision,values_json,extended_values_json,operator_id,operation_id,created_at)
+			 SELECT realm,revision,values_json,extended_values_json,?,operation_id,updated_at FROM identity_configuration WHERE realm=? AND operation_id=?`).bind(
 				operatorId ?? "",
 				env.IDENTITY_REALM,
 				operation,

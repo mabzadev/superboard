@@ -1,13 +1,24 @@
-export class SuperBoardError extends Error {
-	constructor(code, message, status = 0) {
-		super(message);
-		this.name = "SuperBoardError";
-		this.code = code;
-		this.status = status;
-	}
-}
+import {
+	AiClient,
+	FunctionsClient,
+	QueryBuilder,
+	StorageClient,
+	VectorsClient,
+	createDataTransport,
+} from "./data.js";
+import { SuperBoardError } from "./errors.js";
+import { RealtimeClient } from "./realtime.js";
+
+export { SuperBoardError };
 
 const VERIFICATION_KEY_TTL_MS = 10 * 60 * 1000;
+
+function withCaptcha(body, captchaToken) {
+	if (captchaToken === undefined || captchaToken === null) return body;
+	if (typeof captchaToken !== "string" || !captchaToken)
+		throw new TypeError("captchaToken must be the token returned by the CAPTCHA widget.");
+	return { ...body, captcha_token: captchaToken };
+}
 
 export class SuperBoardClient {
 	#origin;
@@ -19,6 +30,13 @@ export class SuperBoardClient {
 	#applicationToken = null;
 	#applicationTokenRequest = null;
 	#verificationKeys = new Map();
+	#data;
+	#realtimeOptions;
+	#realtime = null;
+	#storage = null;
+	#functions = null;
+	#vectors = null;
+	#ai = null;
 
 	constructor(options) {
 		const url = new URL(options.apiUrl);
@@ -48,6 +66,52 @@ export class SuperBoardClient {
 				? { "X-SuperBoard-Language": options.language ?? globalThis.navigator.language }
 				: {}),
 		};
+		this.#data = createDataTransport({
+			origin: this.#origin,
+			fetch: this.#fetch,
+			projectId: options.projectId,
+			timeoutMs: options.timeoutMs,
+			headers: async () =>
+				this.#session
+					? { ...this.#headers, Authorization: `Bearer ${await this.getApplicationAccessToken()}` }
+					: { ...this.#headers },
+			retryUnauthorized: async () => {
+				if (!this.#session) return false;
+				this.#applicationToken = null;
+				return true;
+			},
+		});
+		this.#realtimeOptions = {
+			WebSocket: options.WebSocket,
+			...options.realtime,
+		};
+	}
+
+	from(table) {
+		return new QueryBuilder(this.#data, table);
+	}
+	get storage() {
+		this.#storage ??= new StorageClient(this.#data);
+		return this.#storage;
+	}
+	get functions() {
+		this.#functions ??= new FunctionsClient(this.#data);
+		return this.#functions;
+	}
+	get vectors() {
+		this.#vectors ??= new VectorsClient(this.#data);
+		return this.#vectors;
+	}
+	get ai() {
+		this.#ai ??= new AiClient(this.#data);
+		return this.#ai;
+	}
+	get realtime() {
+		this.#realtime ??= new RealtimeClient(this.#data, this.#realtimeOptions);
+		return this.#realtime;
+	}
+	channel(name, options) {
+		return this.realtime.channel(name, options);
 	}
 
 	get session() {
@@ -66,18 +130,22 @@ export class SuperBoardClient {
 				"invalid_session",
 				"The authentication response does not contain a complete session.",
 			);
+		const identityChanged = this.#session?.user_id !== session.user_id || !this.#session;
 		this.#generation++;
 		this.#session = { ...session };
 		this.#applicationToken = null;
 		this.#applicationTokenRequest = null;
+		if (identityChanged) this.#realtime?.reconnect();
 	}
 
 	clearSession() {
+		const hadSession = this.#session !== null;
 		this.#generation++;
 		this.#session = null;
 		this.#applicationToken = null;
 		this.#applicationTokenRequest = null;
 		this.#refreshing = null;
+		if (hadSession) this.#realtime?.reconnect();
 	}
 
 	async #authenticate(path, body) {
@@ -90,11 +158,14 @@ export class SuperBoardClient {
 		return result;
 	}
 
-	register(input) {
-		return this.#authenticate("/v1/auth/register", input);
+	register(input, options = {}) {
+		return this.#authenticate("/v1/auth/register", withCaptcha(input, options.captchaToken));
 	}
-	signIn(email, password) {
-		return this.#authenticate("/v1/auth/signin/password", { email, password });
+	signIn(email, password, options = {}) {
+		return this.#authenticate(
+			"/v1/auth/signin/password",
+			withCaptcha({ email, password }, options.captchaToken),
+		);
 	}
 	signInAnonymously(installationId) {
 		return this.#authenticate("/v1/auth/anonymous", { installation_id: installationId });

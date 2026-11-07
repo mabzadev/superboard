@@ -1,6 +1,6 @@
 import {
   ViewTitle, PasswordField, PrimaryButton, SubmitError, SecondaryButton,
-  GoogleSignIn, GithubSignIn, OidcSignIn, AppleSignIn,
+  GoogleSignIn, GithubSignIn, OidcSignIn, AppleSignIn, Turnstile,
 } from '../components'
 import { typeConfig } from '../../configs'
 import {
@@ -33,6 +33,8 @@ export interface SignInProps {
   isVerifyingPasskey: boolean;
   isPasswordlessSigningIn: boolean;
   magicLinkSent: boolean;
+  captchaResetCount: number;
+  onCaptchaToken: (token: string | null) => void;
 }
 
 const SignIn = ({
@@ -52,6 +54,8 @@ const SignIn = ({
   isVerifyingPasskey,
   isPasswordlessSigningIn,
   magicLinkSent,
+  captchaResetCount,
+  onCaptchaToken,
 }: SignInProps) => {
   if (magicLinkSent) {
     return (
@@ -99,6 +103,14 @@ const SignIn = ({
                 'password',
                 value,
               )}
+            />
+          )}
+          {initialProps.enablePasswordSignIn && initialProps.captchaSiteKey && (
+            <Turnstile
+              siteKey={initialProps.captchaSiteKey}
+              locale={locale}
+              resetCount={captchaResetCount}
+              onToken={onCaptchaToken}
             />
           )}
           <SubmitError error={submitError} />

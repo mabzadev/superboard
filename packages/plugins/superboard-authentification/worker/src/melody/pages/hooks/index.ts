@@ -24,6 +24,7 @@ import useManageRecoveryCodeForm from './useManageRecoveryCodeForm'
 import useChangeEmailForm from './useChangeEmailForm'
 import useVerifyEmailForm from './useVerifyEmailForm'
 import useRecoveryCodeForm from './useRecoveryCodeForm'
+import useCaptcha from './useCaptcha'
 
 export {
   useAcceptInvitationForm,
@@ -53,4 +54,5 @@ export {
   usePasswordlessVerifyForm,
   useMagicSignInForm,
   useRecoveryCodeForm,
+  useCaptcha,
 }

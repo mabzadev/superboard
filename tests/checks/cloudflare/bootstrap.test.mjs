@@ -10,6 +10,7 @@ import {
 } from "../../../scripts/cloudflare/bootstrap-core.mjs";
 import {
 	assertBootstrapMode,
+	cloudflareClient,
 	fetchCloudflareBootstrapInventories,
 } from "../../../scripts/cloudflare/bootstrap.mjs";
 import { loadTarget } from "../../../scripts/cloudflare/target.mjs";
@@ -88,6 +89,48 @@ test("bootstrap inventory is derived from enabled target features", async () => 
 				migrationStrategy === "canonical",
 		),
 		true,
+	);
+});
+
+test("bootstrap creates the Data vector index with its owner metadata index", async () => {
+	const { target } = await loadTarget("mabza-development");
+	const desired = desiredCloudflareResources(target, "development");
+	assert.equal(
+		desired.find(({ key }) => key === "moduleVectorize.dataVectors")?.name,
+		"superboard-dev-data-vectors",
+	);
+	const plan = buildCloudflareBootstrapPlan({
+		target,
+		environment: "development",
+		accountId: "f".repeat(32),
+		inventories: inventoriesFor(desired.filter(({ key }) => key !== "moduleVectorize.dataVectors")),
+	});
+	const operation = plan.operations.find(({ key }) => key === "moduleVectorize.dataVectors");
+	assert.equal(operation?.type, "create");
+	assert.deepEqual(operation?.metadataIndexes, [{ propertyName: "owner", indexType: "string" }]);
+
+	const calls = [];
+	const client = cloudflareClient({
+		accountId: "f".repeat(32),
+		token: "token",
+		fetchImpl: async (url, init) => {
+			calls.push({ url: String(url), body: init?.body ? JSON.parse(String(init.body)) : null });
+			return Response.json({ success: true, result: { name: operation.name } });
+		},
+	});
+	await client.create(operation);
+	assert.deepEqual(
+		calls.map(({ url, body }) => [
+			new URL(url).pathname.replace(/^.*\/vectorize/u, "/vectorize"),
+			body,
+		]),
+		[
+			["/vectorize/v2/indexes", operation.body],
+			[
+				"/vectorize/v2/indexes/superboard-dev-data-vectors/metadata_index/create",
+				{ propertyName: "owner", indexType: "string" },
+			],
+		],
 	);
 });
 

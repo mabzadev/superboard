@@ -136,6 +136,7 @@ The SuperBoard Flutter SDK provides deep linking, app links, universal links, li
 - **Push notifications** — receive push notifications for dashboard-sent messages
 - **Revenue tracking** — log App Store, Google Play, and custom purchases with automatic attribution
 - **User identity** — attach user IDs and attributes for analytics and segmentation
+- **Application data** — database tables, file storage, realtime channels, functions, and vector search
 - **Self-hosting support** — point the SDK at your own backend
 - **Auto-configuration** — platform config via `AndroidManifest.xml` and `Info.plist`
 
@@ -491,6 +492,194 @@ property updates, as well as floating/slot streams. Blocks and progress context
 are cached in encrypted device storage, including running tours and triggered
 surveys; HTTP recovery does not depend on the WebSocket, and realtime updates
 reconnect with bounded backoff.
+
+## SuperBoard Data
+
+`SuperBoardData` connects the application to the database tables, storage
+buckets, realtime channels, functions, and vector collections of its SuperBoard
+instance. Pass the SDK origin and the application access token of the signed-in
+user. Without a token, requests use the anonymous role and reach only what
+`public` rules allow.
+
+```dart
+import 'package:superboard_flutter/superboard_data.dart';
+
+final data = SuperBoardData(
+  baseUrl: 'https://sdk.example.com',
+  projectKey: 'og_app_your_project_key',
+  platformIdentifier: 'com.example.app',
+  accessTokenProvider: () async => session.accessToken,
+);
+```
+
+Each request carries `PROJECT-KEY`, `PLATFORM`, and `IDENTIFIER`. `PLATFORM`
+defaults to the running platform (`ios`, `android`, `web`, or `desktop`). The
+client calls `accessTokenProvider` again when the token expires within 30
+seconds or a request returns `401`. If the application manages the token
+itself, pass `accessToken` and call `setAccessToken` after each refresh.
+Failures throw `SuperBoardDataException` with the server `code`, `statusCode`,
+`retryable` flag, and `details`. Call `dispose` when the client is no longer
+used.
+
+### Database
+
+`from(table)` starts a query. Each method returns a new query, so one base
+query can load several pages:
+
+```dart
+final openTodos = data
+    .from('todos')
+    .select(['title', 'done'])
+    .eq('done', false)
+    .inList('tag', ['home', 'work'])
+    .order('created_at', ascending: false)
+    .limit(20);
+
+var page = await openTodos.count().get();
+showTodos(page.items, total: page.count);
+while (page.hasMore) {
+  page = await openTodos.cursor(page.nextCursor!).get();
+  showTodos(page.items);
+}
+```
+
+Filters are `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `like`, `ilike`, `inList`,
+`isNull`, and `not(column, operator, value)`. In `like` and `ilike` patterns,
+`*` matches any sequence of characters; `like` is case-sensitive.
+
+```dart
+final todos = data.from('todos');
+final created = (await todos.insert({'title': 'Buy milk'})).single;
+await todos.updateById(created['id'] as String, {'done': true});
+await todos.eq('done', true).update({'archived': true});
+await todos.eq('archived', true).delete();
+await todos.deleteById(created['id'] as String);
+```
+
+`insert` takes one row or a list of up to 100 rows and returns the stored
+rows. With `upsert: true`, a row whose `id` exists is updated when the update
+rule allows it. `update` and `delete` need at least one filter and change at
+most 100 visible rows. A row the caller cannot see fails with `404`
+(`row_not_found`).
+
+### Storage
+
+```dart
+final avatars = data.storage.from('avatars');
+await avatars.upload(
+  'user-1/photo.png',
+  bytes,
+  contentType: 'image/png',
+  upsert: true,
+);
+final thumbnail = await avatars.download(
+  'user-1/photo.png',
+  transform: const SuperBoardImageTransform(
+    width: 256,
+    format: SuperBoardImageFormat.webp,
+  ),
+);
+final link = await avatars.createSignedUrl(
+  'user-1/photo.png',
+  expiresIn: const Duration(hours: 1),
+);
+final files = await avatars.list(prefix: 'user-1/');
+await avatars.remove('user-1/photo.png');
+```
+
+`publicUrl(projectId, path)` builds the URL of an object in a public bucket
+without a request. `data.storage.listBuckets()` returns the buckets the caller
+can read or write. Signed URLs last 7 days at most.
+
+`upload` sends at most 100 MiB. For larger files, `uploadResumable` sends
+parts of 8 MiB by default (5 MiB minimum) and reports progress. Store the
+upload ID passed to `onUploadCreated`; after an interruption, pass it as
+`resumeUploadId` with the same source and the client skips the parts the
+server already holds. An unfinished upload expires after 24 hours.
+
+```dart
+final video = await data.storage
+    .from('videos')
+    .uploadResumable(
+      'clips/intro.mp4',
+      SuperBoardUploadSource.bytes(bytes),
+      contentType: 'video/mp4',
+      resumeUploadId: savedUploadId,
+      onUploadCreated: saveUploadId,
+      onProgress: (sent, total) => setProgress(sent / total),
+    );
+```
+
+To read a file part by part instead of loading it into memory, implement
+`SuperBoardUploadSource`.
+
+### Realtime
+
+All channels of a client share one WebSocket. The client sends a heartbeat,
+and after a connection loss it requests a new ticket, joins its channels
+again, and publishes the tracked presence again.
+
+```dart
+final room = data.realtime.channel('room:42', presenceKey: currentUser.id);
+room.broadcasts.listen((message) => showReaction(message.payload));
+room.presenceEvents.listen((event) => showOnline(event.state.keys));
+await room.subscribe();
+await room.track({'status': 'online'});
+await room.send('typing', {'user': currentUser.id});
+
+final todoChanges = data.realtime.channel('db:todos');
+todoChanges.changes.listen((change) => applyChange(change.event, change.record));
+await todoChanges.subscribe();
+```
+
+A `db:<table>` channel delivers the inserts, updates, and deletes of a table
+whose realtime is enabled, filtered by the table read rule. Anonymous users can
+join the other channels only when the project allows it. `presenceEvents`
+emits `join` and `leave` for each presence key, then `sync` with the complete
+`presenceState`. When the server refuses a channel, `subscribe` throws a
+`SuperBoardDataException`. `unsubscribe` leaves the channel and closes the
+socket after the last one.
+
+### Functions
+
+```dart
+final response = await data.functions.invoke(
+  'send-invoice',
+  path: '/preview',
+  body: {'order_id': orderId},
+);
+final preview = response.json();
+```
+
+A map or list body is sent as JSON, a string as text, and a `Uint8List` as raw
+bytes. A status outside 200–299 throws `SuperBoardFunctionException`; its
+`response` holds the status, headers, and body returned by the function.
+
+### Vectors
+
+```dart
+final articles = data.vectors.from('articles');
+await articles.upsert([
+  const SuperBoardVectorItem(
+    id: 'faq-1',
+    text: 'How do I reset my password?',
+    metadata: {'lang': 'en'},
+  ),
+]);
+final matches = await articles.query(
+  text: 'forgot password',
+  topK: 5,
+  filter: {'lang': 'en'},
+);
+await articles.remove('faq-1');
+
+final embeddings = await data.ai.embeddings(['first text', 'second text']);
+```
+
+The server embeds text with a multilingual model into 1024-dimension vectors.
+`upsert` takes up to 50 items and `query` returns up to 50 matches.
+`ai.embeddings` requires a signed-in user. When the environment has no vector
+index, these calls fail with `vectors_unavailable`.
 
 ## API Reference
 

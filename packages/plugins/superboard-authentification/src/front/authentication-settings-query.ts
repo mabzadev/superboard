@@ -19,7 +19,10 @@ function deploymentStatus(value: unknown): AuthenticationDeploymentStatus | unde
 	const providerSecrets = authenticationProviderSecrets(
 		(provider) => Reflect.get(secrets, provider) === true,
 	);
-	return { providerSecrets };
+	const captchaSecret: unknown = Reflect.get(value, "captchaSecret");
+	return typeof captchaSecret === "boolean"
+		? { providerSecrets, captchaSecret }
+		: { providerSecrets };
 }
 
 export function settingsSnapshot(value: unknown): AuthenticationSettingsSnapshot {

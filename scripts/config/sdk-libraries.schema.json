@@ -23,11 +23,11 @@
 		},
 		"libraries": {
 			"type": "array",
-			"minItems": 4,
+			"minItems": 5,
 			"items": {
 				"$ref": "#/$defs/library"
 			},
-			"maxItems": 4
+			"maxItems": 5
 		},
 		"components": {
 			"type": "array",

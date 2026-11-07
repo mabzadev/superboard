@@ -11,6 +11,7 @@ const tagPrefixes = Object.freeze({
 	flutter: "sdk-flutter-v",
 	web: "sdk-web-v",
 	tauri: "sdk-tauri-v",
+	cli: "sdk-cli-v",
 	flutterflow: "sdk-flutterflow-v",
 	"flutterflow-support": "sdk-flutterflow-messaging-v",
 	ios: "sdk-ios-v",

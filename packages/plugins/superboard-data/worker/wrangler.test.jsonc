@@ -1,0 +1,30 @@
+{
+	"$schema": "../../../../node_modules/wrangler/config-schema.json",
+	"name": "superboard-files-test",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-08-08",
+	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"ENVIRONMENT": "test",
+		"AUTH_GATEWAY_ISSUER": "https://sdk.example.test/v1/auth",
+		"APPLICATION_AUDIENCE": "superboard-test.application",
+		"AUTH_GATEWAY_JWKS_URL": "https://sdk.example.test/v1/auth/.well-known/application-jwks.json",
+		"MAX_FILE_BYTES": "1048576",
+		"FILES_PUBLIC_ORIGIN": "https://sdk.example.test/v1/data",
+		"DATA_PUBLIC_ORIGIN": "https://sdk.example.test/v1/data",
+		"DOWNLOAD_TICKET_TTL_SECONDS": "600",
+		"ALLOWED_FILE_CONTENT_TYPES_JSON": "[\"application/octet-stream\",\"image/png\",\"text/plain\"]",
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "superboard-files-test",
+			"database_id": "00000000-0000-0000-0000-000000000021",
+			"migrations_dir": "migrations",
+		},
+	],
+	"r2_buckets": [{ "binding": "FILES", "bucket_name": "superboard-files-test" }],
+	"durable_objects": { "bindings": [{ "name": "REALTIME", "class_name": "RealtimeHub" }] },
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["RealtimeHub"] }],
+	"worker_loaders": [{ "binding": "LOADER" }],
+}

@@ -13,10 +13,11 @@ import CodeInput from './vanilla/CodeInput'
 import CheckboxInput from './vanilla/CheckboxInput'
 import SuccessMessage from './vanilla/SuccessMessage'
 import RecoveryCodeContainer from './vanilla/RecoveryCodeContainer'
+import Turnstile from './vanilla/Turnstile'
 
 export {
   LocaleSelector, PrimaryButton, SecondaryButton, ViewTitle, Field, PasswordField,
   GoogleSignIn, GithubSignIn, AppleSignIn, OidcSignIn,
   SubmitError, CodeInput, CheckboxInput, SuccessMessage,
-  RecoveryCodeContainer,
+  RecoveryCodeContainer, Turnstile,
 }

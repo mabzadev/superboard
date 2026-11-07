@@ -1,0 +1,24 @@
+{
+	"date": "2026-11-07",
+	"environment": "local stack (pnpm local:start), Front Release republished through the Data plugin enable action",
+	"pages": {
+		"rendered_in": ["fr", "en"],
+		"paths": ["/data/database", "/data/storage", "/data/functions", "/data/vectors", "/data/api"],
+		"page_errors": 0,
+		"failed_api_calls": 0
+	},
+	"operator_flow": [
+		"create table notes_<n> with a text column from /data/database",
+		"add a row from the Rows tab",
+		"run SELECT titre FROM adb_1_notes_<n> in the SQL editor",
+		"create a server key from /data/api and read it once"
+	],
+	"public_api_through_local_api_worker": {
+		"GET /v1/data/manage/tables (server key)": 200,
+		"POST /v1/data/db/<table> (server key)": 201,
+		"GET /v1/data/db/<table>?titre=ilike.*sdk*&select=titre": 200,
+		"GET /v1/data/manage/types": 200,
+		"GET /v1/data/openapi.json": 200,
+		"GET /v1/data/db/<table> without credentials": 401
+	}
+}

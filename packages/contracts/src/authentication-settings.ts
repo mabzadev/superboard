@@ -12,6 +12,7 @@ export interface AuthenticationSettingDefinition {
 	minimum?: number;
 	maximum?: number;
 	choices?: readonly string[];
+	pattern?: RegExp;
 }
 const flag = (group: AuthenticationSettingsGroup): AuthenticationSettingDefinition => ({
 	type: "boolean",
@@ -91,6 +92,8 @@ export const authenticationSettingDefinitions: Record<string, AuthenticationSett
 	OIDC_AUTH_PROVIDERS: { type: "list", group: "providers" },
 	ENABLE_EMAIL_LOG: flag("advanced"),
 	ENABLE_SIGN_IN_LOG: flag("advanced"),
+	ENABLE_CAPTCHA: flag("security"),
+	TURNSTILE_SITE_KEY: { type: "text", group: "security", pattern: /^[\w-]{1,256}$/u },
 };
 const listItemPattern = /^[a-zA-Z0-9_-]{1,100}$/u;
 
@@ -150,6 +153,8 @@ export function validateAuthenticationSettings(value: unknown): AuthenticationSe
 				!setting.includes("\r") &&
 				!setting.includes("\n") &&
 				!setting.includes("\0");
+			if (valid && definition.pattern && setting !== "")
+				valid = definition.pattern.test(String(setting));
 			if (valid && definition.type === "url" && setting !== "") {
 				try {
 					const parsed = new URL(String(setting));
@@ -209,6 +214,7 @@ export type AuthenticationProviderWithSecret = (typeof authenticationProvidersWi
 
 export interface AuthenticationDeploymentStatus {
 	providerSecrets: Record<AuthenticationProviderWithSecret, boolean>;
+	captchaSecret?: boolean;
 }
 
 export function authenticationProviderSecrets(

@@ -35,17 +35,17 @@ function pendingRename(catalog, id) {
 	return library;
 }
 
-test("four public SDKs retain native components and immutable release history", async () => {
+test("five public SDKs retain native components and immutable release history", async () => {
 	const catalog = await loadSdkCatalog();
 	const result = await validateSdkCatalog(catalog);
 
 	assert.deepEqual(result.errors, []);
 	assert.equal(catalog.schemaVersion, 6);
 	assert.equal(catalog.repository, "https://github.com/mabzadev/superboard");
-	assert.equal(result.libraries, 4);
+	assert.equal(result.libraries, 5);
 	assert.deepEqual(
 		Object.fromEntries(catalog.libraries.map(({ id, lifecycle }) => [id, lifecycle])),
-		{ flutter: "active", flutterflow: "active", web: "active", tauri: "active" },
+		{ flutter: "active", flutterflow: "active", web: "active", tauri: "active", cli: "active" },
 	);
 
 	assert.ok(catalog.libraries.every((library) => library.license === "MIT"));

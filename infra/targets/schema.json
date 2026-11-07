@@ -1186,6 +1186,24 @@
 				},
 				"legacyName": {
 					"type": "boolean"
+				},
+				"metadataIndexes": {
+					"type": "array",
+					"maxItems": 10,
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["propertyName", "indexType"],
+						"properties": {
+							"propertyName": {
+								"type": "string",
+								"pattern": "^[a-z][a-z0-9_]{0,63}$"
+							},
+							"indexType": {
+								"enum": ["string", "number", "boolean"]
+							}
+						}
+					}
 				}
 			}
 		},
@@ -1194,6 +1212,9 @@
 			"additionalProperties": false,
 			"properties": {
 				"supportKnowledge": {
+					"$ref": "#/$defs/vectorizeResource"
+				},
+				"dataVectors": {
 					"$ref": "#/$defs/vectorizeResource"
 				}
 			}

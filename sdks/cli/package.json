@@ -1,0 +1,33 @@
+{
+	"name": "@superboard/cli",
+	"version": "0.1.0",
+	"description": "Command-line tool to manage a SuperBoard project's database, storage, functions and vectors.",
+	"type": "module",
+	"bin": {
+		"superboard": "./bin/superboard.js"
+	},
+	"exports": {
+		".": "./src/cli.js"
+	},
+	"files": [
+		"bin",
+		"src"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mabzadev/superboard.git",
+		"directory": "sdks/cli"
+	},
+	"keywords": [
+		"superboard",
+		"cli"
+	],
+	"scripts": {
+		"test": "node --test ../../tests/checks/sdks/cli/*.test.mjs",
+		"pack:check": "pnpm pack --dry-run"
+	}
+}

@@ -25,6 +25,7 @@ import {
 	configuredIdentityEnvironment,
 	requiresHostedSignIn,
 } from "./authentication-settings.js";
+import { captchaRejection, captchaRejectionResponse, captchaTokenHeader } from "./captcha.js";
 import {
 	issueAccessToken,
 	issueSuperBoardToken,
@@ -431,6 +432,11 @@ async function handleApplicationOperation(c: IdentityContext, operation: Applica
 	headers.set("Content-Type", "application/json");
 	const authorization = c.req.header("Authorization");
 	if (authorization) headers.set("Authorization", authorization);
+	if (operation.id === "application_sign_in")
+		for (const name of ["cf-connecting-ip", captchaTokenHeader]) {
+			const value = c.req.header(name);
+			if (value) headers.set(name, value);
+		}
 	return app.fetch(
 		new Request(`https://identity.internal${path}`, {
 			method,
@@ -663,6 +669,8 @@ app.post("/auth/register", async (c) => {
 	const email = normalizedEmail(body.email);
 	const password = passwordValue(body.password);
 	await enforceRateLimit(c.env.DB, c.req.raw, `p${projectId}:register`, email);
+	const rejection = await captchaRejection(c.env, c.req.raw.headers, body);
+	if (rejection) return captchaRejectionResponse(rejection);
 	const id = crypto.randomUUID();
 	try {
 		await c.env.DB.prepare(
@@ -713,6 +721,8 @@ app.post("/auth/signin/password", async (c) => {
 	const email = normalizedEmail(body.email);
 	const password = typeof body.password === "string" ? body.password : "";
 	await enforceRateLimit(c.env.DB, c.req.raw, `p${projectId}:password`, email);
+	const rejection = await captchaRejection(c.env, c.req.raw.headers, body);
+	if (rejection) return captchaRejectionResponse(rejection);
 	const user = await c.env.DB.prepare(
 		"SELECT * FROM application_users WHERE project_id=? AND email=? AND deleted_at IS NULL LIMIT 1",
 	)
@@ -1592,7 +1602,7 @@ const integratedWorker = {
 				"/auth/reset-password",
 			].includes(url.pathname) ||
 			url.pathname.startsWith("/auth/signin/") ||
-			url.pathname.startsWith("/internal/v1/application-plugin/command/") ||
+			url.pathname.startsWith("/internal/v1/application-plugin/commands/") ||
 			(url.pathname.startsWith("/internal/v1/melody-admin") &&
 				!url.pathname.endsWith("/api/v1/configuration"));
 		try {

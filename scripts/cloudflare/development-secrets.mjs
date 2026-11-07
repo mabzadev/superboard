@@ -192,6 +192,7 @@ export async function generateDevelopmentSecretAssignments({
 		files: {
 			FILES_INTERNAL_TOKEN: filesToken,
 			FILES_DOWNLOAD_SIGNING_KEY: token(),
+			DATA_ENCRYPTION_KEY: token(),
 		},
 		observability: {
 			OBSERVABILITY_INTERNAL_TOKEN: observabilityToken,

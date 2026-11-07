@@ -30,6 +30,17 @@ sont des préfixes ; appeler un préfixe seul ne déclenche pas une opération.
 | `/v1/acquisition`   | `/flows/blocks`, `/flows/workflows`, `/flows/events`, `/flows/survey`, `/flows-realtime/block-updates`, `/onboardings/resolve`, `/onboardings/events`, `/attribution`, `/create_link`, `/link_details` |
 | `/v1/analytics`     | `POST /events`, `POST /remote-config/resolve`, `/metrics_for_link/:path`, `/metrics_for_project`                                                                                                       |
 
+La famille `/v1/data` porte aussi les primitives backend décrites dans
+[la spécification](technical-specs/SUPERBOARD_BACKEND_PRIMITIVES_2026-11-07.md) :
+`/db/*` (tables applicatives), `/storage/*` (buckets et objets),
+`/realtime/*` (tickets et WebSocket), `/functions/:name/*` (fonctions),
+`/vectors/*` et `/ai/embeddings` (recherche vectorielle), `/manage/*` (gestion
+par clé serveur) et `/openapi.json`. Une requête porte les en-têtes SDK et, si
+l'utilisateur est connecté, son jeton d'accès d'application ; une clé serveur
+`sb_secret_…` remplace les deux. Les objets d'un bucket public
+(`/storage/public/:projectId/…`), les URL signées (`/storage/signed/:token`) et
+la connexion temps réel (`/realtime/connect?ticket=…`) n'exigent aucun en-tête.
+
 `POST /v1/data/events` accepte le contrat partagé décrit dans
 [la collecte du core](CORE_COLLECTION.md). `/customer-events` conserve le format
 des événements clients App ; `/device-events` conserve celui des lots du SDK
@@ -46,6 +57,17 @@ L’authentification hébergée utilise `/v1/auth/oauth2/v1/*`,
 et ses clés sont sous `/v1/auth/.well-known/`. Les jetons applicatifs ES256
 utilisent le jeu de clés `/v1/auth/.well-known/application-jwks.json`, distinct
 des clés OIDC hébergées.
+
+Quand le CAPTCHA Turnstile est activé avec une clé de site et le secret de
+déploiement `TURNSTILE_SECRET_KEY`, `POST /v1/auth/register`,
+`POST /v1/auth/signin/password` ainsi que l’inscription et la connexion par mot
+de passe des pages hébergées et de `/v1/auth/embedded-auth/v1/*` exigent un
+jeton Turnstile. Le client l’envoie dans le champ `captcha_token` du corps, dans
+le champ `cf-turnstile-response` ou dans l’en-tête `X-SuperBoard-Captcha-Token`.
+Un jeton absent renvoie `403` `captcha_required`, un jeton refusé `403`
+`captcha_failed`, et une vérification impossible `503` `captcha_unavailable`.
+Les connexions anonymes, par fournisseur ou par clé d’accès et le renouvellement
+de session n’en demandent pas.
 
 Les méthodes, corps, en-têtes SDK, signatures de fournisseurs et règles
 d’autorisation des opérations restent ceux de leurs handlers. Le registre

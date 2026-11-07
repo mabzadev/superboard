@@ -25,6 +25,7 @@ const tagPrefixes = Object.freeze({
 	flutter: "sdk-flutter-v",
 	web: "sdk-web-v",
 	tauri: "sdk-tauri-v",
+	cli: "sdk-cli-v",
 	flutterflow: "sdk-flutterflow-v",
 	"flutterflow-support": "sdk-flutterflow-messaging-v",
 	ios: "sdk-ios-v",
@@ -235,7 +236,7 @@ export async function validateSdkCatalog(catalog, options = {}) {
 		}
 	}
 	if (
-		["flutter", "flutterflow", "web", "tauri"].some(
+		["flutter", "flutterflow", "web", "tauri", "cli"].some(
 			(id) => !catalog.libraries.some((library) => library.id === id),
 		)
 	)

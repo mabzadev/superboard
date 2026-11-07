@@ -110,6 +110,12 @@ export function cloudflareClient({ accountId, token, fetchImpl = fetch }) {
 				method: "POST",
 				body: JSON.stringify(operation.body),
 			});
+			for (const index of operation.metadataIndexes ?? []) {
+				await request(
+					`${operation.endpoint}/${encodeURIComponent(operation.name)}/metadata_index/create`,
+					{ method: "POST", body: JSON.stringify(index) },
+				);
+			}
 			return payload.result;
 		},
 	};

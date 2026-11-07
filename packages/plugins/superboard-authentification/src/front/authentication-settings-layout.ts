@@ -14,6 +14,7 @@ export type SettingItem =
 	| { kind: "duration"; key: string }
 	| { kind: "choices"; key: string; choices: readonly string[]; inverted?: boolean }
 	| { kind: "providers" }
+	| { kind: "captcha" }
 	| { kind: "links" };
 
 export interface SettingsSection {
@@ -27,6 +28,8 @@ export interface SignInProvider {
 	keys: readonly string[];
 	secret?: AuthenticationProviderWithSecret;
 }
+
+export const captchaKeys = ["ENABLE_CAPTCHA", "TURNSTILE_SITE_KEY"] as const;
 
 export const signInProviders: readonly SignInProvider[] = [
 	{ id: "google", name: "Google", keys: ["GOOGLE_AUTH_CLIENT_ID"] },
@@ -96,7 +99,10 @@ export const settingsLayout: Record<SettingsTab, SettingsSection[]> = {
 	fields: [
 		{
 			id: "profile",
-			items: [toggle("ENABLE_NAMES", [toggle("NAMES_IS_REQUIRED")]), toggle("ENABLE_USER_ATTRIBUTE")],
+			items: [
+				toggle("ENABLE_NAMES", [toggle("NAMES_IS_REQUIRED")]),
+				toggle("ENABLE_USER_ATTRIBUTE"),
+			],
 		},
 	],
 	appearance: [
@@ -117,7 +123,8 @@ export const settingsLayout: Record<SettingsTab, SettingsSection[]> = {
 				toggle(
 					"ENABLE_LOCALE_SELECTOR",
 					undefined,
-					(values) => Array.isArray(values.SUPPORTED_LOCALES) && values.SUPPORTED_LOCALES.length > 1,
+					(values) =>
+						Array.isArray(values.SUPPORTED_LOCALES) && values.SUPPORTED_LOCALES.length > 1,
 				),
 			],
 		},
@@ -147,6 +154,7 @@ export const settingsLayout: Record<SettingsTab, SettingsSection[]> = {
 				field("AUTH_CODE_VERIFIER_THRESHOLD"),
 			],
 		},
+		{ id: "captcha", items: [{ kind: "captcha" }] },
 		{
 			id: "selfService",
 			items: [
@@ -175,6 +183,7 @@ export const settingsLayout: Record<SettingsTab, SettingsSection[]> = {
 
 function itemKeys(item: SettingItem): string[] {
 	if (item.kind === "providers") return signInProviders.flatMap((provider) => provider.keys);
+	if (item.kind === "captcha") return [...captchaKeys];
 	if (item.kind === "links") return [];
 	return [item.key, ...(item.kind === "switch" ? (item.children ?? []).flatMap(itemKeys) : [])];
 }

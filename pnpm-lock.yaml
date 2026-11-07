@@ -3545,6 +3545,9 @@ importers:
         specifier: ^6.2.2
         version: 6.2.10
     devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: catalog:workers
+        version: 0.20.3(@cloudflare/workers-types@5.20260828.1)(@vitest/runner@4.1.12)(@vitest/snapshot@4.1.12)(vitest@4.1.12)
       '@cloudflare/workers-types':
         specifier: catalog:workers
         version: 5.20260828.1
@@ -4309,6 +4312,8 @@ importers:
       '@x402/svm':
         specifier: ^2.8.0
         version: 2.8.0(@solana/kit@5.5.1(typescript@6.0.3))(@solana/sysvars@5.5.1(typescript@6.0.3))
+
+  sdks/cli: {}
 
   sdks/tauri:
     dependencies:

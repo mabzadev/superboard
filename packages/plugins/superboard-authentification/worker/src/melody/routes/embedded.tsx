@@ -2,7 +2,7 @@ import { Hono } from "hono";
 
 import { routeConfig, typeConfig } from "../configs";
 import { embeddedHandler } from "../handlers";
-import { configMiddleware, setupMiddleware } from "../middlewares";
+import { captchaMiddleware, configMiddleware, setupMiddleware } from "../middlewares";
 
 const embeddedRoutes = new Hono<typeConfig.Context>();
 export default embeddedRoutes;
@@ -24,6 +24,7 @@ embeddedRoutes.post(
 	routeConfig.EmbeddedRoute.SignUp,
 	setupMiddleware.validEmbeddedOrigin,
 	configMiddleware.enableSignUp,
+	captchaMiddleware.requireCaptcha,
 	embeddedHandler.signUp,
 );
 
@@ -31,6 +32,7 @@ embeddedRoutes.post(
 	routeConfig.EmbeddedRoute.SignIn,
 	setupMiddleware.validEmbeddedOrigin,
 	configMiddleware.enablePasswordSignIn,
+	captchaMiddleware.requireCaptcha,
 	embeddedHandler.signIn,
 );
 

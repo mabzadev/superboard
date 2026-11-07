@@ -5,6 +5,7 @@ import { InitialProps, View } from ".";
 import { routeConfig, typeConfig } from "../../configs";
 import { GetAuthorizeAccountRes } from "../../handlers/identity";
 import { userAttributeModel } from "../../models";
+import { captchaFields, captchaRequired } from "../tools/captcha";
 import {
 	validate,
 	emailField,
@@ -22,6 +23,8 @@ export interface UseSignUpFormProps {
 	params: AuthorizeParams;
 	onSubmitError: (error: string | null) => void;
 	onSwitchView: (view: View) => void;
+	captchaToken?: string | null;
+	onCaptchaReset?: () => void;
 }
 
 const useSignUpForm = ({
@@ -30,6 +33,8 @@ const useSignUpForm = ({
 	params,
 	onSubmitError,
 	onSwitchView,
+	captchaToken = null,
+	onCaptchaReset,
 }: UseSignUpFormProps) => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -146,6 +151,11 @@ const useSignUpForm = ({
 				return;
 			}
 
+			if (initialProps.captchaSiteKey && !captchaToken) {
+				onSubmitError(captchaRequired);
+				return;
+			}
+
 			setIsSubmitting(true);
 
 			fetch(routeConfig.IdentityRoute.AuthorizeAccount, {
@@ -160,6 +170,7 @@ const useSignUpForm = ({
 					email,
 					password,
 					attributes: userAttributes.length ? attributeValues : undefined,
+					...captchaFields(captchaToken),
 					...parseAuthorizeBaseValues(params, locale),
 				}),
 			})
@@ -169,12 +180,15 @@ const useSignUpForm = ({
 				})
 				.catch((error) => {
 					onSubmitError(error);
+					onCaptchaReset?.();
 				})
 				.finally(() => {
 					setIsSubmitting(false);
 				});
 		},
 		[
+			captchaToken,
+			onCaptchaReset,
 			params,
 			locale,
 			onSubmitError,

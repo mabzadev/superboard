@@ -694,6 +694,11 @@ function compileBindings(target, environment, physicalResources) {
 		addRuntime("site", binding);
 	}
 	addRuntime("identity", "ASSETS");
+	for (const binding of ["REALTIME", "LOADER", "IMAGES"]) addRuntime("files", binding);
+	if (target.environments[environment]?.moduleVectorize?.dataVectors) {
+		addResource("files", "VECTORS", "moduleVectorize.dataVectors");
+		addRuntime("files", "AI");
+	}
 	addRuntime("observability", "ANALYTICS");
 	if (target.features.messaging) addRuntime("messaging", "CONVERSATIONS");
 	return bindings.toSorted(compareBy("service", "kind", "binding"));
@@ -922,6 +927,7 @@ function compilePhysicalHealthChecks(target) {
 function compileLogicalSchedules(target) {
 	return [
 		{ service: "api", crons: ["*/10 * * * *"], policy: "active" },
+		{ service: "files", crons: ["* * * * *"], policy: "active" },
 		{ service: "site", crons: [...target.siteRuntime.crons], policy: "active" },
 		...(target.features.billing
 			? [

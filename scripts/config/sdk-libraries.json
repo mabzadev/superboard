@@ -73,6 +73,22 @@
 			"publicationTarget": "public-npm",
 			"notes": "Local source; no published version or installation tag is available yet.",
 			"sourcePublication": "local"
+		},
+		{
+			"id": "cli",
+			"lifecycle": "active",
+			"displayName": "SuperBoard CLI",
+			"ecosystem": "npm",
+			"packageName": "@superboard/cli",
+			"sourcePath": "sdks/cli",
+			"license": "MIT",
+			"licensePath": "sdks/cli/LICENSE",
+			"versionSource": "sdks/cli/package.json",
+			"sourceVersion": "0.1.0",
+			"releaseStatus": "unreleased",
+			"publicationTarget": "public-npm",
+			"notes": "Local source of the superboard command; no published version or installation tag is available yet.",
+			"sourcePublication": "local"
 		}
 	],
 	"components": [

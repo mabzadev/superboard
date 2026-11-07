@@ -29,7 +29,13 @@ const useSubmitError = ({
 
       let msg = requestError.authFailed[locale]
 
-      if (errorString.indexOf('isEmail') !== -1 || errorString === validateError.isNotEmail[locale]) {
+      if (errorString.indexOf('captcha_unavailable') !== -1) {
+        msg = requestError.captchaUnavailable[locale]
+      } else if (errorString.indexOf('captcha_failed') !== -1) {
+        msg = requestError.captchaFailed[locale]
+      } else if (errorString.indexOf('captcha_required') !== -1) {
+        msg = requestError.captchaRequired[locale]
+      } else if (errorString.indexOf('isEmail') !== -1 || errorString === validateError.isNotEmail[locale]) {
         msg = validateError.isNotEmail[locale]
       } else if (errorString.indexOf('isStrongPassword') !== -1) {
         msg = validateError.isWeakPassword[locale]

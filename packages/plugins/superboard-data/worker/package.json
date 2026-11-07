@@ -5,8 +5,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.runtime.json",
+    "test": "vitest run && vitest run --config vitest.runtime.config.ts",
+    "test:runtime": "vitest run --config vitest.runtime.config.ts"
   },
   "dependencies": {
     "@superboard/contracts": "workspace:*",
@@ -14,6 +15,7 @@
     "jose": "^6.2.2"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:workers",
     "@cloudflare/workers-types": "catalog:workers",
     "typescript": "catalog:workers",
     "vitest": "catalog:",

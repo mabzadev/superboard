@@ -116,6 +116,7 @@ declare namespace Cloudflare {
 	FILES_INTERNAL_TOKEN: string;
 	INTERNAL_API_TOKEN: string;
 	INTERNAL_API_TOKEN_PREVIOUS?: string;
+	TURNSTILE_SECRET_KEY: string;
 	}
 }
 interface Env {
@@ -125,4 +126,5 @@ interface Env {
 	FILES_INTERNAL_TOKEN: string;
 	INTERNAL_API_TOKEN: string;
 	INTERNAL_API_TOKEN_PREVIOUS?: string;
+	TURNSTILE_SECRET_KEY: string;
 }

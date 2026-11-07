@@ -18,6 +18,7 @@ const activeMetadataFiles = [
 	"sdks/flutter/native/ios/SuperBoard.podspec",
 	"sdks/web/package.json",
 	"sdks/tauri/package.json",
+	"sdks/cli/package.json",
 	"scripts/clients/flutterflow-library/dsl/edit.dart",
 ];
 

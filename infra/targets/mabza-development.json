@@ -332,6 +332,18 @@
 					"dimensions": 1024,
 					"metric": "cosine",
 					"description": "SuperBoard Support knowledge index"
+				},
+				"dataVectors": {
+					"name": "superboard-dev-data-vectors",
+					"dimensions": 1024,
+					"metric": "cosine",
+					"description": "SuperBoard Data vector search",
+					"metadataIndexes": [
+						{
+							"propertyName": "owner",
+							"indexType": "string"
+						}
+					]
 				}
 			},
 			"moduleQueues": {
@@ -483,6 +495,18 @@
 					"dimensions": 1024,
 					"metric": "cosine",
 					"description": "SuperBoard Support knowledge index"
+				},
+				"dataVectors": {
+					"name": "superboard-local-data-vectors",
+					"dimensions": 1024,
+					"metric": "cosine",
+					"description": "SuperBoard Data vector search",
+					"metadataIndexes": [
+						{
+							"propertyName": "owner",
+							"indexType": "string"
+						}
+					]
 				}
 			},
 			"moduleQueues": {
