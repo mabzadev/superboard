@@ -9,6 +9,7 @@ import {
 import { sha256Hex } from "./crypto";
 import { httpError } from "./http";
 import { deliverMarketingSignal, marketingSignalStatement } from "./marketing-signals";
+import { localDate, reportTimezone } from "./timezone";
 import type { Env, IdentityKind, OutboxRow, StoredAnalyticsEventV1 } from "./types";
 
 const DEFAULT_HOT_RETENTION_DAYS = 35;
@@ -24,7 +25,7 @@ export async function projectStoredEvent(
 	const stored = validateStoredEvent(value, outbox);
 	const event = stored.event;
 	const archiveKey = archiveObjectKey(outbox.project_id, event);
-	const hotRetentionDays = await projectHotRetentionDays(env.DB, outbox.project_id);
+	const { hotRetentionDays, timezone } = await projectReportingSettings(env.DB, outbox.project_id);
 	await env.EVENT_ARCHIVE.put(archiveKey, stableAnalyticsJson(event), {
 		httpMetadata: { contentType: "application/json; charset=UTF-8" },
 		customMetadata: {
@@ -60,7 +61,7 @@ export async function projectStoredEvent(
 			event.occurred_at,
 			`+${hotRetentionDays} days`,
 		),
-		dailyEventMetricStatement(env.DB, outbox.project_id, event),
+		dailyEventMetricStatement(env.DB, outbox.project_id, event, timezone),
 		env.DB.prepare(
 			`INSERT OR IGNORE INTO analytics_projection_receipts
         (project_id, projection, event_id) VALUES (?, 'daily_event', ?)`,
@@ -126,13 +127,22 @@ export async function projectStoredEvent(
 	}
 }
 
-async function projectHotRetentionDays(db: D1Database, projectId: string): Promise<number> {
+async function projectReportingSettings(
+	db: D1Database,
+	projectId: string,
+): Promise<{ hotRetentionDays: number; timezone: string }> {
 	const row = await db
-		.prepare("SELECT hot_retention_days FROM analytics_project_settings WHERE project_id = ?")
+		.prepare(
+			"SELECT hot_retention_days, timezone FROM analytics_project_settings WHERE project_id = ?",
+		)
 		.bind(projectId)
-		.first<{ hot_retention_days: number }>();
+		.first<{ hot_retention_days: number; timezone: string | null }>();
 	const value = Number(row?.hot_retention_days ?? DEFAULT_HOT_RETENTION_DAYS);
-	return Number.isInteger(value) && value >= 1 && value <= 366 ? value : DEFAULT_HOT_RETENTION_DAYS;
+	return {
+		hotRetentionDays:
+			Number.isInteger(value) && value >= 1 && value <= 366 ? value : DEFAULT_HOT_RETENTION_DAYS,
+		timezone: reportTimezone(row?.timezone),
+	};
 }
 
 async function hookDeliveryStatements(
@@ -392,12 +402,13 @@ function dailyEventMetricStatement(
 	db: D1Database,
 	projectId: string,
 	event: AnalyticsEventV1,
+	timezone: string,
 ): D1PreparedStatement {
 	return db
 		.prepare(
 			`INSERT INTO analytics_daily_metrics
         (project_id, application_id, metric_date, metric_name, dimension_key, event_count)
-       SELECT ?, ?, substr(?, 1, 10), 'event', ?, 1
+       SELECT ?, ?, ?, 'event', ?, 1
        WHERE NOT EXISTS (
          SELECT 1 FROM analytics_projection_receipts
          WHERE project_id = ? AND projection = 'daily_event' AND event_id = ?
@@ -409,7 +420,7 @@ function dailyEventMetricStatement(
 		.bind(
 			projectId,
 			event.application_id,
-			event.occurred_at,
+			localDate(event.occurred_at, timezone),
 			event.event_name,
 			projectId,
 			event.event_id,

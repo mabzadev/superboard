@@ -20,7 +20,11 @@ const state = vi.hoisted(() => ({
 	feedback: vi.fn(),
 	alerts: vi.fn(),
 	success: vi.fn(),
+	updateSettings: vi.fn(),
 }));
+
+if (!("PointerEvent" in window))
+	Object.defineProperty(window, "PointerEvent", { value: MouseEvent, configurable: true });
 
 vi.mock(
 	"../../../../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js",
@@ -58,7 +62,7 @@ vi.mock(
 		getAnalyticsApplications: vi.fn().mockResolvedValue({ items: [] }),
 		getAnalyticsHooks: vi.fn().mockResolvedValue({ items: [] }),
 		getAnalyticsAnnotations: vi.fn().mockResolvedValue({ items: [] }),
-		updateAnalyticsSettings: vi.fn().mockResolvedValue({}),
+		updateAnalyticsSettings: state.updateSettings,
 	}),
 );
 
@@ -98,6 +102,7 @@ describe("Analytics follows the console language", () => {
 			summary: { responses: 0, average_rating: null, positive: 0, negative: 0 },
 		});
 		state.alerts.mockResolvedValue({ items: [], incidents: [] });
+		state.updateSettings.mockResolvedValue({});
 	});
 
 	it("keeps shared module wrappers usable without a console provider", () => {
@@ -298,14 +303,23 @@ describe("Analytics follows the console language", () => {
 		expect(screen.getByText("Envoyée")).toBeInTheDocument();
 	});
 
-	it("saves data collection settings through the French feature view", async () => {
+	it("saves the report time zone on its own through the French feature view", async () => {
 		const user = userEvent.setup();
 		render(<Page kind="settings" locale="fr" />);
-		await user.click(screen.getByRole("tab", { name: "Traitement Analytics" }));
-		await user.click(await screen.findByRole("button", { name: "Enregistrer les paramètres" }));
-		await waitFor(() =>
-			expect(state.success).toHaveBeenCalledWith("Paramètres des statistiques enregistrés"),
+		await user.click(screen.getByRole("tab", { name: "Rapports" }));
+		const timezone = await screen.findByRole("combobox", { name: "Fuseau horaire des rapports" });
+		await user.clear(timezone);
+		await user.type(timezone, "Europe/Paris");
+		await waitFor(
+			() =>
+				expect(state.updateSettings).toHaveBeenCalledWith(
+					"project-1",
+					expect.objectContaining({ timezone: "Europe/Paris" }),
+				),
+			{ timeout: 3_000 },
 		);
+		expect(state.updateSettings.mock.calls[0]?.[1]).not.toHaveProperty("data_collection_enabled");
+		expect(await screen.findByText("Modifications enregistrées.")).toBeInTheDocument();
 	});
 
 	it("groups audience pages in a single tab row without a repeated settings link", () => {
