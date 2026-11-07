@@ -3,9 +3,11 @@ import { createFrontI18n } from "@superboard/front-ui/i18n";
 import { useMemo } from "react";
 
 import { audienceFrench } from "./audience-i18n.js";
+import { settingsFrench } from "./settings-i18n.js";
 
 const french: Record<string, string> = {
 	...audienceFrench,
+	...settingsFrench,
 	Button: "Bouton",
 	"HTML source": "Code HTML",
 	Components: "Composants",

@@ -30,7 +30,8 @@ try {
 		return route.continue();
 	});
 	const firstRead = page.waitForRequest(
-		(r) => r.method() === "GET" && r.url().endsWith("/settings/smtp"),
+		(r) =>
+			r.method() === "GET" && r.url().includes("/marketing/") && r.url().endsWith("/settings/smtp"),
 	);
 	await page.goto(
 		new URL("/_emdash/api/auth/dev-bypass?redirect=/communication/settings", origin).href,
@@ -99,47 +100,53 @@ try {
 				await open(tab, locale);
 				console.log("Checking sender", locale, tab);
 				const profileName = `issue82-${tab}-${locale}-${Date.now()}`;
+				const savedSender = () =>
+					page.waitForResponse(
+						(r) =>
+							(r.url() === endpoint + "/settings/smtp" && r.request().method() === "PUT") ||
+							(r.url().includes(".command.save_smtp_settings") && r.request().method() === "POST"),
+					);
 				await page
-					.getByPlaceholder(fr ? "Nom de l’expéditeur" : "Profile name", { exact: true })
-					.first()
+					.getByRole("button", {
+						name: fr ? "Ajouter un expéditeur" : "Add a sender",
+						exact: true,
+					})
+					.click();
+				await page
+					.getByLabel(fr ? "Nom interne" : "Internal name", { exact: true })
 					.fill(profileName);
 				const settings = await read(endpoint + "/settings/smtp");
 				if (settings.provider !== "aws-ses") {
 					await page
-						.getByPlaceholder(fr ? "Serveur SMTP" : "SMTP host", { exact: true })
+						.getByLabel(fr ? "Serveur SMTP" : "SMTP host", { exact: true })
 						.fill("smtp.invalid");
-					await page.locator('input[type="password"]').first().fill("issue82-local-test-secret");
+					await page
+						.getByLabel(fr ? "Mot de passe" : "Password", { exact: true })
+						.fill("issue82-local-test-secret");
 				}
 				await page
-					.getByPlaceholder(fr ? "Adresse d’expédition" : "From email", { exact: true })
+					.getByLabel(fr ? "Adresse d’expédition" : "From email", { exact: true })
 					.fill("issue82@example.invalid");
+				await expect(
+					page.getByLabel(
+						fr ? "Sélecteur DKIM (exemple : mail)" : "DKIM selector (for example: mail)",
+						{
+							exact: true,
+						},
+					),
+				).toHaveCount(0);
 				const enabled = page.getByRole("switch", {
 					name: fr ? "Disponible comme expéditeur de secours" : "Enabled for failover pool",
 				});
 				await enabled.uncheck();
-				console.log(
-					"Saving",
-					endpoint,
-					"disabled:",
-					await page
-						.getByRole("button", {
-							name: fr ? "Enregistrer l’expéditeur" : "Save profile",
-							exact: true,
-						})
-						.isDisabled(),
-				);
-				const save = page.waitForResponse(
-					(r) =>
-						(r.url() === endpoint + "/settings/smtp" && r.request().method() === "PUT") ||
-						(r.url().includes(".command.save_smtp_settings") && r.request().method() === "POST"),
-				);
+				const created = savedSender();
 				await page
 					.getByRole("button", {
-						name: fr ? "Enregistrer l’expéditeur" : "Save profile",
+						name: fr ? "Ajouter l’expéditeur" : "Add sender",
 						exact: true,
 					})
 					.click();
-				const saved = await save;
+				const saved = await created;
 				assert.ok(saved.ok(), await saved.text());
 				const value = await read(endpoint + "/settings/smtp");
 				const profile = (value.profiles ?? (value.id ? [value] : [])).find(
@@ -157,39 +164,62 @@ try {
 				assert.ok(!JSON.stringify(value).includes("issue82-local-test-secret"));
 				await page.reload();
 				await hydrate();
-				await page
-					.getByRole("button", { name: new RegExp(profileName) })
-					.first()
-					.click();
+				const row = page.getByRole("button", { name: new RegExp(profileName) }).first();
+				await expect(row).toContainText(fr ? "Désactivé" : "Off");
+				await row.click();
 				if (settings.provider !== "aws-ses" && profile.provider !== "aws-ses")
 					await expect(
-						page.getByPlaceholder(fr ? "Serveur SMTP" : "SMTP host", { exact: true }),
+						page.getByLabel(fr ? "Serveur SMTP" : "SMTP host", { exact: true }),
 					).toHaveValue("smtp.invalid");
 				if (settings.provider !== "aws-ses" && profile.provider !== "aws-ses")
-					await expect(page.locator('input[type="password"]').first()).toHaveValue("");
-				const saveAgain = page.waitForResponse(
-					(r) =>
-						(r.url() === endpoint + "/settings/smtp" && r.request().method() === "PUT") ||
-						(r.url().includes(".command.save_smtp_settings") && r.request().method() === "POST"),
-				);
-				await page
-					.getByRole("button", {
+					await expect(
+						page.getByLabel(fr ? "Mot de passe" : "Password", { exact: true }),
+					).toHaveValue("");
+				await expect(
+					page.getByRole("button", {
 						name: fr ? "Enregistrer l’expéditeur" : "Save profile",
 						exact: true,
-					})
-					.click();
-				assert.ok((await saveAgain).ok());
+					}),
+				).toHaveCount(0);
+				const autosaved = savedSender();
+				await page
+					.getByLabel(fr ? "Nom de l’expéditeur" : "From name", { exact: true })
+					.fill("Issue 82");
+				assert.ok((await autosaved).ok());
 				const reread = await read(endpoint + "/settings/smtp");
-				assert.equal(
-					(reread.profiles ?? [reread]).find((row) => row.id === profile.id).configured,
-					true,
-				);
+				const updated = (reread.profiles ?? [reread]).find((item) => item.id === profile.id);
+				assert.equal(updated.configured, true);
+				assert.equal(updated.from_name, "Issue 82");
 			}
 			for (const [tab, endpoint] of [
 				["webhooks", marketing],
 				["email-webhooks", email],
 			]) {
 				await open(tab, locale);
+				await expect(
+					page.getByRole("tab", { name: fr ? "Avancé" : "Advanced", exact: true }),
+				).toHaveAttribute("aria-selected", "true");
+				const webhooks = page.getByRole("region", { name: "Webhooks", exact: true });
+				await expect(
+					webhooks.getByRole("heading", {
+						name: fr ? "Recevoir les événements du fournisseur" : "Receive provider events",
+						exact: true,
+					}),
+				).toBeVisible();
+				await expect(
+					webhooks.getByRole("heading", {
+						name: fr
+							? "Envoyer les événements à vos points de terminaison"
+							: "Send events to your endpoints",
+						exact: true,
+					}),
+				).toBeVisible();
+				await page
+					.getByRole("button", {
+						name: fr ? "Ajouter un webhook fournisseur" : "Add a provider webhook",
+						exact: true,
+					})
+					.click();
 				const provider = `issue82_${locale}_${Date.now()}`;
 				if (endpoint === marketing) {
 					await page.getByLabel(fr ? "Événements pour" : "Events for", { exact: true }).click();
@@ -244,22 +274,28 @@ try {
 				}),
 			).toHaveAttribute("aria-selected", "true");
 			await open("languages", locale);
+			await page
+				.getByRole("switch", {
+					name: fr
+						? "Limiter les e-mails marketing par contact"
+						: "Limit marketing emails per contact",
+				})
+				.check();
+			await page.getByLabel(fr ? "Unité" : "Unit", { exact: true }).click();
+			await page.getByRole("option", { name: fr ? "heures" : "hours", exact: true }).click();
 			const frequency = page.getByLabel(
-				fr ? "Intervalle marketing (heures)" : "Marketing frequency (hours)",
+				fr
+					? "Délai minimum entre deux e-mails marketing"
+					: "Minimum time between two marketing emails",
 				{ exact: true },
 			);
 			await frequency.fill(fr ? "47" : "46");
-			const saved = page.waitForResponse(
-				(r) => r.url() === studio && r.request().method() === "PUT",
-			);
-			await page
-				.locator("section")
-				.filter({ has: frequency })
-				.last()
-				.getByRole("button", { name: fr ? "Enregistrer" : "Save", exact: true })
-				.click();
-			assert.equal((await saved).status(), 200);
-			assert.equal((await read(studio)).marketing_frequency_hours, fr ? 47 : 46);
+			await expect(
+				page.getByRole("button", { name: fr ? "Enregistrer" : "Save", exact: true }),
+			).toHaveCount(0);
+			await expect
+				.poll(async () => (await read(studio)).marketing_frequency_hours, { timeout: 10000 })
+				.toBe(fr ? 47 : 46);
 			await page.reload();
 			await hydrate();
 			await expect(frequency).toHaveValue(fr ? "47" : "46");
@@ -290,6 +326,9 @@ try {
 			);
 			await page.goto(new URL(`/communication/channels?lang=${locale}`, origin).href);
 			await page.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])').waitFor();
+			await page
+				.getByRole("button", { name: fr ? "Ajouter un canal" : "Add a channel", exact: true })
+				.click();
 			await expect(
 				page.getByPlaceholder(fr ? "Notifications clients" : "Customer notifications", {
 					exact: true,
@@ -301,7 +340,7 @@ try {
 			await hydrate();
 			assert.equal(new URL(page.url()).searchParams.get("tab"), "email");
 			console.log(
-				`${locale}: Sender identities and webhooks saved/reread/reloaded; secrets preserved; language settings saved; keyboard, legacy links, Plugins diagnostics link and health check (${inventory.routes.api.length} API routes in diagnostic) passed`,
+				`${locale}: Sender created with its button and autosaved; webhooks grouped and saved/reread/reloaded; secrets preserved; marketing frequency autosaved; keyboard, legacy links, Plugins diagnostics link and health check (${inventory.routes.api.length} API routes in diagnostic) passed`,
 			);
 		}
 	} finally {

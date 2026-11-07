@@ -8,6 +8,8 @@ globalThis.ResizeObserver ??= class {
 	unobserve() {}
 	disconnect() {}
 };
+if (!("PointerEvent" in window))
+	Object.defineProperty(window, "PointerEvent", { value: MouseEvent, configurable: true });
 
 const email = vi.hoisted(() => ({
 	getEmailApiKeys: vi.fn(),
@@ -32,7 +34,10 @@ vi.mock("../../../../../../packages/supbrd-front-ui/src/shared/lib/Notifications
 	showSuccessNotification: vi.fn(),
 }));
 
-import { EmailDeveloperSettings } from "../../../../../../packages/plugins/superboard-communication/src/front/email/components/modules/EmailDeveloperSettings.js";
+import {
+	EmailApiKeys,
+	EmailEventWebhooks,
+} from "../../../../../../packages/plugins/superboard-communication/src/front/email/components/modules/EmailDeveloperSettings.js";
 import { SenderDomainAuthentication } from "../../../../../../packages/plugins/superboard-communication/src/front/email/components/modules/SenderDomainAuthentication.js";
 
 const records = [
@@ -88,7 +93,7 @@ describe("Email delivery settings", () => {
 			last_used_at: null,
 			secret: `sb_email_${"1".repeat(64)}`,
 		});
-		render(<EmailDeveloperSettings project="10-test" />);
+		render(<EmailApiKeys project="10-test" />);
 		fireEvent.change(await screen.findByLabelText("Key name"), { target: { value: "Backend" } });
 		email.getEmailApiKeys.mockResolvedValue([
 			{
@@ -124,12 +129,14 @@ describe("Email delivery settings", () => {
 			responseStatus: 200,
 			error: null,
 		});
-		render(<EmailDeveloperSettings project="10-test" />);
-		fireEvent.change(await screen.findByLabelText("Endpoint URL (https://…)"), {
+		render(<EmailEventWebhooks project="10-test" />);
+		expect(screen.queryByLabelText("Endpoint URL (https://…)")).not.toBeInTheDocument();
+		fireEvent.click(await screen.findByRole("button", { name: "Add an endpoint" }));
+		fireEvent.change(screen.getByLabelText("Endpoint URL (https://…)"), {
 			target: { value: "https://hooks.example.dev/x" },
 		});
 		for (const type of ["Sent", "Delivered", "Complained", "Opened", "Clicked", "Failed"])
-			fireEvent.click(screen.getByLabelText(type));
+			fireEvent.click(screen.getByRole("switch", { name: type }));
 		email.getEventWebhooks.mockResolvedValue([
 			{
 				id: "w1",
@@ -195,7 +202,38 @@ describe("Email delivery settings", () => {
 			),
 		).toBeVisible();
 		expect(screen.getByText("DMARC policy: p=none.")).toBeVisible();
-		expect(screen.getByText(/Not ready: fix the records marked above\./)).toBeVisible();
+		expect(screen.getByText("Not ready")).toBeVisible();
+		expect(screen.getByText(/Fix the records marked below\./)).toBeVisible();
+	});
+
+	it("saves DNS settings as they are typed, without a save button", async () => {
+		email.saveSenderAuthentication.mockImplementation(
+			async (_project: string, _profile: string, config: object) => ({
+				profile_id: "p1",
+				domain: "example.com",
+				provider: "aws-ses",
+				aws_region: "eu-west-1",
+				config,
+				records,
+				status: "unverified",
+				checked_at: null,
+				report: null,
+			}),
+		);
+		render(<SenderDomainAuthentication project="10-test" profileId="p1" />);
+		fireEvent.change(await screen.findByLabelText("DMARC report address (optional)"), {
+			target: { value: "dmarc@example.com" },
+		});
+		expect(screen.queryByRole("button", { name: /Save/u })).not.toBeInTheDocument();
+		await waitFor(
+			() =>
+				expect(email.saveSenderAuthentication).toHaveBeenCalledWith("10-test", "p1", {
+					dkim_tokens: [],
+					dmarc_rua: "dmarc@example.com",
+				}),
+			{ timeout: 3000 },
+		);
+		expect(await screen.findByText("All changes saved.")).toBeInTheDocument();
 	});
 
 	it("renders the wizard in French", async () => {
@@ -213,12 +251,13 @@ describe("Email delivery settings", () => {
 				}}
 			>
 				<SenderDomainAuthentication project="10-test" profileId="p1" />
-				<EmailDeveloperSettings project="10-test" />
+				<EmailApiKeys project="10-test" />
+				<EmailEventWebhooks project="10-test" />
 			</FrontContextProvider>,
 		);
 		expect(await screen.findByText(/Authentification du domaine/)).toBeVisible();
 		expect(screen.getByRole("button", { name: "Vérifier les enregistrements" })).toBeVisible();
 		expect(await screen.findByText("Clés API")).toBeVisible();
-		expect(screen.getByText("Webhooks d’événements")).toBeVisible();
+		expect(screen.getByText("Envoyer les événements à vos points de terminaison")).toBeVisible();
 	});
 });

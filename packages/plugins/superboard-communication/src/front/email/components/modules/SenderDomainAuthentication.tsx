@@ -1,13 +1,20 @@
+import { Button, Select } from "@superboard/front-ui/kumo";
 import {
 	showErrorNotification,
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
 import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
-import { Button } from "@superboard/front-ui/ui/button.js";
-import { Input } from "@superboard/front-ui/ui/input.js";
-import { CheckCircle2, Copy, RefreshCw, Save } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import {
+	SettingsActions,
+	SettingsRow,
+	SettingsSection,
+	SettingsTextField,
+} from "@superboard/front-ui/settings-form";
+import { Badge } from "@superboard/front-ui/ui/badge.js";
+import { Copy, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
 
+import { useAutosave } from "../../../marketing/studio/settings-autosave.js";
 import {
 	getSenderAuthentication,
 	saveSenderAuthentication,
@@ -20,12 +27,12 @@ import {
 } from "../../api/email/emailService.js";
 import { EMAIL_VALUE_LABELS, useEmailI18n } from "./email-i18n.js";
 
-const selectClass = "w-full rounded-md border bg-background px-3 py-2 text-sm";
-const statusClass: Record<string, string> = {
-	verified: "text-emerald-600",
-	mismatch: "text-red-600",
-	missing: "text-amber-600",
-	unconfigured: "text-muted-foreground",
+const tokenSeparator = /[\s,]+/;
+const statusVariants: Record<string, "success" | "destructive" | "warning" | "default"> = {
+	verified: "success",
+	mismatch: "destructive",
+	missing: "warning",
+	unconfigured: "default",
 };
 
 export function SenderDomainAuthentication({
@@ -37,25 +44,14 @@ export function SenderDomainAuthentication({
 	profileId: string;
 	onVerified?: () => void;
 }) {
-	const { t, locale } = useEmailI18n();
 	const [authentication, setAuthentication] = useState<SenderAuthentication | null>(null);
-	const [config, setConfig] = useState<DomainAuthenticationConfig>({});
-	const [tokens, setTokens] = useState("");
-	const [report, setReport] = useState<DomainAuthenticationReport | null>(null);
-	const [busy, setBusy] = useState(false);
-	const apply = useCallback((value: SenderAuthentication) => {
-		setAuthentication(value);
-		setConfig(value.config);
-		setTokens((value.config.dkim_tokens ?? []).join(", "));
-		setReport(value.report);
-	}, []);
 	useEffect(() => {
 		let active = true;
 		void Promise.resolve()
 			.then(() => getSenderAuthentication(project, profileId))
 			.then(
 				(value) => {
-					if (active) apply(value);
+					if (active) setAuthentication(value);
 				},
 				(cause: unknown) => {
 					showErrorNotification(moduleErrorMessage(cause));
@@ -64,26 +60,50 @@ export function SenderDomainAuthentication({
 		return () => {
 			active = false;
 		};
-	}, [project, profileId, apply]);
-	const save = async () => {
-		setBusy(true);
-		try {
-			apply(
-				await saveSenderAuthentication(project, profileId, {
-					...config,
-					dkim_tokens: tokens
-						.split(/[\s,]+/)
-						.map((token) => token.trim())
-						.filter(Boolean),
-				}),
-			);
-			showSuccessNotification(t("DNS settings saved"));
-		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
-		} finally {
-			setBusy(false);
-		}
-	};
+	}, [project, profileId]);
+	if (!authentication) return null;
+	return (
+		<DomainAuthenticationForm
+			project={project}
+			profileId={profileId}
+			initial={authentication}
+			onVerified={onVerified}
+		/>
+	);
+}
+
+function DomainAuthenticationForm({
+	project,
+	profileId,
+	initial,
+	onVerified,
+}: {
+	project: string;
+	profileId: string;
+	initial: SenderAuthentication;
+	onVerified?: () => void;
+}) {
+	const { t, locale } = useEmailI18n();
+	const [authentication, setAuthentication] = useState(initial);
+	const [config, setConfig] = useState<DomainAuthenticationConfig>(initial.config);
+	const [tokens, setTokens] = useState((initial.config.dkim_tokens ?? []).join(", "));
+	const [report, setReport] = useState<DomainAuthenticationReport | null>(initial.report);
+	const [busy, setBusy] = useState(false);
+	const { indicator } = useAutosave({
+		resourceKey: profileId,
+		value: { config, tokens },
+		save: async (next) => {
+			const saved = await saveSenderAuthentication(project, profileId, {
+				...next.config,
+				dkim_tokens: next.tokens
+					.split(tokenSeparator)
+					.map((token) => token.trim())
+					.filter(Boolean),
+			});
+			setAuthentication(saved);
+			setReport(saved.report);
+		},
+	});
 	const verify = async () => {
 		setBusy(true);
 		try {
@@ -96,43 +116,55 @@ export function SenderDomainAuthentication({
 			setBusy(false);
 		}
 	};
-	if (!authentication) return null;
 	const checks = new Map((report?.records ?? []).map((record) => [record.id, record]));
 	const rows: Array<DnsRecord & Partial<DnsRecordCheck>> = authentication.records.map((record) => ({
 		...record,
 		...checks.get(record.id),
 	}));
 	const field = (key: keyof DomainAuthenticationConfig, label: string) => (
-		<Input
-			aria-label={t(label)}
-			placeholder={t(label)}
-			value={String(config[key] ?? "")}
-			onChange={(event) => {
-				setConfig((value) => ({ ...value, [key]: event.target.value || null }));
-			}}
-		/>
+		<SettingsRow>
+			<SettingsTextField
+				label={t(label)}
+				value={String(config[key] ?? "")}
+				onChange={(event) => {
+					setConfig((value) => ({ ...value, [key]: event.target.value || null }));
+				}}
+			/>
+		</SettingsRow>
 	);
 	return (
-		<div className="mt-3 space-y-3 rounded-md border bg-muted/30 p-3">
-			<div>
-				<p className="font-medium">
-					{t("Domain authentication")} · {authentication.domain}
-				</p>
-				<p className="text-xs text-muted-foreground">
-					{t("Add these DNS records at your DNS provider, then verify them.")}
-				</p>
-			</div>
-			<div className="grid gap-2 md:grid-cols-2">
+		<div className="space-y-4">
+			<SettingsSection
+				title={t("Domain authentication · {domain}", { domain: authentication.domain })}
+				description={t("Add these DNS records at your DNS provider, then verify them.")}
+			>
+				<SettingsRow className="flex items-center justify-between gap-4 space-y-0">
+					<div className="min-w-0 space-y-0.5">
+						<p className="text-sm font-medium">{t("Verification")}</p>
+						{report && (
+							<p className="text-xs text-kumo-subtle">
+								{report.ready ? "" : `${t("Fix the records marked below.")} `}
+								{t("Last checked {date}", {
+									date: new Date(report.checkedAt).toLocaleString(locale),
+								})}
+							</p>
+						)}
+					</div>
+					<Badge variant={report?.ready ? "success" : report ? "warning" : "default"}>
+						{report?.ready ? t("Ready to send") : report ? t("Not ready") : t("Not checked yet")}
+					</Badge>
+				</SettingsRow>
 				{authentication.provider === "aws-ses" ? (
 					<>
-						<Input
-							aria-label={t("Amazon SES DKIM tokens (up to 3, comma separated)")}
-							placeholder={t("Amazon SES DKIM tokens (up to 3, comma separated)")}
-							value={tokens}
-							onChange={(event) => {
-								setTokens(event.target.value);
-							}}
-						/>
+						<SettingsRow>
+							<SettingsTextField
+								label={t("Amazon SES DKIM tokens (up to 3, comma separated)")}
+								value={tokens}
+								onChange={(event) => {
+									setTokens(event.target.value);
+								}}
+							/>
+						</SettingsRow>
 						{field(
 							"mail_from_domain",
 							"Custom MAIL FROM subdomain (optional, for example: mail.example.com)",
@@ -142,94 +174,79 @@ export function SenderDomainAuthentication({
 					<>
 						{field("spf_include", "SPF include of your provider (for example: _spf.provider.com)")}
 						{field("dkim_selector", "DKIM selector")}
-						<select
-							aria-label={t("DKIM record type")}
-							className={selectClass}
-							value={config.dkim_type ?? "txt"}
-							onChange={(event) => {
-								setConfig((value) => ({
-									...value,
-									dkim_type: event.target.value === "cname" ? "cname" : "txt",
-								}));
-							}}
-						>
-							<option value="txt">{t("TXT (public key)")}</option>
-							<option value="cname">{t("CNAME (provider target)")}</option>
-						</select>
+						<SettingsRow>
+							<Select
+								className="w-full"
+								label={t("DKIM record type")}
+								value={config.dkim_type ?? "txt"}
+								onValueChange={(next) => {
+									setConfig((value) => ({
+										...value,
+										dkim_type: next === "cname" ? "cname" : "txt",
+									}));
+								}}
+								items={{ txt: t("TXT (public key)"), cname: t("CNAME (provider target)") }}
+							/>
+						</SettingsRow>
 						{field("dkim_value", "DKIM value from your provider")}
 					</>
 				)}
 				{field("dmarc_rua", "DMARC report address (optional)")}
-			</div>
-			<div className="flex flex-wrap gap-2">
-				<Button variant="outline" size="sm" disabled={busy} onClick={() => void save()}>
-					<Save />
-					{t("Save DNS settings")}
-				</Button>
-				<Button size="sm" disabled={busy} onClick={() => void verify()}>
-					<RefreshCw />
+				<SettingsRow className="overflow-x-auto">
+					<table className="w-full text-start text-xs">
+						<thead>
+							<tr className="text-kumo-subtle">
+								<th className="p-1 text-start">{t("Type")}</th>
+								<th className="p-1 text-start">{t("Host")}</th>
+								<th className="p-1 text-start">{t("Value")}</th>
+								<th className="p-1 text-start">{t("Status")}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{rows.map((record) => (
+								<tr key={record.id} className="border-t border-kumo-line align-top">
+									<td className="p-1 font-mono">{record.type}</td>
+									<td className="p-1">
+										<CopyValue value={record.host} label={t("Host")} />
+									</td>
+									<td className="p-1">
+										<CopyValue
+											value={`${record.priority ? `${record.priority} ` : ""}${record.value}`}
+											label={t("Value")}
+											disabled={Boolean(record.needs)}
+										/>
+									</td>
+									<td className="space-y-1 p-1">
+										<Badge variant={statusVariants[record.status ?? ""] ?? "default"}>
+											{record.status
+												? t(EMAIL_VALUE_LABELS[record.status] ?? record.status)
+												: t("Not checked yet")}
+										</Badge>
+										{record.detail && (
+											<p className="text-kumo-subtle">
+												{record.detail_key
+													? t(record.detail_key, record.detail_params)
+													: record.detail}
+											</p>
+										)}
+										{record.status && record.status !== "verified" && record.found?.length ? (
+											<p className="break-all font-mono text-kumo-subtle">
+												{t("Found: {value}", { value: record.found.join(" | ") })}
+											</p>
+										) : null}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</SettingsRow>
+			</SettingsSection>
+			<SettingsActions>
+				<Button icon={RefreshCw} loading={busy} onClick={() => void verify()}>
 					{t("Verify records")}
 				</Button>
-			</div>
-			<div className="overflow-x-auto">
-				<table className="w-full text-start text-xs">
-					<thead>
-						<tr className="text-muted-foreground">
-							<th className="p-1 text-start">{t("Type")}</th>
-							<th className="p-1 text-start">{t("Host")}</th>
-							<th className="p-1 text-start">{t("Value")}</th>
-							<th className="p-1 text-start">{t("Status")}</th>
-						</tr>
-					</thead>
-					<tbody>
-						{rows.map((record) => (
-							<tr key={record.id} className="border-t align-top">
-								<td className="p-1 font-mono">{record.type}</td>
-								<td className="p-1">
-									<CopyValue value={record.host} label={t("Host")} />
-								</td>
-								<td className="p-1">
-									<CopyValue
-										value={`${record.priority ? `${record.priority} ` : ""}${record.value}`}
-										label={t("Value")}
-										disabled={Boolean(record.needs)}
-									/>
-								</td>
-								<td className="p-1">
-									<p className={statusClass[record.status ?? ""] ?? "text-muted-foreground"}>
-										{record.status
-											? t(EMAIL_VALUE_LABELS[record.status] ?? record.status)
-											: t("Not checked yet")}
-									</p>
-									{record.detail && (
-										<p className="text-muted-foreground">
-											{record.detail_key
-												? t(record.detail_key, record.detail_params)
-												: record.detail}
-										</p>
-									)}
-									{record.status && record.status !== "verified" && record.found?.length ? (
-										<p className="break-all font-mono text-muted-foreground">
-											{t("Found: {value}", { value: record.found.join(" | ") })}
-										</p>
-									) : null}
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-			{report && (
-				<p
-					className={`flex items-center gap-1 text-xs ${report.ready ? "text-emerald-600" : "text-amber-600"}`}
-				>
-					{report.ready && <CheckCircle2 className="size-4" />}
-					{report.ready ? t("Ready to send") : t("Not ready: fix the records marked above.")}{" "}
-					{t("Last checked {date}", {
-						date: new Date(report.checkedAt).toLocaleString(locale),
-					})}
-				</p>
-			)}
+			</SettingsActions>
+			{indicator}
 		</div>
 	);
 }
@@ -250,8 +267,10 @@ export function CopyValue({
 			{!disabled && (
 				<Button
 					variant="ghost"
-					size="icon"
-					className="size-6 shrink-0"
+					size="xs"
+					shape="square"
+					className="shrink-0"
+					icon={<Copy className="size-3" />}
 					aria-label={t("Copy {name}", { name: label })}
 					onClick={() => {
 						void navigator.clipboard?.writeText(value).then(
@@ -263,9 +282,7 @@ export function CopyValue({
 							},
 						);
 					}}
-				>
-					<Copy className="size-3" />
-				</Button>
+				/>
 			)}
 		</span>
 	);

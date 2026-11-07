@@ -358,10 +358,10 @@ export function profileAuthenticationConfig(row: object): DomainAuthenticationCo
 	const stored = jsonObject(
 		typeof configJson === "string" ? configJson : null,
 	) as DomainAuthenticationConfig;
-	const legacySelector = typeof selector === "string" && selector ? selector : null;
+	const senderSelector = typeof selector === "string" && selector ? selector : null;
 	return {
 		...stored,
-		dkim_selector: legacySelector ?? stored.dkim_selector ?? null,
+		dkim_selector: stored.dkim_selector || senderSelector,
 		dkim_tokens: Array.isArray(stored.dkim_tokens) ? stored.dkim_tokens : [],
 	};
 }
