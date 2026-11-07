@@ -28,6 +28,18 @@ import { EmDashStorageError } from "emdash";
 /** Regex to remove trailing slashes from URLs */
 const TRAILING_SLASH_REGEX = /\/$/;
 
+/** One or more `/`-separated segments, without empty, `.` or `..` segments */
+const KEY_PREFIX_REGEX = /^(?!\.{1,2}(?:\/|$))[^/]+(?:\/(?!\.{1,2}(?:\/|$))[^/]+)*$/;
+
+function normalizeKeyPrefix(prefix: string | undefined): string {
+	if (!prefix) return "";
+	const trimmed = prefix.replace(TRAILING_SLASH_REGEX, "");
+	if (!KEY_PREFIX_REGEX.test(trimmed)) {
+		throw new EmDashStorageError(`Invalid R2 key prefix: ${prefix}`, "INVALID_PATH");
+	}
+	return `${trimmed}/`;
+}
+
 /** The bytes of an object of `size` bytes that an R2 range covers */
 function servedRange(
 	{ offset = 0, length, suffix }: { offset?: number; length?: number; suffix?: number },
@@ -46,10 +58,16 @@ function servedRange(
 export class R2Storage implements Storage {
 	private bucket: R2Bucket;
 	private publicUrl?: string;
+	private keyPrefix: string;
 
-	constructor(bucket: R2Bucket, publicUrl?: string) {
+	constructor(bucket: R2Bucket, publicUrl?: string, prefix?: string) {
 		this.bucket = bucket;
 		this.publicUrl = publicUrl;
+		this.keyPrefix = normalizeKeyPrefix(prefix);
+	}
+
+	private objectKey(key: string): string {
+		return `${this.keyPrefix}${key}`;
 	}
 
 	async upload(options: {
@@ -59,7 +77,7 @@ export class R2Storage implements Storage {
 		cacheControl?: string;
 	}): Promise<UploadResult> {
 		try {
-			const result = await this.bucket.put(options.key, options.body, {
+			const result = await this.bucket.put(this.objectKey(options.key), options.body, {
 				httpMetadata: {
 					contentType: options.contentType,
 					cacheControl: options.cacheControl,
@@ -85,7 +103,7 @@ export class R2Storage implements Storage {
 		const { range } = options;
 		try {
 			const ranged = range ? await this.getRange(key, range) : undefined;
-			const object = ranged === undefined ? await this.bucket.get(key) : ranged;
+			const object = ranged === undefined ? await this.bucket.get(this.objectKey(key)) : ranged;
 
 			if (!object) {
 				throw new EmDashStorageError(`File not found: ${key}`, "NOT_FOUND");
@@ -118,7 +136,7 @@ export class R2Storage implements Storage {
 	 */
 	private async getRange(key: string, range: ByteRange): Promise<R2ObjectBody | null | undefined> {
 		try {
-			return await this.bucket.get(key, { range });
+			return await this.bucket.get(this.objectKey(key), { range });
 		} catch {
 			return undefined;
 		}
@@ -126,7 +144,7 @@ export class R2Storage implements Storage {
 
 	async delete(key: string): Promise<void> {
 		try {
-			await this.bucket.delete(key);
+			await this.bucket.delete(this.objectKey(key));
 		} catch (error) {
 			// R2 delete is idempotent
 			throw new EmDashStorageError(`Failed to delete file: ${key}`, "DELETE_FAILED", error);
@@ -135,7 +153,7 @@ export class R2Storage implements Storage {
 
 	async exists(key: string): Promise<boolean> {
 		try {
-			const object = await this.bucket.head(key);
+			const object = await this.bucket.head(this.objectKey(key));
 			return object !== null;
 		} catch (error) {
 			throw new EmDashStorageError(`Failed to check file existence: ${key}`, "HEAD_FAILED", error);
@@ -145,14 +163,14 @@ export class R2Storage implements Storage {
 	async list(options: ListOptions = {}): Promise<ListResult> {
 		try {
 			const response = await this.bucket.list({
-				prefix: options.prefix,
+				prefix: this.objectKey(options.prefix ?? ""),
 				limit: options.limit,
 				cursor: options.cursor,
 			});
 
 			return {
 				files: response.objects.map((item) => ({
-					key: item.key,
+					key: item.key.slice(this.keyPrefix.length),
 					size: item.size,
 					lastModified: item.uploaded,
 					etag: item.etag,
@@ -178,7 +196,7 @@ export class R2Storage implements Storage {
 
 	getPublicUrl(key: string): string {
 		if (this.publicUrl) {
-			return `${this.publicUrl.replace(TRAILING_SLASH_REGEX, "")}/${key}`;
+			return `${this.publicUrl.replace(TRAILING_SLASH_REGEX, "")}/${this.objectKey(key)}`;
 		}
 		// Without a public URL, we can't generate one for R2 bindings
 		// Return a relative path that should be served through the API
@@ -195,6 +213,7 @@ export class R2Storage implements Storage {
 export function createStorage(config: Record<string, unknown>): Storage {
 	const binding = typeof config.binding === "string" ? config.binding : "";
 	const publicUrl = typeof config.publicUrl === "string" ? config.publicUrl : undefined;
+	const prefix = typeof config.prefix === "string" ? config.prefix : undefined;
 
 	if (!binding) {
 		throw new EmDashStorageError(
@@ -223,5 +242,5 @@ export function createStorage(config: Record<string, unknown>): Storage {
 		);
 	}
 
-	return new R2Storage(bucket, publicUrl);
+	return new R2Storage(bucket, publicUrl, prefix);
 }

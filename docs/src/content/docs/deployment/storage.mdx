@@ -34,10 +34,11 @@ export default defineConfig({
 
 ### Configuration
 
-| Option      | Type     | Description                           |
-| ----------- | -------- | ------------------------------------- |
-| `binding`   | `string` | R2 binding name from `wrangler.jsonc` |
-| `publicUrl` | `string` | Optional public URL for the bucket    |
+| Option      | Type     | Description                                                |
+| ----------- | -------- | ---------------------------------------------------------- |
+| `binding`   | `string` | R2 binding name from `wrangler.jsonc`                      |
+| `publicUrl` | `string` | Optional public URL for the bucket                         |
+| `prefix`    | `string` | Optional folder that holds every EmDash object, as `site/` |
 
 ### Setup
 
@@ -64,6 +65,19 @@ Add the R2 binding to your Wrangler configuration:
     ```
   </TabItem>
 </Tabs>
+
+### Share a bucket with other applications
+
+Set `prefix` when the bucket also stores objects for other applications. EmDash then reads and writes media and automatic backups only under that folder:
+
+```js
+storage: r2({
+	binding: "MEDIA",
+	prefix: "site/",
+});
+```
+
+Media keys in the database don't include the folder, so you can't switch an existing site to a prefix without moving its objects under that folder first. With `publicUrl`, generated URLs include the folder: `https://media.example.com/site/<key>`.
 
 ### Public access
 

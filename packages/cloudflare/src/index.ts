@@ -216,6 +216,14 @@ export interface R2StorageConfig {
 	 * Public URL for accessing files (optional CDN)
 	 */
 	publicUrl?: string;
+	/**
+	 * Folder inside the bucket that holds every EmDash object, so the bucket
+	 * can be shared with other applications. EmDash keys stay unprefixed in
+	 * the database; the adapter adds the prefix on every bucket operation.
+	 *
+	 * @example "site/"
+	 */
+	prefix?: string;
 }
 
 /**
@@ -511,7 +519,7 @@ export function playgroundDatabase(config: PreviewDOConfig): DatabaseDescriptor 
 export function r2(config: R2StorageConfig): StorageDescriptor {
 	return {
 		entrypoint: "@emdash-cms/cloudflare/storage/r2",
-		config: { binding: config.binding, publicUrl: config.publicUrl },
+		config: { binding: config.binding, publicUrl: config.publicUrl, prefix: config.prefix },
 	};
 }
 
