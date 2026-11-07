@@ -93,8 +93,12 @@ describe("EmDash plugin Store authority", () => {
 			),
 		).toBe(true);
 
+		const currentAnalytics = superBoardRuntimePluginCatalog().plugins.find(
+			({ manifest }) => manifest.plugin_id === "superboard-analytics",
+		)?.manifest.artifact_checksum;
 		const compatibleAnalyticsChecksum = Object.entries(compatibility.artifacts).find(
-			([, value]) => value.plugin_id === "superboard-analytics",
+			([checksum, value]) =>
+				value.plugin_id === "superboard-analytics" && checksum !== currentAnalytics,
 		)?.[0];
 		expect(compatibleAnalyticsChecksum).toBeDefined();
 		const previousAnalytics = await env.DB.prepare(
@@ -116,9 +120,6 @@ describe("EmDash plugin Store authority", () => {
 		await expect(loadActiveSuperBoardPluginLock(env.DB, scope)).rejects.toThrow(
 			/PLUGIN_INSTALLATION_PLAN_CONTRACT_MISSING:.*analytics/u,
 		);
-		const currentAnalytics = superBoardRuntimePluginCatalog().plugins.find(
-			({ manifest }) => manifest.plugin_id === "superboard-analytics",
-		)?.manifest.artifact_checksum;
 		await env.DB.batch([
 			env.DB.prepare(
 				"UPDATE superboard_plugin_lifecycle SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'superboard-analytics'",

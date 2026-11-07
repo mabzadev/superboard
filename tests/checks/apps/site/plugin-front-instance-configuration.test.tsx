@@ -5,11 +5,10 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import EnvironmentSettings from "../../../../packages/plugins/superboard-core/src/front/settings/EnvironmentSettings.js";
-import { SectionNavigationProvider } from "../../../../packages/supbrd-front-ui/src/section-navigation.js";
+import RunningConfiguration from "../../../../packages/plugins/superboard-core/src/front/observability/DeploymentConfiguration.js";
 
-test("the French settings view follows configuration returned by the running API", async () => {
-	window.history.replaceState({}, "", "/core/settings?tab=infrastructure");
+test("the French Service health view follows configuration returned by the running API", async () => {
+	window.history.replaceState({}, "", "/core/infrastructure");
 	let configuration: DeploymentConfiguration = {
 		schemaVersion: 1,
 		target: "mabza-development",
@@ -56,26 +55,17 @@ test("the French settings view follows configuration returned by the running API
 				<QueryClientProvider client={client}>
 					<FrontContextProvider
 						value={{
-							path: "/core/settings",
+							path: "/core/infrastructure",
 							parameters: {},
 							locale: "fr",
 							instanceId: "test-instance",
-							pluginId: "superboard-settings",
+							pluginId: "superboard-observability",
 							operator: null,
 							projectScope: null,
-							activePluginIds: ["superboard-settings"],
+							activePluginIds: ["superboard-observability"],
 						}}
 					>
-						<SectionNavigationProvider
-							value={
-								<nav aria-label="Configuration">
-									<a href="/app/android-setup">Android</a>
-									<a href="/app/ios-setup">iOS</a>
-								</nav>
-							}
-						>
-							<EnvironmentSettings />
-						</SectionNavigationProvider>
+						<RunningConfiguration />
 					</FrontContextProvider>
 				</QueryClientProvider>,
 			);
@@ -83,20 +73,7 @@ test("the French settings view follows configuration returned by the running API
 		await vi.waitFor(() => {
 			expect(container.textContent).toContain("https://board.mabza.dev/mcp");
 		});
-		expect(container.querySelectorAll("h1")).toHaveLength(1);
-		expect(container.querySelector("h1")?.textContent).toBe("Paramètres de l’environnement");
-		expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe(
-			"Infrastructure",
-		);
-		const navigation = container.querySelector('nav[aria-label="Configuration"]');
-		expect(navigation?.querySelector('a[href="/app/android-setup"]')).not.toBeNull();
-		expect(navigation?.querySelector('a[href="/app/ios-setup"]')).not.toBeNull();
-		expect(navigation).not.toBeNull();
-		const heading = container.querySelector("h1");
-		if (!heading || !navigation) throw new Error("Settings heading and navigation are required");
-		expect(
-			Boolean(heading.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING),
-		).toBe(true);
+		expect(container.textContent).toContain("Configuration exécutée");
 		expect(container.querySelector('a[href*="/_emdash/admin/plugins/"]')).toBeNull();
 		expect(container.textContent).toContain("https://api.mabza.dev/users");
 		expect(container.textContent).toContain("site-local");

@@ -18,7 +18,7 @@ const SettingsActiveUsersChart = React.memo(function SettingsActiveUsersChart({
 }: {
 	data: Record<string, number> | null;
 }) {
-	const { t } = useSettingsI18n();
+	const { locale, t } = useSettingsI18n();
 	const [fullData, setFullData] = useState<ChartDataPoint[]>([]);
 
 	const chartConfig = {
@@ -36,7 +36,7 @@ const SettingsActiveUsersChart = React.memo(function SettingsActiveUsersChart({
 
 		const parsedData = Object.entries(data)?.map(([dateStr, users]) => {
 			const date = new Date(dateStr);
-			const name = date.toLocaleDateString("en-US", {
+			const name = date.toLocaleDateString(locale, {
 				month: "short",
 				day: "numeric",
 			});
@@ -44,21 +44,21 @@ const SettingsActiveUsersChart = React.memo(function SettingsActiveUsersChart({
 			return { name, users };
 		});
 		setFullData(parsedData);
-	}, [data]);
+	}, [data, locale]);
 
 	const isEmpty =
 		fullData.length === 0 || fullData.every((d: ChartDataPoint) => !d.users || d.users === 0);
 
 	if (isEmpty) {
 		return (
-			<div className="min-w-0 pr-6">
+			<div className="min-w-0 pe-6">
 				<div className="flex flex-col items-center justify-center h-[300px] rounded-xl border border-dashed border-sidebar-border mx-6">
 					<div className="flex items-center justify-center h-12 w-12 rounded-xl bg-muted mb-3">
 						<BarChart3 className="h-6 w-6 text-muted-foreground" />
 					</div>
-					<span className="text-sm font-medium text-muted-foreground">No data for this period</span>
+					<span className="text-sm font-medium text-muted-foreground">{t("usage.empty")}</span>
 					<span className="text-xs text-muted-foreground/60 mt-1">
-						Active users will appear here once your app starts receiving traffic.
+						{t("usage.emptyDescription")}
 					</span>
 				</div>
 			</div>
@@ -66,7 +66,7 @@ const SettingsActiveUsersChart = React.memo(function SettingsActiveUsersChart({
 	}
 
 	return (
-		<div className="min-w-0 pr-6">
+		<div className="min-w-0 pe-6">
 			<ChartContainer
 				config={chartConfig}
 				className="!aspect-auto h-[300px] w-full overflow-hidden"

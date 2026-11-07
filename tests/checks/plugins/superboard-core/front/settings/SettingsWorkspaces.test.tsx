@@ -15,9 +15,18 @@ vi.mock(
 	() => ({ default: () => <p>usage section</p> }),
 );
 vi.mock(
-	"../../../../../../packages/plugins/superboard-core/src/front/settings/InstanceConfiguration.js",
-	() => ({ default: () => <p>infrastructure section</p> }),
+	"../../../../../../packages/plugins/superboard-core/src/front/settings/components/settings/ProjectAdvancedSection.js",
+	() => ({ default: () => <p>advanced section</p> }),
 );
+const navigation = vi.hoisted(() => ({ replace: vi.fn() }));
+vi.mock("../../../../../../packages/supbrd-front-ui/src/navigation.js", async (load) => {
+	const actual =
+		await load<typeof import("../../../../../../packages/supbrd-front-ui/src/navigation.js")>();
+	return {
+		...actual,
+		useRouter: () => ({ ...actual.useRouter(), replace: navigation.replace }),
+	};
+});
 vi.mock(
 	"../../../../../../packages/plugins/superboard-core/src/front/settings/components/app/LibrariesPageContent.js",
 	() => ({ default: () => <p>libraries section</p> }),
@@ -52,7 +61,7 @@ describe("Environment settings", () => {
 			"General",
 			"Team",
 			"Usage",
-			"Infrastructure",
+			"Advanced",
 		]);
 		expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
 		expect(screen.getByText("general section")).toBeInTheDocument();
@@ -71,6 +80,15 @@ describe("Environment settings", () => {
 		selectTab("General");
 		expect(window.location.search).toBe("?lang=en");
 		expect(screen.getByText("general section")).toBeInTheDocument();
+	});
+
+	it("sends the former Infrastructure tab to the Service health page", () => {
+		at("/core/settings?tab=infrastructure&lang=en");
+		render(<EnvironmentSettings />);
+
+		expect(navigation.replace).toHaveBeenCalledWith("/core/infrastructure?lang=en");
+		expect(screen.queryByRole("tab")).toBeNull();
+		expect(screen.queryByText("general section")).toBeNull();
 	});
 
 	it("opens the requested section", () => {

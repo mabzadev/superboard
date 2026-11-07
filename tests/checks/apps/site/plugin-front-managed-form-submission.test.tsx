@@ -33,6 +33,9 @@ vi.mock("../../../../packages/plugins/superboard-core/src/front/gateway/transpor
 	GET: async (path: string) => ({
 		data: {
 			data: path.endsWith("/routes") ? state.routes : path.endsWith("/active-manifest") ? null : [],
+			...(path.endsWith("/routes")
+				? { access_policy: { allowed_operator_ids: [], version: null } }
+				: {}),
 		},
 	}),
 	PUT: async (path: string, body: Record<string, unknown>) => {

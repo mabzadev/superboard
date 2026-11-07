@@ -7,22 +7,23 @@ import {
 	DialogClose,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@superboard/front-ui/ui/dialog.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
+import { Label } from "@superboard/front-ui/ui/label.js";
 import {
 	Select,
 	SelectContent,
-	SelectGroup,
 	SelectItem,
-	SelectLabel,
 	SelectTrigger,
+	SelectValue,
 } from "@superboard/front-ui/ui/select.js";
-import { Check, ShieldUser, User, X } from "lucide-react";
-import { useEffect, type ChangeEvent } from "react";
+import { useEffect, useId, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 
+import { useSettingsI18n } from "../../i18n.js";
 import { addMemberSchema, type AddMemberFormValues } from "../../schemas/member.js";
 
 const AddNewMemberDialog = ({
@@ -34,6 +35,9 @@ const AddNewMemberDialog = ({
 	onOpenChange: (open: boolean) => void;
 	handleInviteMember: (email: string, role: string) => void;
 }) => {
+	const { t } = useSettingsI18n();
+	const emailId = useId();
+	const roleId = useId();
 	const form = useForm<AddMemberFormValues>({
 		resolver: zodResolver(addMemberSchema),
 		defaultValues: { email: "", role: MEMBER_ROLE },
@@ -60,92 +64,53 @@ const AddNewMemberDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent
-				showCloseButton={false}
-				className="flex flex-col w-full max-w-[800px] max-h-[90vh] gap-4 my-6"
-			>
+			<DialogContent className="flex w-full max-w-lg flex-col gap-5">
 				<DialogHeader>
-					<div className="flex items-center gap-4 w-full">
-						<DialogTitle className="font-semibold text-lg">Invite member</DialogTitle>
-						<DialogClose className="ml-auto" aria-label="Close dialog">
-							<X />
-						</DialogClose>
-					</div>
+					<DialogTitle>{t("invite.title")}</DialogTitle>
+					<DialogDescription>{t("invite.description")}</DialogDescription>
 				</DialogHeader>
-
-				<div className="flex flex-col gap-4 w-full">
-					<div className="flex flex-col gap-4 max-w-[800px]">
-						<DialogDescription className="text-sm text-muted-foreground">
-							You can add new members to your project, giving them access to specific areas based on
-							their assigned role. They will receive an email to create an account once invited.
-						</DialogDescription>
-						<div className="flex flex-col gap-2">
-							<div className="flex items-center gap-4 w-full max-w-[600px]">
-								<div className="flex w-full relative">
-									<Input
-										className={cn(
-											"pr-10 transition-all",
-											isEmailFieldValid ? "border-valid-green ring-[2px] ring-valid-green/5" : "",
-										)}
-										placeholder="Email address"
-										aria-label="Member email address"
-										name="email"
-										value={email}
-										onChange={handleEmailChange}
-										onBlur={() => form.trigger("email")}
-									/>
-									{isEmailFieldValid && (
-										<div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center h-5 w-5 rounded-full bg-valid-green-light">
-											<Check className="h-3 w-3 text-valid-green" />
-										</div>
-									)}
-								</div>
-								<Select
-									value={role}
-									onValueChange={(value) => form.setValue("role", value, { shouldValidate: true })}
-								>
-									<SelectTrigger className="min-w-[160px] " aria-label="Member role">
-										<div className="flex items-center gap-2 text-secondary-foreground">
-											{role === ADMIN_ROLE && (
-												<>
-													<ShieldUser className="w-4 h-4" />
-													<span>Administrator</span>
-												</>
-											)}
-											{role === MEMBER_ROLE && (
-												<>
-													<User className="w-4 h-4" />
-													<span>Member</span>
-												</>
-											)}
-										</div>
-									</SelectTrigger>
-									<SelectContent className="bg-secondary border-none">
-										<SelectGroup>
-											<SelectLabel>Role</SelectLabel>
-											<SelectItem value={ADMIN_ROLE}>
-												<ShieldUser className="w-4 h-4 mr-2" />
-												Administrator
-											</SelectItem>
-											<SelectItem value={MEMBER_ROLE}>
-												<User className="w-4 h-4 mr-2" />
-												Member
-											</SelectItem>
-										</SelectGroup>
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-
-						<Button
-							disabled={!form.formState.isValid}
-							onClick={() => handleInviteMember(email, role)}
-							className="w-full"
-						>
-							Add member
-						</Button>
-					</div>
+				<div className="space-y-2">
+					<Label htmlFor={emailId}>{t("invite.email")}</Label>
+					<Input
+						id={emailId}
+						type="email"
+						autoComplete="off"
+						className={cn(
+							"w-full transition-all",
+							isEmailFieldValid ? "border-valid-green ring-[2px] ring-valid-green/5" : "",
+						)}
+						name="email"
+						value={email}
+						onChange={handleEmailChange}
+						onBlur={() => form.trigger("email")}
+					/>
 				</div>
+				<div className="space-y-2">
+					<Label htmlFor={roleId}>{t("invite.role")}</Label>
+					<Select
+						value={role}
+						onValueChange={(value) => form.setValue("role", value, { shouldValidate: true })}
+					>
+						<SelectTrigger id={roleId} className="w-full">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value={ADMIN_ROLE}>{t("team.administrator")}</SelectItem>
+							<SelectItem value={MEMBER_ROLE}>{t("team.memberRole")}</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+				<DialogFooter>
+					<DialogClose asChild>
+						<Button variant="outline">{t("invite.cancel")}</Button>
+					</DialogClose>
+					<Button
+						disabled={!form.formState.isValid}
+						onClick={() => handleInviteMember(email, role)}
+					>
+						{t("invite.submit")}
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

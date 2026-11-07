@@ -2,6 +2,7 @@
 
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { showSuccessNotification } from "@superboard/front-ui/lib/Notifications.js";
+import { SettingsActions, SettingsTextField } from "@superboard/front-ui/settings-form";
 import type { PlatformAppConfig } from "@superboard/front-ui/types";
 import {
 	AlertDialog,
@@ -87,21 +88,23 @@ export default function StoreCredentialsSection({
 					{t("store.loading")}
 				</p>
 			) : config.isError ? (
-				<div role="alert" className="flex flex-wrap items-center gap-3 text-sm">
-					<span>{t("store.loadError")}</span>
-					<Button
-						variant="outline"
-						onClick={() => {
-							config.refetch().catch(() => undefined);
-						}}
-					>
-						{t("store.retry")}
-					</Button>
+				<div role="alert" className="space-y-3 text-sm">
+					<p>{t("store.loadError")}</p>
+					<SettingsActions>
+						<Button
+							variant="outline"
+							onClick={() => {
+								config.refetch().catch(() => undefined);
+							}}
+						>
+							{t("store.retry")}
+						</Button>
+					</SettingsActions>
 				</div>
 			) : (
 				<>
 					{identifier || typeof keyLabel === "string" ? (
-						<dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+						<dl className="space-y-2 text-sm">
 							{identifier ? (
 								<div>
 									<dt className="text-xs text-muted-foreground">
@@ -125,14 +128,16 @@ export default function StoreCredentialsSection({
 						</dl>
 					) : null}
 					{serverKey && !editing ? (
-						<Button
-							variant="outline"
-							onClick={() => {
-								setEditing(true);
-							}}
-						>
-							{t("store.replace")}
-						</Button>
+						<SettingsActions>
+							<Button
+								variant="outline"
+								onClick={() => {
+									setEditing(true);
+								}}
+							>
+								{t("store.replace")}
+							</Button>
+						</SettingsActions>
 					) : apple ? (
 						<AppleKeyForm key={formKey} {...formProps} />
 					) : (
@@ -210,25 +215,21 @@ function AppleKeyForm({
 				) : null
 			}
 		>
-			<div className="grid gap-4 sm:grid-cols-2">
-				<TextField id={ids.keyId} label={t("store.keyId")} value={keyId} onChange={setKeyId} />
-				<TextField
-					id={ids.issuerId}
-					label={t("store.issuerId")}
-					value={issuerId}
-					onChange={setIssuerId}
-				/>
-			</div>
-			<div className="space-y-2">
-				<TextField
-					id={ids.appleAppId}
-					label={t("store.appleAppId")}
-					value={appleAppId}
-					onChange={setAppleAppId}
-					inputMode="numeric"
-				/>
-				<p className="text-xs text-muted-foreground">{t("store.appleAppIdHint")}</p>
-			</div>
+			<TextField id={ids.keyId} label={t("store.keyId")} value={keyId} onChange={setKeyId} />
+			<TextField
+				id={ids.issuerId}
+				label={t("store.issuerId")}
+				value={issuerId}
+				onChange={setIssuerId}
+			/>
+			<TextField
+				id={ids.appleAppId}
+				label={t("store.appleAppId")}
+				description={t("store.appleAppIdHint")}
+				value={appleAppId}
+				onChange={setAppleAppId}
+				inputMode="numeric"
+			/>
 			<FileField id={ids.file} label={t("store.privateKey")} accept=".p8" onChange={setFile} />
 		</KeyForm>
 	);
@@ -347,7 +348,12 @@ function KeyForm({
 					{t(error)}
 				</p>
 			) : null}
-			<div className="flex flex-wrap gap-2">
+			<SettingsActions>
+				{replacing ? (
+					<Button variant="outline" disabled={saving} onClick={onDone}>
+						{t("store.cancel")}
+					</Button>
+				) : null}
 				<Button
 					disabled={blocked || saving}
 					onClick={() => {
@@ -356,12 +362,7 @@ function KeyForm({
 				>
 					{t(saving ? "store.saving" : "store.save")}
 				</Button>
-				{replacing ? (
-					<Button variant="outline" disabled={saving} onClick={onDone}>
-						{t("store.cancel")}
-					</Button>
-				) : null}
-			</div>
+			</SettingsActions>
 			<AlertDialog
 				open={pending !== null}
 				onOpenChange={(open) => {
@@ -392,30 +393,31 @@ function KeyForm({
 function TextField({
 	id,
 	label,
+	description,
 	value,
 	onChange,
 	inputMode,
 }: {
 	id: string;
 	label: string;
+	description?: string;
 	value: string;
 	onChange: (value: string) => void;
 	inputMode?: "numeric";
 }) {
 	return (
-		<div className="space-y-2">
-			<Label htmlFor={id}>{label}</Label>
-			<Input
-				id={id}
-				value={value}
-				inputMode={inputMode}
-				autoComplete="off"
-				spellCheck={false}
-				onChange={(event) => {
-					onChange(event.currentTarget.value);
-				}}
-			/>
-		</div>
+		<SettingsTextField
+			id={id}
+			label={label}
+			description={description}
+			value={value}
+			inputMode={inputMode}
+			autoComplete="off"
+			spellCheck={false}
+			onChange={(event) => {
+				onChange(event.currentTarget.value);
+			}}
+		/>
 	);
 }
 
