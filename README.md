@@ -214,6 +214,9 @@ The four application SDKs are:
 | Web | `sdks/web` | JavaScript and TypeScript browser applications |
 | Tauri | `sdks/tauri` | Desktop applications using the Web client and native HTTP |
 
+The `superboard` command-line tool in `sdks/cli` manages a project's database,
+storage, functions and vectors with a server key.
+
 Flutter owns its native implementations in `sdks/flutter/native/`.
 Web owns the Identity and Flows components in `sdks/web/identity/` and
 `sdks/web/flows/`. These are internal dependencies, not additional SDKs to
@@ -225,7 +228,7 @@ components. `pnpm sdk:documentation:check` verifies installation instructions
 against published release metadata. A source version marked `unreleased` has
 no registry version or immutable installation tag yet.
 
-`pnpm web:check`, `pnpm tauri:check` and `pnpm flutter:check` validate the SDKs.
+`pnpm web:check`, `pnpm tauri:check`, `pnpm cli:check` and `pnpm flutter:check` validate the SDKs.
 The FlutterFlow reusable project lives in `scripts/clients/flutterflow-library`;
 its public actions are inventoried in `scripts/config/flutterflow-custom-code.json`.
 

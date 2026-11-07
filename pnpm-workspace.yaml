@@ -140,6 +140,7 @@ packages:
   - tests/fixtures/emdash-cloudflare
   - tests/fixtures/performance-site
   - sdks/tauri
+  - sdks/cli
 catalog:
   "@arethetypeswrong/cli": ^0.18.2
   "@astrojs/check": ^0.9.10

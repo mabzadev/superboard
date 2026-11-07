@@ -75,12 +75,17 @@
 		"src/client.js",
 		"src/client.d.ts",
 		"src/server.js",
-		"src/server.d.ts"
+		"src/server.d.ts",
+		"src/data.js",
+		"src/data.d.ts",
+		"src/errors.js",
+		"src/realtime.js",
+		"src/realtime.d.ts"
 	],
 	"scripts": {
 		"start": "webpack-dev-server --config webpack.config.cjs --open",
 		"build": "webpack --config webpack.config.cjs && node scripts/build-modules.mjs",
-		"test": "node --test ../../tests/checks/sdks/web/superboard.test.js ../../tests/checks/sdks/web/support.test.js ../../tests/checks/sdks/web/emdash-store-parity.test.js ../../tests/checks/sdks/web/client.test.mjs ../../tests/checks/sdks/web/server.test.mjs ../../tests/checks/sdks/web/ui-helper.test.js ../../tests/checks/sdks/support-contract-parity.test.mjs",
+		"test": "node --test ../../tests/checks/sdks/web/superboard.test.js ../../tests/checks/sdks/web/support.test.js ../../tests/checks/sdks/web/emdash-store-parity.test.js ../../tests/checks/sdks/web/client.test.mjs ../../tests/checks/sdks/web/server.test.mjs ../../tests/checks/sdks/web/data.test.mjs ../../tests/checks/sdks/web/realtime.test.mjs ../../tests/checks/sdks/web/admin.test.mjs ../../tests/checks/sdks/web/ui-helper.test.js ../../tests/checks/sdks/support-contract-parity.test.mjs",
 		"test:package": "node --test ../../tests/checks/sdks/web/package.test.js",
 		"pack:check": "npm pack --dry-run",
 		"audit:production": "npm audit --omit=dev --workspaces=false --audit-level=low",

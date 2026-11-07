@@ -44,6 +44,96 @@ Each client owns its own session. Requests use only the configured origin,
 never send browser cookies, and reject redirects. HTTP is accepted only for
 loopback development origins.
 
+Pass `{ captchaToken }` as the last argument of `signIn()` or `register()` when
+the project requires a CAPTCHA; it is sent as `captcha_token`.
+
+## Database, storage, realtime, functions and vectors
+
+These clients call `/v1/data`. Signed-in requests carry the application token
+of the user, so table, bucket and collection rules apply to that user; other
+requests are anonymous. Methods return the API payload: lists are
+`{ items, nextCursor?, count? }` and errors are `SuperBoardError` instances
+with the API `code`, `status`, `details` and `retryable`.
+
+```typescript
+const client = new SuperBoardClient({ apiUrl, projectKey, appId, projectId: 12 });
+
+// Tables: filters are encoded PostgREST style (title=ilike.*milk*).
+const open = client
+	.from("todos")
+	.select("id,title,done")
+	.eq("done", false)
+	.ilike("title", "*milk*")
+	.order("created_at", { ascending: false })
+	.limit(20);
+const page = await open.count();
+const next = page.nextCursor ? await open.cursor(page.nextCursor) : null;
+for await (const { items } of open.pages()) console.log(items.length);
+const todo = await client.from("todos").insert({ title: "Buy milk" });
+await client.from("todos").updateById(todo.id, { done: true });
+await client.from("todos").eq("done", true).delete();
+
+// Storage
+const avatars = client.storage.from("avatars");
+await avatars.upload("me.png", file, { upsert: true });
+const { url } = await avatars.createSignedUrl("me.png", 3600, { transform: { width: 128 } });
+const publicUrl = avatars.getPublicUrl("me.png"); // public buckets; needs projectId
+await client.storage.from("videos").uploadLarge("intro.mp4", bigFile, {
+	onProgress: ({ uploadedBytes, totalBytes }) => console.log(uploadedBytes / totalBytes),
+});
+
+// Realtime: one WebSocket per client, re-joined after a disconnection.
+const room = client
+	.channel("room:1", { presence: { key: userId } })
+	.on("broadcast", "cursor", ({ payload }) => moveCursor(payload))
+	.on("presence", "sync", (state) => renderMembers(state))
+	.on("change", { table: "todos", event: "INSERT" }, ({ record }) => addTodo(record));
+await room.subscribe();
+await room.track({ status: "online" });
+await room.send("cursor", { x: 10, y: 20 });
+
+// Functions, vectors and embeddings
+const result = await client.functions.invoke("hello", { body: { name: "Ada" } });
+const matches = await client.vectors.from("docs").query({ text: "refund policy", topK: 5 });
+const { data } = await client.ai.embeddings(["hello"]);
+```
+
+`uploadLarge()` sends parts of at least 5 MiB (8 MiB by default). When it fails,
+the error carries `uploadId`; call it again with `resumeUploadId` and the same
+file to send only the missing parts. A query builder runs when it is awaited.
+Change listeners join the `db:<table>` channel of a table whose realtime is
+enabled. Signing in or out reconnects the realtime socket with the new identity.
+
+## Server key administration (`@superboard/web/server`)
+
+`SuperBoardAdmin` uses a server key (`sb_secret_…`) created in the Front. It
+bypasses the per-user rules, so it is server-only like `SuperBoardServer`.
+
+```typescript
+import { SuperBoardAdmin } from "@superboard/web/server";
+
+const admin = new SuperBoardAdmin({
+	apiUrl: "https://sdk.example.com",
+	secretKey: process.env.SUPERBOARD_SECRET_KEY!,
+	projectId: 12,
+});
+
+await admin.from("articles").insert({ headline: "Hello" });
+await admin.storage.from("exports").upload("2026/report.csv", csv);
+await admin.realtime.broadcast("news", "published", { id: 1 });
+
+const schema = await admin.manage.schema.pull();
+const plan = await admin.manage.schema.push(schema, { dryRun: true });
+const types = await admin.manage.types();
+await admin.manage.functions.deploy("hello", { source, access: "public" });
+await admin.manage.functions.schedule("hello", "*/15 * * * *");
+```
+
+`manage` also covers tables and columns, buckets, function runs and rollbacks,
+vector collections and project settings. Deletions pass the name as
+confirmation. The `superboard` CLI in `sdks/cli` exposes the same operations
+from a terminal.
+
 ## Server-side transactional email (`@superboard/web/server`)
 
 > **Server only.** These helpers need a secret server API key (`sb_email_…`)

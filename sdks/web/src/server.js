@@ -1,5 +1,20 @@
+import {
+	AiClient,
+	FunctionsClient,
+	QueryBuilder,
+	StorageClient,
+	VectorsClient,
+	createDataTransport,
+	parseOrigin,
+} from "./data.js";
+import { SuperBoardError } from "./errors.js";
+
+export { SuperBoardError };
+
 const KEY_FORMAT = /^sb_email_[a-f0-9]{64}$/;
+const SECRET_KEY_FORMAT = /^sb_secret_[A-Za-z0-9_-]{43}$/;
 const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_ADMIN_TIMEOUT_MS = 60_000;
 
 export class SuperBoardEmailError extends Error {
 	constructor(code, message, status = 0, details = undefined, retryable = false) {
@@ -103,6 +118,232 @@ export class SuperBoardServer {
 			);
 		}
 		return payload;
+	}
+}
+
+function name(value, label) {
+	if (typeof value !== "string" || !value) throw new TypeError(`${label} is required.`);
+	return encodeURIComponent(value);
+}
+
+function confirmed(value) {
+	return [["confirm", value]];
+}
+
+export function schemaFromTables(tables) {
+	return {
+		tables: tables.map((table) => ({
+			name: table.name,
+			...(table.label ? { label: table.label } : {}),
+			rules: table.rules,
+			realtime: table.realtime === true,
+			columns: [...(table.columns ?? [])]
+				.sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
+				.map((column) => ({
+					name: column.name,
+					type: column.type,
+					nullable: column.nullable,
+					...(column.default === null || column.default === undefined
+						? {}
+						: { default: column.default }),
+					unique: column.unique === true,
+					indexed: column.indexed === true,
+				})),
+		})),
+	};
+}
+
+class ManagementClient {
+	#transport;
+
+	constructor(transport) {
+		this.#transport = transport;
+		const request = (method, path, options) => transport.request(method, `/manage${path}`, options);
+		this.tables = {
+			list: (options = {}) => request("GET", "/tables", options),
+			get: (table, options = {}) => request("GET", `/tables/${name(table, "A table")}`, options),
+			create: (definition, options = {}) =>
+				request("POST", "/tables", { ...options, json: definition }),
+			update: (table, changes, options = {}) =>
+				request("PATCH", `/tables/${name(table, "A table")}`, { ...options, json: changes }),
+			delete: (table, options = {}) =>
+				request("DELETE", `/tables/${name(table, "A table")}`, {
+					...options,
+					query: confirmed(table),
+				}),
+			addColumn: (table, column, options = {}) =>
+				request("POST", `/tables/${name(table, "A table")}/columns`, { ...options, json: column }),
+			updateColumn: (table, column, changes, options = {}) =>
+				request("PATCH", `/tables/${name(table, "A table")}/columns/${name(column, "A column")}`, {
+					...options,
+					json: changes,
+				}),
+			dropColumn: (table, column, options = {}) =>
+				request("DELETE", `/tables/${name(table, "A table")}/columns/${name(column, "A column")}`, {
+					...options,
+					query: confirmed(column),
+				}),
+		};
+		this.schema = {
+			pull: async (options = {}) => schemaFromTables((await this.tables.list(options)).items),
+			push: (schema, { dryRun = false, allowDestructive = false, prune, signal } = {}) =>
+				request("POST", "/schema", {
+					query: [
+						...(dryRun ? [["dry_run", "true"]] : []),
+						...(allowDestructive ? [["allow_destructive", "true"]] : []),
+					],
+					json: prune === undefined ? schema : { ...schema, prune },
+					signal,
+				}),
+		};
+		this.buckets = {
+			list: (options = {}) => request("GET", "/buckets", options),
+			create: (bucket, options = {}) => request("POST", "/buckets", { ...options, json: bucket }),
+			update: (bucket, changes, options = {}) =>
+				request("PATCH", `/buckets/${name(bucket, "A bucket")}`, { ...options, json: changes }),
+			delete: (bucket, options = {}) =>
+				request("DELETE", `/buckets/${name(bucket, "A bucket")}`, {
+					...options,
+					query: confirmed(bucket),
+				}),
+		};
+		this.functions = {
+			list: (options = {}) => request("GET", "/functions", options),
+			get: (fn, options = {}) => request("GET", `/functions/${name(fn, "A function")}`, options),
+			deploy: (fn, { source, access, timeoutMs, vars, secrets, signal } = {}) =>
+				request("PUT", `/functions/${name(fn, "A function")}`, {
+					json: Object.fromEntries(
+						Object.entries({ source, access, timeout_ms: timeoutMs, vars, secrets }).filter(
+							([, value]) => value !== undefined,
+						),
+					),
+					signal,
+				}),
+			delete: (fn, options = {}) =>
+				request("DELETE", `/functions/${name(fn, "A function")}`, {
+					...options,
+					query: confirmed(fn),
+				}),
+			rollback: (fn, version, options = {}) =>
+				request("POST", `/functions/${name(fn, "A function")}/rollback`, {
+					...options,
+					json: { version },
+				}),
+			runs: (fn, { limit, signal } = {}) =>
+				request("GET", `/functions/${name(fn, "A function")}/runs`, {
+					query: limit === undefined ? [] : [["limit", String(limit)]],
+					signal,
+				}),
+			schedule: (fn, cron, { enabled, signal } = {}) =>
+				request("PUT", `/functions/${name(fn, "A function")}/schedule`, {
+					json: { cron, ...(enabled === undefined ? {} : { enabled }) },
+					signal,
+				}),
+			unschedule: (fn, options = {}) =>
+				request("DELETE", `/functions/${name(fn, "A function")}/schedule`, options),
+			test: (fn, { method, path, body, headers, signal } = {}) =>
+				request("POST", `/functions/${name(fn, "A function")}/invoke`, {
+					json: Object.fromEntries(
+						Object.entries({ method, path, body, headers }).filter(
+							([, value]) => value !== undefined,
+						),
+					),
+					signal,
+				}),
+		};
+		this.vectorCollections = {
+			list: (options = {}) => request("GET", "/vector-collections", options),
+			create: (collection, options = {}) =>
+				request("POST", "/vector-collections", { ...options, json: collection }),
+			update: (collection, changes, options = {}) =>
+				request("PATCH", `/vector-collections/${name(collection, "A collection")}`, {
+					...options,
+					json: changes,
+				}),
+			delete: (collection, options = {}) =>
+				request("DELETE", `/vector-collections/${name(collection, "A collection")}`, {
+					...options,
+					query: confirmed(collection),
+				}),
+		};
+		this.settings = {
+			get: (options = {}) => request("GET", "/settings", options),
+			update: (changes, options = {}) =>
+				request("PATCH", "/settings", { ...options, json: changes }),
+		};
+	}
+
+	status(options = {}) {
+		return this.#transport.request("GET", "/manage/status", options);
+	}
+	types(options = {}) {
+		return this.#transport.request("GET", "/manage/types", { ...options, as: "text" });
+	}
+	openapi(options = {}) {
+		return this.#transport.request("GET", "/openapi.json", options);
+	}
+}
+
+export class SuperBoardAdmin {
+	#transport;
+	#storage = null;
+	#functions = null;
+	#vectors = null;
+	#ai = null;
+	#manage = null;
+
+	constructor(options) {
+		if (!options || typeof options !== "object") throw new TypeError("options are required.");
+		if (isBrowser() && options.dangerouslyAllowBrowser !== true)
+			throw new TypeError(
+				"SuperBoardAdmin is server-only: a secret server key must never be exposed in a browser.",
+			);
+		const origin = parseOrigin(options.apiUrl);
+		const secretKey = String(options.secretKey ?? "");
+		if (!SECRET_KEY_FORMAT.test(secretKey))
+			throw new TypeError("secretKey must be a SuperBoard server key (sb_secret_…).");
+		this.#transport = createDataTransport({
+			origin,
+			fetch: options.fetch,
+			projectId: options.projectId,
+			timeoutMs: options.timeoutMs ?? DEFAULT_ADMIN_TIMEOUT_MS,
+			headers: () => ({
+				Authorization: `Bearer ${secretKey}`,
+				"X-SuperBoard-SDK-Version": "0.1.0",
+			}),
+		});
+		const transport = this.#transport;
+		this.realtime = {
+			broadcast: (channel, event, payload, { signal } = {}) =>
+				transport.request("POST", "/realtime/broadcast", {
+					json: { channel, event, payload: payload ?? null },
+					signal,
+				}),
+		};
+	}
+
+	from(table) {
+		return new QueryBuilder(this.#transport, table);
+	}
+	get storage() {
+		this.#storage ??= new StorageClient(this.#transport);
+		return this.#storage;
+	}
+	get functions() {
+		this.#functions ??= new FunctionsClient(this.#transport);
+		return this.#functions;
+	}
+	get vectors() {
+		this.#vectors ??= new VectorsClient(this.#transport);
+		return this.#vectors;
+	}
+	get ai() {
+		this.#ai ??= new AiClient(this.#transport);
+		return this.#ai;
+	}
+	get manage() {
+		this.#manage ??= new ManagementClient(this.#transport);
+		return this.#manage;
 	}
 }
 

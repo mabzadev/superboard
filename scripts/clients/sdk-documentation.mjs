@@ -13,6 +13,7 @@ export const sdkDocumentationContracts = Object.freeze([
 	{ id: "android", path: "sdks/flutter/native/android/README.md" },
 	{ id: "web", path: "sdks/web/README.md" },
 	{ id: "tauri", path: "sdks/tauri/README.md" },
+	{ id: "cli", path: "sdks/cli/README.md" },
 ]);
 
 export const sdkDocumentationAuditPaths = Object.freeze(["sdks/flutter/native/ios/CLAUDE.md"]);
@@ -309,6 +310,7 @@ export function renderSdkDocumentationSections(catalog) {
 	return new Map([
 		["web", clientInstallation(libraries.get("web"))],
 		["tauri", clientInstallation(libraries.get("tauri"))],
+		["cli", clientInstallation(libraries.get("cli"))],
 		["flutter", flutterInstallation(flutter)],
 		["flutterflow", flutterInstallation(flutterflow, "FlutterFlow")],
 		["flutterflow-support", flutterInstallation(support, "FlutterFlow Support")],
