@@ -283,30 +283,6 @@ export const s2sWriteScope = bearerAuth({
   },
 })
 
-export const s2sReadOrg = bearerAuth({
-  verifyToken: async (
-    token, c: Context<typeConfig.Context>,
-  ) => {
-    return s2sScopeGuard(
-      c,
-      token,
-      Scope.ReadOrg,
-    )
-  },
-})
-
-export const s2sWriteOrg = bearerAuth({
-  verifyToken: async (
-    token, c: Context<typeConfig.Context>,
-  ) => {
-    return s2sScopeGuard(
-      c,
-      token,
-      Scope.WriteOrg,
-    )
-  },
-})
-
 export const s2sReadUserAttribute = bearerAuth({
   verifyToken: async (
     token, c: Context<typeConfig.Context>,

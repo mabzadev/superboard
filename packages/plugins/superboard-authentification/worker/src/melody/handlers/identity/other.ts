@@ -1,25 +1,20 @@
 import { Context } from 'hono'
 import { env } from 'hono/adapter'
-import { getAuthCodeBody } from './mfa'
 import {
   errorConfig, messageConfig, typeConfig,
 } from '../../configs'
 import {
-  baseDto, identityDto, oauthDto, userDto,
+  baseDto, identityDto, userDto,
 } from '../../dtos'
 import {
-  appBannerService,
   identityService,
   kvService,
-  orgService,
   userService,
 } from '../../services'
 import {
   cryptoUtil, loggerUtil, requestUtil, timeUtil, validateUtil,
 } from '../../utils'
-import {
-  orgModel, userModel,
-} from '../../models'
+import { userModel } from '../../models'
 
 export const postVerifyEmail = async (c: Context<typeConfig.Context>) => {
   const reqBody = await c.req.json()
@@ -85,151 +80,6 @@ export const postResetPassword = async (c: Context<typeConfig.Context>) => {
       ip,
     )
   }
-
-  return c.json({ success: true })
-}
-
-export const getAppBanners = async (c: Context<typeConfig.Context>) => {
-  const bodyDto = new baseDto.GetAppBannersDto({ clientId: c.req.query('client_id') ?? '' })
-
-  const banners = await appBannerService.getBannersByClientId(
-    c,
-    bodyDto.clientId,
-  )
-
-  return c.json({ banners })
-}
-
-export interface GetProcessSwitchOrgRes {
-  orgs: orgModel.AuthInfo[];
-  activeOrgSlug: string;
-}
-const getSwitchOrg = async (
-  c: Context<typeConfig.Context>, policy?: oauthDto.Policy,
-) => {
-  const queryDto = await identityDto.parseGetProcess(c)
-  await validateUtil.dto(queryDto)
-
-  const authCodeStore = await getAuthCodeBody(
-    c,
-    queryDto.code,
-    policy,
-  )
-
-  const orgs = await orgService.getUserOrgs(
-    c,
-    authCodeStore.user.id,
-  )
-  const authOrgInfos = orgs.map((org) => ({
-    id: org.id,
-    name: org.name,
-    slug: org.slug,
-    companyLogoUrl: org.companyLogoUrl,
-  }))
-
-  return c.json({
-    orgs: authOrgInfos, activeOrgSlug: authCodeStore.user.orgSlug,
-  })
-}
-
-export const getProcessSwitchOrg = async (c: Context<typeConfig.Context>) => getSwitchOrg(c)
-
-export const getChangeOrg = async (c: Context<typeConfig.Context>) => getSwitchOrg(
-  c,
-  oauthDto.Policy.ChangeOrg,
-)
-
-export const postProcessSwitchOrg = async (c: Context<typeConfig.Context>) => {
-  const reqBody = await c.req.json()
-
-  const bodyDto = new identityDto.PostProcessOrgSwitchDto(reqBody)
-  await validateUtil.dto(bodyDto)
-
-  const authCodeStore = await getAuthCodeBody(
-    c,
-    bodyDto.code,
-  )
-
-  await identityService.ensureAuthCodeIsSecured(
-    c,
-    bodyDto.code,
-    authCodeStore,
-  )
-
-  if (authCodeStore.user.orgSlug === bodyDto.org) {
-    return c.json(await identityService.processPostAuthorize(
-      c,
-      identityService.AuthorizeStep.SwitchOrg,
-      bodyDto.code,
-      authCodeStore,
-    ))
-  }
-
-  const user = await orgService.switchUserOrg(
-    c,
-    authCodeStore,
-    bodyDto.org,
-  )
-
-  const { AUTHORIZATION_CODE_EXPIRES_IN: codeExpiresIn } = env(c)
-  const newAuthCodeStore = {
-    ...authCodeStore,
-    user,
-  }
-  await kvService.storeAuthCode(
-    c.env.KV,
-    bodyDto.code,
-    newAuthCodeStore,
-    codeExpiresIn,
-  )
-
-  return c.json(await identityService.processPostAuthorize(
-    c,
-    identityService.AuthorizeStep.SwitchOrg,
-    bodyDto.code,
-    newAuthCodeStore,
-  ))
-}
-
-export const postChangeOrg = async (c: Context<typeConfig.Context>) => {
-  const reqBody = await c.req.json()
-
-  const bodyDto = new identityDto.PostProcessOrgSwitchDto(reqBody)
-  await validateUtil.dto(bodyDto)
-
-  const authCodeStore = await getAuthCodeBody(
-    c,
-    bodyDto.code,
-    oauthDto.Policy.ChangeOrg,
-  )
-
-  await identityService.ensureAuthCodeIsSecured(
-    c,
-    bodyDto.code,
-    authCodeStore,
-  )
-
-  if (authCodeStore.user.orgSlug === bodyDto.org) {
-    return c.json({ success: true })
-  }
-
-  const user = await orgService.switchUserOrg(
-    c,
-    authCodeStore,
-    bodyDto.org,
-  )
-
-  const { AUTHORIZATION_CODE_EXPIRES_IN: codeExpiresIn } = env(c)
-  const newAuthCodeStore = {
-    ...authCodeStore,
-    user,
-  }
-  await kvService.storeAuthCode(
-    c.env.KV,
-    bodyDto.code,
-    newAuthCodeStore,
-    codeExpiresIn,
-  )
 
   return c.json({ success: true })
 }

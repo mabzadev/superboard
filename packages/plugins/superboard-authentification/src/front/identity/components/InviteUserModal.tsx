@@ -3,7 +3,6 @@ import { useState } from "react";
 
 import {
 	useGetApiV1AppsQuery,
-	useGetApiV1OrgsQuery,
 	useGetApiV1RolesQuery,
 	usePostApiV1UsersInvitationsMutation,
 } from "../services/auth/api.js";
@@ -13,6 +12,7 @@ import useSignalValue from "../useSignalValue.js";
 import FieldError from "./FieldError.js";
 import { InviteLocaleField, InviteRedirectFields } from "./InviteDeliveryFields.js";
 import SubmitError from "./SubmitError.js";
+import SwitchRow from "./SwitchRow.js";
 import {
 	AlertDialog,
 	AlertDialogContent,
@@ -22,19 +22,8 @@ import {
 	AlertDialogCancel,
 } from "./ui/alert-dialog.js";
 import { Button } from "./ui/button.js";
-import { Checkbox } from "./ui/checkbox.js";
 import { Input } from "./ui/input.js";
 import { Label } from "./ui/label.js";
-import {
-	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "./ui/select.js";
-
-const NO_ORG = " ";
 
 const InviteUserModal = ({
 	show,
@@ -48,14 +37,10 @@ const InviteUserModal = ({
 	const t = useTranslations();
 	const configs = useSignalValue(configSignal);
 
-	const enableOrg = !!configs.ENABLE_ORG;
 	const supportedLocales: string[] = configs.SUPPORTED_LOCALES ?? [];
 
 	const { data: rolesData } = useGetApiV1RolesQuery();
 	const roles = rolesData?.roles ?? [];
-
-	const { data: orgsData } = useGetApiV1OrgsQuery(undefined, { skip: !enableOrg });
-	const orgs = orgsData?.orgs?.filter((org) => !org.onlyUseForBrandingOverride) ?? [];
 
 	const { data: appsData } = useGetApiV1AppsQuery();
 	const spaApps =
@@ -67,7 +52,6 @@ const InviteUserModal = ({
 	const [firstName, setFirstName] = useState("");
 	const [lastName, setLastName] = useState("");
 	const [locale, setLocale] = useState("");
-	const [orgSlug, setOrgSlug] = useState("");
 	const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 	const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
 	const [signinUrl, setSigninUrl] = useState("");
@@ -93,7 +77,6 @@ const InviteUserModal = ({
 				firstName: firstName.trim() || undefined,
 				lastName: lastName.trim() || undefined,
 				locale: locale || undefined,
-				orgSlug: orgSlug.trim() || undefined,
 				roles: selectedRoles.length ? selectedRoles : undefined,
 				signinUrl: signinUrl || undefined,
 			},
@@ -109,7 +92,6 @@ const InviteUserModal = ({
 		setFirstName("");
 		setLastName("");
 		setLocale("");
-		setOrgSlug("");
 		setSelectedRoles([]);
 		setSelectedAppId(null);
 		setSigninUrl("");
@@ -127,7 +109,7 @@ const InviteUserModal = ({
 					<div className="flex flex-col gap-1">
 						<Label htmlFor="invite-email">
 							{t("users.email")}
-							<span className="text-red-500 ml-1">*</span>
+							<span className="text-red-500 ms-1">*</span>
 						</Label>
 						<Input
 							id="invite-email"
@@ -168,47 +150,19 @@ const InviteUserModal = ({
 						testIdPrefix="invite"
 						onLocaleChange={setLocale}
 					/>
-					{enableOrg && orgs.length > 0 && (
-						<div className="flex flex-col gap-1">
-							<Label>{t("users.org")}</Label>
-							<Select
-								value={orgSlug || NO_ORG}
-								onValueChange={(val) => setOrgSlug(val === NO_ORG ? "" : val)}
-							>
-								<SelectTrigger data-testid="inviteOrg">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectGroup>
-										<SelectItem value={NO_ORG}>{t("users.noOrg")}</SelectItem>
-										{orgs.map((org) => (
-											<SelectItem
-												key={org.id}
-												value={org.slug}
-												data-testid={`inviteOrgOption-${org.slug}`}
-											>
-												{org.name}
-											</SelectItem>
-										))}
-									</SelectGroup>
-								</SelectContent>
-							</Select>
-						</div>
-					)}
 					{roles.length > 0 && (
 						<div className="flex flex-col gap-2">
 							<Label>{t("users.roles")}</Label>
-							<div className="flex flex-wrap gap-4">
+							<div className="flex flex-col gap-3">
 								{roles.map((role) => (
-									<div key={role.id} className="flex items-center gap-2">
-										<Checkbox
-											id={`invite-role-${role.id}`}
-											data-testid={`inviteRole-${role.name}`}
-											checked={selectedRoles.includes(role.name)}
-											onClick={() => handleToggleRole(role.name)}
-										/>
-										<Label htmlFor={`invite-role-${role.id}`}>{role.name}</Label>
-									</div>
+									<SwitchRow
+										key={role.id}
+										id={`invite-role-${role.id}`}
+										data-testid={`inviteRole-${role.name}`}
+										label={role.name}
+										checked={selectedRoles.includes(role.name)}
+										onClick={() => handleToggleRole(role.name)}
+									/>
 								))}
 							</div>
 						</div>

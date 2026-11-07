@@ -7,19 +7,17 @@ import { useDispatch } from "react-redux";
 import Breadcrumb from "../../../../../../identity/components/Breadcrumb.js";
 import ClientTypeSelector from "../../../../../../identity/components/ClientTypeSelector.js";
 import FieldError from "../../../../../../identity/components/FieldError.js";
+import {
+	PropertyLabel,
+	PropertyList,
+	PropertyRow,
+	PropertyValue,
+} from "../../../../../../identity/components/PropertyList.js";
 import RequiredProperty from "../../../../../../identity/components/RequiredProperty.js";
 import SaveButton from "../../../../../../identity/components/SaveButton.js";
 import ScopesEditor from "../../../../../../identity/components/ScopesEditor.js";
 import SubmitError from "../../../../../../identity/components/SubmitError.js";
 import { Input } from "../../../../../../identity/components/ui/input.js";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "../../../../../../identity/components/ui/table.js";
 import { useRouter } from "../../../../../../identity/i18n/navigation.js";
 import {
 	useGetApiV1ScopesQuery,
@@ -91,66 +89,65 @@ const Page = () => {
 					label: t("apps.title"),
 				}}
 			/>
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead className="max-md:w-24 md:w-48">{t("common.property")}</TableHead>
-						<TableHead>{t("common.value")}</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody className="divide-y">
-					<TableRow>
-						<TableCell>
-							<RequiredProperty title={t("apps.name")} />
-						</TableCell>
-						<TableCell>
-							<Input
-								data-testid="nameInput"
-								onChange={(e) => onChange("name", e.target.value)}
-								value={values.name}
+			<PropertyList>
+				<PropertyRow>
+					<PropertyLabel>
+						<RequiredProperty title={t("apps.name")} />
+					</PropertyLabel>
+					<PropertyValue>
+						<Input
+							data-testid="nameInput"
+							onChange={(e) => onChange("name", e.target.value)}
+							value={values.name}
+						/>
+						{showErrors && <FieldError error={errors.name} />}
+					</PropertyValue>
+				</PropertyRow>
+				<PropertyRow>
+					<PropertyLabel>
+						<RequiredProperty title={t("apps.type")} />
+					</PropertyLabel>
+					<PropertyValue>
+						<ClientTypeSelector value={values.type} onChange={handleUpdateType} />
+						{showErrors && <FieldError error={errors.type} />}
+					</PropertyValue>
+				</PropertyRow>
+				{!!availableScopes.length && (
+					<PropertyRow>
+						<PropertyLabel>
+							<RequiredProperty title={t("apps.scopes")} />
+						</PropertyLabel>
+						<PropertyValue>
+							<ScopesEditor
+								scopes={availableScopes}
+								value={values.scopes}
+								onToggleScope={handleToggleAppScope}
 							/>
-							{showErrors && <FieldError error={errors.name} />}
-						</TableCell>
-					</TableRow>
-					<TableRow>
-						<TableCell>
-							<RequiredProperty title={t("apps.type")} />
-						</TableCell>
-						<TableCell>
-							<ClientTypeSelector value={values.type} onChange={handleUpdateType} />
-							{showErrors && <FieldError error={errors.type} />}
-						</TableCell>
-					</TableRow>
-					{!!availableScopes.length && (
-						<TableRow>
-							<TableCell>
-								<RequiredProperty title={t("apps.scopes")} />
-							</TableCell>
-							<TableCell>
-								<ScopesEditor
-									scopes={availableScopes}
-									value={values.scopes}
-									onToggleScope={handleToggleAppScope}
-								/>
-								{showErrors && <FieldError error={errors.scopes} />}
-							</TableCell>
-						</TableRow>
-					)}
-					{values.type === typeTool.ClientType.SPA && (
-						<TableRow>
-							<TableCell>{t("apps.redirectUris")}</TableCell>
-							<TableCell>
-								<RedirectUriEditor
-									redirectUris={values.redirectUris}
-									onChange={(uris) => onChange("redirectUris", uris)}
-								/>
-							</TableCell>
-						</TableRow>
-					)}
-				</TableBody>
-			</Table>
+							{showErrors && <FieldError error={errors.scopes} />}
+						</PropertyValue>
+					</PropertyRow>
+				)}
+				{values.type === typeTool.ClientType.SPA && (
+					<PropertyRow>
+						<PropertyLabel>{t("apps.redirectUris")}</PropertyLabel>
+						<PropertyValue>
+							<RedirectUriEditor
+								redirectUris={values.redirectUris}
+								onChange={(uris) => onChange("redirectUris", uris)}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+				)}
+			</PropertyList>
 			<SubmitError />
-			<SaveButton className="mt-8" isLoading={isCreating} onClick={handleSubmit} />
+			<div className="mt-8 flex justify-end">
+				<SaveButton
+					isLoading={isCreating}
+					onClick={() => {
+						handleSubmit().catch(() => undefined);
+					}}
+				/>
+			</div>
 		</section>
 	);
 };

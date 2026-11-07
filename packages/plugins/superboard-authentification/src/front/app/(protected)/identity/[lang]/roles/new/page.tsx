@@ -5,18 +5,16 @@ import { useState } from "react";
 
 import Breadcrumb from "../../../../../../identity/components/Breadcrumb.js";
 import FieldError from "../../../../../../identity/components/FieldError.js";
+import {
+	PropertyLabel,
+	PropertyList,
+	PropertyRow,
+	PropertyValue,
+} from "../../../../../../identity/components/PropertyList.js";
 import RequiredProperty from "../../../../../../identity/components/RequiredProperty.js";
 import SaveButton from "../../../../../../identity/components/SaveButton.js";
 import SubmitError from "../../../../../../identity/components/SubmitError.js";
 import { Input } from "../../../../../../identity/components/ui/input.js";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "../../../../../../identity/components/ui/table.js";
 import { useRouter } from "../../../../../../identity/i18n/navigation.js";
 import { usePostApiV1RolesMutation } from "../../../../../../identity/services/auth/api.js";
 import { routeTool } from "../../../../../../identity/tools/index.js";
@@ -53,42 +51,41 @@ const Page = () => {
 				}}
 			/>
 			<section>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="max-md:w-24 md:w-48 ">{t("common.property")}</TableHead>
-							<TableHead>{t("common.value")}</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody className="divide-y">
-						<TableRow>
-							<TableCell>
-								<RequiredProperty title={t("roles.name")} />
-							</TableCell>
-							<TableCell>
-								<Input
-									data-testid="nameInput"
-									onChange={(e) => onChange("name", e.target.value)}
-									value={values.name}
-								/>
-								{showErrors && <FieldError error={errors.name} />}
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("common.note")}</TableCell>
-							<TableCell>
-								<Input
-									data-testid="noteInput"
-									onChange={(e) => onChange("note", e.target.value)}
-									value={values.note}
-								/>
-							</TableCell>
-						</TableRow>
-					</TableBody>
-				</Table>
+				<PropertyList>
+					<PropertyRow>
+						<PropertyLabel>
+							<RequiredProperty title={t("roles.name")} />
+						</PropertyLabel>
+						<PropertyValue>
+							<Input
+								data-testid="nameInput"
+								onChange={(e) => onChange("name", e.target.value)}
+								value={values.name}
+							/>
+							{showErrors && <FieldError error={errors.name} />}
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("common.note")}</PropertyLabel>
+						<PropertyValue>
+							<Input
+								data-testid="noteInput"
+								onChange={(e) => onChange("note", e.target.value)}
+								value={values.note}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+				</PropertyList>
 			</section>
 			<SubmitError />
-			<SaveButton className="mt-8" isLoading={isCreating} onClick={handleSubmit} />
+			<div className="mt-8 flex justify-end">
+				<SaveButton
+					isLoading={isCreating}
+					onClick={() => {
+						handleSubmit().catch(() => undefined);
+					}}
+				/>
+			</div>
 		</section>
 	);
 };

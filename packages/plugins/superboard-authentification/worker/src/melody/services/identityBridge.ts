@@ -164,7 +164,6 @@ export const getCurrentProjectUsers = async (
   c: Context<typeConfig.Context>,
   search: string | undefined,
   pagination: typeConfig.Pagination | undefined,
-  orgSlug?: string,
 ): Promise<{ users: userModel.Record[]; count: number } | null> => {
   const currentProjectId = projectId(c)
   if (!c.env.MELODY_INTERNAL_ADMIN || !currentProjectId) return null
@@ -174,10 +173,6 @@ export const getCurrentProjectUsers = async (
     'source."deletedAt" IS NULL',
   ]
   const values: unknown[] = [c.env.IDENTITY_REALM, currentProjectId]
-  if (orgSlug) {
-    conditions.push('source."orgSlug"=?')
-    values.push(orgSlug)
-  }
   if (search) {
     conditions.push(
       `(COALESCE(source."firstName", '') || ' ' ||

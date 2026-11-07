@@ -92,7 +92,6 @@ test("Identity log lists expose real native events and cancel cleanup without de
 	await ready(page, "/identity/en/logs");
 	for (const [kind, button, row] of [
 		["email", "emailLogCleanBtn", "emailLogRow"],
-		["sms", "smsLogCleanBtn", "smsLogRow"],
 		["sign-in", "signInLogCleanBtn", "signInRow"],
 	]) {
 		const api = `/api/v1/identity-admin/projects/${ref}/api/v1/logs/${kind}?pageSize=10&pageNumber=1`;
@@ -118,7 +117,7 @@ test("Identity log lists expose real native events and cancel cleanup without de
 		plugin,
 		"superboard.identity_by_lang_logs",
 		ids,
-		"Read real Email/SMS/sign-in events, opened each cleanup confirmation, cancelled, and confirmed all persisted IDs remain.",
+		"Read real Email/sign-in events, opened each cleanup confirmation, cancelled, and confirmed all persisted IDs remain.",
 	);
 });
 

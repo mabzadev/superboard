@@ -26,7 +26,7 @@ const useRecoveryCodeEnrollForm = ({
     () => getFollowUpParams(),
     [],
   )
-  const qs = `?code=${followUpParams.code}&locale=${locale}&org=${followUpParams.org}`
+  const qs = `?code=${followUpParams.code}&locale=${locale}`
 
   const [recoveryCodeEnrollInfo, setRecoveryCodeEnrollInfo] = useState<GetProcessRecoveryCodeEnrollRes | null>(null)
 

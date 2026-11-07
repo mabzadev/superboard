@@ -16,7 +16,7 @@ export interface UseOtpMfaFormProps {
 
 const useOtpMfaForm = ({ locale, onSubmitError, onSwitchView }: UseOtpMfaFormProps) => {
 	const followUpParams = useMemo(() => getFollowUpParams(), []);
-	const qs = `?code=${followUpParams.code}&locale=${locale}&org=${followUpParams.org}`;
+	const qs = `?code=${followUpParams.code}&locale=${locale}`;
 
 	const [isVerifyingMfa, setIsVerifyingMfa] = useState(false);
 

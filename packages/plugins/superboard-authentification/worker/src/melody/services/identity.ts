@@ -36,11 +36,9 @@ export enum AuthorizeStep {
 	Consent = 2,
 	MfaEnroll = 3,
 	OtpMfa = 4,
-	SmsMfa = 5,
 	EmailMfa = 6,
 	PasskeyEnroll = 7,
 	RecoveryCodeEnroll = 8,
-	SwitchOrg = 9,
 }
 
 const getNextPageForPolicy = (
@@ -82,10 +80,6 @@ const getNextPageForPolicy = (
 				nextPage = routeConfig.View.UpdateInfo;
 				break;
 			}
-			case oauthDto.Policy.ChangeOrg: {
-				nextPage = routeConfig.View.ChangeOrg;
-				break;
-			}
 		}
 	}
 
@@ -106,12 +100,11 @@ const verifyAuthCodeMfaAndConsent = async (
 	const {
 		requireEmailMfa,
 		requireOtpMfa,
-		requireSmsMfa,
 		enforceOneMfaEnrollment: enforceMfa,
 	} = mfaService.getAuthorizeMfaConfig(c, authCodeBody);
 
 	if (!bypassLocalMfa && !authCodeBody.isFullyAuthorized) {
-		if (enforceMfa?.length && !requireEmailMfa && !requireOtpMfa && !requireSmsMfa) {
+		if (enforceMfa?.length && !requireEmailMfa && !requireOtpMfa) {
 			if (!authCodeBody.user.mfaTypes.length) {
 				loggerUtil.triggerLogger(
 					c,
@@ -124,18 +117,6 @@ const verifyAuthCodeMfaAndConsent = async (
 
 		if (requireOtpMfa || authCodeBody.user.mfaTypes.includes(userModel.MfaType.Otp)) {
 			const isVerified = await kvService.optMfaCodeVerified(c.env.KV, authCode);
-			if (!isVerified) {
-				loggerUtil.triggerLogger(
-					c,
-					loggerUtil.LoggerLevel.Warn,
-					messageConfig.RequestError.MfaNotVerified,
-				);
-				throw new errorConfig.UnAuthorized(messageConfig.RequestError.MfaNotVerified);
-			}
-		}
-
-		if (requireSmsMfa || authCodeBody.user.mfaTypes.includes(userModel.MfaType.Sms)) {
-			const isVerified = await kvService.smsMfaCodeVerified(c.env.KV, authCode);
 			if (!isVerified) {
 				loggerUtil.triggerLogger(
 					c,
@@ -217,7 +198,6 @@ export const processPostAuthorize = async (
 	const {
 		requireEmailMfa: enableEmailMfa,
 		requireOtpMfa: enableOtpMfa,
-		requireSmsMfa: enableSmsMfa,
 		enforceOneMfaEnrollment: enforceMfa,
 	} = mfaService.getAuthorizeMfaConfig(c, authCodeBody);
 
@@ -227,8 +207,6 @@ export const processPostAuthorize = async (
 		ENABLE_RECOVERY_CODE: enableRecoveryCode,
 		AUTHORIZATION_CODE_EXPIRES_IN: codeExpiresIn,
 		ENABLE_MFA_REMEMBER_DEVICE: enableMfaRememberDevice,
-		ENABLE_ORG: enableOrg,
-		ALLOW_USER_SWITCH_ORG_ON_SIGN_IN: allowSwitchOrg,
 	} = env(c);
 
 	const isSocialLogin = !!authCodeBody.user.socialAccountId;
@@ -281,7 +259,6 @@ export const processPostAuthorize = async (
 		!!enforceMfa?.length &&
 		!enableEmailMfa &&
 		!enableOtpMfa &&
-		!enableSmsMfa &&
 		!authCodeBody.user.mfaTypes.length;
 	if (requireMfaEnroll) {
 		return {
@@ -323,36 +300,6 @@ export const processPostAuthorize = async (
 			return {
 				...basicInfo,
 				nextPage: routeConfig.View.OtpMfa,
-			};
-		}
-	}
-
-	const requireSmsMfa =
-		step < 5 &&
-		!bypassLocalMfa &&
-		(enableSmsMfa || authCodeBody.user.mfaTypes.includes(userModel.MfaType.Sms));
-	if (requireSmsMfa) {
-		if (!enableMfaRememberDevice) {
-			return {
-				...basicInfo,
-				nextPage: routeConfig.View.SmsMfa,
-			};
-		}
-
-		const cookieKey = adapterConfig.getSmsMfaRememberDeviceCookieKey(authCodeBody.user.id);
-		const cookieValue = getCookie(c, cookieKey);
-		const isValid = await kvService.verifySmsMfaRememberDevice(
-			c.env.KV,
-			authCodeBody.user.id,
-			cookieValue,
-		);
-
-		if (isValid) {
-			await kvService.bypassSmsMfa(c.env.KV, authCode, codeExpiresIn);
-		} else {
-			return {
-				...basicInfo,
-				nextPage: routeConfig.View.SmsMfa,
 			};
 		}
 	}
@@ -406,14 +353,6 @@ export const processPostAuthorize = async (
 		return {
 			...basicInfo,
 			nextPage: routeConfig.View.RecoveryCodeEnroll,
-		};
-	}
-
-	const requireSwitchOrg = step < 9 && enableOrg && allowSwitchOrg;
-	if (requireSwitchOrg) {
-		return {
-			...basicInfo,
-			nextPage: routeConfig.View.SwitchOrg,
 		};
 	}
 
@@ -554,7 +493,6 @@ export const prepareOidcRedirect = async (
 		codeChallengeMethod: queryDto.codeChallengeMethod,
 		locale: queryDto.locale,
 		policy: queryDto.policy,
-		org: queryDto.org,
 		scopes: queryDto.scopes,
 	};
 

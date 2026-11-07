@@ -391,9 +391,6 @@ importers:
       '@lunariajs/core':
         specifier: ^0.2.0
         version: 0.2.1
-      '@peculiar/x509':
-        specifier: ^1.14.3
-        version: 1.14.3
       '@playwright/test':
         specifier: ^1.61.1
         version: 1.64.1
@@ -3132,9 +3129,6 @@ importers:
       '@superboard/contracts':
         specifier: workspace:*
         version: link:../../../contracts
-      '@xmldom/xmldom':
-        specifier: ^0.9.11
-        version: 0.9.12
       base32-decode:
         specifier: ^1.0.0
         version: 1.0.0
@@ -3147,9 +3141,6 @@ importers:
       class-validator:
         specifier: ^0.14.2
         version: 0.14.4
-      fflate:
-        specifier: ^0.4.8
-        version: 0.4.9
       hono:
         specifier: catalog:workers
         version: 4.13.16
@@ -3168,12 +3159,6 @@ importers:
       toml:
         specifier: 5.0.1
         version: 5.0.1
-      xml-crypto:
-        specifier: ^6.1.2
-        version: 6.1.2
-      xml-encryption:
-        specifier: ^6.0.0
-        version: 6.0.1
       yup:
         specifier: ^1.7.1
         version: 1.7.1
@@ -3193,9 +3178,6 @@ importers:
       '@types/qs':
         specifier: ^6.14.0
         version: 6.15.1
-      '@types/xml-encryption':
-        specifier: ^1.2.4
-        version: 1.2.4
       typescript:
         specifier: catalog:workers
         version: 5.9.3
@@ -12939,9 +12921,6 @@ packages:
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
-  '@types/xml-encryption@1.2.4':
-    resolution: {integrity: sha512-I69K/WW1Dv7j6O3jh13z0X8sLWJRXbu5xnHDl9yHzUNDUBtUoBY058eb5s+x/WG6yZC1h8aKdI2EoyEPjyEh+Q==}
-
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
 
@@ -13536,18 +13515,6 @@ packages:
     resolution: {integrity: sha512-kDkFU9pYR+/j3JUoK9OyaRD6jGF9FtbRMHoGD122J9bwTfkaWc9+f4QVnVBASK6+5DBz7X8bC0/bLrGhMpXiSg==}
     peerDependencies:
       '@solana/kit': '>=5.1.0'
-
-  '@xmldom/is-dom-node@1.0.1':
-    resolution: {integrity: sha512-CJDxIgE5I0FH+ttq/Fxy6nRpxP70+e2O048EPe85J2use3XKdatVM7dDVvFNjQudd9B49NPoZ+8PG49zj4Er8Q==}
-    engines: {node: '>= 16'}
-
-  '@xmldom/xmldom@0.8.15':
-    resolution: {integrity: sha512-/5NV/vDALVFDXgLmfsy9TRCBlKwO2LNBFzpzvb9iIj+jR+eSc6DLYYvVOdivT/jm7MtU6TebYuRmzEOI7w40UA==}
-    engines: {node: '>=10.0.0'}
-
-  '@xmldom/xmldom@0.9.12':
-    resolution: {integrity: sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A==}
-    engines: {node: '>=14.6'}
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -15447,9 +15414,6 @@ packages:
   fetch-blob@3.2.0:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
     engines: {node: ^12.20 || >= 14.13}
-
-  fflate@0.4.9:
-    resolution: {integrity: sha512-zdxgIEddhfsyCaWpJ2SdXEP8ZMrKJ6+5jl4OupODcywU0IhRk6gdXuVGcPICyfx2H97hVK7xmJtRLPjkxAX8Vw==}
 
   fflate@0.8.3:
     resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
@@ -20620,13 +20584,6 @@ packages:
     resolution: {integrity: sha512-Hl0ZOAs672vg+06kfujwRhoS6/jehvULrlFkuF2dRu6pHgA8U06h3xqNIqNNU1LTXPcedxByAR4GS6pwQK0mgA==}
     engines: {node: '>=20'}
 
-  xml-crypto@6.1.2:
-    resolution: {integrity: sha512-leBOVQdVi8FvPJrMYoum7Ici9qyxfE4kVi+AkpUoYCSXaQF4IlBm1cneTK9oAxR61LpYxTx7lNcsnBIeRpGW2w==}
-    engines: {node: '>=16'}
-
-  xml-encryption@6.0.1:
-    resolution: {integrity: sha512-hQSkWsiOKXxYB8FbSJhe/BRwobEt/lVcxzV699CdH7KLNv2nLEtNvkGkw5UTxYUkPQ3XQs65BvXtRfujJ/1OFA==}
-
   xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
     engines: {node: '>=18'}
@@ -20637,10 +20594,6 @@ packages:
 
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
-
-  xpath@0.0.33:
-    resolution: {integrity: sha512-NNXnzrkDrAzalLhIUc01jO2mOzXGXh1JwPgkihcLLzw98c0WgYDmmjSh1Kl3wzaxSVWMuA+fe0WTWOBDWCBmNA==}
-    engines: {node: '>=0.6.0'}
 
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
@@ -29207,10 +29160,6 @@ snapshots:
     dependencies:
       '@types/node': 24.19.2
 
-  '@types/xml-encryption@1.2.4':
-    dependencies:
-      '@types/node': 24.19.2
-
   '@types/yargs-parser@21.0.3': {}
 
   '@types/yargs@17.0.35':
@@ -30429,12 +30378,6 @@ snapshots:
     transitivePeerDependencies:
       - '@solana/sysvars'
     optional: true
-
-  '@xmldom/is-dom-node@1.0.1': {}
-
-  '@xmldom/xmldom@0.8.15': {}
-
-  '@xmldom/xmldom@0.9.12': {}
 
   '@xtuc/ieee754@1.2.0': {}
 
@@ -32953,8 +32896,6 @@ snapshots:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
-
-  fflate@0.4.9: {}
 
   fflate@0.8.3: {}
 
@@ -40080,24 +40021,11 @@ snapshots:
       is-wsl: 3.1.1
       powershell-utils: 0.1.0
 
-  xml-crypto@6.1.2:
-    dependencies:
-      '@xmldom/is-dom-node': 1.0.1
-      '@xmldom/xmldom': 0.8.15
-      xpath: 0.0.33
-
-  xml-encryption@6.0.1:
-    dependencies:
-      '@xmldom/xmldom': 0.8.15
-      escape-html: 1.0.3
-
   xml-name-validator@5.0.0: {}
 
   xml-naming@0.3.0: {}
 
   xmlchars@2.2.0: {}
-
-  xpath@0.0.33: {}
 
   xtend@4.0.2: {}
 

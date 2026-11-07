@@ -7,7 +7,6 @@ import {
 } from '../configs'
 import { Policy } from '../dtos/oauth'
 import { loggerUtil } from '../utils'
-import { systemConfig } from '../configs/variable'
 
 export const enableSignUp = async (
   c: Context<typeConfig.Context>, next: Next,
@@ -119,95 +118,6 @@ export const enableUserAttribute = async (
   await next()
 }
 
-export const enableOrg = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const { ENABLE_ORG: enabledOrg } = env(c)
-
-  if (!enabledOrg) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.OrgNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.OrgNotEnabled)
-  }
-
-  await next()
-}
-
-export const enableUserSwitchOrg = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const { ALLOW_USER_SWITCH_ORG_ON_SIGN_IN: enabledUserSwitchOrg } = env(c)
-  if (!enabledUserSwitchOrg) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.SwitchOrgNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.SwitchOrgNotEnabled)
-  }
-  await next()
-}
-
-export const enableOrgGroup = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const { ENABLE_ORG: enabledOrg } = env(c)
-
-  if (!enabledOrg) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.OrgNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.OrgNotEnabled)
-  }
-
-  if (!systemConfig.enableOrgGroup) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.OrgGroupNotEnabled,
-    )
-  }
-
-  await next()
-}
-
-export const enableAppBanner = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const { ENABLE_APP_BANNER: enabledAppBanner } = env(c)
-
-  if (!enabledAppBanner) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.AppBannerNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.AppBannerNotEnabled)
-  }
-
-  await next()
-}
-
-export const enableSamlAsSp = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const { ENABLE_SAML_SSO_AS_SP: enabledSamlSp } = env(c)
-  if (!enabledSamlSp) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.SamlSpNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.SamlSpNotEnabled)
-  }
-  await next()
-}
-
 export const enablePasskeyEnrollment = async (
   c: Context<typeConfig.Context>, next: Next,
 ) => {
@@ -259,23 +169,6 @@ export const enableGoogleSignIn = async (
   await next()
 }
 
-export const enableFacebookSignIn = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const {
-    FACEBOOK_AUTH_CLIENT_ID: facebookId, FACEBOOK_AUTH_CLIENT_SECRET: facebookSecret,
-  } = env(c)
-  if (!facebookId || !facebookSecret) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.FacebookSignInNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.FacebookSignInNotEnabled)
-  }
-  await next()
-}
-
 export const enableGithubSignIn = async (
   c: Context<typeConfig.Context>, next: Next,
 ) => {
@@ -291,24 +184,6 @@ export const enableGithubSignIn = async (
       messageConfig.ConfigError.GithubSignInNotEnabled,
     )
     throw new errorConfig.Forbidden(messageConfig.ConfigError.GithubSignInNotEnabled)
-  }
-  await next()
-}
-
-export const enableDiscordSignIn = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const {
-    DISCORD_AUTH_CLIENT_ID: discordId,
-    DISCORD_AUTH_CLIENT_SECRET: discordSecret,
-  } = env(c)
-  if (!discordId || !discordSecret) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.DiscordSignInNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.DiscordSignInNotEnabled)
   }
   await next()
 }
@@ -368,12 +243,11 @@ export const enableMfaEnroll = async (
 ) => {
   const {
     ENFORCE_ONE_MFA_ENROLLMENT: enforceMfa,
-    SMS_MFA_IS_REQUIRED: requireSmsMfa,
     EMAIL_MFA_IS_REQUIRED: requireEmailMfa,
     OTP_MFA_IS_REQUIRED: requireOtpMfa,
   } = env(c)
 
-  if (!enforceMfa?.length || requireEmailMfa || requireOtpMfa || requireSmsMfa) {
+  if (!enforceMfa?.length || requireEmailMfa || requireOtpMfa) {
     loggerUtil.triggerLogger(
       c,
       loggerUtil.LoggerLevel.Error,
@@ -382,21 +256,6 @@ export const enableMfaEnroll = async (
     throw new errorConfig.Forbidden(messageConfig.ConfigError.MfaEnrollNotEnabled)
   }
 
-  await next()
-}
-
-export const enableSwitchOrg = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const { ALLOW_USER_SWITCH_ORG_ON_SIGN_IN: enableSwitchOrg } = env(c)
-  if (!enableSwitchOrg) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.SwitchOrgNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.SwitchOrgNotEnabled)
-  }
   await next()
 }
 
@@ -496,21 +355,6 @@ export const enableUpdateInfoPolicy = async (
       messageConfig.ConfigError.UpdateInfoPolicyNotEnabled,
     )
     throw new errorConfig.Forbidden(messageConfig.ConfigError.UpdateInfoPolicyNotEnabled)
-  }
-  await next()
-}
-
-export const enableChangeOrgPolicy = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const { BLOCKED_POLICIES: blockedPolicies } = env(c)
-  if (blockedPolicies.includes(Policy.ChangeOrg)) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.ChangeOrgPolicyNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.ChangeOrgPolicyNotEnabled)
   }
   await next()
 }

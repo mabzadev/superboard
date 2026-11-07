@@ -1,7 +1,37 @@
+import {
+	authenticationSettingsFromEnvironment,
+	type AuthenticationSettings,
+} from "@superboard/contracts/authentication-settings";
+import { QueryClient, QueryClientProvider } from "@superboard/front-ui/query";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fireEvent, render, screen } from "../../../packages/supbrd-front-ui/render.js";
+import { fireEvent, render as renderUi, screen } from "../../../packages/supbrd-front-ui/render.js";
+
+const settings = vi.hoisted(() => {
+	const values: AuthenticationSettings = {};
+	return { values };
+});
+vi.mock(
+	"../../../../../packages/plugins/superboard-authentification/src/front/transport.js",
+	() => ({
+		GET: async () => ({
+			data: {
+				revision: 0,
+				updatedAt: null,
+				values: settings.values,
+				deployment: {
+					providerSecrets: { github: true, apple: true },
+				},
+			},
+		}),
+		PUT: vi.fn(),
+	}),
+);
+vi.mock(
+	"../../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js",
+	() => ({ useProjectSelection: () => ({ selectedProject: { id: "1-test" } }) }),
+);
 
 vi.mock(
 	"../../../../../packages/plugins/superboard-authentification/src/front/app/(protected)/identity/[lang]/roles/page.js",
@@ -16,16 +46,9 @@ vi.mock(
 	}),
 );
 vi.mock(
-	"../../../../../packages/plugins/superboard-authentification/src/front/app/(protected)/identity/[lang]/orgs/page.js",
-	() => ({
-		default: () => <p>organizations panel</p>,
-	}),
-);
-vi.mock(
 	"../../../../../packages/plugins/superboard-authentification/src/front/app/(protected)/identity/[lang]/apps/page.js",
 	() => ({
 		default: () => <p>apps panel</p>,
-		AppBanners: () => <p>banners panel</p>,
 	}),
 );
 vi.mock(
@@ -41,20 +64,31 @@ vi.mock(
 
 import SettingsPage from "../../../../../packages/plugins/superboard-authentification/src/front/SettingsPage.js";
 
+function render(ui: ReactNode) {
+	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	return renderUi(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+
+beforeAll(() => {
+	if (!("PointerEvent" in window))
+		Object.defineProperty(window, "PointerEvent", { value: MouseEvent, configurable: true });
+});
+
 describe("authentication settings access control", () => {
 	beforeEach(() => {
+		settings.values = authenticationSettingsFromEnvironment({ SUPPORTED_LOCALES: ["en"] });
 		window.history.replaceState({}, "", "/auth/settings?tab=access");
 	});
 
-	it("lists the access areas as collapsible sections instead of a second row of tabs", async () => {
+	it("shows each access area behind its own switch instead of a second row of tabs", async () => {
 		render(<SettingsPage />);
 		expect(screen.queryByRole("group", { name: "Access control sections" })).toBeNull();
-		for (const name of ["Roles", "Permissions", "Organizations", "Apps"])
-			expect(screen.getByText(name, { selector: "summary" })).toBeInTheDocument();
+		for (const name of ["Roles", "Permissions", "Apps"])
+			expect(screen.getByRole("switch", { name })).not.toBeChecked();
 		expect(screen.queryByText("roles panel")).toBeNull();
 
-		fireEvent.click(screen.getByText("Organizations", { selector: "summary" }));
-		expect(await screen.findByText("organizations panel")).toBeInTheDocument();
+		fireEvent.click(screen.getByRole("switch", { name: "Apps" }));
+		expect(await screen.findByText("apps panel")).toBeInTheDocument();
 	});
 
 	it("opens the section named in a former address", async () => {

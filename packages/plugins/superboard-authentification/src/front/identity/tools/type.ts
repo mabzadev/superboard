@@ -11,8 +11,6 @@ export enum Scope {
 	WriteRole = "write_role",
 	ReadScope = "read_scope",
 	WriteScope = "write_scope",
-	ReadOrg = "read_org",
-	WriteOrg = "write_org",
 }
 
 export enum Role {
@@ -22,11 +20,4 @@ export enum Role {
 export enum ClientType {
 	SPA = "spa",
 	S2S = "s2s",
-}
-
-export enum BannerType {
-	ERROR = "error",
-	INFO = "info",
-	WARNING = "warning",
-	SUCCESS = "success",
 }

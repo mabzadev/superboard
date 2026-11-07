@@ -88,7 +88,7 @@ describe("Identity Setup", () => {
 		expect(screen.queryByText("Melody page content")).not.toBeInTheDocument();
 
 		await act(async () => {
-			configuration.resolve(jsonResponse({ configs: { ENABLE_ORG: true } }));
+			configuration.resolve(jsonResponse({ configs: { ENABLE_USER_ATTRIBUTE: true } }));
 			await configuration.promise;
 		});
 
@@ -102,7 +102,7 @@ describe("Identity Setup", () => {
 
 	it("keeps the previous project hidden and clears its primary app during a switch", async () => {
 		network.GET.mockResolvedValueOnce(
-			jsonResponse({ configs: { ENABLE_ORG: true } }),
+			jsonResponse({ configs: { ENABLE_USER_ATTRIBUTE: true } }),
 		).mockResolvedValueOnce(
 			jsonResponse({
 				apps: [
@@ -144,7 +144,7 @@ describe("Identity Setup", () => {
 		expect(window.sessionStorage.getItem("superboard.identity.primaryApp")).toBeNull();
 
 		await act(async () => {
-			secondConfiguration.resolve(jsonResponse({ configs: { ENABLE_ORG: false } }));
+			secondConfiguration.resolve(jsonResponse({ configs: { ENABLE_USER_ATTRIBUTE: false } }));
 			await secondConfiguration.promise;
 		});
 

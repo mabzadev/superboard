@@ -1,5 +1,6 @@
 import { useFrontContext } from "@superboard/front-ui/context";
 import { createFrontI18n } from "@superboard/front-ui/i18n";
+import { SwitchField } from "@superboard/front-ui/kumo";
 import { useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { SectionNavigationProvider } from "@superboard/front-ui/section-navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
@@ -15,7 +16,6 @@ const en = {
 	close: "Close",
 	notFound: "This item is unavailable.",
 	email: "Email",
-	sms: "SMS",
 	"sign-in": "Sign-in",
 	profile: "Profile",
 	account: "Account",
@@ -23,14 +23,10 @@ const en = {
 	settings: "Settings",
 	directory: "Directory",
 	apps: "Apps",
-	banners: "Banners",
 	roles: "Roles",
 	permissions: "Permissions",
-	organizations: "Organizations",
 	fields: "Fields",
 	loading: "Loading…",
-	policies: "Recovery",
-	sso: "SSO/SAML",
 	"tab:users": "Users",
 	"tab:directory": "Directory",
 	"tab:devices": "Devices & profiles",
@@ -40,14 +36,14 @@ const en = {
 	"tab:access": "Access control",
 	"tab:fields": "Users & fields",
 	"tab:appearance": "Appearance",
+	"tab:advanced": "Advanced",
 	devicesDescription: "SDK profiles, platforms and installation activity in the application.",
-	activityDescription: "Email, SMS and sign-in logs of your users.",
+	activityDescription: "Email and sign-in logs of your users.",
 };
 const fr: typeof en = {
 	close: "Fermer",
 	notFound: "Cet élément est indisponible.",
 	email: "E-mail",
-	sms: "SMS",
 	"sign-in": "Connexion",
 	profile: "Profil",
 	account: "Compte",
@@ -55,14 +51,10 @@ const fr: typeof en = {
 	settings: "Paramètres",
 	directory: "Annuaire",
 	apps: "Applications",
-	banners: "Bannières",
 	roles: "Rôles",
 	permissions: "Permissions",
-	organizations: "Organisations",
 	fields: "Champs",
 	loading: "Chargement…",
-	policies: "Récupération",
-	sso: "SSO/SAML",
 	"tab:users": "Utilisateurs",
 	"tab:directory": "Annuaire",
 	"tab:devices": "Appareils et profils",
@@ -72,8 +64,9 @@ const fr: typeof en = {
 	"tab:access": "Contrôle d’accès",
 	"tab:fields": "Utilisateurs et champs",
 	"tab:appearance": "Apparence",
+	"tab:advanced": "Avancé",
 	devicesDescription: "Profils SDK, plateformes et activité des installations dans l’application.",
-	activityDescription: "Journaux des e-mails, SMS et connexions de vos utilisateurs.",
+	activityDescription: "Journaux des e-mails et des connexions de vos utilisateurs.",
 };
 export function useAuthenticationI18n() {
 	const { locale } = useFrontContext();
@@ -92,18 +85,12 @@ export function AuthenticationSection({
 	const i18n = useAuthenticationI18n();
 	const [expanded, setExpanded] = useState(open);
 	return (
-		<details
-			open={expanded}
-			className="rounded border border-kumo-subtle p-4"
-			onToggle={(event) => {
-				setExpanded(event.currentTarget.open);
-			}}
-		>
-			<summary>{i18n._(name)}</summary>
+		<section className="space-y-4 rounded-lg border border-kumo-line p-4">
+			<SwitchField label={i18n._(name)} checked={expanded} onCheckedChange={setExpanded} />
 			{expanded && (
 				<Suspense fallback={<p role="status">{i18n._("loading")}</p>}>{children}</Suspense>
 			)}
-		</details>
+		</section>
 	);
 }
 

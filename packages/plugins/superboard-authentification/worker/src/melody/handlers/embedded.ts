@@ -5,9 +5,8 @@ import {
   errorConfig, messageConfig, typeConfig,
 } from '../configs'
 import {
-  appBannerService,
   appService, consentService, emailService, identityService,
-  kvService, mfaService, oauthService, orgService, passkeyService, recoveryCodeService, scopeService,
+  kvService, mfaService, oauthService, passkeyService, recoveryCodeService, scopeService,
   userAttributeService,
   userService,
 } from '../services'
@@ -23,7 +22,7 @@ import {
 } from '../hooks'
 import { userModel } from '../models'
 
-export const sessionBodyToAuthCodeBody = (sessionBody: typeConfig.EmbeddedSessionBody): typeConfig.AuthCodeBody => {
+const sessionBodyToAuthCodeBody = (sessionBody: typeConfig.EmbeddedSessionBody): typeConfig.AuthCodeBody => {
   if (!sessionBody.user) {
     throw new errorConfig.NotFound(messageConfig.RequestError.WrongSessionId)
   }
@@ -265,7 +264,6 @@ export const signUp = async (c: Context<typeConfig.Context>) => {
       firstName: bodyDto.firstName,
       lastName: bodyDto.lastName,
       locale: sessionBody.request.locale,
-      org: sessionBody.request.org,
     },
     attributeValues,
   )
@@ -695,98 +693,6 @@ export const postOtpMfa = async (c: Context<typeConfig.Context>) => {
   })
 }
 
-export const postSmsMfaSetup = async (c: Context<typeConfig.Context>) => {
-  const bodyDto = new embeddedDto.SmsMfaSetupDto(await c.req.json())
-  await validateUtil.dto(bodyDto)
-
-  const sessionId = c.req.param('sessionId') ?? ''
-  const sessionBody = await getSessionBodyWithUser(
-    c,
-    sessionId,
-  )
-
-  await mfaService.handleSmsMfaSetup(
-    c,
-    sessionId,
-    sessionBody,
-    bodyDto.phoneNumber,
-    sessionBody.request.locale,
-  )
-
-  return c.json({ success: true })
-}
-
-export const getSmsMfa = async (c: Context<typeConfig.Context>) => {
-  const sessionId = c.req.param('sessionId') ?? ''
-  const sessionBody = await getSessionBodyWithUser(
-    c,
-    sessionId,
-  )
-
-  const info = await mfaService.getSmsMfaInfo(
-    c,
-    sessionId,
-    sessionBody,
-    sessionBody.request.locale,
-  )
-
-  return c.json(info)
-}
-
-export const postSmsMfaCode = async (c: Context<typeConfig.Context>) => {
-  const sessionId = c.req.param('sessionId') ?? ''
-  const sessionBody = await getSessionBodyWithUser(
-    c,
-    sessionId,
-  )
-
-  await mfaService.handleSendSmsMfaCode(
-    c,
-    sessionId,
-    sessionBody,
-    sessionBody.request.locale,
-  )
-
-  return c.json({ success: true })
-}
-
-export const postSmsMfa = async (c: Context<typeConfig.Context>) => {
-  const bodyDto = new embeddedDto.MfaDto(await c.req.json())
-  await validateUtil.dto(bodyDto)
-
-  const sessionId = c.req.param('sessionId') ?? ''
-  const sessionBody = await getSessionBodyWithUser(
-    c,
-    sessionId,
-  )
-
-  await mfaService.processSmsMfa(
-    c,
-    sessionId,
-    sessionBody,
-    bodyDto.mfaCode,
-  )
-
-  await mfaService.rememberSmsMfaDevice(
-    c,
-    bodyDto.rememberDevice,
-    sessionBody.user.id,
-  )
-
-  const result = await processPostAuthorizeForEmbedded(
-    c,
-    identityService.AuthorizeStep.SmsMfa,
-    sessionId,
-    sessionBody,
-  )
-
-  return c.json({
-    sessionId,
-    nextStep: result.nextPage,
-    success: !result.nextPage,
-  })
-}
-
 export const getPasskeyEnroll = async (c: Context<typeConfig.Context>) => {
   const sessionId = c.req.param('sessionId') ?? ''
   const sessionBody = await getSessionBodyWithUser(
@@ -941,78 +847,6 @@ export const postPasskeyVerify = async (c: Context<typeConfig.Context>) => {
   })
 }
 
-export const getUserOrgs = async (c: Context<typeConfig.Context>) => {
-  const sessionId = c.req.param('sessionId') ?? ''
-  const sessionBody = await getSessionBodyWithUser(
-    c,
-    sessionId,
-  )
-
-  const orgs = await orgService.getUserOrgs(
-    c,
-    sessionBody.user.id,
-  )
-
-  const authOrgInfos = orgs.map((org) => ({
-    id: org.id,
-    name: org.name,
-    slug: org.slug,
-    companyLogoUrl: org.companyLogoUrl,
-  }))
-
-  return c.json({
-    orgs: authOrgInfos, activeOrgSlug: sessionBody.user.orgSlug,
-  })
-}
-
-export const postUserOrgs = async (c: Context<typeConfig.Context>) => {
-  const bodyDto = new embeddedDto.PostSwitchUserOrgDto(await c.req.json())
-  await validateUtil.dto(bodyDto)
-
-  const sessionId = c.req.param('sessionId') ?? ''
-  const sessionBody = await getSessionBodyWithUser(
-    c,
-    sessionId,
-  )
-
-  const securedSessionBody = await guardEmbeddedSessionIsSecured(
-    c,
-    sessionId,
-    sessionBody,
-  )
-
-  const user = await orgService.switchUserOrg(
-    c,
-    securedSessionBody,
-    bodyDto.org,
-  )
-
-  const { AUTHORIZATION_CODE_EXPIRES_IN: codeExpiresIn } = env(c)
-  const newSessionBody = {
-    ...securedSessionBody,
-    user,
-  }
-  await kvService.storeEmbeddedSession(
-    c.env.KV,
-    sessionId,
-    newSessionBody,
-    codeExpiresIn,
-  )
-
-  const result = await processPostAuthorizeForEmbedded(
-    c,
-    identityService.AuthorizeStep.SwitchOrg,
-    sessionId,
-    newSessionBody,
-  )
-
-  return c.json({
-    sessionId,
-    nextStep: result.nextPage,
-    success: !result.nextPage,
-  })
-}
-
 export const getRecoveryCodeEnroll = async (c: Context<typeConfig.Context>) => {
   const sessionId = c.req.param('sessionId') ?? ''
   const sessionBody = await getSessionBodyWithUser(
@@ -1047,21 +881,6 @@ export const getRecoveryCodeEnroll = async (c: Context<typeConfig.Context>) => {
   )
 
   return c.json({ recoveryCode })
-}
-
-export const getAppBanners = async (c: Context<typeConfig.Context>) => {
-  const sessionId = c.req.param('sessionId') ?? ''
-  const sessionBody = await getSessionBody(
-    c,
-    sessionId,
-  )
-
-  const banners = await appBannerService.getBannersByClientId(
-    c,
-    sessionBody.request.clientId,
-  )
-
-  return c.json({ banners })
 }
 
 export const resetPassword = async (c: Context<typeConfig.Context>) => {

@@ -153,17 +153,8 @@ const identityAdminResourceDefinitions = [
 		listKey: "userAttributes",
 		itemKey: "userAttribute",
 	},
-	{
-		prefix: "/api/v1/app-banners",
-		type: "app_banner",
-		listKey: "appBanners",
-		itemKey: "appBanner",
-	},
-	{ prefix: "/api/v1/org-groups", type: "org_group", listKey: "orgGroups", itemKey: "orgGroup" },
-	{ prefix: "/api/v1/saml/idps", type: "saml_idp", listKey: "idps", itemKey: "idp" },
 	{ prefix: "/api/v1/roles", type: "role", listKey: "roles", itemKey: "role" },
 	{ prefix: "/api/v1/scopes", type: "scope", listKey: "scopes", itemKey: "scope" },
-	{ prefix: "/api/v1/orgs", type: "org", listKey: "orgs", itemKey: "org" },
 ] as const;
 
 function identityAdminResource(pathname: string): IdentityAdminResource | null {
@@ -228,8 +219,7 @@ async function identitySystemResource(
 					`SELECT id FROM scope WHERE id=? AND name IN (
          'openid','profile','offline_access','root',
          'read_user','write_user','read_app','write_app',
-         'read_scope','write_scope','read_role','write_role',
-         'read_org','write_org'
+         'read_scope','write_scope','read_role','write_role'
        ) AND "deletedAt" IS NULL`,
 				)
 				.bind(resourceId)

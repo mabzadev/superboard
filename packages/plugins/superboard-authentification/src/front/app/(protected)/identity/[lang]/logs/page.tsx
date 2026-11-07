@@ -30,10 +30,8 @@ import { useAuth } from "../../../../../identity/melody-react.js";
 import {
 	useDeleteApiV1LogsEmailMutation,
 	useDeleteApiV1LogsSignInMutation,
-	useDeleteApiV1LogsSmsMutation,
 	useGetApiV1LogsEmailQuery,
 	useGetApiV1LogsSignInQuery,
-	useGetApiV1LogsSmsQuery,
 } from "../../../../../identity/services/auth/api.js";
 import { configSignal } from "../../../../../identity/signals/index.js";
 import { accessTool, routeTool, variableTool } from "../../../../../identity/tools/index.js";
@@ -77,7 +75,7 @@ const Page = () => {
 
 	const configs = useSignalValue(configSignal);
 
-	const [cleanTarget, setCleanTarget] = useState<"email" | "sms" | "signIn" | "">("");
+	const [cleanTarget, setCleanTarget] = useState<"email" | "signIn" | "">("");
 
 	const [emailLogPageNumber, setEmailLogPageNumber] = useState(1);
 	const { data: emailData, isLoading: isEmailLoading } = useGetApiV1LogsEmailQuery({
@@ -86,14 +84,6 @@ const Page = () => {
 	});
 	const emailLogs = emailData?.logs ?? [];
 	const emailLogCount = emailData?.count ?? 0;
-
-	const [smsLogPageNumber, setSmsLogPageNumber] = useState(1);
-	const { data: smsData, isLoading: isSmsLoading } = useGetApiV1LogsSmsQuery({
-		pageNumber: smsLogPageNumber,
-		pageSize: PageSize,
-	});
-	const smsLogs = smsData?.logs ?? [];
-	const smsLogCount = smsData?.count ?? 0;
 
 	const [signInLogPageNumber, setSignInLogPageNumber] = useState(1);
 	const { data: signInData, isLoading: isSignInLoading } = useGetApiV1LogsSignInQuery({
@@ -104,7 +94,6 @@ const Page = () => {
 	const signInLogCount = signInData?.count ?? 0;
 
 	const [deleteEmailLogs] = useDeleteApiV1LogsEmailMutation();
-	const [deleteSmsLogs] = useDeleteApiV1LogsSmsMutation();
 	const [deleteSignInLogs] = useDeleteApiV1LogsSignInMutation();
 
 	const { userInfo } = useAuth();
@@ -112,16 +101,10 @@ const Page = () => {
 
 	const emailLogTotalPages = useMemo(() => Math.ceil(emailLogCount / PageSize), [emailLogCount]);
 
-	const smsLogTotalPages = useMemo(() => Math.ceil(smsLogCount / PageSize), [smsLogCount]);
-
 	const signInLogTotalPages = useMemo(() => Math.ceil(signInLogCount / PageSize), [signInLogCount]);
 
 	const handleEmailLogPageChange = (page: number) => {
 		setEmailLogPageNumber(page);
-	};
-
-	const handleSmsLogPageChange = (page: number) => {
-		setSmsLogPageNumber(page);
 	};
 
 	const handleSignInLogPageChange = (page: number) => {
@@ -135,9 +118,6 @@ const Page = () => {
 			case "email":
 				deleteEmailLogs({ before: dateBefore });
 				break;
-			case "sms":
-				deleteSmsLogs({ before: dateBefore });
-				break;
 			case "signIn":
 				deleteSignInLogs({ before: dateBefore });
 				break;
@@ -147,7 +127,7 @@ const Page = () => {
 
 	if (!configs) return <LoadingPage />;
 
-	if (isEmailLoading || isSmsLoading || isSignInLoading) return <LoadingPage />;
+	if (isEmailLoading || isSignInLoading) return <LoadingPage />;
 
 	return (
 		<section className="flex flex-col">
@@ -202,57 +182,6 @@ const Page = () => {
 							currentPage={emailLogPageNumber}
 							totalPages={emailLogTotalPages}
 							onPageChange={handleEmailLogPageChange}
-							previousLabel={t("common.previous")}
-							nextLabel={t("common.next")}
-						/>
-					)}
-				</section>
-			)}
-			{configs.ENABLE_SMS_LOG && (
-				<section className="flex flex-col mt-8">
-					<header className="flex gap-8 items-center mb-6">
-						<PageTitle title={t("logs.smsLogs")} />
-						{showCleanBtn && (
-							<Button
-								data-testid="smsLogCleanBtn"
-								variant="outline"
-								size="sm"
-								onClick={() => setCleanTarget("sms")}
-							>
-								{t("logs.clean")}
-							</Button>
-						)}
-					</header>
-					<Table className="break-all">
-						<TableHeader>
-							<TableRow>
-								<TableHead>{t("logs.receiver")}</TableHead>
-								<TableHead>{t("logs.success")}</TableHead>
-								<TableHead>{t("logs.time")}</TableHead>
-								<TableHead />
-							</TableRow>
-						</TableHeader>
-						<TableBody className="divide-y">
-							{smsLogs.map((log) => (
-								<TableRow data-testid="smsLogRow" key={log.id}>
-									<TableCell>{log.receiver}</TableCell>
-									<TableCell>
-										<ConfigBooleanValue config={log.success} />
-									</TableCell>
-									<TableCell>{log.createdAt}</TableCell>
-									<TableCell>
-										<ViewLink href={`${routeTool.Internal.Logs}/sms/${log.id}`} />
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-					{smsLogTotalPages > 1 && (
-						<Pagination
-							className="mt-8"
-							currentPage={smsLogPageNumber}
-							totalPages={smsLogTotalPages}
-							onPageChange={handleSmsLogPageChange}
 							previousLabel={t("common.previous")}
 							nextLabel={t("common.next")}
 						/>

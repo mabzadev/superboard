@@ -26,12 +26,8 @@ const viewRender = async (
   c: Context<typeConfig.Context>,
   propsScript: HtmlEscapedString | Promise<HtmlEscapedString>,
   locale: typeConfig.Locale,
-  org?: string,
 ) => {
-  const branding = await brandingService.getBranding(
-    c,
-    org,
-  )
+  const branding = brandingService.getBranding(c)
 
   const { ENVIRONMENT } = env(c)
 
@@ -120,13 +116,9 @@ export const getAuthorizeView = async (c: Context<typeConfig.Context>) => {
     ENABLE_NAMES: enableNames,
     NAMES_IS_REQUIRED: namesIsRequired,
     GOOGLE_AUTH_CLIENT_ID: googleAuthId,
-    FACEBOOK_AUTH_CLIENT_ID: facebookAuthId,
-    FACEBOOK_AUTH_CLIENT_SECRET: facebookClientSecret,
     GITHUB_AUTH_CLIENT_ID: githubAuthId,
     GITHUB_AUTH_CLIENT_SECRET: githubClientSecret,
     GITHUB_AUTH_APP_NAME: githubAppName,
-    DISCORD_AUTH_CLIENT_ID: discordAuthId,
-    DISCORD_AUTH_CLIENT_SECRET: discordClientSecret,
     APPLE_AUTH_CLIENT_ID: appleAuthId,
     APPLE_AUTH_CLIENT_SECRET: appleClientSecret,
     ALLOW_PASSKEY_ENROLLMENT: allowPasskeyEnroll,
@@ -138,7 +130,6 @@ export const getAuthorizeView = async (c: Context<typeConfig.Context>) => {
     OIDC_AUTH_PROVIDERS: oidcAuthProviders,
     ENABLE_USER_ATTRIBUTE: enableUserAttribute,
     ENABLE_MFA_REMEMBER_DEVICE: enableMfaRememberDevice,
-    ENABLE_APP_BANNER: enableAppBanner,
   } = env(c)
 
   const isBasePolicy = !queryDto.policy || queryDto.policy === oauthDto.Policy.SignInOrSignUp
@@ -150,15 +141,10 @@ export const getAuthorizeView = async (c: Context<typeConfig.Context>) => {
   const allowPasskey = allowPasskeyEnroll && !enablePasswordlessSignIn
   const allowRecoveryCode = enableRecoveryCode && !enablePasswordlessSignIn
   const googleClientId = isBasePolicy ? (googleAuthId ?? '') : ''
-  const facebookClientId = isBasePolicy && facebookClientSecret ? (facebookAuthId ?? '') : ''
   const githubClientId = isBasePolicy && githubClientSecret && githubAppName ? (githubAuthId ?? '') : ''
-  const discordClientId = isBasePolicy && discordClientSecret ? (discordAuthId ?? '') : ''
   const appleClientId = isBasePolicy && appleClientSecret ? (appleAuthId ?? '') : ''
   const oidcProviders = isBasePolicy && oidcAuthProviders ? oidcAuthProviders : []
-  const branding = await brandingService.getBranding(
-    c,
-    queryDto.org,
-  )
+  const branding = brandingService.getBranding(c)
 
   const propsScript = html`
     <script>
@@ -172,12 +158,9 @@ export const getAuthorizeView = async (c: Context<typeConfig.Context>) => {
         enablePasswordlessSignIn: ${enablePasswordlessSignIn.toString()},
         usePasswordlessAsMagicLink: ${(usePasswordlessAsMagicLink ?? false).toString()},
         enableMfaRememberDevice: ${enableMfaRememberDevice.toString()},
-        enableAppBanner: ${enableAppBanner.toString()},
         googleClientId: "${googleClientId}",
-        facebookClientId: "${facebookClientId}",
         githubClientId: "${githubClientId}",
         appleClientId: "${appleClientId}",
-        discordClientId: "${discordClientId}",
         oidcProviders: "${oidcProviders.join(',')}",
         enableNames: ${enableNames.toString()},
         namesIsRequired: ${namesIsRequired.toString()},
@@ -194,7 +177,6 @@ export const getAuthorizeView = async (c: Context<typeConfig.Context>) => {
     c,
     propsScript,
     queryDto.locale,
-    queryDto.org,
   )
 }
 
@@ -214,10 +196,7 @@ export const getProcessView = async (c: Context<typeConfig.Context>) => {
     USE_PASSWORDLESS_AS_MAGIC_LINK: usePasswordlessAsMagicLink,
   } = env(c)
 
-  const branding = await brandingService.getBranding(
-    c,
-    queryDto.org,
-  )
+  const branding = brandingService.getBranding(c)
 
   const propsScript = html`
   <script>
@@ -235,7 +214,6 @@ export const getProcessView = async (c: Context<typeConfig.Context>) => {
     c,
     propsScript,
     queryDto.locale,
-    queryDto.org,
   )
 }
 
@@ -246,7 +224,6 @@ export const getVerifyEmailView = async (c: Context<typeConfig.Context>) => {
       c.req.query('locale'),
     ),
     id: c.req.query('id'),
-    org: c.req.query('org'),
     invitationToken: c.req.query('invitationToken'),
     signinUrl: c.req.query('signinUrl'),
   })
@@ -258,10 +235,7 @@ export const getVerifyEmailView = async (c: Context<typeConfig.Context>) => {
     ENABLE_LOCALE_SELECTOR: enableLocaleSelector,
   } = env(c)
 
-  const branding = await brandingService.getBranding(
-    c,
-    queryDto.org,
-  )
+  const branding = brandingService.getBranding(c)
 
   const propsScript = html`
   <script>
@@ -279,7 +253,6 @@ export const getVerifyEmailView = async (c: Context<typeConfig.Context>) => {
     c,
     propsScript,
     queryDto.locale,
-    queryDto.org,
   )
 }
 
@@ -290,7 +263,6 @@ export const getAuthCodeExpiredView = async (c: Context<typeConfig.Context>) => 
       c.req.query('locale'),
     ),
     redirect_uri: c.req.query('redirect_uri'),
-    org: c.req.query('org'),
   })
 
   const {
@@ -298,10 +270,7 @@ export const getAuthCodeExpiredView = async (c: Context<typeConfig.Context>) => 
     ENABLE_LOCALE_SELECTOR: enableLocaleSelector,
   } = env(c)
 
-  const branding = await brandingService.getBranding(
-    c,
-    queryDto.org,
-  )
+  const branding = brandingService.getBranding(c)
 
   const propsScript = html`
   <script>
@@ -317,6 +286,5 @@ export const getAuthCodeExpiredView = async (c: Context<typeConfig.Context>) => 
     c,
     propsScript,
     queryDto.locale,
-    queryDto.org,
   )
 }

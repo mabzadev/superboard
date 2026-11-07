@@ -221,17 +221,68 @@ test("operator MFA enrollment and reset resolve the project-bound application su
 	expect(
 		await (await request("/internal/v1/admin/profiles/application-mfa-user/security")).json(),
 	).toMatchObject({ data: { directory_subject: "application-mfa-user" } });
-	const path = "/internal/v1/melody-admin/api/v1/users/application-mfa-user/sms-mfa";
+	const path = "/internal/v1/melody-admin/api/v1/users/application-mfa-user/email-mfa";
 	expect((await request(path, "POST", {}, 82)).status).toBe(404);
 	const enrolled = await request(path, "POST", {});
 	expect(enrolled.status, await enrolled.clone().text()).toBe(204);
 	expect(
 		await env.DB.prepare('SELECT "mfaTypes" FROM "user" WHERE id=?').bind(user!.id).first(),
-	).toEqual({ mfaTypes: "sms" });
+	).toEqual({ mfaTypes: "email" });
 	expect((await request(path, "DELETE")).status).toBe(204);
 	expect(
 		await env.DB.prepare('SELECT "mfaTypes" FROM "user" WHERE id=?').bind(user!.id).first(),
 	).toEqual({ mfaTypes: "" });
+});
+
+test("an account enrolled in SMS MFA keeps its other methods and exposes no SMS data", async () => {
+	const user = await env.DB.prepare(
+		'INSERT INTO "user"("authId",email,"mfaTypes","smsPhoneNumber","smsPhoneNumberVerified") VALUES(?,?,?,?,1) RETURNING id',
+	)
+		.bind("native-sms-user", "sms-subject@example.test", "sms,otp", "+15555550199")
+		.first<{ id: number }>();
+	await env.DB.batch([
+		env.DB.prepare(
+			"INSERT INTO application_users(id,project_id,email,is_anonymous) VALUES('application-sms-user',81,'sms-subject@example.test',0)",
+		),
+		env.DB.prepare(
+			"INSERT INTO identity_subject_bridge(id,realm,melody_user_id,project_id,application_user_id) VALUES('sms-bridge',?,?,81,'application-sms-user')",
+		).bind((env as unknown as { IDENTITY_REALM: string }).IDENTITY_REALM, user!.id),
+	]);
+	const base = "/internal/v1/melody-admin/api/v1/users/application-sms-user";
+	const detail = await request(base);
+	expect(detail.status).toBe(200);
+	const body = await detail.text();
+	expect(body).not.toContain("+15555550199");
+	const { user: listed } = JSON.parse(body) as { user: Record<string, unknown> };
+	expect(listed.mfaTypes).toEqual(["otp"]);
+	expect(listed).not.toHaveProperty("smsPhoneNumberVerified");
+	expect((await request(`${base}/sms-mfa`, "POST", {})).status).toBe(404);
+});
+
+test("an account assigned to an organization exposes no organization data or endpoints", async () => {
+	const user = await env.DB.prepare(
+		'INSERT INTO "user"("authId",email,"orgSlug") VALUES(?,?,?) RETURNING id',
+	)
+		.bind("native-org-user", "org-subject@example.test", "legacy-org")
+		.first<{ id: number }>();
+	await env.DB.batch([
+		env.DB.prepare(
+			"INSERT INTO application_users(id,project_id,email,is_anonymous) VALUES('application-org-user',81,'org-subject@example.test',0)",
+		),
+		env.DB.prepare(
+			"INSERT INTO identity_subject_bridge(id,realm,melody_user_id,project_id,application_user_id) VALUES('org-bridge',?,?,81,'application-org-user')",
+		).bind((env as unknown as { IDENTITY_REALM: string }).IDENTITY_REALM, user!.id),
+	]);
+	const admin = "/internal/v1/melody-admin/api/v1";
+	const detail = await request(`${admin}/users/application-org-user`);
+	expect(detail.status).toBe(200);
+	const body = await detail.text();
+	expect(body).not.toContain("legacy-org");
+	const { user: listed } = JSON.parse(body) as { user: Record<string, unknown> };
+	expect(listed).not.toHaveProperty("org");
+	expect(listed).not.toHaveProperty("orgGroups");
+	expect((await request(`${admin}/orgs`)).status).toBe(404);
+	expect((await request(`${admin}/users/application-org-user/orgs`)).status).toBe(404);
 });
 
 test("operators can inspect and revoke one application session without affecting another account", async () => {

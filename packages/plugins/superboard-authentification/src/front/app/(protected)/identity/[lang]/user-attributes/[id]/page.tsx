@@ -9,19 +9,18 @@ import DeleteButton from "../../../../../../identity/components/DeleteButton.js"
 import FieldError from "../../../../../../identity/components/FieldError.js";
 import LoadingPage from "../../../../../../identity/components/LoadingPage.js";
 import LocaleEditor from "../../../../../../identity/components/LocaleEditor.js";
+import {
+	PropertyLabel,
+	PropertyList,
+	PropertyRow,
+	PropertyValue,
+} from "../../../../../../identity/components/PropertyList.js";
 import RequiredProperty from "../../../../../../identity/components/RequiredProperty.js";
 import SaveButton from "../../../../../../identity/components/SaveButton.js";
 import SubmitError from "../../../../../../identity/components/SubmitError.js";
+import SwitchRow from "../../../../../../identity/components/SwitchRow.js";
 import { Input } from "../../../../../../identity/components/ui/input.js";
 import { Switch } from "../../../../../../identity/components/ui/switch.js";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "../../../../../../identity/components/ui/table.js";
 import { useRouter } from "../../../../../../identity/i18n/navigation.js";
 import { useAuth } from "../../../../../../identity/melody-react.js";
 import {
@@ -140,134 +139,120 @@ const Page = () => {
 				}}
 			/>
 			<section>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="max-md:w-24 md:w-48">{t("common.property")}</TableHead>
-							<TableHead>{t("common.value")}</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody className="divide-y">
-						<TableRow>
-							<TableCell>
-								<RequiredProperty title={t("userAttributes.name")} />
-							</TableCell>
-							<TableCell>
-								<Input
-									data-testid="nameInput"
-									disabled={!canWriteUserAttribute}
-									onChange={(e) => onChange("name", e.target.value)}
-									value={values.name}
-								/>
-								{showErrors && <FieldError error={errors.name} />}
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("userAttributes.locales")}</TableCell>
-							<TableCell>
-								<LocaleEditor
-									description={`* ${t("userAttributes.localeNote")}`}
-									supportedLocales={configs.SUPPORTED_LOCALES}
-									values={values.locales}
-									disabled={!canWriteUserAttribute}
-									onChange={(values) => onChange("locales", values)}
-								/>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("userAttributes.includeInSignUpForm")}</TableCell>
-							<TableCell>
-								<Switch
-									checked={values.includeInSignUpForm}
-									disabled={!canWriteUserAttribute}
-									onClick={handleChangeIncludeInSignUpForm}
-								/>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("userAttributes.requiredInSignUpForm")}</TableCell>
-							<TableCell>
-								<div className="flex items-center gap-4">
-									<Switch
-										checked={values.requiredInSignUpForm}
-										disabled={!canWriteUserAttribute || !values.includeInSignUpForm}
-										onClick={() => onChange("requiredInSignUpForm", !values.requiredInSignUpForm)}
-									/>
-									<p>{t("userAttributes.requiredAttributeNote")}</p>
-								</div>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("userAttributes.includeInIdTokenBody")}</TableCell>
-							<TableCell>
-								<Switch
-									checked={values.includeInIdTokenBody}
-									disabled={!canWriteUserAttribute}
-									onClick={() => onChange("includeInIdTokenBody", !values.includeInIdTokenBody)}
-								/>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("userAttributes.includeInUserInfo")}</TableCell>
-							<TableCell>
-								<Switch
-									checked={values.includeInUserInfo}
-									disabled={!canWriteUserAttribute}
-									onClick={() => onChange("includeInUserInfo", !values.includeInUserInfo)}
-								/>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("userAttributes.uniqueAttribute")}</TableCell>
-							<TableCell>
-								<div className="flex items-center gap-4">
-									<Switch
-										checked={values.unique}
-										disabled={!canWriteUserAttribute}
-										onClick={() => onChange("unique", !values.unique)}
-									/>
-									<p>{t("userAttributes.uniqueAttributeNote")}</p>
-								</div>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("userAttributes.validation")}</TableCell>
-							<TableCell>
-								<Input
-									data-testid="validationRegexInput"
-									disabled={!canWriteUserAttribute}
-									onChange={(e) => onChange("validationRegex", e.target.value)}
-									value={values.validationRegex}
-								/>
-								{showErrors && <FieldError error={errors.validationRegex} />}
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("userAttributes.validationLocales")}</TableCell>
-							<TableCell>
-								<LocaleEditor
-									description={`* ${t("userAttributes.validationLocaleNote")}`}
-									supportedLocales={configs.SUPPORTED_LOCALES}
-									values={values.validationLocales}
-									disabled={!canWriteUserAttribute}
-									onChange={(values) => onChange("validationLocales", values)}
-								/>
-							</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("common.createdAt")}</TableCell>
-							<TableCell>{userAttribute.createdAt} UTC</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell>{t("common.updatedAt")}</TableCell>
-							<TableCell>{userAttribute.updatedAt} UTC</TableCell>
-						</TableRow>
-					</TableBody>
-				</Table>
+				<PropertyList>
+					<PropertyRow>
+						<PropertyLabel>
+							<RequiredProperty title={t("userAttributes.name")} />
+						</PropertyLabel>
+						<PropertyValue>
+							<Input
+								data-testid="nameInput"
+								disabled={!canWriteUserAttribute}
+								onChange={(e) => onChange("name", e.target.value)}
+								value={values.name}
+							/>
+							{showErrors && <FieldError error={errors.name} />}
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("userAttributes.locales")}</PropertyLabel>
+						<PropertyValue>
+							<LocaleEditor
+								description={`* ${t("userAttributes.localeNote")}`}
+								supportedLocales={configs.SUPPORTED_LOCALES}
+								values={values.locales}
+								disabled={!canWriteUserAttribute}
+								onChange={(values) => onChange("locales", values)}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow inline>
+						<PropertyLabel>{t("userAttributes.includeInSignUpForm")}</PropertyLabel>
+						<PropertyValue>
+							<Switch
+								checked={values.includeInSignUpForm}
+								disabled={!canWriteUserAttribute}
+								onClick={handleChangeIncludeInSignUpForm}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+					{values.includeInSignUpForm && (
+						<PropertyRow>
+							<SwitchRow
+								label={t("userAttributes.requiredInSignUpForm")}
+								description={t("userAttributes.requiredAttributeNote")}
+								checked={values.requiredInSignUpForm}
+								disabled={!canWriteUserAttribute}
+								onClick={() => onChange("requiredInSignUpForm", !values.requiredInSignUpForm)}
+							/>
+						</PropertyRow>
+					)}
+					<PropertyRow inline>
+						<PropertyLabel>{t("userAttributes.includeInIdTokenBody")}</PropertyLabel>
+						<PropertyValue>
+							<Switch
+								checked={values.includeInIdTokenBody}
+								disabled={!canWriteUserAttribute}
+								onClick={() => onChange("includeInIdTokenBody", !values.includeInIdTokenBody)}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow inline>
+						<PropertyLabel>{t("userAttributes.includeInUserInfo")}</PropertyLabel>
+						<PropertyValue>
+							<Switch
+								checked={values.includeInUserInfo}
+								disabled={!canWriteUserAttribute}
+								onClick={() => onChange("includeInUserInfo", !values.includeInUserInfo)}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<SwitchRow
+							label={t("userAttributes.uniqueAttribute")}
+							description={t("userAttributes.uniqueAttributeNote")}
+							checked={values.unique}
+							disabled={!canWriteUserAttribute}
+							onClick={() => onChange("unique", !values.unique)}
+						/>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("userAttributes.validation")}</PropertyLabel>
+						<PropertyValue>
+							<Input
+								data-testid="validationRegexInput"
+								disabled={!canWriteUserAttribute}
+								onChange={(e) => onChange("validationRegex", e.target.value)}
+								value={values.validationRegex}
+							/>
+							{showErrors && <FieldError error={errors.validationRegex} />}
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("userAttributes.validationLocales")}</PropertyLabel>
+						<PropertyValue>
+							<LocaleEditor
+								description={`* ${t("userAttributes.validationLocaleNote")}`}
+								supportedLocales={configs.SUPPORTED_LOCALES}
+								values={values.validationLocales}
+								disabled={!canWriteUserAttribute}
+								onChange={(values) => onChange("validationLocales", values)}
+							/>
+						</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("common.createdAt")}</PropertyLabel>
+						<PropertyValue>{t("common.utcTime", { time: userAttribute.createdAt })}</PropertyValue>
+					</PropertyRow>
+					<PropertyRow>
+						<PropertyLabel>{t("common.updatedAt")}</PropertyLabel>
+						<PropertyValue>{t("common.utcTime", { time: userAttribute.updatedAt })}</PropertyValue>
+					</PropertyRow>
+				</PropertyList>
 			</section>
 			<SubmitError />
 			{canWriteUserAttribute && (
-				<section className="flex items-center gap-4 mt-8">
+				<section className="mt-8 flex items-center justify-end gap-4">
 					<SaveButton
 						isLoading={isUpdating}
 						disabled={

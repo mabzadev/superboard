@@ -30,7 +30,7 @@ const usePasskeyEnrollForm = ({
     () => getFollowUpParams(),
     [],
   )
-  const qs = `?code=${followUpParams.code}&locale=${locale}&org=${followUpParams.org}`
+  const qs = `?code=${followUpParams.code}&locale=${locale}`
 
   const [isEnrolling, setIsEnrolling] = useState(false)
   const [isDeclining, setIsDeclining] = useState(false)

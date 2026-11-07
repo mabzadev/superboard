@@ -1,8 +1,9 @@
-import { authenticationSettingDefinitions } from "@superboard/contracts/authentication-settings";
 import { useFrontContext } from "@superboard/front-ui/context";
-import { lazy, Suspense, type ComponentType } from "react";
+import { lazy, Suspense, type ComponentType, type ReactNode } from "react";
 
 import { accessSections } from "./authentication-navigation.js";
+import { settingsTabs, type SettingsTab } from "./authentication-settings-layout.js";
+import { useAuthenticationSettings } from "./authentication-settings-query.js";
 import AuthenticationEditor from "./AuthenticationEditor.js";
 import AuthenticationSettingsPage from "./AuthenticationSettingsPage.js";
 import {
@@ -14,36 +15,40 @@ import {
 import IdentityPanel from "./IdentityPanel.js";
 
 const Apps = lazy(() => import("./app/(protected)/identity/[lang]/apps/page.js"));
-const Banners = lazy(() =>
-	import("./app/(protected)/identity/[lang]/apps/page.js").then((module) => ({
-		default: module.AppBanners,
-	})),
-);
 const Roles = lazy(() => import("./app/(protected)/identity/[lang]/roles/page.js"));
 const Permissions = lazy(() => import("./app/(protected)/identity/[lang]/scopes/page.js"));
-const Organizations = lazy(() => import("./app/(protected)/identity/[lang]/orgs/page.js"));
 const Fields = lazy(() => import("./app/(protected)/identity/[lang]/user-attributes/page.js"));
-const Saml = lazy(() => import("./app/(protected)/identity/[lang]/saml/page.js"));
-const Recovery = lazy(() => import("./app/(protected)/identity/[lang]/account/page.js"));
 const AccessKeys = lazy(() => import("./components/app/AccessKeyPageContent.js"));
 
 const accessPanels: Record<(typeof accessSections)[number], ComponentType> = {
 	roles: Roles,
 	permissions: Permissions,
-	organizations: Organizations,
 	apps: Apps,
 };
-const settingTabs: Readonly<Record<string, string>> = {
-	ENABLE_NAMES: "fields",
-	NAMES_IS_REQUIRED: "fields",
-	ENABLE_USER_ATTRIBUTE: "fields",
-	ENABLE_ORG: "access",
-	ENABLE_USER_APP_CONSENT: "access",
-	ENABLE_APP_BANNER: "appearance",
-};
-function settingTab(key: string) {
-	if (Object.hasOwn(settingTabs, key)) return settingTabs[key];
-	return authenticationSettingDefinitions[key]?.group === "general" ? "appearance" : "sign-in";
+
+function isSettingsTab(tab: string): tab is SettingsTab {
+	return (settingsTabs as readonly string[]).includes(tab);
+}
+
+function useSavedSetting(key: string) {
+	return useAuthenticationSettings().query.data?.values[key];
+}
+
+function AccessPanels({ section }: { section: string | null }) {
+	return accessSections.map((name) => {
+		const AccessPanel = accessPanels[name];
+		return (
+			<AuthenticationSection key={name} name={name} open={section === name}>
+				<IdentityPanel>
+					<AccessPanel />
+				</IdentityPanel>
+			</AuthenticationSection>
+		);
+	});
+}
+
+function WhenEnabled({ setting, children }: { setting: string; children: ReactNode }) {
+	return useSavedSetting(setting) === false ? null : children;
 }
 
 export default function SettingsPage() {
@@ -58,49 +63,22 @@ export default function SettingsPage() {
 				</Suspense>
 			</section>
 		);
-	if (moved) return <p role="status">{i18n._("loading")}</p>;
+	if (moved || !isSettingsTab(selected)) return <p role="status">{i18n._("loading")}</p>;
 	return (
 		<AuthenticationTabs view="settings" selected={selected} select={select}>
 			<AuthenticationSettingsPage
-				embedded={(key) => settingTab(key) === selected}
-				onInvalidField={(key) => {
-					select(settingTab(key));
+				tab={selected}
+				onInvalidField={(tab) => {
+					select(tab);
 				}}
 			/>
-			{selected === "sign-in" && (
-				<>
-					<AuthenticationSection name="sso" open={section === "sso"}>
-						<IdentityPanel>
-							<Saml />
-						</IdentityPanel>
-					</AuthenticationSection>
-					<AuthenticationSection name="policies" open={section === "policies"}>
-						<IdentityPanel>
-							<Recovery />
-						</IdentityPanel>
-					</AuthenticationSection>
-				</>
-			)}
-			{selected === "access" &&
-				accessSections.map((name) => {
-					const AccessPanel = accessPanels[name];
-					return (
-						<AuthenticationSection key={name} name={name} open={section === name}>
-							<IdentityPanel>
-								<AccessPanel />
-							</IdentityPanel>
-						</AuthenticationSection>
-					);
-				})}
+			{selected === "access" && <AccessPanels section={section} />}
 			{selected === "fields" && (
-				<IdentityPanel>
-					<Fields />
-				</IdentityPanel>
-			)}
-			{selected === "appearance" && (
-				<IdentityPanel>
-					<Banners />
-				</IdentityPanel>
+				<WhenEnabled setting="ENABLE_USER_ATTRIBUTE">
+					<IdentityPanel>
+						<Fields />
+					</IdentityPanel>
+				</WhenEnabled>
 			)}
 			<AuthenticationEditor view="settings" />
 		</AuthenticationTabs>

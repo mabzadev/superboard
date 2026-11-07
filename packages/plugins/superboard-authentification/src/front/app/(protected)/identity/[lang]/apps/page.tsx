@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 
-import BannerTypeLabel from "../../../../../identity/components/BannerTypeLabel.js";
 import Breadcrumb from "../../../../../identity/components/Breadcrumb.js";
 import ClientTypeLabel from "../../../../../identity/components/ClientTypeLabel.js";
 import CreateButton from "../../../../../identity/components/CreateButton.js";
@@ -18,13 +17,8 @@ import {
 	TableRow,
 } from "../../../../../identity/components/ui/table.js";
 import { useAuth } from "../../../../../identity/melody-react.js";
-import {
-	useGetApiV1AppsQuery,
-	useGetApiV1AppBannersQuery,
-} from "../../../../../identity/services/auth/api.js";
-import { configSignal } from "../../../../../identity/signals/index.js";
+import { useGetApiV1AppsQuery } from "../../../../../identity/services/auth/api.js";
 import { routeTool, accessTool } from "../../../../../identity/tools/index.js";
-import useSignalValue from "../../../../../identity/useSignalValue.js";
 
 const Page = () => {
 	const t = useTranslations();
@@ -101,83 +95,3 @@ const Page = () => {
 };
 
 export default Page;
-
-export function AppBanners() {
-	const t = useTranslations();
-	const configs = useSignalValue(configSignal);
-	const { data } = useGetApiV1AppBannersQuery(undefined, { skip: !configs.ENABLE_APP_BANNER });
-	const { userInfo } = useAuth();
-	const canWriteApp = accessTool.isAllowedAccess(accessTool.Access.WriteApp, userInfo?.roles);
-	const appBanners = data?.appBanners ?? [];
-
-	if (!configs.ENABLE_APP_BANNER) return null;
-
-	return (
-		<section>
-			<div className="mb-4 flex items-center justify-between gap-3">
-				<h2 className="text-lg font-semibold">{t("apps.appBanners")}</h2>
-				{canWriteApp && (
-					<CreateButton
-						data-testid="createBannerButton"
-						href={`${routeTool.Internal.Apps}/banners/new`}
-					/>
-				)}
-			</div>
-			<Table className="break-all">
-				<TableHeader className="md:hidden">
-					<TableRow>
-						<TableHead>{t("apps.appBanner")}</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableHeader className="max-md:hidden">
-					<TableRow>
-						<TableHead>{t("apps.bannerText")}</TableHead>
-						<TableHead>{t("apps.bannerType")}</TableHead>
-						<TableHead>{t("apps.bannerStatus")}</TableHead>
-						<TableHead />
-					</TableRow>
-				</TableHeader>
-				<TableBody className="divide-y md:hidden">
-					{appBanners.map((banner) => (
-						<TableRow key={banner.id}>
-							<TableCell>
-								<div className="flex items-center justify-between">
-									<div className="flex flex-col gap-2">
-										{banner.text}
-										<div className="flex items-center gap-2">
-											<BannerTypeLabel type={banner.type} />
-											<EntityStatusLabel isEnabled={banner.isActive} />
-										</div>
-									</div>
-									<EditLink
-										viewOnly={!canWriteApp}
-										href={`${routeTool.Internal.Apps}/banners/${banner.id}`}
-									/>
-								</div>
-							</TableCell>
-						</TableRow>
-					))}
-				</TableBody>
-				<TableBody className="divide-y max-md:hidden">
-					{appBanners.map((banner) => (
-						<TableRow key={banner.id} data-testid="bannerRow">
-							<TableCell>{banner.text}</TableCell>
-							<TableCell>
-								<BannerTypeLabel type={banner.type} />
-							</TableCell>
-							<TableCell>
-								<EntityStatusLabel isEnabled={banner.isActive} />
-							</TableCell>
-							<TableCell>
-								<EditLink
-									viewOnly={!canWriteApp}
-									href={`${routeTool.Internal.Apps}/banners/${banner.id}`}
-								/>
-							</TableCell>
-						</TableRow>
-					))}
-				</TableBody>
-			</Table>
-		</section>
-	);
-}

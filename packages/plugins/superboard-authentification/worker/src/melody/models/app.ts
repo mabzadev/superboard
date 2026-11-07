@@ -21,7 +21,7 @@ export interface Raw extends Common {
   useSystemMfaConfig: number;
   requireEmailMfa: number;
   requireOtpMfa: number;
-  requireSmsMfa: number;
+  requireSmsMfa?: number;
   allowEmailMfaAsBackup: number;
 }
 
@@ -31,7 +31,6 @@ export interface Record extends Common {
   useSystemMfaConfig: boolean;
   requireEmailMfa: boolean;
   requireOtpMfa: boolean;
-  requireSmsMfa: boolean;
   allowEmailMfaAsBackup: boolean;
 }
 
@@ -51,7 +50,6 @@ export interface Update {
   useSystemMfaConfig?: number;
   requireEmailMfa?: number;
   requireOtpMfa?: number;
-  requireSmsMfa?: number;
   allowEmailMfaAsBackup?: number;
   isActive?: number;
   deletedAt?: string | null;
@@ -61,13 +59,13 @@ export interface Update {
 const TableName = adapterConfig.TableName.App
 
 const format = (raw: Raw): Record => {
+  const { requireSmsMfa: _requireSmsMfa, ...app } = raw
   return {
-    ...raw,
+    ...app,
     isActive: !!raw.isActive,
     useSystemMfaConfig: !!raw.useSystemMfaConfig,
     requireEmailMfa: !!raw.requireEmailMfa,
     requireOtpMfa: !!raw.requireOtpMfa,
-    requireSmsMfa: !!raw.requireSmsMfa,
     allowEmailMfaAsBackup: !!raw.allowEmailMfaAsBackup,
     redirectUris: raw.redirectUris ? raw.redirectUris.split(',') : [],
   }
@@ -126,7 +124,7 @@ export const update = async (
 ): Promise<Record> => {
   const updateKeys: (keyof Update)[] = [
     'name', 'redirectUris', 'isActive',
-    'useSystemMfaConfig', 'requireEmailMfa', 'requireOtpMfa', 'requireSmsMfa', 'allowEmailMfaAsBackup',
+    'useSystemMfaConfig', 'requireEmailMfa', 'requireOtpMfa', 'allowEmailMfaAsBackup',
     'deletedAt', 'updatedAt',
   ]
   const stmt = dbUtil.d1UpdateQuery(

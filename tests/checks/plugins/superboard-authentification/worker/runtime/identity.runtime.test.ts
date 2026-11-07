@@ -4,10 +4,8 @@ import {
 	type InternalProjectContext,
 } from "@superboard/contracts/project-context";
 import { env, SELF } from "cloudflare:test";
-import { inflateSync } from "fflate";
 import { decodeJwt } from "jose";
 import { describe, expect, it } from "vitest";
-import { SignedXml } from "xml-crypto";
 
 describe("Identity Worker with D1", () => {
 	it("reports the applied D1 schema revision", async () => {
@@ -403,151 +401,6 @@ describe("Identity Worker with D1", () => {
 		expect(asset.headers.get("cache-control")).toContain("max-age=300");
 	});
 
-	it("runs the native Cloudflare SAML SP flow with signed assertions and replay protection", async () => {
-		const runtime = env as unknown as {
-			DB: D1Database;
-			MELODY_AUTH_SECRETS: string;
-		};
-		const encodedSecrets = JSON.parse(runtime.MELODY_AUTH_SECRETS) as {
-			sp: string;
-			sc: string;
-		};
-		const secrets = {
-			samlPrivateKeyPem: testPem(encodedSecrets.sp, "PRIVATE KEY"),
-			samlCertificatePem: testPem(encodedSecrets.sc, "CERTIFICATE"),
-		};
-		const idpEntityId = "https://idp.example.test/metadata";
-		const idpSsoUrl = "https://idp.example.test/sso";
-		const certificate = secrets.samlCertificatePem.replace(
-			/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s/g,
-			"",
-		);
-		const metadata = [
-			'<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"',
-			` entityID="${idpEntityId}"><md:IDPSSODescriptor`,
-			' protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">',
-			'<md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">',
-			`<ds:X509Data><ds:X509Certificate>${certificate}</ds:X509Certificate></ds:X509Data>`,
-			"</ds:KeyInfo></md:KeyDescriptor>",
-			`<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="${idpSsoUrl}"/>`,
-			"</md:IDPSSODescriptor></md:EntityDescriptor>",
-		].join("");
-		await runtime.DB.prepare(
-			`INSERT INTO saml_idp
-         (name,"userIdAttribute","emailAttribute","firstNameAttribute","lastNameAttribute",metadata,"isActive")
-       VALUES (?,?,?,?,?,?,1)`,
-		)
-			.bind("runtime", "uid", "email", "first_name", "last_name", metadata)
-			.run();
-
-		const spMetadata = await SELF.fetch("https://identity.test/saml/sp/v1/metadata", {
-			headers: { "x-superboard-auth-gateway": "1" },
-		});
-		expect(spMetadata.status, await spMetadata.clone().text()).toBe(200);
-		expect(spMetadata.headers.get("content-type")).toContain("application/xml");
-		expect(await spMetadata.text()).toContain("https://auth.example.test/saml/sp/v1/acs");
-
-		const client = await runtime.DB.prepare("SELECT clientId FROM app WHERE id=1").first<{
-			clientId: string;
-		}>();
-		const authorize = new URL("https://identity.test/oauth2/v1/authorize");
-		authorize.searchParams.set("client_id", client?.clientId ?? "");
-		authorize.searchParams.set("redirect_uri", "http://localhost:3000/en/dashboard");
-		authorize.searchParams.set("response_type", "code");
-		authorize.searchParams.set("state", "saml-runtime-state");
-		authorize.searchParams.set("code_challenge", "saml-runtime-code-challenge-that-is-long-enough");
-		authorize.searchParams.set("code_challenge_method", "S256");
-		authorize.searchParams.set("scope", "openid profile offline_access");
-		authorize.searchParams.set("locale", "en");
-		authorize.searchParams.set("policy", "saml_sso_runtime");
-		const begin = await SELF.fetch(authorize, {
-			redirect: "manual",
-			headers: { "x-superboard-auth-gateway": "1" },
-		});
-		expect(begin.status).toBe(302);
-		const login = await SELF.fetch(new URL(begin.headers.get("location") ?? "", authorize), {
-			redirect: "manual",
-			headers: { "x-superboard-auth-gateway": "1" },
-		});
-		expect(login.status, await login.clone().text()).toBe(302);
-		const idpRedirect = new URL(login.headers.get("location") ?? "");
-		expect(idpRedirect.origin).toBe("https://idp.example.test");
-		const relayState = idpRedirect.searchParams.get("RelayState") ?? "";
-		const samlRequest = idpRedirect.searchParams.get("SAMLRequest") ?? "";
-		const requestXml = new TextDecoder().decode(inflateSync(base64Bytes(samlRequest)));
-		const requestId = /\bID="([^"]+)"/u.exec(requestXml)?.[1] ?? "";
-		expect(requestId).toMatch(/^_[0-9a-f-]{36}$/u);
-
-		const now = Date.now();
-		const assertionId = `_${crypto.randomUUID()}`;
-		const assertion = [
-			'<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"',
-			` ID="_${crypto.randomUUID()}" Version="2.0" IssueInstant="${new Date(now).toISOString()}"`,
-			` InResponseTo="${requestId}" Destination="https://auth.example.test/saml/sp/v1/acs">`,
-			`<saml:Issuer>${idpEntityId}</saml:Issuer>`,
-			'<samlp:Status><samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/></samlp:Status>',
-			`<saml:Assertion ID="${assertionId}" Version="2.0" IssueInstant="${new Date(now).toISOString()}">`,
-			`<saml:Issuer>${idpEntityId}</saml:Issuer>`,
-			'<saml:Subject><saml:NameID>runtime-user</saml:NameID><saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer">',
-			`<saml:SubjectConfirmationData InResponseTo="${requestId}" Recipient="https://auth.example.test/saml/sp/v1/acs" NotOnOrAfter="${new Date(now + 300_000).toISOString()}"/>`,
-			"</saml:SubjectConfirmation></saml:Subject>",
-			`<saml:Conditions NotBefore="${new Date(now - 5_000).toISOString()}" NotOnOrAfter="${new Date(now + 300_000).toISOString()}">`,
-			"<saml:AudienceRestriction><saml:Audience>https://auth.example.test/saml/sp/v1/metadata</saml:Audience></saml:AudienceRestriction>",
-			"</saml:Conditions>",
-			'<saml:AuthnStatement AuthnInstant="' +
-				new Date(now).toISOString() +
-				'"><saml:AuthnContext><saml:AuthnContextClassRef>',
-			"urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport",
-			"</saml:AuthnContextClassRef></saml:AuthnContext></saml:AuthnStatement>",
-			"<saml:AttributeStatement>",
-			'<saml:Attribute Name="uid"><saml:AttributeValue>runtime-user</saml:AttributeValue></saml:Attribute>',
-			'<saml:Attribute Name="email"><saml:AttributeValue>saml-runtime@example.test</saml:AttributeValue></saml:Attribute>',
-			'<saml:Attribute Name="first_name"><saml:AttributeValue>SAML</saml:AttributeValue></saml:Attribute>',
-			'<saml:Attribute Name="last_name"><saml:AttributeValue>Runtime</saml:AttributeValue></saml:Attribute>',
-			"</saml:AttributeStatement></saml:Assertion></samlp:Response>",
-		].join("");
-		const signer = new SignedXml({
-			privateKey: secrets.samlPrivateKeyPem,
-			publicCert: secrets.samlCertificatePem,
-			signatureAlgorithm: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
-			canonicalizationAlgorithm: "http://www.w3.org/2001/10/xml-exc-c14n#",
-		});
-		signer.addReference({
-			xpath: "//*[local-name(.)='Assertion']",
-			transforms: [
-				"http://www.w3.org/2000/09/xmldsig#enveloped-signature",
-				"http://www.w3.org/2001/10/xml-exc-c14n#",
-			],
-			digestAlgorithm: "http://www.w3.org/2001/04/xmlenc#sha256",
-		});
-		signer.computeSignature(assertion, {
-			location: {
-				reference: "//*[local-name(.)='Assertion']/*[local-name(.)='Issuer']",
-				action: "after",
-			},
-		});
-		const form = new URLSearchParams({
-			RelayState: relayState,
-			SAMLResponse: btoa(signer.getSignedXml()),
-		});
-		const postAssertion = () =>
-			SELF.fetch("https://identity.test/saml/sp/v1/acs", {
-				method: "POST",
-				redirect: "manual",
-				headers: {
-					"content-type": "application/x-www-form-urlencoded",
-					"x-superboard-auth-gateway": "1",
-				},
-				body: form,
-			});
-		const accepted = await postAssertion();
-		expect(accepted.status, await accepted.clone().text()).toBe(302);
-		expect(accepted.headers.get("location")).toContain("code=");
-		const replay = await postAssertion();
-		expect(replay.status).toBe(400);
-		expect(await replay.text()).toContain("already been used");
-	});
-
 	it("isolates Melody applications behind the signed SuperBoard project realm", async () => {
 		const projectOneApp = await melodyAdminJson<{
 			app: { id: number; name: string; clientId: string };
@@ -643,16 +496,6 @@ describe("Identity Worker with D1", () => {
          VALUES (1,?,?,?,?)`,
 			).bind("project-two@example.test", "runtime-project-two-email", "project two email", 202),
 			database.DB.prepare(
-				`INSERT INTO sms_log
-           (success,receiver,response,content,"projectId")
-         VALUES (1,?,?,?,?)`,
-			).bind("+1555010101", "runtime-project-one-sms", "project one sms", 101),
-			database.DB.prepare(
-				`INSERT INTO sms_log
-           (success,receiver,response,content,"projectId")
-         VALUES (1,?,?,?,?)`,
-			).bind("+1555020202", "runtime-project-two-sms", "project two sms", 202),
-			database.DB.prepare(
 				`INSERT INTO sign_in_log
            ("userId",ip,detail,"projectId") VALUES (0,?,?,?)`,
 			).bind("192.0.2.101", "runtime-project-one-sign-in", 101),
@@ -663,11 +506,9 @@ describe("Identity Worker with D1", () => {
 		]);
 
 		const emailIds = await logIds(database.DB, "email_log", "response");
-		const smsIds = await logIds(database.DB, "sms_log", "response");
 		const signInIds = await logIds(database.DB, "sign_in_log", "detail");
 		const resources = [
 			{ route: "email", ids: emailIds },
-			{ route: "sms", ids: smsIds },
 			{ route: "sign-in", ids: signInIds },
 		];
 
@@ -863,20 +704,6 @@ async function json<T>(response: Response): Promise<T> {
 	return response.json<T>();
 }
 
-function base64Bytes(value: string): Uint8Array {
-	const binary = atob(value);
-	const bytes = new Uint8Array(binary.length);
-	for (let index = 0; index < binary.length; index += 1) {
-		bytes[index] = binary.charCodeAt(index);
-	}
-	return bytes;
-}
-
-function testPem(value: string, label: string): string {
-	const lines = value.match(/.{1,64}/gu) ?? [];
-	return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----`;
-}
-
 const secondProject = {
 	projectId: 202,
 	instanceId: 20,
@@ -988,7 +815,7 @@ async function melodyAdminJson<T>(
 
 async function logIds(
 	database: D1Database,
-	table: "email_log" | "sms_log" | "sign_in_log",
+	table: "email_log" | "sign_in_log",
 	markerColumn: "response" | "detail",
 ): Promise<{ one: number; two: number }> {
 	const rows = await database
@@ -997,8 +824,8 @@ async function logIds(
      WHERE ${markerColumn} IN (?,?) ORDER BY "projectId"`,
 		)
 		.bind(
-			`runtime-project-one-${table === "sign_in_log" ? "sign-in" : table === "email_log" ? "email" : "sms"}`,
-			`runtime-project-two-${table === "sign_in_log" ? "sign-in" : table === "email_log" ? "email" : "sms"}`,
+			`runtime-project-one-${table === "sign_in_log" ? "sign-in" : "email"}`,
+			`runtime-project-two-${table === "sign_in_log" ? "sign-in" : "email"}`,
 		)
 		.all<{ id: number; projectId: number }>();
 	const one = rows.results.find(({ projectId }) => projectId === 101)?.id;

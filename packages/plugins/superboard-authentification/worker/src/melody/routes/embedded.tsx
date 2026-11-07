@@ -90,30 +90,6 @@ embeddedRoutes.post(
 	embeddedHandler.postOtpMfa,
 );
 
-embeddedRoutes.post(
-	routeConfig.EmbeddedRoute.SmsMfaSetup,
-	setupMiddleware.validEmbeddedOrigin,
-	embeddedHandler.postSmsMfaSetup,
-);
-
-embeddedRoutes.get(
-	routeConfig.EmbeddedRoute.SmsMfa,
-	setupMiddleware.validEmbeddedOrigin,
-	embeddedHandler.getSmsMfa,
-);
-
-embeddedRoutes.post(
-	routeConfig.EmbeddedRoute.SmsMfaCode,
-	setupMiddleware.validEmbeddedOrigin,
-	embeddedHandler.postSmsMfaCode,
-);
-
-embeddedRoutes.post(
-	routeConfig.EmbeddedRoute.SmsMfa,
-	setupMiddleware.validEmbeddedOrigin,
-	embeddedHandler.postSmsMfa,
-);
-
 embeddedRoutes.get(
 	routeConfig.EmbeddedRoute.PasskeyEnroll,
 	setupMiddleware.validEmbeddedOrigin,
@@ -161,29 +137,6 @@ embeddedRoutes.post(
 	setupMiddleware.validEmbeddedOrigin,
 	configMiddleware.enableRecoveryCode,
 	embeddedHandler.signInWithRecoveryCode,
-);
-
-embeddedRoutes.get(
-	routeConfig.EmbeddedRoute.UserOrgs,
-	setupMiddleware.validEmbeddedOrigin,
-	configMiddleware.enableOrg,
-	configMiddleware.enableUserSwitchOrg,
-	embeddedHandler.getUserOrgs,
-);
-
-embeddedRoutes.post(
-	routeConfig.EmbeddedRoute.UserOrgs,
-	setupMiddleware.validEmbeddedOrigin,
-	configMiddleware.enableOrg,
-	configMiddleware.enableUserSwitchOrg,
-	embeddedHandler.postUserOrgs,
-);
-
-embeddedRoutes.get(
-	routeConfig.EmbeddedRoute.AppBanners,
-	setupMiddleware.validEmbeddedOrigin,
-	configMiddleware.enableAppBanner,
-	embeddedHandler.getAppBanners,
 );
 
 embeddedRoutes.post(

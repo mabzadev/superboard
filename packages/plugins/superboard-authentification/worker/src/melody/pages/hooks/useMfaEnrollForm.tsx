@@ -15,7 +15,7 @@ export interface UseMfaEnrollFormProps {
 
 const useMfaEnrollForm = ({ locale, onSubmitError, onSwitchView }: UseMfaEnrollFormProps) => {
 	const followUpParams = useMemo(() => getFollowUpParams(), []);
-	const qs = `?code=${followUpParams.code}&locale=${locale}&org=${followUpParams.org}`;
+	const qs = `?code=${followUpParams.code}&locale=${locale}`;
 
 	const [isEnrolling, setIsEnrolling] = useState(false);
 	const [mfaEnrollInfo, setMfaEnrollInfo] = useState<GetProcessMfaEnrollRes | null>(null);

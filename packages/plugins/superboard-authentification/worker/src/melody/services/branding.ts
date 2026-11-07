@@ -3,7 +3,6 @@ import { env } from 'hono/adapter'
 import {
   variableConfig, typeConfig,
 } from '../configs'
-import { orgModel } from '../models'
 
 export interface Branding {
   logoUrl: string;
@@ -23,7 +22,7 @@ export interface Branding {
   privacyPolicyLink: string;
 }
 
-const getDefaultBranding = (c: Context<typeConfig.Context>): Branding => {
+export const getBranding = (c: Context<typeConfig.Context>): Branding => {
   const {
     COMPANY_LOGO_URL: logoUrl,
     COMPANY_EMAIL_LOGO_URL: emailLogoUrl,
@@ -46,40 +45,5 @@ const getDefaultBranding = (c: Context<typeConfig.Context>): Branding => {
     privacyPolicyLink,
     logoUrl,
     emailLogoUrl,
-  }
-}
-
-export const getBranding = async (
-  c: Context<typeConfig.Context>, orgSlug?: string | null,
-): Promise<Branding> => {
-  const { ENABLE_ORG: enableOrg } = env(c)
-
-  const orgData = orgSlug && enableOrg
-    ? await orgModel.getBySlug(
-      c.env.DB,
-      orgSlug,
-    )
-    : null
-
-  const org = orgData && orgData.allowPublicRegistration ? orgData : null
-
-  const defaultBranding = getDefaultBranding(c)
-  return {
-    ...defaultBranding,
-    fontFamily: org?.fontFamily || defaultBranding.fontFamily,
-    fontUrl: org?.fontUrl || defaultBranding.fontUrl,
-    logoUrl: org?.companyLogoUrl || defaultBranding.logoUrl,
-    emailLogoUrl: org?.companyEmailLogoUrl || defaultBranding.emailLogoUrl,
-    layoutColor: org?.layoutColor || defaultBranding.layoutColor,
-    labelColor: org?.labelColor || defaultBranding.labelColor,
-    primaryButtonColor: org?.primaryButtonColor || defaultBranding.primaryButtonColor,
-    primaryButtonLabelColor: org?.primaryButtonLabelColor || defaultBranding.primaryButtonLabelColor,
-    primaryButtonBorderColor: org?.primaryButtonBorderColor || defaultBranding.primaryButtonBorderColor,
-    secondaryButtonColor: org?.secondaryButtonColor || defaultBranding.secondaryButtonColor,
-    secondaryButtonLabelColor: org?.secondaryButtonLabelColor || defaultBranding.secondaryButtonLabelColor,
-    secondaryButtonBorderColor: org?.secondaryButtonBorderColor || defaultBranding.secondaryButtonBorderColor,
-    criticalIndicatorColor: org?.criticalIndicatorColor || defaultBranding.criticalIndicatorColor,
-    termsLink: org?.termsLink || defaultBranding.termsLink,
-    privacyPolicyLink: org?.privacyPolicyLink || defaultBranding.privacyPolicyLink,
   }
 }

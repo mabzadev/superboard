@@ -27,7 +27,6 @@ export const parseAuthorizeBaseValues = (
     codeChallenge: params.codeChallenge,
     codeChallengeMethod: params.codeChallengeMethod,
     locale,
-    org: params.org,
     scope: params.scope,
   }
 }
@@ -38,8 +37,15 @@ export const parseAuthorizeFollowUpValues = (
   return {
     code: params.code,
     locale,
-    org: params.org,
   }
+}
+
+const responseText = (
+  response: unknown, key: string,
+): string => {
+  if (typeof response !== 'object' || response === null) return ''
+  const value: unknown = Reflect.get(response, key)
+  return typeof value === 'string' ? value : ''
 }
 
 export const handleAuthorizeStep = (
@@ -64,10 +70,6 @@ export const handleAuthorizeStep = (
         data.redirectUri,
       )
       newUrl.searchParams.set(
-        'org',
-        data.org ?? '',
-      )
-      newUrl.searchParams.set(
         'locale',
         locale,
       )
@@ -89,13 +91,12 @@ export const handleAuthorizeStep = (
           state: data.state,
           code: data.code,
           locale,
-          org: data.org ?? '',
           redirectUri: data.redirectUri,
         },
         data.redirectUri,
       )
     } else {
-      const queryString = `?state=${data.state}&code=${data.code}&locale=${locale}&org=${data.org ?? ''}`
+      const queryString = `?state=${responseText(data, 'state')}&code=${responseText(data, 'code')}&locale=${locale}`
       const url = `${data.redirectUri}${queryString}`
       window.location.href = url
     }

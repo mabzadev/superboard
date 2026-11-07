@@ -1,7 +1,6 @@
 import { Context } from "hono";
 import { env } from "hono/adapter";
 
-import { brandingService } from ".";
 import { errorConfig, variableConfig, localeConfig, messageConfig, typeConfig } from "../configs";
 import { systemConfig } from "../configs/variable";
 import { emailLogModel, userModel } from "../models";
@@ -15,6 +14,7 @@ import {
 	WelcomeEmailTemplate,
 } from "../templates";
 import { cryptoUtil, loggerUtil } from "../utils";
+import * as brandingService from "./branding";
 import { BrevoMailer } from "./email/brevo";
 import { IMailer } from "./email/interface";
 import { MailgunMailer } from "./email/mailgun";
@@ -168,23 +168,18 @@ export const sendEmailVerification = async (
 	checkEmailSetup(c);
 
 	const verificationCode = cryptoUtil.genRandom6DigitString();
-	const content = (
-		sendWelcomeEmail ? (
-			<WelcomeEmailTemplate
-				branding={await brandingService.getBranding(c, user.orgSlug)}
-				locale={locale}
-			/>
-		) : (
-			<EmailVerificationTemplate
-				serverUrl={serverUrl}
-				authId={user.authId}
-				verificationCode={verificationCode}
-				org={user.orgSlug}
-				branding={await brandingService.getBranding(c, user.orgSlug)}
-				locale={locale}
-			/>
-		)
-	).toString();
+	const template = sendWelcomeEmail ? (
+		<WelcomeEmailTemplate branding={brandingService.getBranding(c)} locale={locale} />
+	) : (
+		<EmailVerificationTemplate
+			serverUrl={serverUrl}
+			authId={user.authId}
+			verificationCode={verificationCode}
+			branding={brandingService.getBranding(c)}
+			locale={locale}
+		/>
+	);
+	const content = (await template).toString();
 
 	const res = await sendEmail(
 		c,
@@ -202,20 +197,20 @@ export const sendEmailVerification = async (
 export const sendPasswordReset = async (
 	c: Context<typeConfig.Context>,
 	email: string,
-	orgSlug: string,
 	locale: typeConfig.Locale,
 	userId?: number,
 ) => {
 	checkEmailSetup(c);
 
 	const resetCode = cryptoUtil.genRandom6DigitString();
-	const content = (
+	const template = (
 		<PasswordResetTemplate
 			resetCode={resetCode}
-			branding={await brandingService.getBranding(c, orgSlug)}
+			branding={brandingService.getBranding(c)}
 			locale={locale}
 		/>
-	).toString();
+	);
+	const content = (await template).toString();
 
 	const res = await sendEmail(c, email, localeConfig.passwordResetEmail.subject[locale], content, {
 		userId,
@@ -228,19 +223,19 @@ export const sendChangeEmailVerificationCode = async (
 	c: Context<typeConfig.Context>,
 	email: string,
 	locale: typeConfig.Locale,
-	org?: string,
 	logScope: DeliveryLogScope = {},
 ) => {
 	checkEmailSetup(c);
 
 	const verificationCode = cryptoUtil.genRandom6DigitString();
-	const content = (
+	const template = (
 		<ChangeEmailVerificationTemplate
 			verificationCode={verificationCode}
-			branding={await brandingService.getBranding(c, org)}
+			branding={brandingService.getBranding(c)}
 			locale={locale}
 		/>
-	).toString();
+	);
+	const content = (await template).toString();
 
 	const res = await sendEmail(
 		c,
@@ -256,7 +251,6 @@ export const sendChangeEmailVerificationCode = async (
 export const sendMagicLinkEmail = async (
 	c: Context<typeConfig.Context>,
 	email: string,
-	orgSlug: string,
 	locale: typeConfig.Locale,
 	magicLinkBaseUrl: string,
 	logScope: DeliveryLogScope = {},
@@ -268,13 +262,14 @@ export const sendMagicLinkEmail = async (
 
 	const mfaCode = cryptoUtil.genRandom6DigitString();
 	const magicLinkUrl = `${magicLinkBaseUrl}&otp=${mfaCode}`;
-	const content = (
+	const template = (
 		<MagicLinkTemplate
 			magicLinkUrl={magicLinkUrl}
-			branding={await brandingService.getBranding(c, orgSlug)}
+			branding={brandingService.getBranding(c)}
 			locale={displayLocale}
 		/>
-	).toString();
+	);
+	const content = (await template).toString();
 
 	const res = await sendEmail(
 		c,
@@ -290,21 +285,21 @@ export const sendMagicLinkEmail = async (
 export const sendInvitationEmail = async (
 	c: Context<typeConfig.Context>,
 	email: string,
-	orgSlug: string,
 	locale: typeConfig.Locale,
 	invitationUrl: string,
 	expiresIn: number,
 ) => {
 	checkEmailSetup(c);
 
-	const content = (
+	const template = (
 		<InvitationTemplate
 			invitationUrl={invitationUrl}
 			expiresIn={expiresIn}
-			branding={await brandingService.getBranding(c, orgSlug)}
+			branding={brandingService.getBranding(c)}
 			locale={locale}
 		/>
-	).toString();
+	);
+	const content = (await template).toString();
 
 	const res = await sendEmail(c, email, localeConfig.invitationEmail.subject[locale], content);
 
@@ -314,7 +309,6 @@ export const sendInvitationEmail = async (
 export const sendEmailMfa = async (
 	c: Context<typeConfig.Context>,
 	email: string,
-	orgSlug: string,
 	locale: typeConfig.Locale,
 	logScope: DeliveryLogScope = {},
 ) => {
@@ -324,13 +318,14 @@ export const sendEmailMfa = async (
 	const displayLocale = locale || locales[0];
 
 	const mfaCode = cryptoUtil.genRandom6DigitString();
-	const content = (
+	const template = (
 		<EmailMfaTemplate
 			mfaCode={mfaCode}
-			branding={await brandingService.getBranding(c, orgSlug)}
+			branding={brandingService.getBranding(c)}
 			locale={displayLocale}
 		/>
-	).toString();
+	);
+	const content = (await template).toString();
 
 	const res = await sendEmail(
 		c,

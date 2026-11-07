@@ -2,15 +2,10 @@ import { authApi as api } from "./index.js";
 export const addTagTypes = [
 	"Scopes",
 	"Roles",
-	"Orgs",
-	"Org Groups",
 	"Apps",
-	"App Banners",
 	"Users",
-	"User Org Groups",
 	"User Attributes",
 	"Logs",
-	"SAML",
 	"System",
 ] as const;
 const injectedRtkApi = api.enhanceEndpoints({ addTagTypes }).injectEndpoints({
@@ -90,107 +85,6 @@ const injectedRtkApi = api.enhanceEndpoints({ addTagTypes }).injectEndpoints({
 			query: (queryArg) => ({ url: `/api/v1/roles/${queryArg.id}/users` }),
 			providesTags: ["Roles"],
 		}),
-		getApiV1Orgs: build.query<GetApiV1OrgsApiResponse, GetApiV1OrgsApiArg>({
-			query: () => ({ url: "/api/v1/orgs" }),
-			providesTags: ["Orgs"],
-		}),
-		postApiV1Orgs: build.mutation<PostApiV1OrgsApiResponse, PostApiV1OrgsApiArg>({
-			query: (queryArg) => ({
-				url: "/api/v1/orgs",
-				method: "POST",
-				body: queryArg.postOrgReq,
-			}),
-			invalidatesTags: ["Orgs"],
-		}),
-		getApiV1OrgsById: build.query<GetApiV1OrgsByIdApiResponse, GetApiV1OrgsByIdApiArg>({
-			query: (queryArg) => ({ url: `/api/v1/orgs/${queryArg.id}` }),
-			providesTags: ["Orgs"],
-		}),
-		putApiV1OrgsById: build.mutation<PutApiV1OrgsByIdApiResponse, PutApiV1OrgsByIdApiArg>({
-			query: (queryArg) => ({
-				url: `/api/v1/orgs/${queryArg.id}`,
-				method: "PUT",
-				body: queryArg.putOrgReq,
-			}),
-			invalidatesTags: ["Orgs"],
-		}),
-		deleteApiV1OrgsById: build.mutation<DeleteApiV1OrgsByIdApiResponse, DeleteApiV1OrgsByIdApiArg>({
-			query: (queryArg) => ({
-				url: `/api/v1/orgs/${queryArg.id}`,
-				method: "DELETE",
-			}),
-			invalidatesTags: ["Orgs"],
-		}),
-		getApiV1OrgsByIdUsers: build.query<
-			GetApiV1OrgsByIdUsersApiResponse,
-			GetApiV1OrgsByIdUsersApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/orgs/${queryArg.id}/users`,
-				params: {
-					page_size: queryArg.pageSize,
-					page_number: queryArg.pageNumber,
-					search: queryArg.search,
-				},
-			}),
-			providesTags: ["Orgs"],
-		}),
-		getApiV1OrgsByIdAllUsers: build.query<
-			GetApiV1OrgsByIdAllUsersApiResponse,
-			GetApiV1OrgsByIdAllUsersApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/orgs/${queryArg.id}/all-users`,
-				params: {
-					page_size: queryArg.pageSize,
-					page_number: queryArg.pageNumber,
-				},
-			}),
-			providesTags: ["Orgs"],
-		}),
-		getApiV1OrgGroups: build.query<GetApiV1OrgGroupsApiResponse, GetApiV1OrgGroupsApiArg>({
-			query: (queryArg) => ({
-				url: "/api/v1/org-groups",
-				params: { org_id: queryArg.orgId },
-			}),
-			providesTags: ["Org Groups"],
-		}),
-		postApiV1OrgGroups: build.mutation<PostApiV1OrgGroupsApiResponse, PostApiV1OrgGroupsApiArg>({
-			query: (queryArg) => ({
-				url: "/api/v1/org-groups",
-				method: "POST",
-				body: queryArg.postOrgGroupReq,
-			}),
-			invalidatesTags: ["Org Groups"],
-		}),
-		getApiV1OrgGroupsByIdUsers: build.query<
-			GetApiV1OrgGroupsByIdUsersApiResponse,
-			GetApiV1OrgGroupsByIdUsersApiArg
-		>({
-			query: (queryArg) => ({ url: `/api/v1/org-groups/${queryArg.id}/users` }),
-			providesTags: ["Org Groups"],
-		}),
-		putApiV1OrgGroupsById: build.mutation<
-			PutApiV1OrgGroupsByIdApiResponse,
-			PutApiV1OrgGroupsByIdApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/org-groups/${queryArg.id}`,
-				method: "PUT",
-				body: queryArg.putOrgGroupReq,
-			}),
-			invalidatesTags: ["Org Groups"],
-		}),
-		deleteApiV1OrgGroupsById: build.mutation<
-			DeleteApiV1OrgGroupsByIdApiResponse,
-			DeleteApiV1OrgGroupsByIdApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/org-groups/${queryArg.id}`,
-				method: "DELETE",
-			}),
-			invalidatesTags: ["Org Groups"],
-		}),
 		getApiV1Apps: build.query<GetApiV1AppsApiResponse, GetApiV1AppsApiArg>({
 			query: () => ({ url: "/api/v1/apps" }),
 			providesTags: ["Apps"],
@@ -221,46 +115,6 @@ const injectedRtkApi = api.enhanceEndpoints({ addTagTypes }).injectEndpoints({
 				method: "DELETE",
 			}),
 			invalidatesTags: ["Apps"],
-		}),
-		getApiV1AppBanners: build.query<GetApiV1AppBannersApiResponse, GetApiV1AppBannersApiArg>({
-			query: () => ({ url: "/api/v1/app-banners" }),
-			providesTags: ["App Banners"],
-		}),
-		postApiV1AppBanners: build.mutation<PostApiV1AppBannersApiResponse, PostApiV1AppBannersApiArg>({
-			query: (queryArg) => ({
-				url: "/api/v1/app-banners",
-				method: "POST",
-				body: queryArg.postAppBannerReq,
-			}),
-			invalidatesTags: ["App Banners"],
-		}),
-		getApiV1AppBannersById: build.query<
-			GetApiV1AppBannersByIdApiResponse,
-			GetApiV1AppBannersByIdApiArg
-		>({
-			query: (queryArg) => ({ url: `/api/v1/app-banners/${queryArg.id}` }),
-			providesTags: ["App Banners"],
-		}),
-		putApiV1AppBannersById: build.mutation<
-			PutApiV1AppBannersByIdApiResponse,
-			PutApiV1AppBannersByIdApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/app-banners/${queryArg.id}`,
-				method: "PUT",
-				body: queryArg.putAppBannerReq,
-			}),
-			invalidatesTags: ["App Banners"],
-		}),
-		deleteApiV1AppBannersById: build.mutation<
-			DeleteApiV1AppBannersByIdApiResponse,
-			DeleteApiV1AppBannersByIdApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/app-banners/${queryArg.id}`,
-				method: "DELETE",
-			}),
-			invalidatesTags: ["App Banners"],
 		}),
 		getApiV1Users: build.query<GetApiV1UsersApiResponse, GetApiV1UsersApiArg>({
 			query: (queryArg) => ({
@@ -402,26 +256,6 @@ const injectedRtkApi = api.enhanceEndpoints({ addTagTypes }).injectEndpoints({
 			}),
 			invalidatesTags: ["Users"],
 		}),
-		postApiV1UsersByAuthIdSmsMfa: build.mutation<
-			PostApiV1UsersByAuthIdSmsMfaApiResponse,
-			PostApiV1UsersByAuthIdSmsMfaApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/users/${queryArg.authId}/sms-mfa`,
-				method: "POST",
-			}),
-			invalidatesTags: ["Users"],
-		}),
-		deleteApiV1UsersByAuthIdSmsMfa: build.mutation<
-			DeleteApiV1UsersByAuthIdSmsMfaApiResponse,
-			DeleteApiV1UsersByAuthIdSmsMfaApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/users/${queryArg.authId}/sms-mfa`,
-				method: "DELETE",
-			}),
-			invalidatesTags: ["Users"],
-		}),
 		postApiV1UsersByAuthIdAccountLinkingAndLinkingAuthId: build.mutation<
 			PostApiV1UsersByAuthIdAccountLinkingAndLinkingAuthIdApiResponse,
 			PostApiV1UsersByAuthIdAccountLinkingAndLinkingAuthIdApiArg
@@ -467,44 +301,6 @@ const injectedRtkApi = api.enhanceEndpoints({ addTagTypes }).injectEndpoints({
 			query: (queryArg) => ({
 				url: `/api/v1/users/${queryArg.authId}/active-sessions/${queryArg.sessionId}`,
 				method: "DELETE",
-			}),
-			invalidatesTags: ["Users"],
-		}),
-		postApiV1UsersByAuthIdOrgGroupsAndOrgGroupId: build.mutation<
-			PostApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiResponse,
-			PostApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/users/${queryArg.authId}/org-groups/${queryArg.orgGroupId}`,
-				method: "POST",
-			}),
-			invalidatesTags: ["User Org Groups"],
-		}),
-		deleteApiV1UsersByAuthIdOrgGroupsAndOrgGroupId: build.mutation<
-			DeleteApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiResponse,
-			DeleteApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/users/${queryArg.authId}/org-groups/${queryArg.orgGroupId}`,
-				method: "DELETE",
-			}),
-			invalidatesTags: ["User Org Groups"],
-		}),
-		getApiV1UsersByAuthIdOrgs: build.query<
-			GetApiV1UsersByAuthIdOrgsApiResponse,
-			GetApiV1UsersByAuthIdOrgsApiArg
-		>({
-			query: (queryArg) => ({ url: `/api/v1/users/${queryArg.authId}/orgs` }),
-			providesTags: ["Users"],
-		}),
-		postApiV1UsersByAuthIdOrgs: build.mutation<
-			PostApiV1UsersByAuthIdOrgsApiResponse,
-			PostApiV1UsersByAuthIdOrgsApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/users/${queryArg.authId}/orgs`,
-				method: "POST",
-				body: queryArg.body,
 			}),
 			invalidatesTags: ["Users"],
 		}),
@@ -614,28 +410,6 @@ const injectedRtkApi = api.enhanceEndpoints({ addTagTypes }).injectEndpoints({
 			query: (queryArg) => ({ url: `/api/v1/logs/email/${queryArg.id}` }),
 			providesTags: ["Logs"],
 		}),
-		getApiV1LogsSms: build.query<GetApiV1LogsSmsApiResponse, GetApiV1LogsSmsApiArg>({
-			query: (queryArg) => ({
-				url: "/api/v1/logs/sms",
-				params: {
-					page_size: queryArg.pageSize,
-					page_number: queryArg.pageNumber,
-				},
-			}),
-			providesTags: ["Logs"],
-		}),
-		deleteApiV1LogsSms: build.mutation<DeleteApiV1LogsSmsApiResponse, DeleteApiV1LogsSmsApiArg>({
-			query: (queryArg) => ({
-				url: "/api/v1/logs/sms",
-				method: "DELETE",
-				params: { before: queryArg.before },
-			}),
-			invalidatesTags: ["Logs"],
-		}),
-		getApiV1LogsSmsById: build.query<GetApiV1LogsSmsByIdApiResponse, GetApiV1LogsSmsByIdApiArg>({
-			query: (queryArg) => ({ url: `/api/v1/logs/sms/${queryArg.id}` }),
-			providesTags: ["Logs"],
-		}),
 		getApiV1LogsSignIn: build.query<GetApiV1LogsSignInApiResponse, GetApiV1LogsSignInApiArg>({
 			query: (queryArg) => ({
 				url: "/api/v1/logs/sign-in",
@@ -663,43 +437,6 @@ const injectedRtkApi = api.enhanceEndpoints({ addTagTypes }).injectEndpoints({
 		>({
 			query: (queryArg) => ({ url: `/api/v1/logs/sign-in/${queryArg.id}` }),
 			providesTags: ["Logs"],
-		}),
-		getApiV1SamlIdps: build.query<GetApiV1SamlIdpsApiResponse, GetApiV1SamlIdpsApiArg>({
-			query: () => ({ url: "/api/v1/saml/idps" }),
-			providesTags: ["SAML"],
-		}),
-		postApiV1SamlIdps: build.mutation<PostApiV1SamlIdpsApiResponse, PostApiV1SamlIdpsApiArg>({
-			query: (queryArg) => ({
-				url: "/api/v1/saml/idps",
-				method: "POST",
-				body: queryArg.postSamlIdpReq,
-			}),
-			invalidatesTags: ["SAML"],
-		}),
-		getApiV1SamlIdpsById: build.query<GetApiV1SamlIdpsByIdApiResponse, GetApiV1SamlIdpsByIdApiArg>({
-			query: (queryArg) => ({ url: `/api/v1/saml/idps/${queryArg.id}` }),
-			providesTags: ["SAML"],
-		}),
-		putApiV1SamlIdpsById: build.mutation<
-			PutApiV1SamlIdpsByIdApiResponse,
-			PutApiV1SamlIdpsByIdApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/saml/idps/${queryArg.id}`,
-				method: "PUT",
-				body: queryArg.putSamlIdpReq,
-			}),
-			invalidatesTags: ["SAML"],
-		}),
-		deleteApiV1SamlIdpsById: build.mutation<
-			DeleteApiV1SamlIdpsByIdApiResponse,
-			DeleteApiV1SamlIdpsByIdApiArg
-		>({
-			query: (queryArg) => ({
-				url: `/api/v1/saml/idps/${queryArg.id}`,
-				method: "DELETE",
-			}),
-			invalidatesTags: ["SAML"],
 		}),
 		getInfo: build.query<GetInfoApiResponse, GetInfoApiArg>({
 			query: () => ({ url: "/info" }),
@@ -769,81 +506,6 @@ export type GetApiV1RolesByIdUsersApiResponse = {
 export type GetApiV1RolesByIdUsersApiArg = {
 	id: number;
 };
-export type GetApiV1OrgsApiResponse = {
-	orgs?: Org[];
-};
-export type GetApiV1OrgsApiArg = void;
-export type PostApiV1OrgsApiResponse = {
-	org?: Org;
-};
-export type PostApiV1OrgsApiArg = {
-	postOrgReq: PostOrgReq;
-};
-export type GetApiV1OrgsByIdApiResponse = {
-	org?: Org;
-};
-export type GetApiV1OrgsByIdApiArg = {
-	id: number;
-};
-export type PutApiV1OrgsByIdApiResponse = {
-	org?: Org;
-};
-export type PutApiV1OrgsByIdApiArg = {
-	id: number;
-	putOrgReq: PutOrgReq;
-};
-export type DeleteApiV1OrgsByIdApiResponse = unknown;
-export type DeleteApiV1OrgsByIdApiArg = {
-	id: number;
-};
-export type GetApiV1OrgsByIdUsersApiResponse = {
-	users?: User[];
-	count?: number;
-};
-export type GetApiV1OrgsByIdUsersApiArg = {
-	id: number;
-	pageSize?: number;
-	pageNumber?: number;
-	search?: string;
-};
-export type GetApiV1OrgsByIdAllUsersApiResponse = {
-	users?: User[];
-	count?: number;
-};
-export type GetApiV1OrgsByIdAllUsersApiArg = {
-	id: number;
-	pageSize?: number;
-	pageNumber?: number;
-};
-export type GetApiV1OrgGroupsApiResponse = {
-	orgGroups?: OrgGroup[];
-};
-export type GetApiV1OrgGroupsApiArg = {
-	orgId?: number;
-};
-export type PostApiV1OrgGroupsApiResponse = {
-	orgGroup?: OrgGroup;
-};
-export type PostApiV1OrgGroupsApiArg = {
-	postOrgGroupReq: PostOrgGroupReq;
-};
-export type GetApiV1OrgGroupsByIdUsersApiResponse = {
-	users?: User[];
-};
-export type GetApiV1OrgGroupsByIdUsersApiArg = {
-	id: number;
-};
-export type PutApiV1OrgGroupsByIdApiResponse = {
-	orgGroup?: OrgGroup;
-};
-export type PutApiV1OrgGroupsByIdApiArg = {
-	id: number;
-	putOrgGroupReq: PutOrgGroupReq;
-};
-export type DeleteApiV1OrgGroupsByIdApiResponse = unknown;
-export type DeleteApiV1OrgGroupsByIdApiArg = {
-	id: number;
-};
 export type GetApiV1AppsApiResponse = {
 	apps?: App[];
 };
@@ -869,33 +531,6 @@ export type PutApiV1AppsByIdApiArg = {
 };
 export type DeleteApiV1AppsByIdApiResponse = unknown;
 export type DeleteApiV1AppsByIdApiArg = {
-	id: number;
-};
-export type GetApiV1AppBannersApiResponse = {
-	appBanners?: AppBanner[];
-};
-export type GetApiV1AppBannersApiArg = void;
-export type PostApiV1AppBannersApiResponse = {
-	appBanner?: AppBanner;
-};
-export type PostApiV1AppBannersApiArg = {
-	postAppBannerReq: PostAppBannerReq;
-};
-export type GetApiV1AppBannersByIdApiResponse = {
-	appBanner?: AppBanner;
-};
-export type GetApiV1AppBannersByIdApiArg = {
-	id: number;
-};
-export type PutApiV1AppBannersByIdApiResponse = {
-	appBanner?: AppBanner;
-};
-export type PutApiV1AppBannersByIdApiArg = {
-	id: number;
-	putAppBannerReq: PutAppBannerReq;
-};
-export type DeleteApiV1AppBannersByIdApiResponse = unknown;
-export type DeleteApiV1AppBannersByIdApiArg = {
 	id: number;
 };
 export type GetApiV1UsersApiResponse = {
@@ -980,14 +615,6 @@ export type DeleteApiV1UsersByAuthIdOtpMfaApiResponse = unknown;
 export type DeleteApiV1UsersByAuthIdOtpMfaApiArg = {
 	authId: string;
 };
-export type PostApiV1UsersByAuthIdSmsMfaApiResponse = unknown;
-export type PostApiV1UsersByAuthIdSmsMfaApiArg = {
-	authId: string;
-};
-export type DeleteApiV1UsersByAuthIdSmsMfaApiResponse = unknown;
-export type DeleteApiV1UsersByAuthIdSmsMfaApiArg = {
-	authId: string;
-};
 export type PostApiV1UsersByAuthIdAccountLinkingAndLinkingAuthIdApiResponse = {
 	success?: boolean;
 };
@@ -1031,35 +658,6 @@ export type DeleteApiV1UsersByAuthIdActiveSessionsAndSessionIdApiArg = {
 	authId: string;
 	sessionId: string;
 };
-export type PostApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiResponse = {
-	success?: boolean;
-};
-export type PostApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiArg = {
-	authId: string;
-	orgGroupId: number;
-};
-export type DeleteApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiResponse = {
-	success?: boolean;
-};
-export type DeleteApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiArg = {
-	authId: string;
-	orgGroupId: number;
-};
-export type GetApiV1UsersByAuthIdOrgsApiResponse = {
-	orgs?: Org[];
-};
-export type GetApiV1UsersByAuthIdOrgsApiArg = {
-	authId: string;
-};
-export type PostApiV1UsersByAuthIdOrgsApiResponse = {
-	success?: boolean;
-};
-export type PostApiV1UsersByAuthIdOrgsApiArg = {
-	authId: string;
-	body: {
-		orgs?: number[];
-	};
-};
 export type PostApiV1UsersInvitationsByAuthIdApiResponse = {
 	success?: boolean;
 };
@@ -1083,7 +681,6 @@ export type PostApiV1UsersInvitationsApiArg = {
 		firstName?: string;
 		lastName?: string;
 		locale?: string;
-		orgSlug?: string;
 		roles?: string[];
 		signinUrl?: string;
 	};
@@ -1133,24 +730,6 @@ export type GetApiV1LogsEmailByIdApiResponse = {
 export type GetApiV1LogsEmailByIdApiArg = {
 	id: number;
 };
-export type GetApiV1LogsSmsApiResponse = {
-	logs?: SmsLog[];
-	count?: number;
-};
-export type GetApiV1LogsSmsApiArg = {
-	pageSize?: number;
-	pageNumber?: number;
-};
-export type DeleteApiV1LogsSmsApiResponse = unknown;
-export type DeleteApiV1LogsSmsApiArg = {
-	before?: string;
-};
-export type GetApiV1LogsSmsByIdApiResponse = {
-	log?: SmsLog;
-};
-export type GetApiV1LogsSmsByIdApiArg = {
-	id: number;
-};
 export type GetApiV1LogsSignInApiResponse = {
 	logs?: SignInLog[];
 	count?: number;
@@ -1167,33 +746,6 @@ export type GetApiV1LogsSignInByIdApiResponse = {
 	log?: SignInLog;
 };
 export type GetApiV1LogsSignInByIdApiArg = {
-	id: number;
-};
-export type GetApiV1SamlIdpsApiResponse = {
-	idps?: SamlIdp[];
-};
-export type GetApiV1SamlIdpsApiArg = void;
-export type PostApiV1SamlIdpsApiResponse = {
-	idp?: SamlIdp;
-};
-export type PostApiV1SamlIdpsApiArg = {
-	postSamlIdpReq: PostSamlIdpReq;
-};
-export type GetApiV1SamlIdpsByIdApiResponse = {
-	idp?: SamlIdp;
-};
-export type GetApiV1SamlIdpsByIdApiArg = {
-	id: number;
-};
-export type PutApiV1SamlIdpsByIdApiResponse = {
-	idp?: SamlIdp;
-};
-export type PutApiV1SamlIdpsByIdApiArg = {
-	id: number;
-	putSamlIdpReq: PutSamlIdpReq;
-};
-export type DeleteApiV1SamlIdpsByIdApiResponse = unknown;
-export type DeleteApiV1SamlIdpsByIdApiArg = {
 	id: number;
 };
 export type GetInfoApiResponse = {
@@ -1269,82 +821,12 @@ export type User = {
 	mfaTypes: string[];
 	emailVerified: boolean;
 	otpVerified: boolean;
-	smsPhoneNumberVerified: boolean;
 	isActive: boolean;
 	isInviting: boolean;
 	invitationExpiresAt?: string | null;
 	createdAt: string;
 	updatedAt: string;
 	deletedAt: string | null;
-};
-export type Org = {
-	id: number;
-	name: string;
-	slug: string;
-	allowPublicRegistration: boolean;
-	onlyUseForBrandingOverride: boolean;
-	companyLogoUrl: string;
-	companyEmailLogoUrl: string;
-	fontFamily: string;
-	fontUrl: string;
-	layoutColor: string;
-	labelColor: string;
-	primaryButtonColor: string;
-	primaryButtonLabelColor: string;
-	primaryButtonBorderColor: string;
-	secondaryButtonColor: string;
-	secondaryButtonLabelColor: string;
-	secondaryButtonBorderColor: string;
-	criticalIndicatorColor: string;
-	emailSenderName: string;
-	termsLink: string;
-	privacyPolicyLink: string;
-	createdAt: string;
-	updatedAt: string;
-	deletedAt: string | null;
-};
-export type PostOrgReq = {
-	name: string;
-	slug: string;
-	allowPublicRegistration: boolean;
-	onlyUseForBrandingOverride: boolean;
-};
-export type PutOrgReq = {
-	name?: string;
-	slug?: string;
-	allowPublicRegistration?: boolean;
-	onlyUseForBrandingOverride?: boolean;
-	companyLogoUrl?: string;
-	companyEmailLogoUrl?: string;
-	fontFamily?: string;
-	fontUrl?: string;
-	layoutColor?: string;
-	labelColor?: string;
-	primaryButtonColor?: string;
-	primaryButtonLabelColor?: string;
-	primaryButtonBorderColor?: string;
-	secondaryButtonColor?: string;
-	secondaryButtonLabelColor?: string;
-	secondaryButtonBorderColor?: string;
-	criticalIndicatorColor?: string;
-	emailSenderName?: string;
-	termsLink?: string;
-	privacyPolicyLink?: string;
-};
-export type OrgGroup = {
-	id: number;
-	orgId: number;
-	name: string;
-	createdAt: string;
-	updatedAt: string;
-	deletedAt: string | null;
-};
-export type PostOrgGroupReq = {
-	name: string;
-	orgId: number;
-};
-export type PutOrgGroupReq = {
-	name: string;
 };
 export type App = {
 	id: number;
@@ -1356,7 +838,6 @@ export type App = {
 	useSystemMfaConfig: boolean;
 	requireEmailMfa: boolean;
 	requireOtpMfa: boolean;
-	requireSmsMfa: boolean;
 	allowEmailMfaAsBackup: boolean;
 	createdAt: string;
 	updatedAt: string;
@@ -1382,56 +863,10 @@ export type PutAppReq = {
 	useSystemMfaConfig?: boolean;
 	requireEmailMfa?: boolean;
 	requireOtpMfa?: boolean;
-	requireSmsMfa?: boolean;
 	allowEmailMfaAsBackup?: boolean;
-};
-export type Banner = {
-	id: number;
-	type: string;
-	text: string;
-	isActive: boolean;
-	locales: {
-		locale: string;
-		value: string;
-	}[];
-	createdAt: string;
-	updatedAt: string;
-	deletedAt: string | null;
-};
-export type AppBanner = Banner & {
-	appIds: number[];
-};
-export type PostAppBannerReq = {
-	type: string;
-	text?: string;
-	locales?: {
-		locale: string;
-		value: string;
-	}[];
-};
-export type PutAppBannerReq = {
-	type?: string;
-	text?: string;
-	locales?: {
-		locale: string;
-		value: string;
-	}[];
-	appIds?: number[];
-	isActive?: boolean;
 };
 export type UserDetail = User & {
 	roles: string[] | null;
-	org?: {
-		id?: number;
-		name?: string;
-		slug?: string;
-	} | null;
-	orgGroups?:
-		| {
-				id?: number;
-				name?: string;
-		  }[]
-		| null;
 	attributes?: {
 		[key: string]: string;
 	} | null;
@@ -1441,7 +876,6 @@ export type PutUserReq = {
 	lastName?: string;
 	isActive?: boolean;
 	locale?: string;
-	orgSlug?: string;
 	roles?: string[];
 	attributes?: {
 		[key: string]: string | null;
@@ -1521,16 +955,6 @@ export type EmailLog = {
 	updatedAt: string;
 	deletedAt: string | null;
 };
-export type SmsLog = {
-	id: number;
-	success?: boolean;
-	receiver: string;
-	response: string;
-	content: string;
-	createdAt: string;
-	updatedAt: string;
-	deletedAt: string | null;
-};
 export type SignInLog = {
 	id: number;
 	userId: number;
@@ -1539,35 +963,6 @@ export type SignInLog = {
 	createdAt: string;
 	updatedAt: string;
 	deletedAt: string | null;
-};
-export type SamlIdp = {
-	id: number;
-	name: string;
-	isActive: boolean;
-	userIdAttribute: string;
-	emailAttribute: string | null;
-	firstNameAttribute: string | null;
-	lastNameAttribute: string | null;
-	metadata: string;
-	createdAt: string;
-	updatedAt: string;
-	deletedAt: string | null;
-};
-export type PostSamlIdpReq = {
-	name: string;
-	userIdAttribute: string;
-	emailAttribute: string | null;
-	firstNameAttribute: string | null;
-	lastNameAttribute: string | null;
-	metadata: string;
-};
-export type PutSamlIdpReq = {
-	isActive?: boolean;
-	userIdAttribute?: string;
-	emailAttribute?: string;
-	firstNameAttribute?: string;
-	lastNameAttribute?: string;
-	metadata?: string;
 };
 export const {
 	useGetApiV1ScopesQuery,
@@ -1586,24 +981,6 @@ export const {
 	useDeleteApiV1RolesByIdMutation,
 	useGetApiV1RolesByIdUsersQuery,
 	useLazyGetApiV1RolesByIdUsersQuery,
-	useGetApiV1OrgsQuery,
-	useLazyGetApiV1OrgsQuery,
-	usePostApiV1OrgsMutation,
-	useGetApiV1OrgsByIdQuery,
-	useLazyGetApiV1OrgsByIdQuery,
-	usePutApiV1OrgsByIdMutation,
-	useDeleteApiV1OrgsByIdMutation,
-	useGetApiV1OrgsByIdUsersQuery,
-	useLazyGetApiV1OrgsByIdUsersQuery,
-	useGetApiV1OrgsByIdAllUsersQuery,
-	useLazyGetApiV1OrgsByIdAllUsersQuery,
-	useGetApiV1OrgGroupsQuery,
-	useLazyGetApiV1OrgGroupsQuery,
-	usePostApiV1OrgGroupsMutation,
-	useGetApiV1OrgGroupsByIdUsersQuery,
-	useLazyGetApiV1OrgGroupsByIdUsersQuery,
-	usePutApiV1OrgGroupsByIdMutation,
-	useDeleteApiV1OrgGroupsByIdMutation,
 	useGetApiV1AppsQuery,
 	useLazyGetApiV1AppsQuery,
 	usePostApiV1AppsMutation,
@@ -1611,13 +988,6 @@ export const {
 	useLazyGetApiV1AppsByIdQuery,
 	usePutApiV1AppsByIdMutation,
 	useDeleteApiV1AppsByIdMutation,
-	useGetApiV1AppBannersQuery,
-	useLazyGetApiV1AppBannersQuery,
-	usePostApiV1AppBannersMutation,
-	useGetApiV1AppBannersByIdQuery,
-	useLazyGetApiV1AppBannersByIdQuery,
-	usePutApiV1AppBannersByIdMutation,
-	useDeleteApiV1AppBannersByIdMutation,
 	useGetApiV1UsersQuery,
 	useLazyGetApiV1UsersQuery,
 	useGetApiV1UsersByAuthIdQuery,
@@ -1638,19 +1008,12 @@ export const {
 	useDeleteApiV1UsersByAuthIdEmailMfaMutation,
 	usePostApiV1UsersByAuthIdOtpMfaMutation,
 	useDeleteApiV1UsersByAuthIdOtpMfaMutation,
-	usePostApiV1UsersByAuthIdSmsMfaMutation,
-	useDeleteApiV1UsersByAuthIdSmsMfaMutation,
 	usePostApiV1UsersByAuthIdAccountLinkingAndLinkingAuthIdMutation,
 	useDeleteApiV1UsersByAuthIdAccountLinkingMutation,
 	usePostApiV1UsersByAuthIdImpersonationAndAppIdMutation,
 	useGetApiV1UsersByAuthIdActiveSessionsQuery,
 	useLazyGetApiV1UsersByAuthIdActiveSessionsQuery,
 	useDeleteApiV1UsersByAuthIdActiveSessionsAndSessionIdMutation,
-	usePostApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdMutation,
-	useDeleteApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdMutation,
-	useGetApiV1UsersByAuthIdOrgsQuery,
-	useLazyGetApiV1UsersByAuthIdOrgsQuery,
-	usePostApiV1UsersByAuthIdOrgsMutation,
 	usePostApiV1UsersInvitationsByAuthIdMutation,
 	useDeleteApiV1UsersInvitationsByAuthIdMutation,
 	usePostApiV1UsersInvitationsMutation,
@@ -1666,23 +1029,11 @@ export const {
 	useDeleteApiV1LogsEmailMutation,
 	useGetApiV1LogsEmailByIdQuery,
 	useLazyGetApiV1LogsEmailByIdQuery,
-	useGetApiV1LogsSmsQuery,
-	useLazyGetApiV1LogsSmsQuery,
-	useDeleteApiV1LogsSmsMutation,
-	useGetApiV1LogsSmsByIdQuery,
-	useLazyGetApiV1LogsSmsByIdQuery,
 	useGetApiV1LogsSignInQuery,
 	useLazyGetApiV1LogsSignInQuery,
 	useDeleteApiV1LogsSignInMutation,
 	useGetApiV1LogsSignInByIdQuery,
 	useLazyGetApiV1LogsSignInByIdQuery,
-	useGetApiV1SamlIdpsQuery,
-	useLazyGetApiV1SamlIdpsQuery,
-	usePostApiV1SamlIdpsMutation,
-	useGetApiV1SamlIdpsByIdQuery,
-	useLazyGetApiV1SamlIdpsByIdQuery,
-	usePutApiV1SamlIdpsByIdMutation,
-	useDeleteApiV1SamlIdpsByIdMutation,
 	useGetInfoQuery,
 	useLazyGetInfoQuery,
 } = injectedRtkApi;

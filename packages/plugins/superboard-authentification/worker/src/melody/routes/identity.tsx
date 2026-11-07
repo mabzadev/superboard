@@ -63,23 +63,10 @@ identityRoutes.post(
 	identityHandler.postAuthorizeGoogle,
 );
 
-identityRoutes.post(
-	routeConfig.IdentityRoute.AuthorizeFacebook,
-	setupMiddleware.validOrigin,
-	configMiddleware.enableFacebookSignIn,
-	identityHandler.postAuthorizeFacebook,
-);
-
 identityRoutes.get(
 	routeConfig.IdentityRoute.AuthorizeGitHub,
 	configMiddleware.enableGithubSignIn,
 	identityHandler.getAuthorizeGithub,
-);
-
-identityRoutes.get(
-	routeConfig.IdentityRoute.AuthorizeDiscord,
-	configMiddleware.enableDiscordSignIn,
-	identityHandler.getAuthorizeDiscord,
 );
 
 identityRoutes.post(
@@ -143,26 +130,6 @@ identityRoutes.post(
 	identityHandler.postProcessEmailMfa,
 );
 
-identityRoutes.post(
-	routeConfig.IdentityRoute.SetupSmsMfa,
-	setupMiddleware.validOrigin,
-	identityHandler.postSetupSmsMfa,
-);
-
-identityRoutes.post(
-	routeConfig.IdentityRoute.ResendSmsMfa,
-	setupMiddleware.validOrigin,
-	identityHandler.resendSmsMfa,
-);
-
-identityRoutes.get(routeConfig.IdentityRoute.ProcessSmsMfa, identityHandler.getProcessSmsMfa);
-
-identityRoutes.post(
-	routeConfig.IdentityRoute.ProcessSmsMfa,
-	setupMiddleware.validOrigin,
-	identityHandler.postProcessSmsMfa,
-);
-
 identityRoutes.get(routeConfig.IdentityRoute.OtpMfaSetup, identityHandler.getOtpMfaSetup);
 
 identityRoutes.get(routeConfig.IdentityRoute.ProcessOtpMfa, identityHandler.getProcessOtpMfa);
@@ -216,20 +183,6 @@ identityRoutes.post(
 	routeConfig.IdentityRoute.ProcessRecoveryCodeEnroll,
 	configMiddleware.enableRecoveryCode,
 	identityHandler.postProcessRecoveryCodeEnroll,
-);
-
-identityRoutes.get(
-	routeConfig.IdentityRoute.ProcessSwitchOrg,
-	configMiddleware.enableOrg,
-	configMiddleware.enableSwitchOrg,
-	identityHandler.getProcessSwitchOrg,
-);
-
-identityRoutes.post(
-	routeConfig.IdentityRoute.ProcessSwitchOrg,
-	configMiddleware.enableOrg,
-	configMiddleware.enableSwitchOrg,
-	identityHandler.postProcessSwitchOrg,
 );
 
 identityRoutes.post(
@@ -288,20 +241,6 @@ identityRoutes.post(
 );
 
 identityRoutes.get(
-	routeConfig.IdentityRoute.ChangeOrg,
-	configMiddleware.enableOrg,
-	configMiddleware.enableChangeOrgPolicy,
-	identityHandler.getChangeOrg,
-);
-
-identityRoutes.post(
-	routeConfig.IdentityRoute.ChangeOrg,
-	configMiddleware.enableOrg,
-	configMiddleware.enableChangeOrgPolicy,
-	identityHandler.postChangeOrg,
-);
-
-identityRoutes.get(
 	routeConfig.IdentityRoute.VerifyEmailView,
 	configMiddleware.enableEmailVerification,
 	identityHandler.getVerifyEmailView,
@@ -331,12 +270,6 @@ identityRoutes.post(
 identityRoutes.get(
 	routeConfig.IdentityRoute.AuthCodeExpiredView,
 	identityHandler.getAuthCodeExpiredView,
-);
-
-identityRoutes.get(
-	routeConfig.IdentityRoute.AppBanners,
-	configMiddleware.enableAppBanner,
-	identityHandler.getAppBanners,
 );
 
 identityRoutes.get(routeConfig.IdentityRoute.AcceptInvitation, identityHandler.getAcceptInvitation);

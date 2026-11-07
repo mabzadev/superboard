@@ -1,7 +1,10 @@
 import {
+	authenticationProviderSecrets,
 	authenticationSettingsFromEnvironment,
 	validateAuthenticationSettings,
+	withoutRetiredAuthenticationSettings,
 	AuthenticationSettingsError,
+	type AuthenticationDeploymentStatus,
 	type AuthenticationSettings,
 } from "@superboard/contracts/authentication-settings";
 import { readJsonObjectLimited, RequestBodyError } from "@superboard/contracts/request-body";
@@ -23,7 +26,9 @@ async function storedConfiguration(env: IdentityEnv) {
 		.first<ConfigurationRow>();
 	return {
 		revision: row?.revision ?? 0,
-		values: row ? validateAuthenticationSettings(JSON.parse(row.values_json)) : {},
+		values: row
+			? validateAuthenticationSettings(withoutRetiredAuthenticationSettings(JSON.parse(row.values_json)))
+			: {},
 		updatedAt: row?.updated_at ?? null,
 	};
 }
@@ -44,9 +49,16 @@ export function requiresHostedSignIn(env: IdentityEnv): boolean {
 	return (
 		env.OTP_MFA_IS_REQUIRED ||
 		env.EMAIL_MFA_IS_REQUIRED ||
-		env.SMS_MFA_IS_REQUIRED ||
 		(env.ENFORCE_ONE_MFA_ENROLLMENT ?? []).some((method) => method !== "__none__")
 	);
+}
+
+function deploymentStatus(env: IdentityEnv): AuthenticationDeploymentStatus {
+	const providerSecrets = authenticationProviderSecrets((provider) => {
+		const secret: unknown = Reflect.get(env, `${provider.toUpperCase()}_AUTH_CLIENT_SECRET`);
+		return typeof secret === "string" && secret.trim() !== "";
+	});
+	return { providerSecrets };
 }
 
 export async function authenticationSettingsResponse(
@@ -64,6 +76,7 @@ export async function authenticationSettingsResponse(
 			return reply({
 				...current,
 				serverUrl: env.AUTH_SERVER_URL,
+				deployment: deploymentStatus(env),
 				values: { ...authenticationSettingsFromEnvironment(env), ...current.values },
 			});
 		const body = await readJsonObjectLimited(request, 32768);
@@ -109,6 +122,7 @@ export async function authenticationSettingsResponse(
 		return reply({
 			revision,
 			serverUrl: env.AUTH_SERVER_URL,
+			deployment: deploymentStatus(env),
 			values: { ...authenticationSettingsFromEnvironment(env), ...values },
 			updatedAt: now,
 		});

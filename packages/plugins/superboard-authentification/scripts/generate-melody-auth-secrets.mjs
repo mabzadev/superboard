@@ -4,8 +4,6 @@ import { open } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import * as x509 from "@peculiar/x509";
-
 import { parseArgs } from "../../../../scripts/cloudflare/target.mjs";
 import { assertSafeOutputPath } from "./generate-identity-keyset.mjs";
 
@@ -17,29 +15,8 @@ const RSA_ALGORITHM = Object.freeze({
 });
 const CLOUDFLARE_SECRET_MAX_BYTES = 5 * 1024;
 
-export async function generateMelodyAuthSecrets(now = new Date()) {
-	x509.cryptoProvider.set(webcrypto);
+export async function generateMelodyAuthSecrets() {
 	const jwtKeys = await webcrypto.subtle.generateKey(RSA_ALGORITHM, true, ["sign", "verify"]);
-	const samlKeys = await webcrypto.subtle.generateKey(RSA_ALGORITHM, true, ["sign", "verify"]);
-	const notBefore = new Date(now.getTime() - 5 * 60 * 1_000);
-	const notAfter = new Date(now);
-	notAfter.setUTCFullYear(notAfter.getUTCFullYear() + 10);
-	const certificate = await x509.X509CertificateGenerator.createSelfSigned({
-		serialNumber: randomBytes(16).toString("hex"),
-		name: "CN=SuperBoard Identity SAML SP,O=SuperBoard",
-		notBefore,
-		notAfter,
-		signingAlgorithm: RSA_ALGORITHM,
-		keys: samlKeys,
-		extensions: [
-			new x509.BasicConstraintsExtension(false, undefined, true),
-			new x509.KeyUsagesExtension(
-				x509.KeyUsageFlags.digitalSignature | x509.KeyUsageFlags.keyEncipherment,
-				true,
-			),
-			await x509.SubjectKeyIdentifierExtension.create(samlKeys.publicKey),
-		],
-	});
 
 	return {
 		jwtPrivateKeyPem: pem(
@@ -48,11 +25,6 @@ export async function generateMelodyAuthSecrets(now = new Date()) {
 		),
 		jwtPublicKeyPem: pem("PUBLIC KEY", await webcrypto.subtle.exportKey("spki", jwtKeys.publicKey)),
 		sessionSecret: randomBytes(48).toString("base64url"),
-		samlPrivateKeyPem: pem(
-			"PRIVATE KEY",
-			await webcrypto.subtle.exportKey("pkcs8", samlKeys.privateKey),
-		),
-		samlCertificatePem: certificate.toString("pem"),
 	};
 }
 
@@ -68,8 +40,6 @@ export function serializeMelodyAuthSecrets(secrets) {
 		jp: pemBody(secrets.jwtPrivateKeyPem, "PRIVATE KEY"),
 		ju: pemBody(secrets.jwtPublicKeyPem, "PUBLIC KEY"),
 		ss: secrets.sessionSecret,
-		sp: pemBody(secrets.samlPrivateKeyPem, "PRIVATE KEY"),
-		sc: pemBody(secrets.samlCertificatePem, "CERTIFICATE"),
 	});
 	if (Buffer.byteLength(value) > CLOUDFLARE_SECRET_MAX_BYTES) {
 		throw new Error("Compact Melody Auth material exceeds the Cloudflare secret limit");
