@@ -6,7 +6,14 @@ import { DataError, failure } from "../platform/http.js";
 
 export type DataContext = Context<{ Bindings: DataEnv }>;
 
-export const DATA_PLUGIN_ID = "superboard-files";
+export const DATA_PLUGINS = {
+	database: "superboard-database",
+	storage: "superboard-storage",
+	functions: "superboard-functions",
+	vectors: "superboard-vectors",
+} as const;
+
+export type DataBrick = keyof typeof DATA_PLUGINS;
 
 export function deferralOf(c: DataContext): Deferral {
 	try {

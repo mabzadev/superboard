@@ -10,18 +10,18 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import { useState } from "react";
 
-import { DELETE, PATCH, POST } from "../transport.js";
+import { useDataResource } from "./resource.js";
+import { DELETE, PATCH, POST } from "./transport.js";
 import {
 	encode,
 	useDataAction,
-	useDataResource,
 	type Page,
 	type Row,
 	type Table,
-} from "./client.js";
+} from "../console/client.js";
 import { DraftError, parseValue, valueText, ValueInput } from "./database-columns.js";
-import { useDataConsoleI18n } from "./i18n.js";
-import { cellText, ConfirmPanel, ErrorAlert, LoadState, Notice, Pager } from "./shared.js";
+import { useDataConsoleI18n } from "../console/i18n.js";
+import { cellText, ConfirmPanel, ErrorAlert, LoadState, Notice, Pager } from "../console/shared.js";
 
 type Drafts = Record<string, string>;
 

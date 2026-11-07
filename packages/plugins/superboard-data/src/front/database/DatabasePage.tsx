@@ -18,23 +18,21 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import { useEffect, useState } from "react";
 
-import { DELETE, GET, PATCH, POST } from "../transport.js";
+import { useDataPath, useDataResource } from "./resource.js";
+import { DELETE, GET, PATCH, POST } from "./transport.js";
 import {
 	encode,
 	physicalTableName,
 	readBody,
 	useAddressState,
 	useDataAction,
-	useDataPath,
-	useDataResource,
 	type DataStatus,
 	type Page,
 	type SqlResult,
 	type Table,
 	type TableRules,
-} from "./client.js";
+} from "../console/client.js";
 import {
-	CodeField,
 	ColumnFields,
 	ColumnsEditor,
 	columnPayload,
@@ -44,7 +42,7 @@ import {
 	type ColumnDraft,
 } from "./database-columns.js";
 import { RowsBrowser } from "./database-rows.js";
-import { useDataConsoleI18n } from "./i18n.js";
+import { useDataConsoleI18n } from "../console/i18n.js";
 import {
 	BackButton,
 	cellText,
@@ -58,7 +56,8 @@ import {
 	RuleSelect,
 	SectionTabs,
 	StatusBadge,
-} from "./shared.js";
+	CodeField,
+} from "../console/shared.js";
 
 type TableTab = "rows" | "columns" | "access" | "advanced";
 const tableTabs: readonly TableTab[] = ["rows", "columns", "access", "advanced"];

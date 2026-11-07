@@ -55,6 +55,10 @@ test("plugin routes have one canonical namespace and no duplicate destination", 
 		"superboard-user": "/auth",
 		"superboard-content": "/data",
 		"superboard-files": "/data",
+		"superboard-database": "/data",
+		"superboard-storage": "/data",
+		"superboard-functions": "/data",
+		"superboard-vectors": "/data",
 		"superboard-products": "/monetization",
 		"superboard-billing": "/monetization",
 		"superboard-marketing": "/communication",
@@ -857,9 +861,9 @@ test("menus seeded before the section simplification adopt it while edited menus
 		]);
 		expect(sectionOf("/data/content")).toEqual([
 			"/data/content",
-			"/data/files",
 			"/data/database",
 			"/data/storage",
+			"/data/files",
 			"/data/functions",
 			"/data/vectors",
 			"/data/api",
@@ -1203,7 +1207,8 @@ function menusWithoutBackendDataPages() {
 	return seedJson.menus.map((menu) => ({
 		...menu,
 		items: menu.items.map((item) =>
-			item.url === "/data/content" && item.children
+			item.children &&
+			(item.url === "/data/content" || item.cssClasses === "sb-icon-settings")
 				? {
 						...item,
 						children: item.children.filter((child) => !backendDataPages.has(child.url)),
@@ -1228,7 +1233,7 @@ test("the previous default menu gains the backend Data pages and becomes the new
 	}
 });
 
-test("an edited menu gains the backend Data pages after its own Data links", async () => {
+test("an edited menu gains the backend Data pages in place and Data settings under Settings", async () => {
 	db = await setupTestDatabase();
 	await applySeed(db, { version: "1", menus: menusWithoutBackendDataPages() });
 	const repo = new MenuRepository(db);
@@ -1258,13 +1263,27 @@ test("an edited menu gains the backend Data pages after its own Data links", asy
 				.map(({ label, customUrl }) => [label, customUrl]),
 		).toEqual([
 			[fr ? "Contenus" : "Content", "/data/content"],
-			[fr ? "Fichiers et médias" : "Files and media", "/data/files"],
-			["My exports", "/data/files?folder=exports"],
 			[fr ? "Base de données" : "Database", "/data/database"],
-			[fr ? "Stockage" : "Storage", "/data/storage"],
+			[fr ? "Buckets d’application" : "Application buckets", "/data/storage"],
+			[fr ? "Fichiers et médias" : "Files and media", "/data/files"],
 			[fr ? "Fonctions" : "Functions", "/data/functions"],
 			[fr ? "Vecteurs" : "Vectors", "/data/vectors"],
-			[fr ? "API et clés" : "API and keys", "/data/api"],
+			["My exports", "/data/files?folder=exports"],
+		]);
+		const settings = items.find(
+			(item) => item.parentId === null && item.cssClasses === "sb-icon-settings",
+		);
+		if (!settings) throw new Error("Settings section is missing");
+		expect(
+			items
+				.filter((item) => item.parentId === settings.id)
+				.toSorted((left, right) => left.sortOrder - right.sortOrder)
+				.slice(0, 3)
+				.map(({ label, customUrl }) => [label, customUrl]),
+		).toEqual([
+			[fr ? "Authentification" : "Authentication", `/auth/settings?lang=${menu.locale}`],
+			["Data", "/data/api"],
+			[fr ? "Monétisation" : "Monetization", "/monetization/settings"],
 		]);
 		await ensureNativeFrontMenus(db, seedJson.menus);
 		expect(await repo.findItems(menu.id)).toEqual(items);

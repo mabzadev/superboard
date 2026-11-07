@@ -13,7 +13,7 @@ import {
 	upsertItems,
 } from "../vectors/collections.js";
 import {
-	DATA_PLUGIN_ID,
+	DATA_PLUGINS,
 	action,
 	deferralOf,
 	wildcardPath,
@@ -24,7 +24,7 @@ import {
 export const functionRoutes = registerRouter(new Hono<{ Bindings: DataEnv }>(), {
 	service: "files",
 	module: "functions",
-	pluginId: DATA_PLUGIN_ID,
+	pluginId: DATA_PLUGINS.functions,
 	surface: "internal",
 	access: "sdk-key",
 });
@@ -32,7 +32,7 @@ export const functionRoutes = registerRouter(new Hono<{ Bindings: DataEnv }>(), 
 export const vectorRoutes = registerRouter(new Hono<{ Bindings: DataEnv }>(), {
 	service: "files",
 	module: "vectors",
-	pluginId: DATA_PLUGIN_ID,
+	pluginId: DATA_PLUGINS.vectors,
 	surface: "internal",
 	access: "sdk-key",
 });

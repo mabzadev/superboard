@@ -1,13 +1,13 @@
-import { Button, InputArea, Select, SwitchField } from "@superboard/front-ui/kumo";
+import { Button, Select, SwitchField } from "@superboard/front-ui/kumo";
 import {
 	SettingsActions,
 	SettingsDependents,
 	SettingsTextField,
 } from "@superboard/front-ui/settings-form";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
-import { useId, useState } from "react";
+import { useState } from "react";
 
-import { DELETE, PATCH, POST } from "../transport.js";
+import { DELETE, PATCH, POST } from "./transport.js";
 import {
 	COLUMN_TYPES,
 	encode,
@@ -16,9 +16,9 @@ import {
 	type Column,
 	type ColumnType,
 	type Table,
-} from "./client.js";
-import { useDataConsoleI18n, type DataConsoleMessages } from "./i18n.js";
-import { cellText, ConfirmPanel, ErrorAlert, Notice } from "./shared.js";
+} from "../console/client.js";
+import { useDataConsoleI18n, type DataConsoleMessages } from "../console/i18n.js";
+import { cellText, CodeField, ConfirmPanel, ErrorAlert, Notice } from "../console/shared.js";
 
 export interface ColumnDraft {
 	key: string;
@@ -167,40 +167,6 @@ export function ValueInput({
 				onChange(event.target.value);
 			}}
 		/>
-	);
-}
-
-export function CodeField({
-	label,
-	value,
-	rows = 12,
-	description,
-	onChange,
-}: {
-	label: string;
-	value: string;
-	rows?: number;
-	description?: string;
-	onChange(value: string): void;
-}) {
-	const id = useId();
-	return (
-		<div className="space-y-2">
-			<label htmlFor={id} className="block text-sm font-medium">
-				{label}
-			</label>
-			<InputArea
-				id={id}
-				rows={rows}
-				spellCheck={false}
-				className="w-full font-mono text-sm"
-				value={value}
-				onChange={(event) => {
-					onChange(event.target.value);
-				}}
-			/>
-			{description && <p className="text-xs text-kumo-subtle">{description}</p>}
-		</div>
 	);
 }
 

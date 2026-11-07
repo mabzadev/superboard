@@ -6,7 +6,7 @@ import { ensureTable, jsonOf, operator, publicRequest, sdk } from "./helpers";
 describe("Account erasure", () => {
 	it("removes the rows, objects and uploads of an erased application user", async () => {
 		await ensureTable({ name: "journal", columns: [{ name: "entry", type: "text" }] });
-		await operator("/buckets", { method: "POST", body: { name: "private-notes" } });
+		await operator("storage", "/buckets", { method: "POST", body: { name: "private-notes" } });
 		for (const user of ["zoe", "yann"])
 			await sdk("/v1/db/journal", { method: "POST", user, body: { entry: `${user} wrote` } });
 		const bytes = new TextEncoder().encode("secret");
@@ -32,7 +32,7 @@ describe("Account erasure", () => {
 			data: { rows: 1, objects: 1, uploads: 1, vectors: 0 },
 		});
 		const remaining = await jsonOf<{ items: { entry: string }[] }>(
-			await operator("/tables/journal/rows"),
+			await operator("database", "/tables/journal/rows"),
 		);
 		expect(remaining.items.map((item) => item.entry)).toEqual(["yann wrote"]);
 		expect(await env.FILES.head("files/storage/12/private-notes/zoe/diary.txt")).toBeNull();

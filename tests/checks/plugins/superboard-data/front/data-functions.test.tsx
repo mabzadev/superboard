@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 
-import FunctionsPage from "../../../../../packages/plugins/superboard-data/src/front/files/data/FunctionsPage.js";
+import FunctionsPage from "../../../../../packages/plugins/superboard-data/src/front/functions/FunctionsPage.js";
 import {
 	FrontContextProvider,
 	type FrontContextValue,
@@ -22,12 +22,12 @@ const api = vi.hoisted(() => ({
 	PATCH: vi.fn(),
 	DELETE: vi.fn(),
 }));
-vi.mock("../../../../../packages/plugins/superboard-data/src/front/files/transport.js", () => api);
+vi.mock("../../../../../packages/plugins/superboard-data/src/front/functions/transport.js", () => api);
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "prod" } }),
 }));
 
-const base = "/api/v1/files/projects/prod/data";
+const base = "/api/v1/data/functions/projects/prod";
 const hello = {
 	name: "hello",
 	access: "authenticated",
@@ -92,13 +92,13 @@ function serve(secrets: boolean) {
 function renderIn(locale: "en" | "fr", ui: ReactNode) {
 	const value: FrontContextValue = {
 		instanceId: "1",
-		pluginId: "superboard-files",
+		pluginId: "superboard-functions",
 		path: "/data/functions",
 		parameters: {},
 		locale,
 		operator: null,
 		projectScope: null,
-		activePluginIds: ["superboard-files"],
+		activePluginIds: ["superboard-functions"],
 	};
 	return render(<FrontContextProvider value={value}>{ui}</FrontContextProvider>);
 }

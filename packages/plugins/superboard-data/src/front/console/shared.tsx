@@ -1,5 +1,5 @@
 import { ArrowLeft } from "@superboard/front-ui/icons";
-import { Button, Input, Loader, Select } from "@superboard/front-ui/kumo";
+import { Button, Input, InputArea, Loader, Select } from "@superboard/front-ui/kumo";
 import { SettingsActions } from "@superboard/front-ui/settings-form";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { useId, useState, type ReactNode } from "react";
@@ -332,4 +332,38 @@ export function cellText(value: unknown, t: DataConsoleMessages): string {
 	if (typeof value === "string") return value;
 	if (typeof value === "number" || typeof value === "bigint") return value.toString();
 	return JSON.stringify(value);
+}
+
+export function CodeField({
+	label,
+	value,
+	rows = 12,
+	description,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	rows?: number;
+	description?: string;
+	onChange(value: string): void;
+}) {
+	const id = useId();
+	return (
+		<div className="space-y-2">
+			<label htmlFor={id} className="block text-sm font-medium">
+				{label}
+			</label>
+			<InputArea
+				id={id}
+				rows={rows}
+				spellCheck={false}
+				className="w-full font-mono text-sm"
+				value={value}
+				onChange={(event) => {
+					onChange(event.target.value);
+				}}
+			/>
+			{description && <p className="text-xs text-kumo-subtle">{description}</p>}
+		</div>
+	);
 }

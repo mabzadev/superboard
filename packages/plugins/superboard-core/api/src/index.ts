@@ -82,6 +82,7 @@ import automationRoutes from "./routes/automation";
 import coreCollection, { collectSdkTelemetry } from "./routes/core-collection.js";
 import diagnosticsRoutes from "./routes/diagnostics";
 import { emailPublicRoutes } from "./routes/email-public.js";
+import { dataAdmin, dataAdminRoutes } from "./routes/data-admin.js";
 import { filesAdmin, filesAdminRoute } from "./routes/files-admin.js";
 import { gatewayAdmin, GATEWAY_ADMIN_PREFIX } from "./routes/gateway-admin.js";
 import iapRoutes from "./routes/iap";
@@ -373,6 +374,7 @@ app
 	});
 
 app.use("*", pluginHttpAdmission);
+for (const route of dataAdminRoutes) app.defineRoute(route).all(route.path, dataAdmin(route));
 
 app.route("/internal/collection/v1", coreCollection);
 app
@@ -582,7 +584,7 @@ app
 app
 	.defineRoute({
 		id: "api:data:openapi-proxy",
-		pluginId: "superboard-files",
+		pluginId: "superboard-database",
 		surface: "sdk",
 		access: "sdk-key",
 		destination: { service: "files", path: "/v1/openapi.json" },
@@ -592,7 +594,7 @@ app
 app
 	.defineRoute({
 		id: "api:data:realtime-connect-proxy",
-		pluginId: "superboard-files",
+		pluginId: "superboard-database",
 		surface: "sdk",
 		access: "public",
 		transport: "websocket",
@@ -600,11 +602,11 @@ app
 		exposures: [{ surface: "sdk", path: "/v1/data/realtime/connect" }],
 	})
 	.get("/api/v1/app-data/realtime/connect", (c) => proxyDataService(c, "/v1/realtime/connect"));
-for (const family of DATA_FAMILIES)
+for (const [family, pluginId] of DATA_FAMILIES)
 	app
 		.defineRoute({
 			id: `api:data:${family}-proxy`,
-			pluginId: "superboard-files",
+			pluginId,
 			surface: "sdk",
 			access: "sdk-key",
 			destination: { service: "files", path: `/v1/${family}/*` },

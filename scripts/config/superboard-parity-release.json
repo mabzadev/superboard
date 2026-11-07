@@ -2,17 +2,19 @@
   "schema_version": 1,
   "target": "mabza-development",
   "environment": "local",
-  "target_artifact_checksum": "sha256:6f4a6eda25758819127fa39df3ddb4bfc3c6bd9a59a2051d93c46400b003cfe2",
-  "target_graph_checksum": "sha256:9d75cfd9fab8e5eb3d2122c4b4ad4ea632297940891b51b6dccc851253123368",
+  "target_artifact_checksum": "sha256:57f928d20210635326ab75aac04c6778add0103e426d315d60a08077bd5af606",
+  "target_graph_checksum": "sha256:1fd13e7a8db1a4bf82f56e5462ed89e969484b3c54706475be9702b0c90c96f4",
   "active_plugin_ids": [
     "superboard-analytics",
     "superboard-audit",
     "superboard-billing",
     "superboard-content",
+    "superboard-database",
     "superboard-dynamic-links",
     "superboard-email",
     "superboard-files",
     "superboard-flows",
+    "superboard-functions",
     "superboard-gateway",
     "superboard-marketing",
     "superboard-mcp",
@@ -21,28 +23,34 @@
     "superboard-paywalls",
     "superboard-products",
     "superboard-settings",
+    "superboard-storage",
     "superboard-support",
-    "superboard-user"
+    "superboard-user",
+    "superboard-vectors"
   ],
   "manifest_artifact_checksums": {
-    "superboard-analytics": "sha256:d9f15e4e2460ac397d1fe9960fe8b71ac967294e8fb14989d2b554122b380433",
-    "superboard-audit": "sha256:c658d57a2e5f7fcfb3fc5b13a9ed58bbc46bc543ee44854fc584cfc1316789bd",
-    "superboard-billing": "sha256:c801033566a1c50941e9f59c0a3d4482c25f85052571605e228fb48ecd93c730",
-    "superboard-content": "sha256:a6f1969a27c657083a26546be5d885d715ff093991f478f515f2cf3ebe4e9cd0",
-    "superboard-dynamic-links": "sha256:2a20b5d9ebf0aedda55eb4ebd9abe9941829bca0f1ce8e516f5b23d458e8e30d",
-    "superboard-email": "sha256:c01f2f63a869d5801d1387ad9dd990485083cf179bfb7268690b9327beb3593b",
-    "superboard-files": "sha256:0769d4380f7772b5db4bfe282500e78a140f5c7f16aa1b8a8a819e12f3045faf",
-    "superboard-flows": "sha256:a0c44d3fdf37eae81136383762fd03774c4e023e739935b733b6f0a2014a0202",
-    "superboard-gateway": "sha256:55733ebfd13a528d41ccc23e3f2acaa9ce28afa78fb7cc748142e0984810347a",
-    "superboard-marketing": "sha256:d679925182dbaf1e8adff66635d38427510ddb4a7f20527dc4005dad2176ab69",
-    "superboard-mcp": "sha256:6bb0bf3c788861b420fc354008284af7a44ed8edf96de70b9a2cd63a5764ffb3",
-    "superboard-observability": "sha256:d64940b2d4616a06b10796304afdbb2b0624e261d9366915d99e0e059ed7f407",
-    "superboard-onboardings": "sha256:26e11fe64a11cc61754cf7b5ecdc2db19696866ca439163124ae980e88917555",
-    "superboard-paywalls": "sha256:300958006d27efa8b78e15d1790a75e8c135317b23910753135b623099075105",
-    "superboard-products": "sha256:f5ec6be9bcd1845a746818239a6daff0498bf31ace924bee8c331f2c30bf81a6",
-    "superboard-settings": "sha256:aa18c7d17da756965a25896054416f00a4e46ba61ecfe217b8df941ec69fa759",
-    "superboard-support": "sha256:1ddfe5ae194a783f0edf6f7e3c96de6519e127a80f137c43c23694728e4e3fff",
-    "superboard-user": "sha256:bc6ea2d472245fdedf0a940328441058c901b9ee4955748cea0ed67a1e91f8b2"
+    "superboard-analytics": "sha256:c91e4db3ce8700032598a50d3c4be59a270cfc4b471b7e6ef35a08171aa51eee",
+    "superboard-audit": "sha256:4bc5c86c2212417e4c8fd6c2e43269ea7ef17971e8c332afea636201ce593fa9",
+    "superboard-billing": "sha256:23c2a70a0ad2ddd6f9c1563bdcd8bef82058020c8e277d7d38ea7a662e46d9a1",
+    "superboard-content": "sha256:ed7f33d33fe768c2c679feb9822729dec958548c843ea03b7687da99599f384a",
+    "superboard-database": "sha256:fc45e5d0d8f9c3a8344f04ea0aa893fff723996614d4c5025c2958c5098e2250",
+    "superboard-dynamic-links": "sha256:fd0a2373df6c7ff02705f5a1e82b76bf1bfedc3237b6e391ffa13a385127c4ac",
+    "superboard-email": "sha256:bbc99b837a66dd64c953e2e1b8aede29dc9f18d7bdaa624e34d8b4450e117309",
+    "superboard-files": "sha256:3a830305b10f218d5225dd17f77d5adf6b9931b29da6bfde4136a1936d2647fa",
+    "superboard-flows": "sha256:428b5d7304df61a9b8c260af7b6ae6b22b2290e80c683f88cd343512c32ff382",
+    "superboard-functions": "sha256:142256445dff14d721a9a76382562455160c57fd9048b93baf64d495f5e81035",
+    "superboard-gateway": "sha256:8503f5f4f61631222f17e927e139f559c98c8163ecd42f267c54ae2189861a35",
+    "superboard-marketing": "sha256:7b9d7a358cd87205bde46a18245d5d75800e52ef94fe8dac1bcbcbc8ecf9b0de",
+    "superboard-mcp": "sha256:5209aaf4ae6241b39f50236fc1c055999cc04244dcdf0f0c3b9e282ae3f086f7",
+    "superboard-observability": "sha256:333a31bf140edbe944c0d9cb02cdf6e8ce6391e942a0c374aa41d2bdc61b419a",
+    "superboard-onboardings": "sha256:7fb184a25feb6cf362820fd4c9fea46b0ce58d8d941b391c30bceff16626dea8",
+    "superboard-paywalls": "sha256:c2b8ff7178d1e9a91698ff79af348ae1c8af48ec684cdb2eaeb66ed849354d17",
+    "superboard-products": "sha256:ebad314ab1bffba66de15a8809c51b74e91fb7686014f12ce9d8fbf6d8c59a17",
+    "superboard-settings": "sha256:0bb41a68458f0905030394bf640f871fda75def0bf4ace4c672fcfd1e71dc900",
+    "superboard-storage": "sha256:517d618c7a3e9d4d29d04fabca1cdd9a49db3333c4bed62a0ecd95fb6b2528f5",
+    "superboard-support": "sha256:42ad8816c6b5b9fadc3783c8cab6d724cbe63eb3e30a7ff624ba30614ae6401c",
+    "superboard-user": "sha256:3702582c3ced8c57e9e536db964d01d2c9b7018492c57ea9082be678ba1eba31",
+    "superboard-vectors": "sha256:32b83e0912c1554c47bbd43da111c429e73da1606532ccc8373a2cea1c8a1e52"
   },
   "verification_key": {
     "key_ops": [
@@ -50,8 +58,8 @@
     ],
     "ext": true,
     "kty": "EC",
-    "x": "MraK7cKvuw381c2mayW13GrEAqrkNQo_OjzPxCHCBSw",
-    "y": "t91soVEGmnH74ZDpnx3AK1zesGCVD6eNrg30s-Hy2vk",
+    "x": "D9FVT550xSWvoD2Uz_sf8t15O_rLMUmtg5mIwbGekTc",
+    "y": "dlL5XcX8rcr3JkVSWxViqJeoCqiO9uHXPanz6szSx4g",
     "crv": "P-256",
     "kid": "issue-70-parity"
   },
@@ -97,6 +105,14 @@
         },
         {
           "activation_policy": "ready",
+          "dependency_id": "dependency.superboard_database",
+          "fallback_dependency_id": null,
+          "kind": "required",
+          "minimum_version": "1.0.0",
+          "runtime_failure_policy": "unavailable"
+        },
+        {
+          "activation_policy": "ready",
           "dependency_id": "dependency.superboard_dynamic_links",
           "fallback_dependency_id": null,
           "kind": "required",
@@ -122,6 +138,14 @@
         {
           "activation_policy": "ready",
           "dependency_id": "dependency.superboard_flows",
+          "fallback_dependency_id": null,
+          "kind": "required",
+          "minimum_version": "1.0.0",
+          "runtime_failure_policy": "unavailable"
+        },
+        {
+          "activation_policy": "ready",
+          "dependency_id": "dependency.superboard_functions",
           "fallback_dependency_id": null,
           "kind": "required",
           "minimum_version": "1.0.0",
@@ -193,6 +217,14 @@
         },
         {
           "activation_policy": "ready",
+          "dependency_id": "dependency.superboard_storage",
+          "fallback_dependency_id": null,
+          "kind": "required",
+          "minimum_version": "1.0.0",
+          "runtime_failure_policy": "unavailable"
+        },
+        {
+          "activation_policy": "ready",
           "dependency_id": "dependency.superboard_support",
           "fallback_dependency_id": null,
           "kind": "required",
@@ -205,6 +237,14 @@
           "fallback_dependency_id": null,
           "kind": "required",
           "minimum_version": "1.4.0",
+          "runtime_failure_policy": "unavailable"
+        },
+        {
+          "activation_policy": "ready",
+          "dependency_id": "dependency.superboard_vectors",
+          "fallback_dependency_id": null,
+          "kind": "required",
+          "minimum_version": "1.0.0",
           "runtime_failure_policy": "unavailable"
         }
       ],
@@ -3427,7 +3467,7 @@
             "audience": "superboard_front",
             "auth_policy": "authenticated",
             "dependencies": [
-              "dependency.superboard_files"
+              "dependency.superboard_database"
             ],
             "layout_ids": [
               "layout.superboard_admin"
@@ -3435,12 +3475,12 @@
             "page_id": "page.superboard_data_api",
             "parameters": {},
             "path_pattern": "/data/api",
-            "permission_expression": "superboard-files.read",
+            "permission_expression": "superboard-database.read",
             "priority": 200,
             "query": {},
             "redirect": null,
             "renderer_ids": [
-              "superboard-files.renderer.admin_surface"
+              "superboard-database.renderer.admin_surface"
             ],
             "route_id": "superboard.data_api",
             "route_kind": "page",
@@ -3489,7 +3529,7 @@
             "audience": "superboard_front",
             "auth_policy": "authenticated",
             "dependencies": [
-              "dependency.superboard_files"
+              "dependency.superboard_database"
             ],
             "layout_ids": [
               "layout.superboard_admin"
@@ -3497,12 +3537,12 @@
             "page_id": "page.superboard_data_database",
             "parameters": {},
             "path_pattern": "/data/database",
-            "permission_expression": "superboard-files.read",
+            "permission_expression": "superboard-database.read",
             "priority": 200,
             "query": {},
             "redirect": null,
             "renderer_ids": [
-              "superboard-files.renderer.admin_surface"
+              "superboard-database.renderer.admin_surface"
             ],
             "route_id": "superboard.data_database",
             "route_kind": "page",
@@ -3551,7 +3591,7 @@
             "audience": "superboard_front",
             "auth_policy": "authenticated",
             "dependencies": [
-              "dependency.superboard_files"
+              "dependency.superboard_functions"
             ],
             "layout_ids": [
               "layout.superboard_admin"
@@ -3559,12 +3599,12 @@
             "page_id": "page.superboard_data_functions",
             "parameters": {},
             "path_pattern": "/data/functions",
-            "permission_expression": "superboard-files.read",
+            "permission_expression": "superboard-functions.read",
             "priority": 200,
             "query": {},
             "redirect": null,
             "renderer_ids": [
-              "superboard-files.renderer.admin_surface"
+              "superboard-functions.renderer.admin_surface"
             ],
             "route_id": "superboard.data_functions",
             "route_kind": "page",
@@ -3582,7 +3622,7 @@
             "audience": "superboard_front",
             "auth_policy": "authenticated",
             "dependencies": [
-              "dependency.superboard_files"
+              "dependency.superboard_storage"
             ],
             "layout_ids": [
               "layout.superboard_admin"
@@ -3590,12 +3630,12 @@
             "page_id": "page.superboard_data_storage",
             "parameters": {},
             "path_pattern": "/data/storage",
-            "permission_expression": "superboard-files.read",
+            "permission_expression": "superboard-storage.read",
             "priority": 200,
             "query": {},
             "redirect": null,
             "renderer_ids": [
-              "superboard-files.renderer.admin_surface"
+              "superboard-storage.renderer.admin_surface"
             ],
             "route_id": "superboard.data_storage",
             "route_kind": "page",
@@ -3613,7 +3653,7 @@
             "audience": "superboard_front",
             "auth_policy": "authenticated",
             "dependencies": [
-              "dependency.superboard_files"
+              "dependency.superboard_vectors"
             ],
             "layout_ids": [
               "layout.superboard_admin"
@@ -3621,12 +3661,12 @@
             "page_id": "page.superboard_data_vectors",
             "parameters": {},
             "path_pattern": "/data/vectors",
-            "permission_expression": "superboard-files.read",
+            "permission_expression": "superboard-vectors.read",
             "priority": 200,
             "query": {},
             "redirect": null,
             "renderer_ids": [
-              "superboard-files.renderer.admin_surface"
+              "superboard-vectors.renderer.admin_surface"
             ],
             "route_id": "superboard.data_vectors",
             "route_kind": "page",
@@ -4292,7 +4332,7 @@
         ],
         "schema_version": "1.0.0",
         "system_routes": [],
-        "route_manifest_checksum": "sha256:bb42ed0aa9cb2f6ca92432158285d5c8128c906532ebd57b1c0072edd13f5548"
+        "route_manifest_checksum": "sha256:799255f881c90e3e3eddac181d0e98681723a32f9106d761b75278b3c6a51bcb"
       },
       "gateway_manifest": {
         "gateway_manifest_id": "01J00000000000000000000221",
@@ -5006,6 +5046,246 @@
           {
             "audience": "superboard_front",
             "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/superboard-database/health",
+            "route_id": "gateway.superboard-database.health",
+            "scopes": [
+              "superboard-database.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.create_data_table",
+            "route_id": "gateway.superboard-database.command.create_data_table",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.update_data_table",
+            "route_id": "gateway.superboard-database.command.update_data_table",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.delete_data_table",
+            "route_id": "gateway.superboard-database.command.delete_data_table",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.add_data_column",
+            "route_id": "gateway.superboard-database.command.add_data_column",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.update_data_column",
+            "route_id": "gateway.superboard-database.command.update_data_column",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.delete_data_column",
+            "route_id": "gateway.superboard-database.command.delete_data_column",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.insert_data_row",
+            "route_id": "gateway.superboard-database.command.insert_data_row",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.update_data_row",
+            "route_id": "gateway.superboard-database.command.update_data_row",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.delete_data_row",
+            "route_id": "gateway.superboard-database.command.delete_data_row",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.run_data_sql",
+            "route_id": "gateway.superboard-database.command.run_data_sql",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.update_data_settings",
+            "route_id": "gateway.superboard-database.command.update_data_settings",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.create_service_key",
+            "route_id": "gateway.superboard-database.command.create_service_key",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/commands/superboard-database.command.revoke_service_key",
+            "route_id": "gateway.superboard-database.command.revoke_service_key",
+            "scopes": [
+              "superboard-database.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/data-sources/superboard-database.data_source.data_status",
+            "route_id": "gateway.superboard-database.data_source.data_status",
+            "scopes": [
+              "superboard-database.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/data-sources/superboard-database.data_source.data_tables",
+            "route_id": "gateway.superboard-database.data_source.data_tables",
+            "scopes": [
+              "superboard-database.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/data-sources/superboard-database.data_source.data_table",
+            "route_id": "gateway.superboard-database.data_source.data_table",
+            "scopes": [
+              "superboard-database.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/data-sources/superboard-database.data_source.data_rows",
+            "route_id": "gateway.superboard-database.data_source.data_rows",
+            "scopes": [
+              "superboard-database.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/data-sources/superboard-database.data_source.data_settings",
+            "route_id": "gateway.superboard-database.data_source.data_settings",
+            "scopes": [
+              "superboard-database.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-database",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-database/data-sources/superboard-database.data_source.data_keys",
+            "route_id": "gateway.superboard-database.data_source.data_keys",
+            "scopes": [
+              "superboard-database.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
             "destination": "superboard-dynamic-links",
             "method": "GET",
             "path_pattern": "/_emdash/api/plugins/superboard-dynamic-links/health",
@@ -5511,306 +5791,6 @@
             "audience": "superboard_front",
             "auth_policy": "authenticated",
             "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.create_data_table",
-            "route_id": "gateway.superboard-files.command.create_data_table",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.update_data_table",
-            "route_id": "gateway.superboard-files.command.update_data_table",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.delete_data_table",
-            "route_id": "gateway.superboard-files.command.delete_data_table",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.add_data_column",
-            "route_id": "gateway.superboard-files.command.add_data_column",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.update_data_column",
-            "route_id": "gateway.superboard-files.command.update_data_column",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.delete_data_column",
-            "route_id": "gateway.superboard-files.command.delete_data_column",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.insert_data_row",
-            "route_id": "gateway.superboard-files.command.insert_data_row",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.update_data_row",
-            "route_id": "gateway.superboard-files.command.update_data_row",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.delete_data_row",
-            "route_id": "gateway.superboard-files.command.delete_data_row",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.run_data_sql",
-            "route_id": "gateway.superboard-files.command.run_data_sql",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.update_data_settings",
-            "route_id": "gateway.superboard-files.command.update_data_settings",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.create_data_bucket",
-            "route_id": "gateway.superboard-files.command.create_data_bucket",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.update_data_bucket",
-            "route_id": "gateway.superboard-files.command.update_data_bucket",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.delete_data_bucket",
-            "route_id": "gateway.superboard-files.command.delete_data_bucket",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.deploy_data_function",
-            "route_id": "gateway.superboard-files.command.deploy_data_function",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.delete_data_function",
-            "route_id": "gateway.superboard-files.command.delete_data_function",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.rollback_data_function",
-            "route_id": "gateway.superboard-files.command.rollback_data_function",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.invoke_data_function",
-            "route_id": "gateway.superboard-files.command.invoke_data_function",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.schedule_data_function",
-            "route_id": "gateway.superboard-files.command.schedule_data_function",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.unschedule_data_function",
-            "route_id": "gateway.superboard-files.command.unschedule_data_function",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.create_vector_collection",
-            "route_id": "gateway.superboard-files.command.create_vector_collection",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.update_vector_collection",
-            "route_id": "gateway.superboard-files.command.update_vector_collection",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.delete_vector_collection",
-            "route_id": "gateway.superboard-files.command.delete_vector_collection",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.create_service_key",
-            "route_id": "gateway.superboard-files.command.create_service_key",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "POST",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/commands/superboard-files.command.revoke_service_key",
-            "route_id": "gateway.superboard-files.command.revoke_service_key",
-            "scopes": [
-              "superboard-files.write"
-            ],
-            "timeout_ms": 30000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
             "method": "GET",
             "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.objects",
             "route_id": "gateway.superboard-files.data_source.objects",
@@ -5850,150 +5830,6 @@
             "method": "GET",
             "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.storage_usage",
             "route_id": "gateway.superboard-files.data_source.storage_usage",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_status",
-            "route_id": "gateway.superboard-files.data_source.data_status",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_tables",
-            "route_id": "gateway.superboard-files.data_source.data_tables",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_table",
-            "route_id": "gateway.superboard-files.data_source.data_table",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_rows",
-            "route_id": "gateway.superboard-files.data_source.data_rows",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_settings",
-            "route_id": "gateway.superboard-files.data_source.data_settings",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_buckets",
-            "route_id": "gateway.superboard-files.data_source.data_buckets",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_bucket_objects",
-            "route_id": "gateway.superboard-files.data_source.data_bucket_objects",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_functions",
-            "route_id": "gateway.superboard-files.data_source.data_functions",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_function",
-            "route_id": "gateway.superboard-files.data_source.data_function",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_function_runs",
-            "route_id": "gateway.superboard-files.data_source.data_function_runs",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_vector_collections",
-            "route_id": "gateway.superboard-files.data_source.data_vector_collections",
-            "scopes": [
-              "superboard-files.read"
-            ],
-            "timeout_ms": 10000
-          },
-          {
-            "audience": "superboard_front",
-            "auth_policy": "authenticated",
-            "destination": "superboard-files",
-            "method": "GET",
-            "path_pattern": "/_emdash/api/superboard/plugins/superboard-files/data-sources/superboard-files.data_source.data_keys",
-            "route_id": "gateway.superboard-files.data_source.data_keys",
             "scopes": [
               "superboard-files.read"
             ],
@@ -6188,6 +6024,138 @@
             "route_id": "gateway.superboard-flows.data_source.user_details",
             "scopes": [
               "superboard-flows.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/superboard-functions/health",
+            "route_id": "gateway.superboard-functions.health",
+            "scopes": [
+              "superboard-functions.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/commands/superboard-functions.command.deploy_data_function",
+            "route_id": "gateway.superboard-functions.command.deploy_data_function",
+            "scopes": [
+              "superboard-functions.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/commands/superboard-functions.command.delete_data_function",
+            "route_id": "gateway.superboard-functions.command.delete_data_function",
+            "scopes": [
+              "superboard-functions.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/commands/superboard-functions.command.rollback_data_function",
+            "route_id": "gateway.superboard-functions.command.rollback_data_function",
+            "scopes": [
+              "superboard-functions.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/commands/superboard-functions.command.invoke_data_function",
+            "route_id": "gateway.superboard-functions.command.invoke_data_function",
+            "scopes": [
+              "superboard-functions.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/commands/superboard-functions.command.schedule_data_function",
+            "route_id": "gateway.superboard-functions.command.schedule_data_function",
+            "scopes": [
+              "superboard-functions.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/commands/superboard-functions.command.unschedule_data_function",
+            "route_id": "gateway.superboard-functions.command.unschedule_data_function",
+            "scopes": [
+              "superboard-functions.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/data-sources/superboard-functions.data_source.data_function_status",
+            "route_id": "gateway.superboard-functions.data_source.data_function_status",
+            "scopes": [
+              "superboard-functions.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/data-sources/superboard-functions.data_source.data_functions",
+            "route_id": "gateway.superboard-functions.data_source.data_functions",
+            "scopes": [
+              "superboard-functions.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/data-sources/superboard-functions.data_source.data_function",
+            "route_id": "gateway.superboard-functions.data_source.data_function",
+            "scopes": [
+              "superboard-functions.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-functions",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-functions/data-sources/superboard-functions.data_source.data_function_runs",
+            "route_id": "gateway.superboard-functions.data_source.data_function_runs",
+            "scopes": [
+              "superboard-functions.read"
             ],
             "timeout_ms": 10000
           },
@@ -7478,6 +7446,78 @@
           {
             "audience": "superboard_front",
             "auth_policy": "authenticated",
+            "destination": "superboard-storage",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/superboard-storage/health",
+            "route_id": "gateway.superboard-storage.health",
+            "scopes": [
+              "superboard-storage.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-storage",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-storage/commands/superboard-storage.command.create_data_bucket",
+            "route_id": "gateway.superboard-storage.command.create_data_bucket",
+            "scopes": [
+              "superboard-storage.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-storage",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-storage/commands/superboard-storage.command.update_data_bucket",
+            "route_id": "gateway.superboard-storage.command.update_data_bucket",
+            "scopes": [
+              "superboard-storage.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-storage",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-storage/commands/superboard-storage.command.delete_data_bucket",
+            "route_id": "gateway.superboard-storage.command.delete_data_bucket",
+            "scopes": [
+              "superboard-storage.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-storage",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-storage/data-sources/superboard-storage.data_source.data_buckets",
+            "route_id": "gateway.superboard-storage.data_source.data_buckets",
+            "scopes": [
+              "superboard-storage.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-storage",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-storage/data-sources/superboard-storage.data_source.data_bucket_objects",
+            "route_id": "gateway.superboard-storage.data_source.data_bucket_objects",
+            "scopes": [
+              "superboard-storage.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
             "destination": "superboard-support",
             "method": "GET",
             "path_pattern": "/_emdash/api/plugins/superboard-support/health",
@@ -7930,10 +7970,70 @@
               "application.identity.sessions.read"
             ],
             "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-vectors",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/superboard-vectors/health",
+            "route_id": "gateway.superboard-vectors.health",
+            "scopes": [
+              "superboard-vectors.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-vectors",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-vectors/commands/superboard-vectors.command.create_vector_collection",
+            "route_id": "gateway.superboard-vectors.command.create_vector_collection",
+            "scopes": [
+              "superboard-vectors.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-vectors",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-vectors/commands/superboard-vectors.command.update_vector_collection",
+            "route_id": "gateway.superboard-vectors.command.update_vector_collection",
+            "scopes": [
+              "superboard-vectors.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-vectors",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-vectors/commands/superboard-vectors.command.delete_vector_collection",
+            "route_id": "gateway.superboard-vectors.command.delete_vector_collection",
+            "scopes": [
+              "superboard-vectors.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "superboard-vectors",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/superboard-vectors/data-sources/superboard-vectors.data_source.data_vector_collections",
+            "route_id": "gateway.superboard-vectors.data_source.data_vector_collections",
+            "scopes": [
+              "superboard-vectors.read"
+            ],
+            "timeout_ms": 10000
           }
         ],
         "schema_version": "1.0.0",
-        "gateway_checksum": "sha256:7f7708d19d830c6a79416564113b19ebf0dc0e280e66af290090ee13ddbf78d7"
+        "gateway_checksum": "sha256:1f71a54fc4629401df6646a9316da3d78903f217ba0dc7da1ca60daf5aa34919"
       },
       "instance_id": "mabza-development",
       "plugin_lock": [
@@ -7944,112 +8044,136 @@
           "version": "0.1.0"
         },
         {
-          "artifact_checksum": "sha256:d9f15e4e2460ac397d1fe9960fe8b71ac967294e8fb14989d2b554122b380433",
+          "artifact_checksum": "sha256:c91e4db3ce8700032598a50d3c4be59a270cfc4b471b7e6ef35a08171aa51eee",
           "native": false,
           "plugin_id": "superboard-analytics",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:c658d57a2e5f7fcfb3fc5b13a9ed58bbc46bc543ee44854fc584cfc1316789bd",
+          "artifact_checksum": "sha256:4bc5c86c2212417e4c8fd6c2e43269ea7ef17971e8c332afea636201ce593fa9",
           "native": false,
           "plugin_id": "superboard-audit",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:c801033566a1c50941e9f59c0a3d4482c25f85052571605e228fb48ecd93c730",
+          "artifact_checksum": "sha256:23c2a70a0ad2ddd6f9c1563bdcd8bef82058020c8e277d7d38ea7a662e46d9a1",
           "native": false,
           "plugin_id": "superboard-billing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:a6f1969a27c657083a26546be5d885d715ff093991f478f515f2cf3ebe4e9cd0",
+          "artifact_checksum": "sha256:ed7f33d33fe768c2c679feb9822729dec958548c843ea03b7687da99599f384a",
           "native": false,
           "plugin_id": "superboard-content",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:2a20b5d9ebf0aedda55eb4ebd9abe9941829bca0f1ce8e516f5b23d458e8e30d",
+          "artifact_checksum": "sha256:fc45e5d0d8f9c3a8344f04ea0aa893fff723996614d4c5025c2958c5098e2250",
+          "native": false,
+          "plugin_id": "superboard-database",
+          "version": "1.0.0"
+        },
+        {
+          "artifact_checksum": "sha256:fd0a2373df6c7ff02705f5a1e82b76bf1bfedc3237b6e391ffa13a385127c4ac",
           "native": false,
           "plugin_id": "superboard-dynamic-links",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:c01f2f63a869d5801d1387ad9dd990485083cf179bfb7268690b9327beb3593b",
+          "artifact_checksum": "sha256:bbc99b837a66dd64c953e2e1b8aede29dc9f18d7bdaa624e34d8b4450e117309",
           "native": false,
           "plugin_id": "superboard-email",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:0769d4380f7772b5db4bfe282500e78a140f5c7f16aa1b8a8a819e12f3045faf",
+          "artifact_checksum": "sha256:3a830305b10f218d5225dd17f77d5adf6b9931b29da6bfde4136a1936d2647fa",
           "native": false,
           "plugin_id": "superboard-files",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:a0c44d3fdf37eae81136383762fd03774c4e023e739935b733b6f0a2014a0202",
+          "artifact_checksum": "sha256:428b5d7304df61a9b8c260af7b6ae6b22b2290e80c683f88cd343512c32ff382",
           "native": false,
           "plugin_id": "superboard-flows",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:55733ebfd13a528d41ccc23e3f2acaa9ce28afa78fb7cc748142e0984810347a",
+          "artifact_checksum": "sha256:142256445dff14d721a9a76382562455160c57fd9048b93baf64d495f5e81035",
+          "native": false,
+          "plugin_id": "superboard-functions",
+          "version": "1.0.0"
+        },
+        {
+          "artifact_checksum": "sha256:8503f5f4f61631222f17e927e139f559c98c8163ecd42f267c54ae2189861a35",
           "native": false,
           "plugin_id": "superboard-gateway",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:d679925182dbaf1e8adff66635d38427510ddb4a7f20527dc4005dad2176ab69",
+          "artifact_checksum": "sha256:7b9d7a358cd87205bde46a18245d5d75800e52ef94fe8dac1bcbcbc8ecf9b0de",
           "native": false,
           "plugin_id": "superboard-marketing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:6bb0bf3c788861b420fc354008284af7a44ed8edf96de70b9a2cd63a5764ffb3",
+          "artifact_checksum": "sha256:5209aaf4ae6241b39f50236fc1c055999cc04244dcdf0f0c3b9e282ae3f086f7",
           "native": false,
           "plugin_id": "superboard-mcp",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:d64940b2d4616a06b10796304afdbb2b0624e261d9366915d99e0e059ed7f407",
+          "artifact_checksum": "sha256:333a31bf140edbe944c0d9cb02cdf6e8ce6391e942a0c374aa41d2bdc61b419a",
           "native": false,
           "plugin_id": "superboard-observability",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:26e11fe64a11cc61754cf7b5ecdc2db19696866ca439163124ae980e88917555",
+          "artifact_checksum": "sha256:7fb184a25feb6cf362820fd4c9fea46b0ce58d8d941b391c30bceff16626dea8",
           "native": false,
           "plugin_id": "superboard-onboardings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:300958006d27efa8b78e15d1790a75e8c135317b23910753135b623099075105",
+          "artifact_checksum": "sha256:c2b8ff7178d1e9a91698ff79af348ae1c8af48ec684cdb2eaeb66ed849354d17",
           "native": false,
           "plugin_id": "superboard-paywalls",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:f5ec6be9bcd1845a746818239a6daff0498bf31ace924bee8c331f2c30bf81a6",
+          "artifact_checksum": "sha256:ebad314ab1bffba66de15a8809c51b74e91fb7686014f12ce9d8fbf6d8c59a17",
           "native": false,
           "plugin_id": "superboard-products",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:aa18c7d17da756965a25896054416f00a4e46ba61ecfe217b8df941ec69fa759",
+          "artifact_checksum": "sha256:0bb41a68458f0905030394bf640f871fda75def0bf4ace4c672fcfd1e71dc900",
           "native": false,
           "plugin_id": "superboard-settings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:1ddfe5ae194a783f0edf6f7e3c96de6519e127a80f137c43c23694728e4e3fff",
+          "artifact_checksum": "sha256:517d618c7a3e9d4d29d04fabca1cdd9a49db3333c4bed62a0ecd95fb6b2528f5",
+          "native": false,
+          "plugin_id": "superboard-storage",
+          "version": "1.0.0"
+        },
+        {
+          "artifact_checksum": "sha256:42ad8816c6b5b9fadc3783c8cab6d724cbe63eb3e30a7ff624ba30614ae6401c",
           "native": false,
           "plugin_id": "superboard-support",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:bc6ea2d472245fdedf0a940328441058c901b9ee4955748cea0ed67a1e91f8b2",
+          "artifact_checksum": "sha256:3702582c3ced8c57e9e536db964d01d2c9b7018492c57ea9082be678ba1eba31",
           "native": false,
           "plugin_id": "superboard-user",
           "version": "1.4.0"
+        },
+        {
+          "artifact_checksum": "sha256:32b83e0912c1554c47bbd43da111c429e73da1606532ccc8373a2cea1c8a1e52",
+          "native": false,
+          "plugin_id": "superboard-vectors",
+          "version": "1.0.0"
         }
       ],
       "presentation": {
@@ -8121,45 +8245,45 @@
                 "route_id": "superboard.data_content"
               },
               {
-                "href": "/data/files",
-                "label": "superboard-files.menu.item_0",
-                "order": 1,
-                "permission": "superboard-files.read",
-                "route_id": "superboard.data_files"
-              },
-              {
                 "href": "/data/database",
-                "label": "superboard-files.menu.item_1",
-                "order": 2,
-                "permission": "superboard-files.read",
+                "label": "superboard-database.menu.item_0",
+                "order": 1,
+                "permission": "superboard-database.read",
                 "route_id": "superboard.data_database"
               },
               {
                 "href": "/data/storage",
-                "label": "superboard-files.menu.item_2",
-                "order": 3,
-                "permission": "superboard-files.read",
+                "label": "superboard-storage.menu.item_0",
+                "order": 2,
+                "permission": "superboard-storage.read",
                 "route_id": "superboard.data_storage"
               },
               {
-                "href": "/data/functions",
-                "label": "superboard-files.menu.item_3",
-                "order": 4,
+                "href": "/data/files",
+                "label": "superboard-files.menu.item_0",
+                "order": 3,
                 "permission": "superboard-files.read",
+                "route_id": "superboard.data_files"
+              },
+              {
+                "href": "/data/functions",
+                "label": "superboard-functions.menu.item_0",
+                "order": 4,
+                "permission": "superboard-functions.read",
                 "route_id": "superboard.data_functions"
               },
               {
                 "href": "/data/vectors",
-                "label": "superboard-files.menu.item_4",
+                "label": "superboard-vectors.menu.item_0",
                 "order": 5,
-                "permission": "superboard-files.read",
+                "permission": "superboard-vectors.read",
                 "route_id": "superboard.data_vectors"
               },
               {
                 "href": "/data/api",
-                "label": "superboard-files.menu.item_5",
+                "label": "superboard-database.menu.item_1",
                 "order": 6,
-                "permission": "superboard-files.read",
+                "permission": "superboard-database.read",
                 "route_id": "superboard.data_api"
               }
             ],
@@ -8794,8 +8918,8 @@
           },
           {
             "page_id": "page.superboard_data_api",
-            "root_renderer_id": "superboard-files.renderer.admin_surface",
-            "title": "API and server keys"
+            "root_renderer_id": "superboard-database.renderer.admin_surface",
+            "title": "Data settings"
           },
           {
             "page_id": "page.superboard_data_content",
@@ -8804,7 +8928,7 @@
           },
           {
             "page_id": "page.superboard_data_database",
-            "root_renderer_id": "superboard-files.renderer.admin_surface",
+            "root_renderer_id": "superboard-database.renderer.admin_surface",
             "title": "Application database"
           },
           {
@@ -8814,17 +8938,17 @@
           },
           {
             "page_id": "page.superboard_data_functions",
-            "root_renderer_id": "superboard-files.renderer.admin_surface",
+            "root_renderer_id": "superboard-functions.renderer.admin_surface",
             "title": "Server functions"
           },
           {
             "page_id": "page.superboard_data_storage",
-            "root_renderer_id": "superboard-files.renderer.admin_surface",
-            "title": "Application storage"
+            "root_renderer_id": "superboard-storage.renderer.admin_surface",
+            "title": "Application buckets"
           },
           {
             "page_id": "page.superboard_data_vectors",
-            "root_renderer_id": "superboard-files.renderer.admin_surface",
+            "root_renderer_id": "superboard-vectors.renderer.admin_surface",
             "title": "Vector collections"
           },
           {
@@ -9235,16 +9359,14 @@
               "superboard-audit.menu.item_0": "Audit log",
               "superboard-billing.menu.customers": "Customers",
               "superboard-content.menu.item_0": "Content",
+              "superboard-database.menu.item_0": "Database",
+              "superboard-database.menu.item_1": "Data settings",
               "superboard-dynamic-links.menu.links": "Dynamic links",
               "superboard-email.menu.group": "Email",
               "superboard-email.menu.item_0": "Transactional email",
               "superboard-files.menu.item_0": "Files and media",
-              "superboard-files.menu.item_1": "Database",
-              "superboard-files.menu.item_2": "Storage",
-              "superboard-files.menu.item_3": "Functions",
-              "superboard-files.menu.item_4": "Vectors",
-              "superboard-files.menu.item_5": "API and keys",
               "superboard-flows.menu.settings": "Settings",
+              "superboard-functions.menu.item_0": "Functions",
               "superboard-gateway.menu.item_0": "API routing",
               "superboard-marketing.menu.audience": "Audience",
               "superboard-marketing.menu.in-app-messages": "In-app & Push",
@@ -9260,6 +9382,8 @@
               "superboard-products.menu.settings": "Settings",
               "superboard-settings.menu.general": "General",
               "superboard-settings.menu.sdk": "SDK & apps",
+              "superboard-storage.menu.item_0": "Application buckets",
+              "superboard-vectors.menu.item_0": "Vectors",
               "user.action.passkey": "Continue with Passkey",
               "user.admin.description": "Manage the selected identity View through its verified plugin renderer.",
               "user.admin.title": "Identity administration",
@@ -9357,16 +9481,14 @@
               "superboard-audit.menu.item_0": "Journal d’audit",
               "superboard-billing.menu.customers": "Clients",
               "superboard-content.menu.item_0": "Contenus",
+              "superboard-database.menu.item_0": "Base de données",
+              "superboard-database.menu.item_1": "Paramètres Data",
               "superboard-dynamic-links.menu.links": "Liens dynamiques",
               "superboard-email.menu.group": "E-mail",
               "superboard-email.menu.item_0": "E-mails transactionnels",
               "superboard-files.menu.item_0": "Fichiers et médias",
-              "superboard-files.menu.item_1": "Base de données",
-              "superboard-files.menu.item_2": "Stockage",
-              "superboard-files.menu.item_3": "Fonctions",
-              "superboard-files.menu.item_4": "Vecteurs",
-              "superboard-files.menu.item_5": "API et clés",
               "superboard-flows.menu.settings": "Paramètres",
+              "superboard-functions.menu.item_0": "Fonctions",
               "superboard-gateway.menu.item_0": "Routage de l’API",
               "superboard-marketing.menu.audience": "Audience",
               "superboard-marketing.menu.in-app-messages": "In-app et push",
@@ -9382,6 +9504,8 @@
               "superboard-products.menu.settings": "Paramètres",
               "superboard-settings.menu.general": "Général",
               "superboard-settings.menu.sdk": "SDK et applications",
+              "superboard-storage.menu.item_0": "Buckets d’application",
+              "superboard-vectors.menu.item_0": "Vecteurs",
               "user.action.passkey": "Continuer avec une passkey",
               "user.admin.description": "Gérez la View d’identité sélectionnée avec son renderer de plugin vérifié.",
               "user.admin.title": "Administration des identités",
@@ -9682,8 +9806,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9711,8 +9835,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9740,8 +9864,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9769,8 +9893,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9798,8 +9922,37 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+          "capabilities": [
+            "renderer.mount",
+            "data_source.bind",
+            "action.bind"
+          ],
+          "plugin_id": "superboard-database",
+          "plugin_version": "1.0.0",
+          "props_schema": {
+            "checksum": "sha256:9506a99b92359056ae510ff96c70ce9059f3755dd76553aa49b4807ccd16814d",
+            "schema_id": "superboard-database.schema.admin_surface_props_v1",
+            "version": "1.0.0"
+          },
+          "renderer_id": "superboard-database.renderer.admin_surface",
+          "runtime_range": ">=0.1.0 <0.2.0",
+          "slots": [],
+          "supported_states": [
+            "loading",
+            "empty",
+            "forbidden",
+            "not_found",
+            "error",
+            "unavailable",
+            "maintenance"
+          ]
+        },
+        {
+          "abi_version": "1.0.0",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9827,8 +9980,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9856,8 +10009,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9885,8 +10038,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9914,8 +10067,37 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+          "capabilities": [
+            "renderer.mount",
+            "data_source.bind",
+            "action.bind"
+          ],
+          "plugin_id": "superboard-functions",
+          "plugin_version": "1.0.0",
+          "props_schema": {
+            "checksum": "sha256:f4926d30227c054f0f7f0913495735be5ffdf37792cb22845b3e15bea999eb5d",
+            "schema_id": "superboard-functions.schema.admin_surface_props_v1",
+            "version": "1.0.0"
+          },
+          "renderer_id": "superboard-functions.renderer.admin_surface",
+          "runtime_range": ">=0.1.0 <0.2.0",
+          "slots": [],
+          "supported_states": [
+            "loading",
+            "empty",
+            "forbidden",
+            "not_found",
+            "error",
+            "unavailable",
+            "maintenance"
+          ]
+        },
+        {
+          "abi_version": "1.0.0",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9943,8 +10125,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9972,8 +10154,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -10001,8 +10183,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -10030,8 +10212,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -10059,8 +10241,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -10088,8 +10270,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -10117,8 +10299,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -10146,8 +10328,37 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+          "capabilities": [
+            "renderer.mount",
+            "data_source.bind",
+            "action.bind"
+          ],
+          "plugin_id": "superboard-storage",
+          "plugin_version": "1.0.0",
+          "props_schema": {
+            "checksum": "sha256:a7681a96cc2656c553e39aff186c6aa7ff0e5779432676f0eba5a7318ffe6061",
+            "schema_id": "superboard-storage.schema.admin_surface_props_v1",
+            "version": "1.0.0"
+          },
+          "renderer_id": "superboard-storage.renderer.admin_surface",
+          "runtime_range": ">=0.1.0 <0.2.0",
+          "slots": [],
+          "supported_states": [
+            "loading",
+            "empty",
+            "forbidden",
+            "not_found",
+            "error",
+            "unavailable",
+            "maintenance"
+          ]
+        },
+        {
+          "abi_version": "1.0.0",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -10175,8 +10386,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount"
           ],
@@ -10202,8 +10413,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount"
           ],
@@ -10229,8 +10440,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-          "build_id": "4DA4N516X945NN6AXHENDWX3A6",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
           "capabilities": [
             "renderer.mount"
           ],
@@ -10253,6 +10464,35 @@
             "unavailable",
             "maintenance"
           ]
+        },
+        {
+          "abi_version": "1.0.0",
+          "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+          "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+          "capabilities": [
+            "renderer.mount",
+            "data_source.bind",
+            "action.bind"
+          ],
+          "plugin_id": "superboard-vectors",
+          "plugin_version": "1.0.0",
+          "props_schema": {
+            "checksum": "sha256:b9152d6e1c153d693fc1a918aa149a05a379e0f7f70c86232cda3812dd7a9195",
+            "schema_id": "superboard-vectors.schema.admin_surface_props_v1",
+            "version": "1.0.0"
+          },
+          "renderer_id": "superboard-vectors.renderer.admin_surface",
+          "runtime_range": ">=0.1.0 <0.2.0",
+          "slots": [],
+          "supported_states": [
+            "loading",
+            "empty",
+            "forbidden",
+            "not_found",
+            "error",
+            "unavailable",
+            "maintenance"
+          ]
         }
       ],
       "rollback": {
@@ -10262,11 +10502,11 @@
       },
       "schema_version": "1.0.0"
     },
-    "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+    "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "lW67xpmz7H6xatIx229z5o-OHC292x9wTHmgJctBfYTZYB4dI5rdHtaS1TupUf9AjBK7q-hPyWmvd1U6rSOANg"
+      "value": "dIbPfnWJEzWHsJUhwLiLDBgN_RY3xKwKa4PIUhDYFnfb3L7deRXCkqNjZ-I4TUv6kn31htd07Bwio4o5SWsiKg"
     },
     "validation_receipts": [
       {
@@ -10276,9 +10516,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "schema validation passed",
-        "receipt_checksum": "sha256:31b6ad1be76e3b44c9e529c35cd4bf05d29cc130e8ebde86ac1b6ba6f27a3a2d"
+        "receipt_checksum": "sha256:4bb31d23bcc24aeb676fe0b0c873cb2247bf274bbb5b210f257b42fe45a2046d"
       },
       {
         "receipt_id": "01J00000000000000000007004:normalization",
@@ -10287,9 +10527,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "normalization validation passed",
-        "receipt_checksum": "sha256:36ab244d32c9b95507333e910abecdb295393fdd6ca6588baa9263020e199e71"
+        "receipt_checksum": "sha256:2c3b0d3daec2493789cdef5aae6efc5cbfc7ad941c24979c438eb8c99555151a"
       },
       {
         "receipt_id": "01J00000000000000000007004:identity",
@@ -10298,9 +10538,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "identity validation passed",
-        "receipt_checksum": "sha256:88e458fa6251c1f4537298e8c6b2711fa6e3f14e18d1d00d1a26537603cd9d50"
+        "receipt_checksum": "sha256:b2685b6d3162d3078174f2b4f7e94c14944aff1cd9873dd002f44a512fea2d42"
       },
       {
         "receipt_id": "01J00000000000000000007004:reference_graph",
@@ -10309,9 +10549,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "reference_graph validation passed",
-        "receipt_checksum": "sha256:f185035889d2acee2339e5c6412663c0c6e227fa2cb43a6ea355cbc7bbdfbd95"
+        "receipt_checksum": "sha256:dadfbb603827c2614d43e7b6096737f8adbc45beef969d1a0d28f908873a7000"
       },
       {
         "receipt_id": "01J00000000000000000007004:routing",
@@ -10320,9 +10560,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "routing validation passed",
-        "receipt_checksum": "sha256:49bab699edf0dadc54e508b993e89a556563860a46fe6bccf93aad4bf71aa0a2"
+        "receipt_checksum": "sha256:cebe9c543aa7917063a65d12d00a6361b44360a346647dd33a9608266a7b374c"
       },
       {
         "receipt_id": "01J00000000000000000007004:renderer_compatibility",
@@ -10331,9 +10571,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "renderer_compatibility validation passed",
-        "receipt_checksum": "sha256:24c538b92263d8513eb3a500ddb1e47d0796d6d3da54de158114d6297de769d5"
+        "receipt_checksum": "sha256:02e416197c9678ca1780c57fc7634378379135f3a21d934f618bb35fd666570c"
       },
       {
         "receipt_id": "01J00000000000000000007004:actions_data_sources",
@@ -10342,9 +10582,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "actions_data_sources validation passed",
-        "receipt_checksum": "sha256:0a257ef148545fae461234bceb46d3602e7db6f439eea2eb12d9724b1e565ff6"
+        "receipt_checksum": "sha256:90198e20965711f554de6cde2d13bd9ac35971923338868850063856072fb9f9"
       },
       {
         "receipt_id": "01J00000000000000000007004:permissions_security",
@@ -10353,9 +10593,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "permissions_security validation passed",
-        "receipt_checksum": "sha256:829b89bdc3e8676b5dc97176dd0edf4d77e547e28943676caecedb0871b3aae5"
+        "receipt_checksum": "sha256:1228165bfb89473144cc31c1c1ee5fa575cb0dac64e79c99bd91e4a6f9a57b84"
       },
       {
         "receipt_id": "01J00000000000000000007004:translations_media",
@@ -10364,9 +10604,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "translations_media validation passed",
-        "receipt_checksum": "sha256:4c50ee79fdee74874a474d49b629aeb48d9f97aa5ad7ac6133c274989d3aa51c"
+        "receipt_checksum": "sha256:728b11ad24757ab5b5a68e01242e77356fef537a2d3e6e8980d26f0c453c026c"
       },
       {
         "receipt_id": "01J00000000000000000007004:plugins_stores_workers",
@@ -10375,9 +10615,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "plugins_stores_workers validation passed",
-        "receipt_checksum": "sha256:f640b4e8b6a81110c07449475dfaf22683890d09ba3b4e59f6e8ef95c162f0cd"
+        "receipt_checksum": "sha256:0ab19ddd5debe5c6b95367f12c77051c4bf19c2f3de487e445becca14d8e9534"
       },
       {
         "receipt_id": "01J00000000000000000007004:migrations",
@@ -10386,9 +10626,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "migrations validation passed",
-        "receipt_checksum": "sha256:d68399d3bc02ba33ba6ffc87044cee87dc79ed74071f8affa40c944653b86d6b"
+        "receipt_checksum": "sha256:9bc8ba6c87ab1c96257a947ccd78867336a597d6014961a2f532d61a8224dba3"
       },
       {
         "receipt_id": "01J00000000000000000007004:rollback_readiness",
@@ -10397,9 +10637,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "rollback_readiness validation passed",
-        "receipt_checksum": "sha256:cda2cbe05a36bbc0461edbc35525e7d1dea8d67cda3eb4dbda2b59b3cd738374"
+        "receipt_checksum": "sha256:4d4cc266587b2f07327aef51b0caee032aae3827ced49efde232b9811b1863f5"
       },
       {
         "receipt_id": "01J00000000000000000007004:integrity",
@@ -10408,12 +10648,12 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+        "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
         "message": "integrity validation passed",
-        "receipt_checksum": "sha256:4e989397f08112526e27b19af3ac55d25c6664c944cd4407099fd0550243c97d"
+        "receipt_checksum": "sha256:509bf5a457b6a080fc8f3427f556e88ac6ca9c2bf9d1475caf007bfe2de8ade6"
       }
     ],
-    "validation_set_checksum": "sha256:f704bae95273f0d7384f79235370c69f22121f7cbd1e8fdd2b1c8d9533ae53fa",
+    "validation_set_checksum": "sha256:13d99667041d3ce54616c4a303f5ab178a21208b31d74ee1f73178e0f4ae1f50",
     "verification_status": "verified"
   }
 }

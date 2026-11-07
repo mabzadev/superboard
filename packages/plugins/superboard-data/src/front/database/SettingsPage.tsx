@@ -20,20 +20,19 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import { useId, useState } from "react";
 
-import { DELETE, PATCH, POST } from "../transport.js";
+import { useDataPath, useDataResource } from "./resource.js";
+import { DELETE, PATCH, POST } from "./transport.js";
 import {
 	encode,
 	readBody,
 	useAddressState,
 	useDataAction,
-	useDataPath,
-	useDataResource,
 	type DataStatus,
 	type Page,
 	type ProjectSettings,
 	type ServiceKey,
-} from "./client.js";
-import { useDataConsoleI18n, type DataConsoleMessages } from "./i18n.js";
+} from "../console/client.js";
+import { useDataConsoleI18n, type DataConsoleMessages } from "../console/i18n.js";
 import {
 	CodeBlock,
 	ConfirmPanel,
@@ -46,7 +45,7 @@ import {
 	SectionTabs,
 	StatusBadge,
 	type FeatureState,
-} from "./shared.js";
+} from "../console/shared.js";
 
 const trailingSlashes = /\/+$/u;
 
@@ -58,7 +57,7 @@ function usePublicApiBase(): string | null {
 	return sdk ? `${sdk.replace(trailingSlashes, "")}/v1/data` : null;
 }
 
-export default function ApiPage() {
+export default function DataSettingsPage() {
 	const { t } = useDataConsoleI18n();
 	const base = useDataPath();
 	const [tabParameter, setTab] = useAddressState("tab");

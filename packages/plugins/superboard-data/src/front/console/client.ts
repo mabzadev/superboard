@@ -3,8 +3,6 @@ import { ApiError } from "@superboard/front-ui/lib/ApiError.js";
 import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { GET } from "../transport.js";
-
 export const ACCESS_RULES = ["public", "authenticated", "owner", "service"] as const;
 export type AccessRule = (typeof ACCESS_RULES)[number];
 export const FUNCTION_ACCESS = ["public", "authenticated", "service"] as const;
@@ -188,9 +186,11 @@ export function readBody<T>(response: { data: unknown }): T {
 	return response.data as T;
 }
 
-export function useDataPath(): string | null {
+export type DataBrick = "database" | "storage" | "functions" | "vectors";
+
+export function useBrickPath(brick: DataBrick): string | null {
 	const { selectedProject } = useProjectSelection();
-	return selectedProject ? `/api/v1/files/projects/${encode(selectedProject.id)}/data` : null;
+	return selectedProject ? `/api/v1/data/${brick}/projects/${encode(selectedProject.id)}` : null;
 }
 
 export function objectPath(base: string, bucket: string, path: string): string {
@@ -209,42 +209,44 @@ export function errorDetail(cause: unknown): string | null {
 	return cause instanceof Error && cause.message ? cause.message : null;
 }
 
-export function useDataResource<T>(path: string | null) {
-	const [version, setVersion] = useState(0);
-	const [result, setResult] = useState<{
-		key: string;
-		path: string;
-		data: T | null;
-		error: unknown;
-	} | null>(null);
-	const key = `${path ?? ""}#${version}`;
-	useEffect(() => {
-		if (!path) return;
-		let active = true;
-		const load = async () => {
-			try {
-				const response = await GET(path);
-				if (active) setResult({ key, path, data: readBody<T>(response), error: null });
-			} catch (cause) {
-				if (active) setResult({ key, path, data: null, error: cause });
-			}
+export function dataResourceHook(get: (path: string) => Promise<{ data: unknown }>) {
+	return function useDataResource<T>(path: string | null) {
+		const [version, setVersion] = useState(0);
+		const [result, setResult] = useState<{
+			key: string;
+			path: string;
+			data: T | null;
+			error: unknown;
+		} | null>(null);
+		const key = `${path ?? ""}#${version}`;
+		useEffect(() => {
+			if (!path) return;
+			let active = true;
+			const load = async () => {
+				try {
+					const response = await get(path);
+					if (active) setResult({ key, path, data: readBody<T>(response), error: null });
+				} catch (cause) {
+					if (active) setResult({ key, path, data: null, error: cause });
+				}
+			};
+			load().catch(() => undefined);
+			return () => {
+				active = false;
+			};
+		}, [path, key]);
+		const refresh = useCallback(() => {
+			setVersion((current) => current + 1);
+		}, []);
+		const current = result?.key === key ? result : null;
+		const sameResource = result !== null && result.path === path;
+		return {
+			data: sameResource ? result.data : null,
+			error: current?.error ?? null,
+			loading: path !== null && current === null,
+			refresh,
 		};
-		load().catch(() => undefined);
-		return () => {
-			active = false;
-		};
-	}, [path, key]);
-	const refresh = useCallback(() => {
-		setVersion((current) => current + 1);
-	}, []);
-	const current = result?.key === key ? result : null;
-	const sameResource = result !== null && result.path === path;
-	return {
-		data: sameResource ? result.data : null,
-		error: current?.error ?? null,
-		loading: path !== null && current === null,
-		refresh,
-	};
+	}
 }
 
 export function useDataAction() {

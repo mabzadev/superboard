@@ -13,9 +13,10 @@ const topologyPath = join(root, "scripts/config/emdash-plugin-topology.json");
 const parityReleasePath = join(root, "scripts/config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "scripts/config/superboard-front-bundle.json");
-const manifestMigrationPath = join(root, "apps/site/migrations/0065_plugin_manifest_refresh.sql");
+const manifestMigrationPath = join(root, "apps/site/migrations/0066_plugin_manifest_refresh.sql");
 const compatibilityPath = join(root, "scripts/config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0065_plugin_manifest_refresh.sql"),
 	join(root, "apps/site/migrations/0064_plugin_manifest_refresh.sql"),
 	join(root, "apps/site/migrations/0063_plugin_manifest_refresh.sql"),
 	join(root, "apps/site/migrations/0062_plugin_manifest_refresh.sql"),
@@ -96,6 +97,10 @@ const modulePlugins = [
 	["email", "email"],
 	["dynamic-links", "dynamic-links"],
 	["files", "files"],
+	["database", "files"],
+	["storage", "files"],
+	["functions", "files"],
+	["vectors", "files"],
 	["paywalls", "paywalls"],
 	["onboardings", "onboardings"],
 	["observability", "observability"],
@@ -117,6 +122,10 @@ const pluginStores = {
 	"superboard-email": ["deliveries", "provider_events"],
 	"superboard-dynamic-links": ["links", "attribution"],
 	"superboard-files": ["objects", "tickets"],
+	"superboard-database": ["tables", "rows", "service_keys"],
+	"superboard-storage": ["buckets", "objects"],
+	"superboard-functions": ["functions", "runs"],
+	"superboard-vectors": ["collections", "items"],
 	"superboard-paywalls": ["definitions", "exposures"],
 	"superboard-onboardings": ["definitions", "progress"],
 	"superboard-observability": ["health_projections"],
@@ -449,11 +458,11 @@ const pluginOperations = {
 		],
 	},
 	"superboard-files": {
+		commands: ["create_upload_ticket", "complete_upload", "delete_object", "collect_garbage"],
+		dataSources: ["objects", "object_metadata", "download_ticket", "storage_usage"],
+	},
+	"superboard-database": {
 		commands: [
-			"create_upload_ticket",
-			"complete_upload",
-			"delete_object",
-			"collect_garbage",
 			"create_data_table",
 			"update_data_table",
 			"delete_data_table",
@@ -465,39 +474,36 @@ const pluginOperations = {
 			"delete_data_row",
 			"run_data_sql",
 			"update_data_settings",
-			"create_data_bucket",
-			"update_data_bucket",
-			"delete_data_bucket",
+			"create_service_key",
+			"revoke_service_key",
+		],
+		dataSources: [
+			"data_status",
+			"data_tables",
+			"data_table",
+			"data_rows",
+			"data_settings",
+			"data_keys",
+		],
+	},
+	"superboard-storage": {
+		commands: ["create_data_bucket", "update_data_bucket", "delete_data_bucket"],
+		dataSources: ["data_buckets", "data_bucket_objects"],
+	},
+	"superboard-functions": {
+		commands: [
 			"deploy_data_function",
 			"delete_data_function",
 			"rollback_data_function",
 			"invoke_data_function",
 			"schedule_data_function",
 			"unschedule_data_function",
-			"create_vector_collection",
-			"update_vector_collection",
-			"delete_vector_collection",
-			"create_service_key",
-			"revoke_service_key",
 		],
-		dataSources: [
-			"objects",
-			"object_metadata",
-			"download_ticket",
-			"storage_usage",
-			"data_status",
-			"data_tables",
-			"data_table",
-			"data_rows",
-			"data_settings",
-			"data_buckets",
-			"data_bucket_objects",
-			"data_functions",
-			"data_function",
-			"data_function_runs",
-			"data_vector_collections",
-			"data_keys",
-		],
+		dataSources: ["data_function_status", "data_functions", "data_function", "data_function_runs"],
+	},
+	"superboard-vectors": {
+		commands: ["create_vector_collection", "update_vector_collection", "delete_vector_collection"],
+		dataSources: ["data_vector_collections"],
 	},
 	"superboard-paywalls": {
 		commands: [
@@ -666,8 +672,8 @@ export function buildParityMatrix() {
 		}),
 	);
 
-	const workerRows = modulePlugins.flatMap(([name, worker]) => {
-		if (!worker) return [];
+	const workerRows = modulePlugins.flatMap(([name, worker], index) => {
+		if (!worker || modulePlugins.findIndex(([, owner]) => owner === worker) !== index) return [];
 		const proof = workerProof(worker);
 		return [
 			row({

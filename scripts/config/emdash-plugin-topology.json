@@ -596,8 +596,8 @@
             "renderer_id": "superboard-user.renderer.login_form",
             "plugin_id": "superboard-user",
             "plugin_version": "1.4.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -623,8 +623,8 @@
             "renderer_id": "superboard-user.renderer.profile_card",
             "plugin_id": "superboard-user",
             "plugin_version": "1.4.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -650,8 +650,8 @@
             "renderer_id": "superboard-user.renderer.admin_surface",
             "plugin_id": "superboard-user",
             "plugin_version": "1.4.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -780,7 +780,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:bc6ea2d472245fdedf0a940328441058c901b9ee4955748cea0ed67a1e91f8b2"
+        "artifact_checksum": "sha256:3702582c3ced8c57e9e536db964d01d2c9b7018492c57ea9082be678ba1eba31"
       },
       "repositories": [
         {
@@ -1106,8 +1106,8 @@
             "renderer_id": "superboard-settings.renderer.admin_surface",
             "plugin_id": "superboard-settings",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1206,7 +1206,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:aa18c7d17da756965a25896054416f00a4e46ba61ecfe217b8df941ec69fa759"
+        "artifact_checksum": "sha256:0bb41a68458f0905030394bf640f871fda75def0bf4ace4c672fcfd1e71dc900"
       },
       "repositories": [
         {
@@ -1547,8 +1547,8 @@
             "renderer_id": "superboard-content.renderer.admin_surface",
             "plugin_id": "superboard-content",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1647,7 +1647,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:a6f1969a27c657083a26546be5d885d715ff093991f478f515f2cf3ebe4e9cd0"
+        "artifact_checksum": "sha256:ed7f33d33fe768c2c679feb9822729dec958548c843ea03b7687da99599f384a"
       },
       "repositories": [
         {
@@ -2011,8 +2011,8 @@
             "renderer_id": "superboard-products.renderer.admin_surface",
             "plugin_id": "superboard-products",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2247,7 +2247,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:f5ec6be9bcd1845a746818239a6daff0498bf31ace924bee8c331f2c30bf81a6"
+        "artifact_checksum": "sha256:ebad314ab1bffba66de15a8809c51b74e91fb7686014f12ce9d8fbf6d8c59a17"
       },
       "repositories": [
         {
@@ -2569,8 +2569,8 @@
             "renderer_id": "superboard-audit.renderer.admin_surface",
             "plugin_id": "superboard-audit",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2659,7 +2659,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c658d57a2e5f7fcfb3fc5b13a9ed58bbc46bc543ee44854fc584cfc1316789bd"
+        "artifact_checksum": "sha256:4bc5c86c2212417e4c8fd6c2e43269ea7ef17971e8c332afea636201ce593fa9"
       },
       "repositories": [
         {
@@ -3124,8 +3124,8 @@
             "renderer_id": "superboard-gateway.renderer.admin_surface",
             "plugin_id": "superboard-gateway",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3224,7 +3224,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:55733ebfd13a528d41ccc23e3f2acaa9ce28afa78fb7cc748142e0984810347a"
+        "artifact_checksum": "sha256:8503f5f4f61631222f17e927e139f559c98c8163ecd42f267c54ae2189861a35"
       },
       "repositories": [
         {
@@ -3587,8 +3587,8 @@
             "renderer_id": "superboard-billing.renderer.admin_surface",
             "plugin_id": "superboard-billing",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3765,7 +3765,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c801033566a1c50941e9f59c0a3d4482c25f85052571605e228fb48ecd93c730"
+        "artifact_checksum": "sha256:23c2a70a0ad2ddd6f9c1563bdcd8bef82058020c8e277d7d38ea7a662e46d9a1"
       },
       "repositories": [
         {
@@ -4254,8 +4254,8 @@
             "renderer_id": "superboard-support.renderer.admin_surface",
             "plugin_id": "superboard-support",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4582,7 +4582,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:1ddfe5ae194a783f0edf6f7e3c96de6519e127a80f137c43c23694728e4e3fff"
+        "artifact_checksum": "sha256:42ad8816c6b5b9fadc3783c8cab6d724cbe63eb3e30a7ff624ba30614ae6401c"
       },
       "repositories": [
         {
@@ -4944,8 +4944,8 @@
             "renderer_id": "superboard-flows.renderer.admin_surface",
             "plugin_id": "superboard-flows",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5144,7 +5144,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:a0c44d3fdf37eae81136383762fd03774c4e023e739935b733b6f0a2014a0202"
+        "artifact_checksum": "sha256:428b5d7304df61a9b8c260af7b6ae6b22b2290e80c683f88cd343512c32ff382"
       },
       "repositories": [
         {
@@ -5482,8 +5482,8 @@
             "renderer_id": "superboard-analytics.renderer.admin_surface",
             "plugin_id": "superboard-analytics",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5852,7 +5852,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:d9f15e4e2460ac397d1fe9960fe8b71ac967294e8fb14989d2b554122b380433"
+        "artifact_checksum": "sha256:c91e4db3ce8700032598a50d3c4be59a270cfc4b471b7e6ef35a08171aa51eee"
       },
       "repositories": [
         {
@@ -6298,8 +6298,8 @@
             "renderer_id": "superboard-marketing.renderer.admin_surface",
             "plugin_id": "superboard-marketing",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6574,7 +6574,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:d679925182dbaf1e8adff66635d38427510ddb4a7f20527dc4005dad2176ab69"
+        "artifact_checksum": "sha256:7b9d7a358cd87205bde46a18245d5d75800e52ef94fe8dac1bcbcbc8ecf9b0de"
       },
       "repositories": [
         {
@@ -6974,8 +6974,8 @@
             "renderer_id": "superboard-email.renderer.admin_surface",
             "plugin_id": "superboard-email",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7148,7 +7148,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c01f2f63a869d5801d1387ad9dd990485083cf179bfb7268690b9327beb3593b"
+        "artifact_checksum": "sha256:bbc99b837a66dd64c953e2e1b8aede29dc9f18d7bdaa624e34d8b4450e117309"
       },
       "repositories": [
         {
@@ -7499,8 +7499,8 @@
             "renderer_id": "superboard-dynamic-links.renderer.admin_surface",
             "plugin_id": "superboard-dynamic-links",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7771,7 +7771,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:2a20b5d9ebf0aedda55eb4ebd9abe9941829bca0f1ce8e516f5b23d458e8e30d"
+        "artifact_checksum": "sha256:fd0a2373df6c7ff02705f5a1e82b76bf1bfedc3237b6e391ffa13a385127c4ac"
       },
       "repositories": [
         {
@@ -8100,8 +8100,8 @@
             "renderer_id": "superboard-files.renderer.admin_surface",
             "plugin_id": "superboard-files",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8166,256 +8166,6 @@
             "failure_policy": "fail_closed",
             "version": "1.0.0",
             "checksum": "sha256:1e253b6a2e67b92938e7fe983d9c10c49ea30888d9944c80ef27c907a1e7b145"
-          },
-          {
-            "command_id": "superboard-files.command.create_data_table",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:f8198e3697e36e72255212e9896072747092031247507ada0fa40c78116d5b6e"
-          },
-          {
-            "command_id": "superboard-files.command.update_data_table",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:98198e9ed1384b0dd458108444c20b5e9122c9312355236c4fe6f049c7437261"
-          },
-          {
-            "command_id": "superboard-files.command.delete_data_table",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:bb3a6c6db00b74b1a9244873b8e9eb9768cf700d4bbba5ea8dc691a156aa7181"
-          },
-          {
-            "command_id": "superboard-files.command.add_data_column",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:8cd41dbb776fa468e977314b0f66e16acd6d826d96e161f97a2ade21ab084be0"
-          },
-          {
-            "command_id": "superboard-files.command.update_data_column",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:6c6e10f1cc390fd91d3b0f65f884c3f65e00c7c552630072c59b6cb9985cf8ea"
-          },
-          {
-            "command_id": "superboard-files.command.delete_data_column",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:541bbb5304e626f0c21b5d16b90ac479692cebeb25f9abf46231fe9184b41822"
-          },
-          {
-            "command_id": "superboard-files.command.insert_data_row",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:a136ebf29721f74d50532b43b675f5d2c660cbe5b50cbcf0837037dc1e6def92"
-          },
-          {
-            "command_id": "superboard-files.command.update_data_row",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:7f62655e0068a159af9c75064064383b3425bdd679267d9446f6d62b13d4ca3a"
-          },
-          {
-            "command_id": "superboard-files.command.delete_data_row",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:0aca2a042d7b87cf166e7506e4ddbd90a83dc499d922d47ff3621d19067c049d"
-          },
-          {
-            "command_id": "superboard-files.command.run_data_sql",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:92c3a13e641b9975a5768cfc41799dc59d791452104b0fa674426639cd377f79"
-          },
-          {
-            "command_id": "superboard-files.command.update_data_settings",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:59b9eb10167560a33f1da19b25c9f53a79dc729bc7da05f5a971f196059b0edc"
-          },
-          {
-            "command_id": "superboard-files.command.create_data_bucket",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:c51470fdbf62eae0128069a7a7639b811bccd80bd3bcefc37d1990652c6d6a71"
-          },
-          {
-            "command_id": "superboard-files.command.update_data_bucket",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:ac754bc46b8a891848aee451d33044f777ae8a793b9f6eded457a4d0e88c1e8c"
-          },
-          {
-            "command_id": "superboard-files.command.delete_data_bucket",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:5cf395e614ed85a4cc0e4d35e93022b7eac2fbb207c23e744ccd556a530b90c7"
-          },
-          {
-            "command_id": "superboard-files.command.deploy_data_function",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:f852e7e12b02eb119791929fc029d90f07c1d651b4aee947224484ec6a2b6359"
-          },
-          {
-            "command_id": "superboard-files.command.delete_data_function",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:5570acaff9edbabde8ef7a0775662ff06fcbab2663af45edd6f6f04253b9d2b8"
-          },
-          {
-            "command_id": "superboard-files.command.rollback_data_function",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:1b27c6100d183bb173b57c2a1915572b90d352afc083de9f49a0db342ea5d2e5"
-          },
-          {
-            "command_id": "superboard-files.command.invoke_data_function",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:904e50c1b55302047771a4bf72fce23fbd446451904e2c52296999fdb0eb5114"
-          },
-          {
-            "command_id": "superboard-files.command.schedule_data_function",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:92233a2e06c57455f7906d2abccacb955a2e729cd042692ec4febb8c35241a49"
-          },
-          {
-            "command_id": "superboard-files.command.unschedule_data_function",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:6dafc4a4407feceec8df898d3191409b0c701dc0677cf9e5bc35a63418a71bcc"
-          },
-          {
-            "command_id": "superboard-files.command.create_vector_collection",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:2b5156411e4ae59877c3b8ff8ade21332113c1884cf96b83377e7bde615f9198"
-          },
-          {
-            "command_id": "superboard-files.command.update_vector_collection",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:26ac7eee378d7b9525ccf48283a5398fec1b7b01498d410545d19ac5baa5b2e7"
-          },
-          {
-            "command_id": "superboard-files.command.delete_vector_collection",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:690e55319e12138ecde42472be7b7de0cf2aabec75a137df2e5be3db913176cc"
-          },
-          {
-            "command_id": "superboard-files.command.create_service_key",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:4485fb026e8699652c714a89d5fb509aa46202dc0c243c0f8d302bdf7a981928"
-          },
-          {
-            "command_id": "superboard-files.command.revoke_service_key",
-            "input_schema_id": "superboard-files.schema.command_input_v1",
-            "output_schema_id": "superboard-files.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.write",
-            "failure_policy": "fail_closed",
-            "version": "1.0.0",
-            "checksum": "sha256:8d5907352cdf74518238e4c33d66d5208b6a695f7dbcdea1498ae43480cdb396"
           }
         ],
         "data_sources": [
@@ -8466,157 +8216,13 @@
             "unavailable_state": "unavailable",
             "version": "1.0.0",
             "checksum": "sha256:9b641488e127e5cf1ae827894148d892c077547594a4cd7700d7b4bbd2f0188d"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_status",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:e2e2745e29a317754840e6d0f86545106bc4f385c79c09b6ea2e5bbb4614a6c6"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_tables",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:b7c35c4ab3eee94f9bb6d29c56d10e6cdbb6bb595177c86b8da6c7807c3f986f"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_table",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:ffd7907b2e1502a9947d2c68812865e815b2fe97080c19402ff1a2d04da276a3"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_rows",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:7d3065cdf758b32bdfed654ac602200ae200e95791552fbac3fe3cfb0447e83c"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_settings",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:7d8dbec6dbc60e4ca542b929293f1a82a4de30f2f4e050d1d3acc282ba6908a9"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_buckets",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:18e3761f1b8d898d523fa9c67f68aaa8b93de69f6ac7705bcbf1e18eae7fa5dd"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_bucket_objects",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:586e6ea1fef74bb7a58e6515f9688bde350c77e5be4ffe5c3409136d84d95f19"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_functions",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:65a1a7ed972e97d2f9e1cf89a6fefb54ede404d48dda5fa08780ad2b3b889e8c"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_function",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:6db74a0644c79d8991553d5877798cf46aff83adfc418728c9c7c27b971d6813"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_function_runs",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:c920b7fcac53466924ebb40c39fc7ed9e319f8c27b8a233ffb6624241bed149f"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_vector_collections",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:47971037259c25b359d7a75ff70bffbb7e06e9302986faa4821da236d85b2bba"
-          },
-          {
-            "data_source_id": "superboard-files.data_source.data_keys",
-            "input_schema_id": "superboard-files.schema.data_source_query_v1",
-            "output_schema_id": "superboard-files.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "superboard-files.read",
-            "store_id": "superboard-files.store.objects",
-            "consistency": "strong",
-            "unavailable_state": "unavailable",
-            "version": "1.0.0",
-            "checksum": "sha256:11ed9160576380e6514b6cfcf524b00311abcb249d366aeaa71497e718790bf5"
           }
         ],
         "failure_policies": {
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:0769d4380f7772b5db4bfe282500e78a140f5c7f16aa1b8a8a819e12f3045faf"
+        "artifact_checksum": "sha256:3a830305b10f218d5225dd17f77d5adf6b9931b29da6bfde4136a1936d2647fa"
       },
       "repositories": [
         {
@@ -8652,7 +8258,7 @@
         "callback_verification": "not_applicable",
         "deployment_status": "ready",
         "evidence": "tests/checks/plugins/superboard-data/worker/runtime/database.runtime.test.ts",
-        "evidence_sha256": "sha256:e378cfe7fd574a80eb91aba01e2adcdda7c75c1ca06d86110673c6e66db592ab",
+        "evidence_sha256": "sha256:bdf8ebc28f968570af9cc988a83d7b147ab3eb69c1c5bb34b3bf293b8de67347",
         "store_ids": [
           "superboard-files.store.objects",
           "superboard-files.store.tickets"
@@ -8661,7 +8267,1933 @@
           "superboard-files.repository.objects",
           "superboard-files.repository.tickets"
         ],
-        "checksum": "sha256:c5e1ba7a56ccc74d22f74d9779b42c8213f8076226091526a2c73c2caa6c92c8"
+        "checksum": "sha256:88dea6a9ecbfc6403174a9367a4274fab50b9fe9cb83193004cdcdc2e08175ce"
+      }
+    },
+    {
+      "manifest": {
+        "schema_version": "1.0.0",
+        "plugin_id": "superboard-database",
+        "plugin_kind": "module",
+        "plugin_version": "1.0.0",
+        "artifact_id": "superboard-database@1.0.0",
+        "publisher": "superboard",
+        "resources": [
+          "superboard-database.store.rows",
+          "superboard-database.store.service_keys",
+          "superboard-database.store.tables",
+          "PLUGIN_PRIVATE_KV",
+          "WORKER:superboard-database"
+        ],
+        "settings": {
+          "render_mode": "block_kit",
+          "storage": "plugin_kv",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [],
+            "properties": {}
+          }
+        },
+        "execution": {
+          "backend": "sandboxed",
+          "worker": "dedicated",
+          "renderer": "native_bundle"
+        },
+        "capabilities": [
+          "plugin.storage",
+          "worker.execute"
+        ],
+        "aliases": {},
+        "stores": [
+          {
+            "store_id": "superboard-database.store.rows",
+            "kind": "d1",
+            "authority": "superboard-database",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "packages/plugins/superboard-data/worker/migrations/0001_files.sql",
+              "packages/plugins/superboard-data/worker/migrations/0002_operator_file_uploads.sql",
+              "packages/plugins/superboard-data/worker/migrations/0003_application_database.sql",
+              "packages/plugins/superboard-data/worker/migrations/0004_application_storage.sql",
+              "packages/plugins/superboard-data/worker/migrations/0005_application_functions.sql",
+              "packages/plugins/superboard-data/worker/migrations/0006_application_vectors.sql",
+              "packages/plugins/superboard-data/worker/migrations/0007_owner_indexes.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:407d76e15b6bc5974bdd0f074a439dea79806f7997b9cc464e9ddd586d7c9a33"
+          },
+          {
+            "store_id": "superboard-database.store.service_keys",
+            "kind": "d1",
+            "authority": "superboard-database",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "packages/plugins/superboard-data/worker/migrations/0001_files.sql",
+              "packages/plugins/superboard-data/worker/migrations/0002_operator_file_uploads.sql",
+              "packages/plugins/superboard-data/worker/migrations/0003_application_database.sql",
+              "packages/plugins/superboard-data/worker/migrations/0004_application_storage.sql",
+              "packages/plugins/superboard-data/worker/migrations/0005_application_functions.sql",
+              "packages/plugins/superboard-data/worker/migrations/0006_application_vectors.sql",
+              "packages/plugins/superboard-data/worker/migrations/0007_owner_indexes.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:f73213915ac54c34fafda620dcae514a5e56e84a07a99fe5a9a354b31377502a"
+          },
+          {
+            "store_id": "superboard-database.store.tables",
+            "kind": "d1",
+            "authority": "superboard-database",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "packages/plugins/superboard-data/worker/migrations/0001_files.sql",
+              "packages/plugins/superboard-data/worker/migrations/0002_operator_file_uploads.sql",
+              "packages/plugins/superboard-data/worker/migrations/0003_application_database.sql",
+              "packages/plugins/superboard-data/worker/migrations/0004_application_storage.sql",
+              "packages/plugins/superboard-data/worker/migrations/0005_application_functions.sql",
+              "packages/plugins/superboard-data/worker/migrations/0006_application_vectors.sql",
+              "packages/plugins/superboard-data/worker/migrations/0007_owner_indexes.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:99e57a4a09eaa53fbc0d7d965b518645c88ccbd2531820fe112d441f4af7e250"
+          }
+        ],
+        "schemas": [
+          {
+            "schema_id": "superboard-database.schema.rows_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:c3d0edb1f0bfbffa11420dcc3aeb3a19b5e29c486cd6b52a468eadf00d4d4650"
+          },
+          {
+            "schema_id": "superboard-database.schema.service_keys_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:ed3558c1439b2d6f4810c96473b0bc5bc1c9f7132e288bf11fb3262dcd0ba53b"
+          },
+          {
+            "schema_id": "superboard-database.schema.tables_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:56ba7942b3c210b78d5a9f26614b5847234a6745a7ddffa1c394371133617027"
+          },
+          {
+            "schema_id": "superboard-database.schema.admin_surface_props_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route_id",
+                "path"
+              ],
+              "properties": {
+                "route_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:9506a99b92359056ae510ff96c70ce9059f3755dd76553aa49b4807ccd16814d"
+          },
+          {
+            "schema_id": "superboard-database.schema.command_input_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "payload"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:2fb42a562d5607ff15e70527c061c2aa92110c056ecb6efcf8107cf7659dc07f"
+          },
+          {
+            "schema_id": "superboard-database.schema.command_output_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation_id",
+                "status",
+                "result"
+              ],
+              "properties": {
+                "operation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "accepted",
+                    "completed",
+                    "failed"
+                  ]
+                },
+                "result": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:efa0afeefb49f76879436db462ee082f0cbd7beab09532e2f77210ed573d55e5"
+          },
+          {
+            "schema_id": "superboard-database.schema.data_source_query_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "query"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "query": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:3e5a780667c46ea2357bf9419f4f668a21708091500381dcf89e0b24094573bb"
+          },
+          {
+            "schema_id": "superboard-database.schema.data_source_page_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "items",
+                "next_cursor"
+              ],
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "next_cursor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:ee60db033d9aaed81140fcd78bc34348506cf9f0809a63d7ac7d89f4295efb42"
+          }
+        ],
+        "renderers": [
+          {
+            "renderer_id": "superboard-database.renderer.admin_surface",
+            "plugin_id": "superboard-database",
+            "plugin_version": "1.0.0",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+            "abi_version": "1.0.0",
+            "runtime_range": ">=0.1.0 <0.2.0",
+            "props_schema": {
+              "schema_id": "superboard-database.schema.admin_surface_props_v1",
+              "version": "1.0.0",
+              "checksum": "sha256:9506a99b92359056ae510ff96c70ce9059f3755dd76553aa49b4807ccd16814d"
+            },
+            "capabilities": [
+              "renderer.mount",
+              "data_source.bind",
+              "action.bind"
+            ],
+            "slots": [],
+            "supported_states": [
+              "loading",
+              "empty",
+              "forbidden",
+              "not_found",
+              "error",
+              "unavailable",
+              "maintenance"
+            ]
+          }
+        ],
+        "commands": [
+          {
+            "command_id": "superboard-database.command.create_data_table",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:11a21f1f65d029248a9814fbf04a24734a9f1f3f8ddd92c1082190a166cff521"
+          },
+          {
+            "command_id": "superboard-database.command.update_data_table",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:79993fd2c9ea7a639c9569e19c6604e3928eb903cede031a1ab1cb87fb368569"
+          },
+          {
+            "command_id": "superboard-database.command.delete_data_table",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:0fe53cd27b524c3f2784207b6af3b09d6a59db10b4ce441949ca475b1a18ed12"
+          },
+          {
+            "command_id": "superboard-database.command.add_data_column",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:abc07e03a8e65af31cf23edbcaea543e5ca2580ae0865e55f02c6b907ab8a101"
+          },
+          {
+            "command_id": "superboard-database.command.update_data_column",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:e996b22b5ee20c3b27e4108c1726d3f0fd0f106f3fd96f9167bef70ba4f926bf"
+          },
+          {
+            "command_id": "superboard-database.command.delete_data_column",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:4cc492379e1b67d7938f0390b9fd4aa84c936c69d044e514e2c779b073f9ac79"
+          },
+          {
+            "command_id": "superboard-database.command.insert_data_row",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:2f4bbaf6def8d588ff13f7738230d1af42c742205d870d21eb12758d7351ebc2"
+          },
+          {
+            "command_id": "superboard-database.command.update_data_row",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:1149158d259d4d8451df98528b53bd0674f3dd1678f2abdd0da73f083804d854"
+          },
+          {
+            "command_id": "superboard-database.command.delete_data_row",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:f1d70178e0c4860b85b6c814436edf42836d8c45ff8cbb3d7977875f7a4a8b84"
+          },
+          {
+            "command_id": "superboard-database.command.run_data_sql",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:3391fb410a216780138eceb30299e40c8645ecb4dc2660d0d25c6b4959e925fd"
+          },
+          {
+            "command_id": "superboard-database.command.update_data_settings",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:99f3699819579595c6808829fefddc2723330642f0e8cdc6d4931514cffc937f"
+          },
+          {
+            "command_id": "superboard-database.command.create_service_key",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:dc1b243e7b0cd645264e169778237f6c31adcc78621e25aa982a552dc73ac7ef"
+          },
+          {
+            "command_id": "superboard-database.command.revoke_service_key",
+            "input_schema_id": "superboard-database.schema.command_input_v1",
+            "output_schema_id": "superboard-database.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:dbb26c965c8568831f7837f19ee26672f44ad8ac4e7cc914ce36b5b4c59ec299"
+          }
+        ],
+        "data_sources": [
+          {
+            "data_source_id": "superboard-database.data_source.data_status",
+            "input_schema_id": "superboard-database.schema.data_source_query_v1",
+            "output_schema_id": "superboard-database.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.read",
+            "store_id": "superboard-database.store.rows",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:2c3fd0f2b8f6b1f7ba389d26edd1d9bdcc0e5195a4ec970e3a47c61df39a3c13"
+          },
+          {
+            "data_source_id": "superboard-database.data_source.data_tables",
+            "input_schema_id": "superboard-database.schema.data_source_query_v1",
+            "output_schema_id": "superboard-database.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.read",
+            "store_id": "superboard-database.store.tables",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:07edb253e6edc11e95e81ca56284824baf512d0108be46c30b00f462c897f17d"
+          },
+          {
+            "data_source_id": "superboard-database.data_source.data_table",
+            "input_schema_id": "superboard-database.schema.data_source_query_v1",
+            "output_schema_id": "superboard-database.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.read",
+            "store_id": "superboard-database.store.rows",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:90ed3b1503057fe6c657725112a24c5ee9456d45b6e3571fd9d1bb4b019f7273"
+          },
+          {
+            "data_source_id": "superboard-database.data_source.data_rows",
+            "input_schema_id": "superboard-database.schema.data_source_query_v1",
+            "output_schema_id": "superboard-database.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.read",
+            "store_id": "superboard-database.store.rows",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:8f8dd23c6d0eb229bfb98f5ee892f1025282b5e312ea5a093f2663ce5e4e1706"
+          },
+          {
+            "data_source_id": "superboard-database.data_source.data_settings",
+            "input_schema_id": "superboard-database.schema.data_source_query_v1",
+            "output_schema_id": "superboard-database.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.read",
+            "store_id": "superboard-database.store.rows",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:090bb62c751fbd8d97f4835a47de7266dedfc7c2c39cea7533f2b83c68fb9e2d"
+          },
+          {
+            "data_source_id": "superboard-database.data_source.data_keys",
+            "input_schema_id": "superboard-database.schema.data_source_query_v1",
+            "output_schema_id": "superboard-database.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-database.read",
+            "store_id": "superboard-database.store.rows",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:5aa7bc690daf5c721d8a971b083cf9076fc7852d97ae7f8728ed5a4ef0760a01"
+          }
+        ],
+        "failure_policies": {
+          "writes": "fail_closed",
+          "reads": "unavailable"
+        },
+        "artifact_checksum": "sha256:fc45e5d0d8f9c3a8344f04ea0aa893fff723996614d4c5025c2958c5098e2250"
+      },
+      "repositories": [
+        {
+          "repository_id": "superboard-database.repository.rows",
+          "store_id": "superboard-database.store.rows",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:b16bf82253389f871a7be5037b33539975f10aa3cf7ade8f554ccddd361dcec4"
+        },
+        {
+          "repository_id": "superboard-database.repository.service_keys",
+          "store_id": "superboard-database.store.service_keys",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:384cc6a9d6d8cb585a97dcccd3649c43319daa555672cc955d8cee8bd0e8697c"
+        },
+        {
+          "repository_id": "superboard-database.repository.tables",
+          "store_id": "superboard-database.store.tables",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:829108589492e58425c04e831d6d3c3010dd800854c2f21e89fbcb9a17a302a6"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "packages/plugins/superboard-data/worker",
+        "execution_mode": "synchronous",
+        "authoritative_writes": false,
+        "lease": "not_applicable",
+        "idempotency": "required",
+        "outbox": "not_applicable",
+        "callback_verification": "not_applicable",
+        "deployment_status": "ready",
+        "evidence": "tests/checks/plugins/superboard-data/worker/runtime/database.runtime.test.ts",
+        "evidence_sha256": "sha256:bdf8ebc28f968570af9cc988a83d7b147ab3eb69c1c5bb34b3bf293b8de67347",
+        "store_ids": [
+          "superboard-database.store.rows",
+          "superboard-database.store.service_keys",
+          "superboard-database.store.tables"
+        ],
+        "repository_ids": [
+          "superboard-database.repository.rows",
+          "superboard-database.repository.service_keys",
+          "superboard-database.repository.tables"
+        ],
+        "checksum": "sha256:a2af98ed934616d8d9e982ff790dfbf5e3b4df569b48e6f4982c95d0dee5f248"
+      }
+    },
+    {
+      "manifest": {
+        "schema_version": "1.0.0",
+        "plugin_id": "superboard-storage",
+        "plugin_kind": "module",
+        "plugin_version": "1.0.0",
+        "artifact_id": "superboard-storage@1.0.0",
+        "publisher": "superboard",
+        "resources": [
+          "superboard-storage.store.buckets",
+          "superboard-storage.store.objects",
+          "PLUGIN_PRIVATE_KV",
+          "WORKER:superboard-storage"
+        ],
+        "settings": {
+          "render_mode": "block_kit",
+          "storage": "plugin_kv",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [],
+            "properties": {}
+          }
+        },
+        "execution": {
+          "backend": "sandboxed",
+          "worker": "dedicated",
+          "renderer": "native_bundle"
+        },
+        "capabilities": [
+          "plugin.storage",
+          "worker.execute"
+        ],
+        "aliases": {},
+        "stores": [
+          {
+            "store_id": "superboard-storage.store.buckets",
+            "kind": "d1",
+            "authority": "superboard-storage",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "packages/plugins/superboard-data/worker/migrations/0001_files.sql",
+              "packages/plugins/superboard-data/worker/migrations/0002_operator_file_uploads.sql",
+              "packages/plugins/superboard-data/worker/migrations/0003_application_database.sql",
+              "packages/plugins/superboard-data/worker/migrations/0004_application_storage.sql",
+              "packages/plugins/superboard-data/worker/migrations/0005_application_functions.sql",
+              "packages/plugins/superboard-data/worker/migrations/0006_application_vectors.sql",
+              "packages/plugins/superboard-data/worker/migrations/0007_owner_indexes.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:11476c941f461094443540097cef9cb61cb895d00ef090171b345c339750d8ed"
+          },
+          {
+            "store_id": "superboard-storage.store.objects",
+            "kind": "d1",
+            "authority": "superboard-storage",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "packages/plugins/superboard-data/worker/migrations/0001_files.sql",
+              "packages/plugins/superboard-data/worker/migrations/0002_operator_file_uploads.sql",
+              "packages/plugins/superboard-data/worker/migrations/0003_application_database.sql",
+              "packages/plugins/superboard-data/worker/migrations/0004_application_storage.sql",
+              "packages/plugins/superboard-data/worker/migrations/0005_application_functions.sql",
+              "packages/plugins/superboard-data/worker/migrations/0006_application_vectors.sql",
+              "packages/plugins/superboard-data/worker/migrations/0007_owner_indexes.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:b875db1f7fb6a708c0e45682188c0e507e41ad19428b756cd370aa82261e9be4"
+          }
+        ],
+        "schemas": [
+          {
+            "schema_id": "superboard-storage.schema.buckets_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:2ca3a87e8fdcdbe166187a00841aedbce5a52acd1df5a62d7d4113376d87ee54"
+          },
+          {
+            "schema_id": "superboard-storage.schema.objects_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:782f8ab988f011373f05f342203fb04f155886c81c66e16784c5a1bd3f57913c"
+          },
+          {
+            "schema_id": "superboard-storage.schema.admin_surface_props_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route_id",
+                "path"
+              ],
+              "properties": {
+                "route_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:a7681a96cc2656c553e39aff186c6aa7ff0e5779432676f0eba5a7318ffe6061"
+          },
+          {
+            "schema_id": "superboard-storage.schema.command_input_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "payload"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:2f66aec3797b4b5aec144808878e2dbee8793bc7ceb102fec1a5c849cea95753"
+          },
+          {
+            "schema_id": "superboard-storage.schema.command_output_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation_id",
+                "status",
+                "result"
+              ],
+              "properties": {
+                "operation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "accepted",
+                    "completed",
+                    "failed"
+                  ]
+                },
+                "result": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:a1aaa672064069b729672e901d8ee0feeb5580dccd7ae1384cd9c79a4ebf8f0b"
+          },
+          {
+            "schema_id": "superboard-storage.schema.data_source_query_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "query"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "query": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:4e8e084f15e9f13896793211cf12dbc742263f447c95d7dc105bc9718176a7b7"
+          },
+          {
+            "schema_id": "superboard-storage.schema.data_source_page_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "items",
+                "next_cursor"
+              ],
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "next_cursor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:b7dc886dfb81118bb37c87a5bd323024064984b89ca9d23f9fd3c3162f6b596e"
+          }
+        ],
+        "renderers": [
+          {
+            "renderer_id": "superboard-storage.renderer.admin_surface",
+            "plugin_id": "superboard-storage",
+            "plugin_version": "1.0.0",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+            "abi_version": "1.0.0",
+            "runtime_range": ">=0.1.0 <0.2.0",
+            "props_schema": {
+              "schema_id": "superboard-storage.schema.admin_surface_props_v1",
+              "version": "1.0.0",
+              "checksum": "sha256:a7681a96cc2656c553e39aff186c6aa7ff0e5779432676f0eba5a7318ffe6061"
+            },
+            "capabilities": [
+              "renderer.mount",
+              "data_source.bind",
+              "action.bind"
+            ],
+            "slots": [],
+            "supported_states": [
+              "loading",
+              "empty",
+              "forbidden",
+              "not_found",
+              "error",
+              "unavailable",
+              "maintenance"
+            ]
+          }
+        ],
+        "commands": [
+          {
+            "command_id": "superboard-storage.command.create_data_bucket",
+            "input_schema_id": "superboard-storage.schema.command_input_v1",
+            "output_schema_id": "superboard-storage.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-storage.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:ad63166119b8679dd397c66e9cfbf8a385b69b7d8e36c0534d7258530b6eee4c"
+          },
+          {
+            "command_id": "superboard-storage.command.update_data_bucket",
+            "input_schema_id": "superboard-storage.schema.command_input_v1",
+            "output_schema_id": "superboard-storage.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-storage.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:ecfd5d8e1815034fa2a78d657afdf0d4372393e27d3b59f18441764264c0374d"
+          },
+          {
+            "command_id": "superboard-storage.command.delete_data_bucket",
+            "input_schema_id": "superboard-storage.schema.command_input_v1",
+            "output_schema_id": "superboard-storage.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-storage.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:b9364c9b68ce021746e778dc174bfb12a1ee405891ef6229abc248462528cf59"
+          }
+        ],
+        "data_sources": [
+          {
+            "data_source_id": "superboard-storage.data_source.data_buckets",
+            "input_schema_id": "superboard-storage.schema.data_source_query_v1",
+            "output_schema_id": "superboard-storage.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-storage.read",
+            "store_id": "superboard-storage.store.buckets",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:36b1daa21bef0ce486559e67812493ad76ddbc4f62a5b3a02bedc070fc23bdce"
+          },
+          {
+            "data_source_id": "superboard-storage.data_source.data_bucket_objects",
+            "input_schema_id": "superboard-storage.schema.data_source_query_v1",
+            "output_schema_id": "superboard-storage.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-storage.read",
+            "store_id": "superboard-storage.store.objects",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:a609cf30bcaaac25efef017f919bad93a472fe293aaa9eab1bcdf998ac05f2f3"
+          }
+        ],
+        "failure_policies": {
+          "writes": "fail_closed",
+          "reads": "unavailable"
+        },
+        "artifact_checksum": "sha256:517d618c7a3e9d4d29d04fabca1cdd9a49db3333c4bed62a0ecd95fb6b2528f5"
+      },
+      "repositories": [
+        {
+          "repository_id": "superboard-storage.repository.buckets",
+          "store_id": "superboard-storage.store.buckets",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:3cc91d8fee6b19c98991d63dbe13fd1927ba301c762645c0d5c1f0002ac19426"
+        },
+        {
+          "repository_id": "superboard-storage.repository.objects",
+          "store_id": "superboard-storage.store.objects",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:fc2b76c67334cd093d7ba7131d3a6558fc8c5dba5d67e171b739cd2069c132e3"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "packages/plugins/superboard-data/worker",
+        "execution_mode": "synchronous",
+        "authoritative_writes": false,
+        "lease": "not_applicable",
+        "idempotency": "required",
+        "outbox": "not_applicable",
+        "callback_verification": "not_applicable",
+        "deployment_status": "ready",
+        "evidence": "tests/checks/plugins/superboard-data/worker/runtime/database.runtime.test.ts",
+        "evidence_sha256": "sha256:bdf8ebc28f968570af9cc988a83d7b147ab3eb69c1c5bb34b3bf293b8de67347",
+        "store_ids": [
+          "superboard-storage.store.buckets",
+          "superboard-storage.store.objects"
+        ],
+        "repository_ids": [
+          "superboard-storage.repository.buckets",
+          "superboard-storage.repository.objects"
+        ],
+        "checksum": "sha256:cf0627781bd4bdb1b326cde07f09dea309f82436a218c64ec5cb42ae1ca9e376"
+      }
+    },
+    {
+      "manifest": {
+        "schema_version": "1.0.0",
+        "plugin_id": "superboard-functions",
+        "plugin_kind": "module",
+        "plugin_version": "1.0.0",
+        "artifact_id": "superboard-functions@1.0.0",
+        "publisher": "superboard",
+        "resources": [
+          "superboard-functions.store.functions",
+          "superboard-functions.store.runs",
+          "PLUGIN_PRIVATE_KV",
+          "WORKER:superboard-functions"
+        ],
+        "settings": {
+          "render_mode": "block_kit",
+          "storage": "plugin_kv",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [],
+            "properties": {}
+          }
+        },
+        "execution": {
+          "backend": "sandboxed",
+          "worker": "dedicated",
+          "renderer": "native_bundle"
+        },
+        "capabilities": [
+          "plugin.storage",
+          "worker.execute"
+        ],
+        "aliases": {},
+        "stores": [
+          {
+            "store_id": "superboard-functions.store.functions",
+            "kind": "d1",
+            "authority": "superboard-functions",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "packages/plugins/superboard-data/worker/migrations/0001_files.sql",
+              "packages/plugins/superboard-data/worker/migrations/0002_operator_file_uploads.sql",
+              "packages/plugins/superboard-data/worker/migrations/0003_application_database.sql",
+              "packages/plugins/superboard-data/worker/migrations/0004_application_storage.sql",
+              "packages/plugins/superboard-data/worker/migrations/0005_application_functions.sql",
+              "packages/plugins/superboard-data/worker/migrations/0006_application_vectors.sql",
+              "packages/plugins/superboard-data/worker/migrations/0007_owner_indexes.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:402f283aeece37e0798ac41f96d6e19740ee0e47a179025a9aa5bf38d1696a72"
+          },
+          {
+            "store_id": "superboard-functions.store.runs",
+            "kind": "d1",
+            "authority": "superboard-functions",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "packages/plugins/superboard-data/worker/migrations/0001_files.sql",
+              "packages/plugins/superboard-data/worker/migrations/0002_operator_file_uploads.sql",
+              "packages/plugins/superboard-data/worker/migrations/0003_application_database.sql",
+              "packages/plugins/superboard-data/worker/migrations/0004_application_storage.sql",
+              "packages/plugins/superboard-data/worker/migrations/0005_application_functions.sql",
+              "packages/plugins/superboard-data/worker/migrations/0006_application_vectors.sql",
+              "packages/plugins/superboard-data/worker/migrations/0007_owner_indexes.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:e781664dd78c3c0083cc07d0e7897b79070f0d4640fd887dccf7a6c796c7ee6d"
+          }
+        ],
+        "schemas": [
+          {
+            "schema_id": "superboard-functions.schema.functions_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:1142fd0bd9693f54b3cd0942086623addc9c841b175f1986a555d056de4dac43"
+          },
+          {
+            "schema_id": "superboard-functions.schema.runs_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:c526eea2491b13426be60dcca15dcd368bac02437ef702ff86fe1a43bc439034"
+          },
+          {
+            "schema_id": "superboard-functions.schema.admin_surface_props_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route_id",
+                "path"
+              ],
+              "properties": {
+                "route_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:f4926d30227c054f0f7f0913495735be5ffdf37792cb22845b3e15bea999eb5d"
+          },
+          {
+            "schema_id": "superboard-functions.schema.command_input_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "payload"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:a81e021ba2a14ccd7ada5b81c7bb3288c765b6209faa6bb46dd916e48fe3436f"
+          },
+          {
+            "schema_id": "superboard-functions.schema.command_output_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation_id",
+                "status",
+                "result"
+              ],
+              "properties": {
+                "operation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "accepted",
+                    "completed",
+                    "failed"
+                  ]
+                },
+                "result": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:0de80506e62a0a9a856c2675c45fb93cf41671450d6f27a30626ff10252528aa"
+          },
+          {
+            "schema_id": "superboard-functions.schema.data_source_query_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "query"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "query": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:156d278363d15491cb410e1df6c38ba3f18595f50862632ab80113cc5c3f1da9"
+          },
+          {
+            "schema_id": "superboard-functions.schema.data_source_page_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "items",
+                "next_cursor"
+              ],
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "next_cursor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:985b3b2beea97b27a1b1180b873e7917ac86227fb61662f8094314a6de252069"
+          }
+        ],
+        "renderers": [
+          {
+            "renderer_id": "superboard-functions.renderer.admin_surface",
+            "plugin_id": "superboard-functions",
+            "plugin_version": "1.0.0",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+            "abi_version": "1.0.0",
+            "runtime_range": ">=0.1.0 <0.2.0",
+            "props_schema": {
+              "schema_id": "superboard-functions.schema.admin_surface_props_v1",
+              "version": "1.0.0",
+              "checksum": "sha256:f4926d30227c054f0f7f0913495735be5ffdf37792cb22845b3e15bea999eb5d"
+            },
+            "capabilities": [
+              "renderer.mount",
+              "data_source.bind",
+              "action.bind"
+            ],
+            "slots": [],
+            "supported_states": [
+              "loading",
+              "empty",
+              "forbidden",
+              "not_found",
+              "error",
+              "unavailable",
+              "maintenance"
+            ]
+          }
+        ],
+        "commands": [
+          {
+            "command_id": "superboard-functions.command.deploy_data_function",
+            "input_schema_id": "superboard-functions.schema.command_input_v1",
+            "output_schema_id": "superboard-functions.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:c21a6c838ee1fa3af5564de6b31a7352941d39d7f5e9bb728722ecdeedee4b52"
+          },
+          {
+            "command_id": "superboard-functions.command.delete_data_function",
+            "input_schema_id": "superboard-functions.schema.command_input_v1",
+            "output_schema_id": "superboard-functions.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:94bc148f2ff488cd49d0062b943efe98630ecd45904b9ca2eaaac0ae6d7ffd89"
+          },
+          {
+            "command_id": "superboard-functions.command.rollback_data_function",
+            "input_schema_id": "superboard-functions.schema.command_input_v1",
+            "output_schema_id": "superboard-functions.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:8092b3e4198ac624b47e136407bfb47f735a29a97119973ebb46fd1bf6561a1f"
+          },
+          {
+            "command_id": "superboard-functions.command.invoke_data_function",
+            "input_schema_id": "superboard-functions.schema.command_input_v1",
+            "output_schema_id": "superboard-functions.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:14246da51ea6654b3f8b540696b8bdd61969cc80a204bc571fa98361dc2054a0"
+          },
+          {
+            "command_id": "superboard-functions.command.schedule_data_function",
+            "input_schema_id": "superboard-functions.schema.command_input_v1",
+            "output_schema_id": "superboard-functions.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:9ca8f74bf46cd624487647e1df43ffdc52cde658254bac9c794540538a72ee7f"
+          },
+          {
+            "command_id": "superboard-functions.command.unschedule_data_function",
+            "input_schema_id": "superboard-functions.schema.command_input_v1",
+            "output_schema_id": "superboard-functions.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:b669ea9fb820eb50e75ff7468503194567dfcd30962156c1ab999f329289cf19"
+          }
+        ],
+        "data_sources": [
+          {
+            "data_source_id": "superboard-functions.data_source.data_function_status",
+            "input_schema_id": "superboard-functions.schema.data_source_query_v1",
+            "output_schema_id": "superboard-functions.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.read",
+            "store_id": "superboard-functions.store.functions",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:0af48dcc3997592bd7fa33dd509859205a8c4ed3e367dcfc072cdd242dde68ed"
+          },
+          {
+            "data_source_id": "superboard-functions.data_source.data_functions",
+            "input_schema_id": "superboard-functions.schema.data_source_query_v1",
+            "output_schema_id": "superboard-functions.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.read",
+            "store_id": "superboard-functions.store.functions",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:2baeee7b7b846334d05092deaea6f1fa110987d1382f5b2c472e9f61084f850f"
+          },
+          {
+            "data_source_id": "superboard-functions.data_source.data_function",
+            "input_schema_id": "superboard-functions.schema.data_source_query_v1",
+            "output_schema_id": "superboard-functions.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.read",
+            "store_id": "superboard-functions.store.functions",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:dfd55580e8a5bdde780a8c8933e2fb4e9cc58f584c523eb0308d8c8a6eb34cb3"
+          },
+          {
+            "data_source_id": "superboard-functions.data_source.data_function_runs",
+            "input_schema_id": "superboard-functions.schema.data_source_query_v1",
+            "output_schema_id": "superboard-functions.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-functions.read",
+            "store_id": "superboard-functions.store.runs",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:44babbb50c86012cc5439d07fb996e8b430fbd535af766017e97505ec4c54d4f"
+          }
+        ],
+        "failure_policies": {
+          "writes": "fail_closed",
+          "reads": "unavailable"
+        },
+        "artifact_checksum": "sha256:142256445dff14d721a9a76382562455160c57fd9048b93baf64d495f5e81035"
+      },
+      "repositories": [
+        {
+          "repository_id": "superboard-functions.repository.functions",
+          "store_id": "superboard-functions.store.functions",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:27566eb40dfbd9db47f6b89415dd91e29e3e7dbf8464fe34b972abc411f61ec7"
+        },
+        {
+          "repository_id": "superboard-functions.repository.runs",
+          "store_id": "superboard-functions.store.runs",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:92b1ab1af693d0f3559f80f08ecf3355c94c70f362d59bedec9cf64c90a03c76"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "packages/plugins/superboard-data/worker",
+        "execution_mode": "synchronous",
+        "authoritative_writes": false,
+        "lease": "not_applicable",
+        "idempotency": "required",
+        "outbox": "not_applicable",
+        "callback_verification": "not_applicable",
+        "deployment_status": "ready",
+        "evidence": "tests/checks/plugins/superboard-data/worker/runtime/database.runtime.test.ts",
+        "evidence_sha256": "sha256:bdf8ebc28f968570af9cc988a83d7b147ab3eb69c1c5bb34b3bf293b8de67347",
+        "store_ids": [
+          "superboard-functions.store.functions",
+          "superboard-functions.store.runs"
+        ],
+        "repository_ids": [
+          "superboard-functions.repository.functions",
+          "superboard-functions.repository.runs"
+        ],
+        "checksum": "sha256:af1618240b739ec12d03448fa2375b149d15154188e60be4db602090436e73bc"
+      }
+    },
+    {
+      "manifest": {
+        "schema_version": "1.0.0",
+        "plugin_id": "superboard-vectors",
+        "plugin_kind": "module",
+        "plugin_version": "1.0.0",
+        "artifact_id": "superboard-vectors@1.0.0",
+        "publisher": "superboard",
+        "resources": [
+          "superboard-vectors.store.collections",
+          "superboard-vectors.store.items",
+          "PLUGIN_PRIVATE_KV",
+          "WORKER:superboard-vectors"
+        ],
+        "settings": {
+          "render_mode": "block_kit",
+          "storage": "plugin_kv",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [],
+            "properties": {}
+          }
+        },
+        "execution": {
+          "backend": "sandboxed",
+          "worker": "dedicated",
+          "renderer": "native_bundle"
+        },
+        "capabilities": [
+          "plugin.storage",
+          "worker.execute"
+        ],
+        "aliases": {},
+        "stores": [
+          {
+            "store_id": "superboard-vectors.store.collections",
+            "kind": "d1",
+            "authority": "superboard-vectors",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "packages/plugins/superboard-data/worker/migrations/0001_files.sql",
+              "packages/plugins/superboard-data/worker/migrations/0002_operator_file_uploads.sql",
+              "packages/plugins/superboard-data/worker/migrations/0003_application_database.sql",
+              "packages/plugins/superboard-data/worker/migrations/0004_application_storage.sql",
+              "packages/plugins/superboard-data/worker/migrations/0005_application_functions.sql",
+              "packages/plugins/superboard-data/worker/migrations/0006_application_vectors.sql",
+              "packages/plugins/superboard-data/worker/migrations/0007_owner_indexes.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:fe62b978bfb82bd26c46e245b57a62e4aedf791e13b3d3f377ba62803084e0c2"
+          },
+          {
+            "store_id": "superboard-vectors.store.items",
+            "kind": "d1",
+            "authority": "superboard-vectors",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "packages/plugins/superboard-data/worker/migrations/0001_files.sql",
+              "packages/plugins/superboard-data/worker/migrations/0002_operator_file_uploads.sql",
+              "packages/plugins/superboard-data/worker/migrations/0003_application_database.sql",
+              "packages/plugins/superboard-data/worker/migrations/0004_application_storage.sql",
+              "packages/plugins/superboard-data/worker/migrations/0005_application_functions.sql",
+              "packages/plugins/superboard-data/worker/migrations/0006_application_vectors.sql",
+              "packages/plugins/superboard-data/worker/migrations/0007_owner_indexes.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:ec80ac1eb77327618d1dd715db2f651b93a5de76bb494869be1103889d0c50fe"
+          }
+        ],
+        "schemas": [
+          {
+            "schema_id": "superboard-vectors.schema.collections_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:9c264c24d0b53ae433c6462e56d914f15e447793f30e5f5b0d003338c8f316c4"
+          },
+          {
+            "schema_id": "superboard-vectors.schema.items_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:75ef5871ffaea9887a38868b38a55913d84a7bc70cda49b48797676d2bb7fb8c"
+          },
+          {
+            "schema_id": "superboard-vectors.schema.admin_surface_props_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route_id",
+                "path"
+              ],
+              "properties": {
+                "route_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:b9152d6e1c153d693fc1a918aa149a05a379e0f7f70c86232cda3812dd7a9195"
+          },
+          {
+            "schema_id": "superboard-vectors.schema.command_input_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "payload"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:1cf1aa83ae30bde6f71a5ec8502b2ccb2032e3e51f138d69de297c1bf59a6893"
+          },
+          {
+            "schema_id": "superboard-vectors.schema.command_output_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation_id",
+                "status",
+                "result"
+              ],
+              "properties": {
+                "operation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "accepted",
+                    "completed",
+                    "failed"
+                  ]
+                },
+                "result": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:6682fc8922ec8e0562b6ecb74a65c87732843c7df3c596ddc195f489a84a730e"
+          },
+          {
+            "schema_id": "superboard-vectors.schema.data_source_query_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "query"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "query": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:878995b3cb1bf66b1ffb2e1c7f577951684fc91fa0b82fa29135a243545576de"
+          },
+          {
+            "schema_id": "superboard-vectors.schema.data_source_page_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "items",
+                "next_cursor"
+              ],
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "next_cursor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:4939ce0b599994a25741c16262f81c3e006f1300f288650e5d8901525b6300ce"
+          }
+        ],
+        "renderers": [
+          {
+            "renderer_id": "superboard-vectors.renderer.admin_surface",
+            "plugin_id": "superboard-vectors",
+            "plugin_version": "1.0.0",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+            "abi_version": "1.0.0",
+            "runtime_range": ">=0.1.0 <0.2.0",
+            "props_schema": {
+              "schema_id": "superboard-vectors.schema.admin_surface_props_v1",
+              "version": "1.0.0",
+              "checksum": "sha256:b9152d6e1c153d693fc1a918aa149a05a379e0f7f70c86232cda3812dd7a9195"
+            },
+            "capabilities": [
+              "renderer.mount",
+              "data_source.bind",
+              "action.bind"
+            ],
+            "slots": [],
+            "supported_states": [
+              "loading",
+              "empty",
+              "forbidden",
+              "not_found",
+              "error",
+              "unavailable",
+              "maintenance"
+            ]
+          }
+        ],
+        "commands": [
+          {
+            "command_id": "superboard-vectors.command.create_vector_collection",
+            "input_schema_id": "superboard-vectors.schema.command_input_v1",
+            "output_schema_id": "superboard-vectors.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-vectors.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:146dab48a26b1c629f5d13e84da9fa641f94b0a33b20d11c49da3157645bbce1"
+          },
+          {
+            "command_id": "superboard-vectors.command.update_vector_collection",
+            "input_schema_id": "superboard-vectors.schema.command_input_v1",
+            "output_schema_id": "superboard-vectors.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-vectors.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:74430600661eee21016860df3cc49504ada36d30801b88256a2ba9cdb3a7ea1f"
+          },
+          {
+            "command_id": "superboard-vectors.command.delete_vector_collection",
+            "input_schema_id": "superboard-vectors.schema.command_input_v1",
+            "output_schema_id": "superboard-vectors.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-vectors.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:843279b665f24087b84a2e050f0f9b5fcd94fd02f6f722d66e7deb233688d1a3"
+          }
+        ],
+        "data_sources": [
+          {
+            "data_source_id": "superboard-vectors.data_source.data_vector_collections",
+            "input_schema_id": "superboard-vectors.schema.data_source_query_v1",
+            "output_schema_id": "superboard-vectors.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "superboard-vectors.read",
+            "store_id": "superboard-vectors.store.collections",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:3d4a0c546c345809e6e850b7f3ee54ef4b4668d1fae90e6c49492914e5335d87"
+          }
+        ],
+        "failure_policies": {
+          "writes": "fail_closed",
+          "reads": "unavailable"
+        },
+        "artifact_checksum": "sha256:32b83e0912c1554c47bbd43da111c429e73da1606532ccc8373a2cea1c8a1e52"
+      },
+      "repositories": [
+        {
+          "repository_id": "superboard-vectors.repository.collections",
+          "store_id": "superboard-vectors.store.collections",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:28dddbf920965f5a65d18e0052b0f09ae14ec94ac70681f4c1a9b4beeec1c79f"
+        },
+        {
+          "repository_id": "superboard-vectors.repository.items",
+          "store_id": "superboard-vectors.store.items",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:7fb0d5f6aeb513ba15409c83c485662f3b0bf2888b6540ac87d0fa55f1c57043"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "packages/plugins/superboard-data/worker",
+        "execution_mode": "synchronous",
+        "authoritative_writes": false,
+        "lease": "not_applicable",
+        "idempotency": "required",
+        "outbox": "not_applicable",
+        "callback_verification": "not_applicable",
+        "deployment_status": "ready",
+        "evidence": "tests/checks/plugins/superboard-data/worker/runtime/database.runtime.test.ts",
+        "evidence_sha256": "sha256:bdf8ebc28f968570af9cc988a83d7b147ab3eb69c1c5bb34b3bf293b8de67347",
+        "store_ids": [
+          "superboard-vectors.store.collections",
+          "superboard-vectors.store.items"
+        ],
+        "repository_ids": [
+          "superboard-vectors.repository.collections",
+          "superboard-vectors.repository.items"
+        ],
+        "checksum": "sha256:fb28aaf81dcb81ef6c60ed643db6ec59ed0d86264e887cd3a35db43bc1666704"
       }
     },
     {
@@ -8958,8 +10490,8 @@
             "renderer_id": "superboard-paywalls.renderer.admin_surface",
             "plugin_id": "superboard-paywalls",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9142,7 +10674,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:300958006d27efa8b78e15d1790a75e8c135317b23910753135b623099075105"
+        "artifact_checksum": "sha256:c2b8ff7178d1e9a91698ff79af348ae1c8af48ec684cdb2eaeb66ed849354d17"
       },
       "repositories": [
         {
@@ -9484,8 +11016,8 @@
             "renderer_id": "superboard-onboardings.renderer.admin_surface",
             "plugin_id": "superboard-onboardings",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9680,7 +11212,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:26e11fe64a11cc61754cf7b5ecdc2db19696866ca439163124ae980e88917555"
+        "artifact_checksum": "sha256:7fb184a25feb6cf362820fd4c9fea46b0ce58d8d941b391c30bceff16626dea8"
       },
       "repositories": [
         {
@@ -9966,8 +11498,8 @@
             "renderer_id": "superboard-observability.renderer.admin_surface",
             "plugin_id": "superboard-observability",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10122,7 +11654,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:d64940b2d4616a06b10796304afdbb2b0624e261d9366915d99e0e059ed7f407"
+        "artifact_checksum": "sha256:333a31bf140edbe944c0d9cb02cdf6e8ce6391e942a0c374aa41d2bdc61b419a"
       },
       "repositories": [
         {
@@ -10440,8 +11972,8 @@
             "renderer_id": "superboard-mcp.renderer.admin_surface",
             "plugin_id": "superboard-mcp",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10540,7 +12072,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:6bb0bf3c788861b420fc354008284af7a44ed8edf96de70b9a2cd63a5764ffb3"
+        "artifact_checksum": "sha256:5209aaf4ae6241b39f50236fc1c055999cc04244dcdf0f0c3b9e282ae3f086f7"
       },
       "repositories": [
         {
@@ -10807,8 +12339,8 @@
             "renderer_id": "supbrd-plugmod-custom-*.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-custom-*",
             "plugin_version": "1.0.0",
-            "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-            "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
+            "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+            "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10863,7 +12395,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:0a1691639da6c6063d52c0a5e5a066335a1f10ce9d03d323f449cd2d303397c7"
+        "artifact_checksum": "sha256:f47b3bdf02d6cbed040fc2bd22a0c21948da56e3a2de74b2ce2e7d87a5f53cf6"
       },
       "repositories": [
         {

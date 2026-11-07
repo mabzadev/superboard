@@ -27,7 +27,7 @@ export default {
 type Run = { trigger: string; outcome: string; logs: { level: string; message: string }[] };
 
 async function deploy(name: string, body: Record<string, unknown>) {
-	const response = await operator(`/functions/${name}`, { method: "PUT", body });
+	const response = await operator("functions", `/functions/${name}`, { method: "PUT", body });
 	expect(response.status).toBe(200);
 	return jsonOf<{ active_version: number; secret_names: string[]; vars: Record<string, string> }>(
 		response,
@@ -38,7 +38,7 @@ async function runs(name: string): Promise<Run[]> {
 	await new Promise((resolve) => {
 		setTimeout(resolve, 50);
 	});
-	return (await jsonOf<{ items: Run[] }>(await operator(`/functions/${name}/runs`))).items;
+	return (await jsonOf<{ items: Run[] }>(await operator("functions", `/functions/${name}/runs`))).items;
 }
 
 describe("Functions", () => {
@@ -54,7 +54,7 @@ describe("Functions", () => {
 			vars: { GREETING: "bonjour" },
 			secret_names: ["API_TOKEN"],
 		});
-		const details = await operator("/functions/hello");
+		const details = await operator("functions", "/functions/hello");
 		const text = await details.text();
 		expect(text).toContain("hello from");
 		expect(text).not.toContain("s3cr3t");
@@ -100,7 +100,7 @@ describe("Functions", () => {
 		});
 		expect(second.active_version).toBe(2);
 		expect(await (await sdk("/v1/functions/hello")).text()).toBe("v2");
-		const rolledBack = await operator("/functions/hello/rollback", {
+		const rolledBack = await operator("functions", "/functions/hello/rollback", {
 			method: "POST",
 			body: { version: 1 },
 		});
@@ -131,7 +131,7 @@ describe("Functions", () => {
 	});
 
 	it("invokes a function from the console", async () => {
-		const response = await operator("/functions/hello/invoke", {
+		const response = await operator("functions", "/functions/hello/invoke", {
 			method: "POST",
 			body: { method: "GET", path: "/console" },
 		});
@@ -142,7 +142,7 @@ describe("Functions", () => {
 	});
 
 	it("runs due schedules once", async () => {
-		const scheduled = await operator("/functions/hello/schedule", {
+		const scheduled = await operator("functions", "/functions/hello/schedule", {
 			method: "PUT",
 			body: { cron: "*/5 * * * *" },
 		});
@@ -168,13 +168,13 @@ describe("Functions", () => {
 			["reserved", { source: "x", vars: { SUPERBOARD_API_URL: "x" } }, "variable_name_invalid"],
 		] as const)
 			expect(
-				await jsonOf(await operator(`/functions/${name}`, { method: "PUT", body })),
+				await jsonOf(await operator("functions", `/functions/${name}`, { method: "PUT", body })),
 			).toMatchObject({
 				error: { code },
 			});
 		expect(
 			await jsonOf(
-				await operator("/functions/hello/schedule", {
+				await operator("functions", "/functions/hello/schedule", {
 					method: "PUT",
 					body: { cron: "61 * * * *" },
 				}),

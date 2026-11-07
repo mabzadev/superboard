@@ -19,21 +19,20 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import { useId, useState } from "react";
 
-import { DELETE, GET, PATCH, POST, PUT } from "../transport.js";
+import { useDataPath, useDataResource } from "./resource.js";
+import { DELETE, GET, PATCH, POST, PUT } from "./transport.js";
 import {
 	encode,
 	objectPath,
 	readBody,
 	useAddressState,
 	useDataAction,
-	useDataPath,
-	useDataResource,
 	type Bucket,
 	type BucketRules,
 	type Page,
 	type StoredObject,
-} from "./client.js";
-import { useDataConsoleI18n } from "./i18n.js";
+} from "../console/client.js";
+import { useDataConsoleI18n } from "../console/i18n.js";
 import {
 	BackButton,
 	ConfirmPanel,
@@ -47,7 +46,7 @@ import {
 	Pager,
 	RuleSelect,
 	SectionTabs,
-} from "./shared.js";
+} from "../console/shared.js";
 
 const megabyte = 1024 * 1024;
 const typeSeparator = /[,\s]+/u;
