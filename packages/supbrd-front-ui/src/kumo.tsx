@@ -4,11 +4,12 @@ import {
 	Loader as KumoLoader,
 	Select as KumoSelect,
 	Checkbox as KumoCheckbox,
+	Switch as KumoSwitch,
 	Dialog as KumoDialog,
 	type ButtonProps,
 	type LinkButtonProps,
 } from "@cloudflare/kumo";
-import { createElement, forwardRef, type ComponentProps, type ReactNode } from "react";
+import { createElement, forwardRef, useId, type ComponentProps, type ReactNode } from "react";
 
 import { Button as FrontButton, buttonVariants } from "./shared/components/ui/button.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./shared/components/ui/tooltip.js";
@@ -152,6 +153,61 @@ export const Checkbox = Object.assign(FrontCheckbox, {
 	Group: KumoCheckbox.Group,
 	Legend: KumoCheckbox.Legend,
 });
+
+const FrontSwitch = forwardRef<HTMLButtonElement, ComponentProps<typeof KumoSwitch>>(
+	({ label, ...props }, ref) => (
+		<KumoSwitch
+			{...props}
+			ref={ref}
+			label={label ? <span className="text-sm leading-5">{label}</span> : label}
+		/>
+	),
+);
+FrontSwitch.displayName = "FrontCompatibleSwitch";
+export const Switch = Object.assign(FrontSwitch, {
+	Item: KumoSwitch.Item,
+	Group: KumoSwitch.Group,
+	Legend: KumoSwitch.Legend,
+});
+
+export function SwitchField({
+	label,
+	description,
+	trailing,
+	id,
+	className,
+	...props
+}: Omit<ComponentProps<typeof KumoSwitch>, "label" | "children"> & {
+	label: ReactNode;
+	description?: ReactNode;
+	trailing?: ReactNode;
+}) {
+	const generated = useId();
+	const controlId = id ?? generated;
+	return (
+		<div className={cn("flex items-center justify-between gap-4", className)}>
+			<div className="min-w-0 space-y-0.5">
+				<label id={`${controlId}-label`} htmlFor={controlId} className="block text-sm font-medium">
+					{label}
+				</label>
+				{description && (
+					<p id={`${controlId}-description`} className="text-xs text-kumo-subtle">
+						{description}
+					</p>
+				)}
+			</div>
+			<div className="flex shrink-0 items-center gap-3">
+				{trailing}
+				<FrontSwitch
+					id={controlId}
+					aria-labelledby={`${controlId}-label`}
+					aria-describedby={description ? `${controlId}-description` : undefined}
+					{...props}
+				/>
+			</div>
+		</div>
+	);
+}
 
 function FrontDialog({ className, ...props }: ComponentProps<typeof KumoDialog>) {
 	return <KumoDialog {...props} className={cn("front-dialog", className)} />;
