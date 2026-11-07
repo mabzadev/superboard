@@ -10,6 +10,7 @@ import {
 import { Hono, type Context, type Next } from "hono";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
+import { eraseApplicationUser } from "./erasure.js";
 import { FilesInputError } from "./errors.js";
 import { filesBucket } from "./files-bucket.js";
 import { pruneRuns, runDueSchedules } from "./functions/runtime.js";
@@ -382,7 +383,7 @@ app.delete("/internal/v1/users/:id", async (c) => {
 			.run();
 		deleted += rows.length;
 	}
-	return json({ deleted });
+	return json({ deleted, data: await eraseApplicationUser(c.env, userId) });
 });
 
 function remoteJwks(url: string) {

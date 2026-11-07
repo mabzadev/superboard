@@ -277,6 +277,14 @@ Le générateur `scripts/cloudflare/config.mjs` ajoute au Worker Data :
 `DATA_ENCRYPTION_KEY` est un secret facultatif. Son absence désactive les
 secrets de fonctions et l'affiche dans le Front.
 
+## Effacement d'un compte
+
+L'effacement d'un Utilisateur d'application passe par
+`DELETE /internal/v1/users/:id` du Worker Data. En plus de ses fichiers, cet
+appel supprime ses lignes dans toutes les tables applicatives, ses objets, ses
+envois en plusieurs parties et ses éléments vectoriels, puis renvoie leur
+décompte.
+
 ## Pannes
 
 - Un binding absent rend sa brique indisponible (`503`) sans affecter les autres.
