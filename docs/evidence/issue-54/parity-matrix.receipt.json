@@ -1,48 +1,50 @@
 {
   "schema_version": 1,
-  "matrix_sha256": "sha256:d28488a415202f808320f9b6c99fd7b9201fa2c55e11441ee657450dd572ceed",
-  "topology_sha256": "sha256:967e9e00842776df3b90957d82128fdc54dbdb86f430d16f0d4551d6ccbd2a8e",
-  "row_count": 1023,
-  "required_row_count": 604,
+  "matrix_sha256": "sha256:c4e798458a9722a497b5a98f2a06f85887b257d693d13afd5589ade15a4b9473",
+  "topology_sha256": "sha256:8761e339b632c24e3ab9c2e31511bce5a62107d204ca3902321a2082528acebe",
+  "row_count": 1050,
+  "required_row_count": 631,
   "public_cutover": false,
   "release": {
     "source": "scripts/config/superboard-parity-release.json",
     "release_id": "01J00000000000000000007005",
-    "content_checksum": "sha256:f6f3d95e8b9ba2b7c19f665d03fc2e5666825efcfcd3db2a65e2e2e16293c2b4",
+    "content_checksum": "sha256:2a084829506f05288f6067ea5242f5a963efb283f67110f6a2cdf8d3f3d77a74",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "lW67xpmz7H6xatIx229z5o-OHC292x9wTHmgJctBfYTZYB4dI5rdHtaS1TupUf9AjBK7q-hPyWmvd1U6rSOANg"
+      "value": "dIbPfnWJEzWHsJUhwLiLDBgN_RY3xKwKa4PIUhDYFnfb3L7deRXCkqNjZ-I4TUv6kn31htd07Bwio4o5SWsiKg"
     },
-    "validation_set_checksum": "sha256:f704bae95273f0d7384f79235370c69f22121f7cbd1e8fdd2b1c8d9533ae53fa",
+    "validation_set_checksum": "sha256:13d99667041d3ce54616c4a303f5ab178a21208b31d74ee1f73178e0f4ae1f50",
     "validation_receipt_checksums": [
-      "sha256:31b6ad1be76e3b44c9e529c35cd4bf05d29cc130e8ebde86ac1b6ba6f27a3a2d",
-      "sha256:36ab244d32c9b95507333e910abecdb295393fdd6ca6588baa9263020e199e71",
-      "sha256:88e458fa6251c1f4537298e8c6b2711fa6e3f14e18d1d00d1a26537603cd9d50",
-      "sha256:f185035889d2acee2339e5c6412663c0c6e227fa2cb43a6ea355cbc7bbdfbd95",
-      "sha256:49bab699edf0dadc54e508b993e89a556563860a46fe6bccf93aad4bf71aa0a2",
-      "sha256:24c538b92263d8513eb3a500ddb1e47d0796d6d3da54de158114d6297de769d5",
-      "sha256:0a257ef148545fae461234bceb46d3602e7db6f439eea2eb12d9724b1e565ff6",
-      "sha256:829b89bdc3e8676b5dc97176dd0edf4d77e547e28943676caecedb0871b3aae5",
-      "sha256:4c50ee79fdee74874a474d49b629aeb48d9f97aa5ad7ac6133c274989d3aa51c",
-      "sha256:f640b4e8b6a81110c07449475dfaf22683890d09ba3b4e59f6e8ef95c162f0cd",
-      "sha256:d68399d3bc02ba33ba6ffc87044cee87dc79ed74071f8affa40c944653b86d6b",
-      "sha256:cda2cbe05a36bbc0461edbc35525e7d1dea8d67cda3eb4dbda2b59b3cd738374",
-      "sha256:4e989397f08112526e27b19af3ac55d25c6664c944cd4407099fd0550243c97d"
+      "sha256:4bb31d23bcc24aeb676fe0b0c873cb2247bf274bbb5b210f257b42fe45a2046d",
+      "sha256:2c3b0d3daec2493789cdef5aae6efc5cbfc7ad941c24979c438eb8c99555151a",
+      "sha256:b2685b6d3162d3078174f2b4f7e94c14944aff1cd9873dd002f44a512fea2d42",
+      "sha256:dadfbb603827c2614d43e7b6096737f8adbc45beef969d1a0d28f908873a7000",
+      "sha256:cebe9c543aa7917063a65d12d00a6361b44360a346647dd33a9608266a7b374c",
+      "sha256:02e416197c9678ca1780c57fc7634378379135f3a21d934f618bb35fd666570c",
+      "sha256:90198e20965711f554de6cde2d13bd9ac35971923338868850063856072fb9f9",
+      "sha256:1228165bfb89473144cc31c1c1ee5fa575cb0dac64e79c99bd91e4a6f9a57b84",
+      "sha256:728b11ad24757ab5b5a68e01242e77356fef537a2d3e6e8980d26f0c453c026c",
+      "sha256:0ab19ddd5debe5c6b95367f12c77051c4bf19c2f3de487e445becca14d8e9534",
+      "sha256:9bc8ba6c87ab1c96257a947ccd78867336a597d6014961a2f532d61a8224dba3",
+      "sha256:4d4cc266587b2f07327aef51b0caee032aae3827ced49efde232b9811b1863f5",
+      "sha256:509bf5a457b6a080fc8f3427f556e88ac6ca9c2bf9d1475caf007bfe2de8ade6"
     ],
     "verification_status": "verified",
     "target": "mabza-development",
     "environment": "local",
-    "target_artifact_checksum": "sha256:6f4a6eda25758819127fa39df3ddb4bfc3c6bd9a59a2051d93c46400b003cfe2",
+    "target_artifact_checksum": "sha256:57f928d20210635326ab75aac04c6778add0103e426d315d60a08077bd5af606",
     "active_plugin_ids": [
       "superboard-analytics",
       "superboard-audit",
       "superboard-billing",
       "superboard-content",
+      "superboard-database",
       "superboard-dynamic-links",
       "superboard-email",
       "superboard-files",
       "superboard-flows",
+      "superboard-functions",
       "superboard-gateway",
       "superboard-marketing",
       "superboard-mcp",
@@ -51,15 +53,17 @@
       "superboard-paywalls",
       "superboard-products",
       "superboard-settings",
+      "superboard-storage",
       "superboard-support",
-      "superboard-user"
+      "superboard-user",
+      "superboard-vectors"
     ]
   },
   "front_bundle": {
     "schema_version": 1,
-    "build_id": "4DA4N516X945NN6AXHENDWX3A6",
-    "build_checksum": "sha256:d55093796859cd5acb5c6d73ad75248daf202d6fb4d3fa2b141be4ac4a910075",
-    "source_count": 704
+    "build_id": "3VXQ95QBDZ4FBA8QA3A7SC050A",
+    "build_checksum": "sha256:14ee47e7039e33fcb2151a5c4828315dabf483e36dd85973f8030db1bca147a3",
+    "source_count": 724
   },
   "store_coverage": [
     {
@@ -395,6 +399,96 @@
     {
       "store_id": "superboard-files.store.tickets",
       "descriptor_checksum": "sha256:db292dad1181c95fd095e56fd34227ef4155e7b9e0280531b10b2dc8ee5c171c",
+      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+      "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
+      "double_import": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "passed_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "store_id": "superboard-database.store.rows",
+      "descriptor_checksum": "sha256:407d76e15b6bc5974bdd0f074a439dea79806f7997b9cc464e9ddd586d7c9a33",
+      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+      "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
+      "double_import": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "passed_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "store_id": "superboard-database.store.service_keys",
+      "descriptor_checksum": "sha256:f73213915ac54c34fafda620dcae514a5e56e84a07a99fe5a9a354b31377502a",
+      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+      "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
+      "double_import": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "passed_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "store_id": "superboard-database.store.tables",
+      "descriptor_checksum": "sha256:99e57a4a09eaa53fbc0d7d965b518645c88ccbd2531820fe112d441f4af7e250",
+      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+      "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
+      "double_import": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "passed_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "store_id": "superboard-storage.store.buckets",
+      "descriptor_checksum": "sha256:11476c941f461094443540097cef9cb61cb895d00ef090171b345c339750d8ed",
+      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+      "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
+      "double_import": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "passed_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "store_id": "superboard-storage.store.objects",
+      "descriptor_checksum": "sha256:b875db1f7fb6a708c0e45682188c0e507e41ad19428b756cd370aa82261e9be4",
+      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+      "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
+      "double_import": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "passed_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "store_id": "superboard-functions.store.functions",
+      "descriptor_checksum": "sha256:402f283aeece37e0798ac41f96d6e19740ee0e47a179025a9aa5bf38d1696a72",
+      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+      "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
+      "double_import": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "passed_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "store_id": "superboard-functions.store.runs",
+      "descriptor_checksum": "sha256:e781664dd78c3c0083cc07d0e7897b79070f0d4640fd887dccf7a6c796c7ee6d",
+      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+      "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
+      "double_import": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "passed_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "store_id": "superboard-vectors.store.collections",
+      "descriptor_checksum": "sha256:fe62b978bfb82bd26c46e245b57a62e4aedf791e13b3d3f377ba62803084e0c2",
+      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+      "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
+      "double_import": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "passed_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "store_id": "superboard-vectors.store.items",
+      "descriptor_checksum": "sha256:ec80ac1eb77327618d1dd715db2f651b93a5de76bb494869be1103889d0c50fe",
       "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:196d26fc7de44c0d0954df60e43eefb52acbc95714b44d6e36f091050f420624",
       "double_import": "passed",

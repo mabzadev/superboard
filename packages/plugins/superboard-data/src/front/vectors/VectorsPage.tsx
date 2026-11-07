@@ -10,17 +10,16 @@ import {
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { useState } from "react";
 
-import { DELETE, PATCH, POST } from "../transport.js";
+import { useDataPath, useDataResource } from "./resource.js";
+import { DELETE, PATCH, POST } from "./transport.js";
 import {
 	encode,
 	useDataAction,
-	useDataPath,
-	useDataResource,
 	type AccessRule,
 	type Page,
 	type VectorCollection,
-} from "./client.js";
-import { useDataConsoleI18n } from "./i18n.js";
+} from "../console/client.js";
+import { useDataConsoleI18n } from "../console/i18n.js";
 import {
 	ConfirmPanel,
 	DataPage,
@@ -30,7 +29,7 @@ import {
 	Notice,
 	RuleSelect,
 	StatusBadge,
-} from "./shared.js";
+} from "../console/shared.js";
 
 type CollectionRules = VectorCollection["rules"];
 const operations = ["read", "write"] as const;

@@ -35,7 +35,14 @@
 			"kind": "business",
 			"label": "Data",
 			"label_fr": "Data",
-			"components": ["superboard-content", "superboard-files"],
+			"components": [
+				"superboard-content",
+				"superboard-database",
+				"superboard-storage",
+				"superboard-files",
+				"superboard-functions",
+				"superboard-vectors"
+			],
 			"required_components": [],
 			"directory": "superboard-data"
 		},

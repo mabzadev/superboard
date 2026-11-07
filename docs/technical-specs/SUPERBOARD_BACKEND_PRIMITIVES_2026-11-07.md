@@ -6,9 +6,28 @@ recevoir des événements en temps réel et d'exécuter du code serveur, sans
 passer par un module métier. Elle fixe les contrats publics, le modèle de
 données, les bindings Cloudflare et l'ordre de livraison.
 
-Le Worker Data (`superboard-files`, source `packages/plugins/superboard-data/worker`)
+Le Worker Data (service `files`, source `packages/plugins/superboard-data/worker`)
 porte toutes ces briques. Son autorité d'écriture reste le plugin
 `superboard-data`.
+
+## Composants et pages
+
+Chaque brique est un composant du plugin Data. L'Opérateur l'active ou le
+désactive séparément dans le gestionnaire de plugins ; un composant désactivé
+ferme ses pages, ses routes Opérateur et ses routes publiques.
+
+| Composant              | Brique                                                           | Page              | Menu                         |
+| ---------------------- | ---------------------------------------------------------------- | ----------------- | ---------------------------- |
+| `superboard-content`   | Contenus du site                                                 | `/data/content`   | Data > Contenus              |
+| `superboard-database`  | Tables, temps réel, clés serveur et API de gestion               | `/data/database`  | Data > Base de données       |
+| `superboard-storage`   | Buckets d'application                                            | `/data/storage`   | Data > Buckets d'application |
+| `superboard-files`     | Fichiers et médias du site                                       | `/data/files`     | Data > Fichiers et médias    |
+| `superboard-functions` | Fonctions et planification                                       | `/data/functions` | Data > Fonctions             |
+| `superboard-vectors`   | Collections de vecteurs et embeddings                            | `/data/vectors`   | Data > Vecteurs              |
+| `superboard-database`  | URL de l'API, clés serveur, temps réel anonyme, état des briques | `/data/api`       | Paramètres > Data            |
+
+Les buckets d'application servent aux applications clientes par le SDK. Les
+médias utilisés par le site restent dans Fichiers et médias.
 
 ## Objectifs
 
@@ -148,8 +167,12 @@ Une ligne renvoie l'objet seul. Une écriture filtrée sans filtre est refusée
 
 ### Gestion
 
-Ces routes acceptent une clé serveur. Le Front appelle les mêmes handlers par
-`/internal/v1/operator/data/*` avec la session de l'Opérateur SuperBoard.
+Ces routes acceptent une clé serveur et appartiennent au composant
+`superboard-database`. Le Front appelle les mêmes handlers avec la session de
+l'Opérateur SuperBoard, par le proxy `/api/v1/data/<brique>/projects/:projectRef/*`
+de la Core API, qui transmet à `/internal/v1/data/<brique>/*`. `<brique>` vaut
+`database`, `storage`, `functions` ou `vectors`, et chaque proxy n'atteint que
+les routes de son composant.
 
 | Méthode et chemin                                      | Effet                                                          |
 | ------------------------------------------------------ | -------------------------------------------------------------- |
@@ -317,7 +340,7 @@ décompte.
 4. Fonctions et planification.
 5. Vecteurs et Workers AI.
 6. Turnstile.
-7. Front : Base de données, Stockage, Fonctions, Vecteurs, API et clés.
+7. Front : Base de données, Buckets d'application, Fonctions et Vecteurs dans Data, et Paramètres > Data.
 8. SDK web, SDK Flutter et CLI.
 
 Chaque brique ajoute ses tests dans `tests/checks/plugins/superboard-data/`.

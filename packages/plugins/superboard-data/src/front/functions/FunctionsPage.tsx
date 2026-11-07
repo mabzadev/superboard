@@ -19,15 +19,14 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import { useState } from "react";
 
-import { DELETE, POST, PUT } from "../transport.js";
+import { useDataPath, useDataResource } from "./resource.js";
+import { DELETE, POST, PUT } from "./transport.js";
 import {
 	encode,
 	FUNCTION_ACCESS,
 	readBody,
 	useAddressState,
 	useDataAction,
-	useDataPath,
-	useDataResource,
 	type DataFunction,
 	type DataStatus,
 	type FunctionAccess,
@@ -36,9 +35,8 @@ import {
 	type FunctionRun,
 	type InvocationResult,
 	type Page,
-} from "./client.js";
-import { CodeField } from "./database-columns.js";
-import { useDataConsoleI18n } from "./i18n.js";
+} from "../console/client.js";
+import { useDataConsoleI18n } from "../console/i18n.js";
 import {
 	BackButton,
 	CodeBlock,
@@ -52,7 +50,8 @@ import {
 	SectionTabs,
 	StatusBadge,
 	type FeatureState,
-} from "./shared.js";
+	CodeField,
+} from "../console/shared.js";
 
 const template = `export default {
 	async fetch(request, env) {

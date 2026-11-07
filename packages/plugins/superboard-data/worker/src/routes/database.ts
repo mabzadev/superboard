@@ -11,7 +11,7 @@ import { allows } from "../platform/policy.js";
 import { publicOrigin } from "../platform/signing.js";
 import { publishChanges } from "../realtime/publish.js";
 import {
-	DATA_PLUGIN_ID,
+	DATA_PLUGINS,
 	action,
 	deferralOf,
 	searchParams,
@@ -22,7 +22,7 @@ import {
 export const databaseRoutes = registerRouter(new Hono<{ Bindings: DataEnv }>(), {
 	service: "files",
 	module: "database",
-	pluginId: DATA_PLUGIN_ID,
+	pluginId: DATA_PLUGINS.database,
 	surface: "internal",
 	access: "sdk-key",
 });

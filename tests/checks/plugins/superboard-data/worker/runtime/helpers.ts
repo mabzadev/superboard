@@ -83,16 +83,16 @@ export async function sdk(
 	return SELF.fetch(`${ORIGIN}${path}`, { method, headers, body: body(options, headers) });
 }
 
-export async function operator(path: string, options: RequestOptions = {}) {
+export async function operator(
+	brick: "database" | "storage" | "functions" | "vectors",
+	path: string,
+	options: RequestOptions = {},
+) {
 	const method = options.method ?? "GET";
-	const headers = await contextHeaders(
-		method,
-		`/internal/v1/operator/data${path}`,
-		options.projectId ?? PROJECT_ID,
-		true,
-	);
+	const target = `/internal/v1/data/${brick}${path}`;
+	const headers = await contextHeaders(method, target, options.projectId ?? PROJECT_ID, true);
 	for (const [name, value] of Object.entries(options.headers ?? {})) headers.set(name, value);
-	return SELF.fetch(`${ORIGIN}/internal/v1/operator/data${path}`, {
+	return SELF.fetch(`${ORIGIN}${target}`, {
 		method,
 		headers,
 		body: body(options, headers),
@@ -113,7 +113,7 @@ export async function publicRequest(path: string, init: RequestInit = {}) {
 }
 
 export async function createKey(name = "server"): Promise<string> {
-	const response = await operator("/keys", { method: "POST", body: { name } });
+	const response = await operator("database", "/keys", { method: "POST", body: { name } });
 	if (response.status !== 201)
 		throw new Error(`key creation failed: ${response.status} ${await response.text()}`);
 	return (await response.json<{ secret: string }>()).secret;
@@ -121,9 +121,9 @@ export async function createKey(name = "server"): Promise<string> {
 
 export async function ensureTable(definition: Record<string, unknown>) {
 	const name = String(definition.name);
-	const existing = await operator(`/tables/${name}`);
+	const existing = await operator("database", `/tables/${name}`);
 	if (existing.status === 200) return existing.json();
-	const response = await operator("/tables", { method: "POST", body: definition });
+	const response = await operator("database", "/tables", { method: "POST", body: definition });
 	if (response.status !== 201)
 		throw new Error(`table creation failed: ${response.status} ${await response.text()}`);
 	return response.json();

@@ -20,7 +20,15 @@ export function validatePluginApiAdapters(registry, baseline, root = repositoryR
 				.map(({ route_id }) => [route_id.slice("gateway.".length), plugin.plugin_id]),
 		),
 	);
-	const pluginIds = new Set(baseline.plugins.map(({ plugin_id }) => plugin_id));
+	const packagesPath = resolve(root, "scripts/config/superboard-plugin-packages.json");
+	const pluginIds = new Set([
+		...baseline.plugins.map(({ plugin_id }) => plugin_id),
+		...(existsSync(packagesPath)
+			? JSON.parse(readFileSync(packagesPath, "utf8")).packages.flatMap(
+					({ components }) => components,
+				)
+			: []),
+	]);
 	for (const application of registry.application_plugins ?? []) {
 		if (
 			typeof application.manifest !== "string" ||

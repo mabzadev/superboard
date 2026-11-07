@@ -11,7 +11,7 @@ const pause = (milliseconds: number) =>
 	});
 
 async function sql(query: string) {
-	return operator("/sql", { method: "POST", body: { query } });
+	return operator("database", "/sql", { method: "POST", body: { query } });
 }
 
 describe("Read-only SQL console", () => {
@@ -53,7 +53,7 @@ describe("Read-only SQL console", () => {
 
 describe("Storage visibility", () => {
 	it("stops serving anonymous readers when a public bucket becomes private", async () => {
-		await operator("/buckets", { method: "POST", body: { name: "flyers", public: true } });
+		await operator("storage", "/buckets", { method: "POST", body: { name: "flyers", public: true } });
 		const bytes = new TextEncoder().encode("hello");
 		await sdk("/v1/storage/object/flyers/a.txt", {
 			method: "PUT",
@@ -62,7 +62,7 @@ describe("Storage visibility", () => {
 			headers: { "content-type": "text/plain", "content-length": String(bytes.byteLength) },
 		});
 		expect((await sdk("/v1/storage/object/flyers/a.txt")).status).toBe(200);
-		const updated = await operator("/buckets/flyers", { method: "PATCH", body: { public: false } });
+		const updated = await operator("storage", "/buckets/flyers", { method: "PATCH", body: { public: false } });
 		expect(await jsonOf(updated)).toMatchObject({ public: false, rules: { read: "owner" } });
 		expect((await sdk("/v1/storage/object/flyers/a.txt")).status).toBe(401);
 		expect((await publicRequest("/v1/storage/public/12/flyers/a.txt")).status).toBe(404);
@@ -70,7 +70,7 @@ describe("Storage visibility", () => {
 	});
 
 	it("rejects a multipart upload whose parts exceed the bucket size", async () => {
-		await operator("/buckets", { method: "POST", body: { name: "tiny", max_bytes: 10 } });
+		await operator("storage", "/buckets", { method: "POST", body: { name: "tiny", max_bytes: 10 } });
 		const { upload_id } = await jsonOf<{ upload_id: string }>(
 			await sdk("/v1/storage/uploads/tiny", {
 				method: "POST",
@@ -177,7 +177,7 @@ describe("Row writes", () => {
 	});
 
 	it("rejects names that could collide with generated index names", async () => {
-		const response = await operator("/tables", { method: "POST", body: { name: "audit__uq" } });
+		const response = await operator("database", "/tables", { method: "POST", body: { name: "audit__uq" } });
 		expect(await jsonOf(response)).toMatchObject({ error: { code: "table_name_invalid" } });
 	});
 
@@ -187,13 +187,13 @@ describe("Row writes", () => {
 			rules: { read: "service", insert: "service", update: "service", delete: "service" },
 			columns: [{ name: "body", type: "text" }],
 		});
-		const pushed = await operator("/schema", {
+		const pushed = await operator("database", "/schema", {
 			method: "POST",
 			body: { tables: [{ name: "internal_notes", columns: [{ name: "body", type: "text" }] }] },
 		});
 		expect(await jsonOf(pushed)).toMatchObject({ applied: true, changes: [] });
 		const table = await jsonOf<{ rules: Record<string, string> }>(
-			await operator("/tables/internal_notes"),
+			await operator("database", "/tables/internal_notes"),
 		);
 		expect(table.rules).toEqual({
 			read: "service",
@@ -206,7 +206,7 @@ describe("Row writes", () => {
 
 describe("Function responses", () => {
 	it("strip cookies both ways and sandbox the response", async () => {
-		const deployed = await operator("/functions/page", {
+		const deployed = await operator("functions", "/functions/page", {
 			method: "PUT",
 			body: {
 				access: "public",
@@ -266,13 +266,13 @@ describe("Realtime sessions", () => {
 	});
 
 	it("disconnects anonymous visitors when the project stops allowing them", async () => {
-		await operator("/settings", { method: "PATCH", body: { realtime_anonymous: true } });
+		await operator("database", "/settings", { method: "PATCH", body: { realtime_anonymous: true } });
 		await pause(50);
 		const visitor = await connect();
 		const closing = closed(visitor);
 		visitor.send(JSON.stringify({ type: "join", channel: "lobby", ref: "1" }));
 		await pause(50);
-		await operator("/settings", { method: "PATCH", body: { realtime_anonymous: false } });
+		await operator("database", "/settings", { method: "PATCH", body: { realtime_anonymous: false } });
 		expect(await closing).toBe(4003);
 	});
 });

@@ -178,7 +178,7 @@ describe("Realtime", () => {
 			code: "authentication_required",
 		});
 		expect(
-			(await operator("/settings", { method: "PATCH", body: { realtime_anonymous: true } })).status,
+			(await operator("database", "/settings", { method: "PATCH", body: { realtime_anonymous: true } })).status,
 		).toBe(200);
 		await pause(50);
 		const allowed = await connect();

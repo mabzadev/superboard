@@ -62,7 +62,8 @@ import {
 	vectorsAvailable,
 } from "../vectors/collections.js";
 import {
-	DATA_PLUGIN_ID,
+	DATA_PLUGINS,
+	type DataBrick,
 	action,
 	deferralOf,
 	searchParams,
@@ -82,25 +83,25 @@ function confirmation(c: DataContext): string | null {
 function managementRouter(options: {
 	module: string;
 	access: "sdk-key" | "internal";
-	prefix: string;
+	path: (brick: DataBrick, suffix: string) => string;
+	owner: (brick: DataBrick) => string;
 	idPrefix: string;
 	resolve: Resolver;
 }) {
 	const router = registerRouter(new Hono<{ Bindings: DataEnv }>(), {
 		service: "files",
 		module: options.module,
-		pluginId: DATA_PLUGIN_ID,
+		pluginId: options.owner("database"),
 		surface: "internal",
 		access: options.access,
 	});
-	const { prefix, idPrefix, resolve } = options;
-	const route = (id: string) => router.defineRoute({ id: `${idPrefix}:${id}` });
+	const { path: at, idPrefix, resolve } = options;
+	const route = (id: string, brick: DataBrick) =>
+		router.defineRoute({ id: `${idPrefix}:${id}`, pluginId: options.owner(brick) });
 	const handle = (scope: string, handler: (c: DataContext, caller: Caller) => Promise<Response>) =>
 		action(`${options.module}-${scope}`, async (c) => handler(c, await resolve(c)));
 
-	route("status").get(
-		`${prefix}/status`,
-		handle("status", async (c, caller) => {
+	const status = handle("status", async (c, caller) => {
 			const [tables, buckets, functions] = await Promise.all([
 				listTables(c.env, caller.projectId),
 				listBuckets(c.env, caller.projectId),
@@ -117,17 +118,17 @@ function managementRouter(options: {
 				},
 				counts: { tables: tables.length, buckets: buckets.length, functions: functions.length },
 			});
-		}),
-	);
+		});
+	route("status", "database").get(at("database", "/status"), status);
 
-	route("tables-list").get(
-		`${prefix}/tables`,
+	route("tables-list", "database").get(
+		at("database", "/tables"),
 		handle("tables-list", async (c, caller) =>
 			json({ items: await listTables(c.env, caller.projectId) }),
 		),
 	);
-	route("tables-create").post(
-		`${prefix}/tables`,
+	route("tables-create", "database").post(
+		at("database", "/tables"),
 		handle("tables-create", async (c, caller) => {
 			const table = await createTable(
 				c.env,
@@ -138,15 +139,15 @@ function managementRouter(options: {
 			return json(table, 201);
 		}),
 	);
-	route("table-get").get(
-		`${prefix}/tables/:table`,
+	route("table-get", "database").get(
+		at("database", "/tables/:table"),
 		handle("table-get", async (c, caller) => {
 			const table = await requireTable(c.env, caller.projectId, param(c, "table"));
 			return json({ ...table, row_count: await countRows(c.env, caller.projectId, table.name) });
 		}),
 	);
-	route("table-update").patch(
-		`${prefix}/tables/:table`,
+	route("table-update", "database").patch(
+		at("database", "/tables/:table"),
 		handle("table-update", async (c, caller) => {
 			const table = await updateTable(
 				c.env,
@@ -158,16 +159,16 @@ function managementRouter(options: {
 			return json(table);
 		}),
 	);
-	route("table-delete").delete(
-		`${prefix}/tables/:table`,
+	route("table-delete", "database").delete(
+		at("database", "/tables/:table"),
 		handle("table-delete", async (c, caller) => {
 			await dropTable(c.env, caller.projectId, param(c, "table"), confirmation(c));
 			invalidateRealtime(c.env, deferralOf(c), caller.projectId);
 			return json({ deleted: true });
 		}),
 	);
-	route("column-add").post(
-		`${prefix}/tables/:table/columns`,
+	route("column-add", "database").post(
+		at("database", "/tables/:table/columns"),
 		handle("column-add", async (c, caller) =>
 			json(
 				await addColumn(c.env, caller.projectId, param(c, "table"), await readJsonBody(c.req.raw)),
@@ -175,8 +176,8 @@ function managementRouter(options: {
 			),
 		),
 	);
-	route("column-update").patch(
-		`${prefix}/tables/:table/columns/:column`,
+	route("column-update", "database").patch(
+		at("database", "/tables/:table/columns/:column"),
 		handle("column-update", async (c, caller) =>
 			json(
 				await updateColumn(
@@ -189,8 +190,8 @@ function managementRouter(options: {
 			),
 		),
 	);
-	route("column-delete").delete(
-		`${prefix}/tables/:table/columns/:column`,
+	route("column-delete", "database").delete(
+		at("database", "/tables/:table/columns/:column"),
 		handle("column-delete", async (c, caller) =>
 			json(
 				await dropColumn(
@@ -203,8 +204,8 @@ function managementRouter(options: {
 			),
 		),
 	);
-	route("schema-apply").post(
-		`${prefix}/schema`,
+	route("schema-apply", "database").post(
+		at("database", "/schema"),
 		handle("schema-apply", async (c, caller) => {
 			const params = searchParams(c);
 			return json(
@@ -215,8 +216,8 @@ function managementRouter(options: {
 			);
 		}),
 	);
-	route("types").get(
-		`${prefix}/types`,
+	route("types", "database").get(
+		at("database", "/types"),
 		handle("types", async (c, caller) => {
 			const response = new Response(typescriptTypes(await listTables(c.env, caller.projectId)));
 			response.headers.set("content-type", "text/plain; charset=utf-8");
@@ -224,14 +225,14 @@ function managementRouter(options: {
 			return response;
 		}),
 	);
-	route("settings-get").get(
-		`${prefix}/settings`,
+	route("settings-get", "database").get(
+		at("database", "/settings"),
 		handle("settings-get", async (c, caller) =>
 			json(await getProjectSettings(c.env, caller.projectId)),
 		),
 	);
-	route("settings-update").patch(
-		`${prefix}/settings`,
+	route("settings-update", "database").patch(
+		at("database", "/settings"),
 		handle("settings-update", async (c, caller) => {
 			const settings = await updateProjectSettings(
 				c.env,
@@ -243,20 +244,20 @@ function managementRouter(options: {
 		}),
 	);
 
-	route("buckets-list").get(
-		`${prefix}/buckets`,
+	route("buckets-list", "storage").get(
+		at("storage", "/buckets"),
 		handle("buckets-list", async (c, caller) =>
 			json({ items: await listBuckets(c.env, caller.projectId) }),
 		),
 	);
-	route("buckets-create").post(
-		`${prefix}/buckets`,
+	route("buckets-create", "storage").post(
+		at("storage", "/buckets"),
 		handle("buckets-create", async (c, caller) =>
 			json(await createBucket(c.env, caller.projectId, await readJsonBody(c.req.raw)), 201),
 		),
 	);
-	route("bucket-update").patch(
-		`${prefix}/buckets/:bucket`,
+	route("bucket-update", "storage").patch(
+		at("storage", "/buckets/:bucket"),
 		handle("bucket-update", async (c, caller) =>
 			json(
 				await updateBucket(
@@ -268,28 +269,28 @@ function managementRouter(options: {
 			),
 		),
 	);
-	route("bucket-delete").delete(
-		`${prefix}/buckets/:bucket`,
+	route("bucket-delete", "storage").delete(
+		at("storage", "/buckets/:bucket"),
 		handle("bucket-delete", async (c, caller) => {
 			await deleteBucket(c.env, caller.projectId, param(c, "bucket"), confirmation(c));
 			return json({ deleted: true });
 		}),
 	);
 
-	route("functions-list").get(
-		`${prefix}/functions`,
+	route("functions-list", "functions").get(
+		at("functions", "/functions"),
 		handle("functions-list", async (c, caller) =>
 			json({ items: await listFunctions(c.env, caller.projectId) }),
 		),
 	);
-	route("function-get").get(
-		`${prefix}/functions/:name`,
+	route("function-get", "functions").get(
+		at("functions", "/functions/:name"),
 		handle("function-get", async (c, caller) =>
 			json(await functionDetails(c.env, caller.projectId, param(c, "name"))),
 		),
 	);
-	route("function-deploy").put(
-		`${prefix}/functions/:name`,
+	route("function-deploy", "functions").put(
+		at("functions", "/functions/:name"),
 		handle("function-deploy", async (c, caller) =>
 			json(
 				await deployFunction(
@@ -302,15 +303,15 @@ function managementRouter(options: {
 			),
 		),
 	);
-	route("function-delete").delete(
-		`${prefix}/functions/:name`,
+	route("function-delete", "functions").delete(
+		at("functions", "/functions/:name"),
 		handle("function-delete", async (c, caller) => {
 			await deleteFunction(c.env, caller.projectId, param(c, "name"), confirmation(c));
 			return json({ deleted: true });
 		}),
 	);
-	route("function-rollback").post(
-		`${prefix}/functions/:name/rollback`,
+	route("function-rollback", "functions").post(
+		at("functions", "/functions/:name/rollback"),
 		handle("function-rollback", async (c, caller) =>
 			json(
 				await rollbackFunction(
@@ -322,29 +323,29 @@ function managementRouter(options: {
 			),
 		),
 	);
-	route("function-runs").get(
-		`${prefix}/functions/:name/runs`,
+	route("function-runs", "functions").get(
+		at("functions", "/functions/:name/runs"),
 		handle("function-runs", async (c, caller) =>
 			json(await listRuns(c.env, caller.projectId, param(c, "name"), searchParams(c))),
 		),
 	);
-	route("function-schedule-set").put(
-		`${prefix}/functions/:name/schedule`,
+	route("function-schedule-set", "functions").put(
+		at("functions", "/functions/:name/schedule"),
 		handle("function-schedule-set", async (c, caller) =>
 			json(
 				await setSchedule(c.env, caller.projectId, param(c, "name"), await readJsonBody(c.req.raw)),
 			),
 		),
 	);
-	route("function-schedule-delete").delete(
-		`${prefix}/functions/:name/schedule`,
+	route("function-schedule-delete", "functions").delete(
+		at("functions", "/functions/:name/schedule"),
 		handle("function-schedule-delete", async (c, caller) => {
 			await deleteSchedule(c.env, caller.projectId, param(c, "name"));
 			return json({ deleted: true });
 		}),
 	);
-	route("function-invoke").post(
-		`${prefix}/functions/:name/invoke`,
+	route("function-invoke", "functions").post(
+		at("functions", "/functions/:name/invoke"),
 		handle("function-invoke", async (c, caller) => {
 			const body = await readJsonObject(c.req.raw, 1_048_576);
 			const method = typeof body.method === "string" ? body.method.toUpperCase() : "POST";
@@ -385,8 +386,8 @@ function managementRouter(options: {
 		}),
 	);
 
-	route("vector-collections-list").get(
-		`${prefix}/vector-collections`,
+	route("vector-collections-list", "vectors").get(
+		at("vectors", "/vector-collections"),
 		handle("vector-collections-list", async (c, caller) =>
 			json({
 				items: await listCollections(c.env, caller.projectId),
@@ -394,14 +395,14 @@ function managementRouter(options: {
 			}),
 		),
 	);
-	route("vector-collections-create").post(
-		`${prefix}/vector-collections`,
+	route("vector-collections-create", "vectors").post(
+		at("vectors", "/vector-collections"),
 		handle("vector-collections-create", async (c, caller) =>
 			json(await createCollection(c.env, caller.projectId, await readJsonBody(c.req.raw)), 201),
 		),
 	);
-	route("vector-collection-update").patch(
-		`${prefix}/vector-collections/:collection`,
+	route("vector-collection-update", "vectors").patch(
+		at("vectors", "/vector-collections/:collection"),
 		handle("vector-collection-update", async (c, caller) =>
 			json(
 				await updateCollection(
@@ -413,62 +414,66 @@ function managementRouter(options: {
 			),
 		),
 	);
-	route("vector-collection-delete").delete(
-		`${prefix}/vector-collections/:collection`,
+	route("vector-collection-delete", "vectors").delete(
+		at("vectors", "/vector-collections/:collection"),
 		handle("vector-collection-delete", async (c, caller) => {
 			await deleteCollection(c.env, caller.projectId, param(c, "collection"), confirmation(c));
 			return json({ deleted: true });
 		}),
 	);
 
-	return { router, route, handle };
+	return { router, route, handle, status };
 }
 
 export const manageRoutes = managementRouter({
 	module: "manage",
 	access: "sdk-key",
-	prefix: "/v1/manage",
+	path: (_brick, suffix) => `/v1/manage${suffix}`,
+	owner: () => DATA_PLUGINS.database,
 	idPrefix: "data:manage",
 	resolve: (c) => resolveServiceCaller(c.req.raw, c.env, deferralOf(c)),
 }).router;
 
+const operatorPath = (brick: DataBrick, suffix: string) => `/internal/v1/data/${brick}${suffix}`;
 const operator = managementRouter({
 	module: "operator-data",
 	access: "internal",
-	prefix: "/internal/v1/operator/data",
+	path: operatorPath,
+	owner: (brick) => DATA_PLUGINS[brick],
 	idPrefix: "data:operator",
 	resolve: (c) => resolveOperatorCaller(c.req.raw, c.env),
 });
-const operatorPrefix = "/internal/v1/operator/data";
 
-operator.route("keys-list").get(
-	`${operatorPrefix}/keys`,
+operator.route("functions-status", "functions").get(operatorPath("functions", "/status"), operator.status);
+
+operator.route("keys-list", "database").get(
+	operatorPath("database", "/keys"),
 	operator.handle("keys-list", async (c, caller) =>
 		json({ items: await listServiceKeys(c.env, caller.projectId) }),
 	),
 );
-operator.route("keys-create").post(
-	`${operatorPrefix}/keys`,
+operator.route("keys-create", "database").post(
+	operatorPath("database", "/keys"),
 	operator.handle("keys-create", async (c, caller) => {
 		const body = await readJsonObject(c.req.raw, 4_096);
 		return json(await createServiceKey(c.env, caller.projectId, body.name, caller.operatorId), 201);
 	}),
 );
-operator.route("key-revoke").delete(
-	`${operatorPrefix}/keys/:id`,
+operator.route("key-revoke", "database").delete(
+	operatorPath("database", "/keys/:id"),
 	operator.handle("key-revoke", async (c, caller) => {
 		await revokeServiceKey(c.env, caller.projectId, param(c, "id"));
 		return json({ revoked: true });
 	}),
 );
-operator.route("sql").post(
-	`${operatorPrefix}/sql`,
+operator.route("sql", "database").post(
+	operatorPath("database", "/sql"),
 	operator.handle("sql", async (c, caller) =>
 		json(await runReadOnlySql(c.env, caller.projectId, await readJsonBody(c.req.raw))),
 	),
 );
-operator.route("realtime-stats").get(
-	`${operatorPrefix}/realtime`,
+operator.route("realtime-stats", "database").get(
+	operatorPath("database", "/realtime"),
 	operator.handle("realtime-stats", async (c, caller) => {
 		const stub = realtimeStub(c.env, caller.projectId);
 		if (!stub) return json({ available: false, connections: 0, channels: [] });
@@ -479,15 +484,15 @@ operator.route("realtime-stats").get(
 		return json({ available: true, ...(isRecord(stats) ? stats : {}) });
 	}),
 );
-operator.route("rows-list").get(
-	`${operatorPrefix}/tables/:table/rows`,
+operator.route("rows-list", "database").get(
+	operatorPath("database", "/tables/:table/rows"),
 	operator.handle("rows-list", async (c, caller) => {
 		const table = await requireTable(c.env, caller.projectId, param(c, "table"));
 		return json(await listRows(c.env, caller, caller.projectId, table, searchParams(c)));
 	}),
 );
-operator.route("rows-insert").post(
-	`${operatorPrefix}/tables/:table/rows`,
+operator.route("rows-insert", "database").post(
+	operatorPath("database", "/tables/:table/rows"),
 	operator.handle("rows-insert", async (c, caller) => {
 		const table = await requireTable(c.env, caller.projectId, param(c, "table"));
 		const result = await insertRows(
@@ -504,8 +509,8 @@ operator.route("rows-insert").post(
 		return json(result.rows[0], 201);
 	}),
 );
-operator.route("row-update").patch(
-	`${operatorPrefix}/tables/:table/rows/:id`,
+operator.route("row-update", "database").patch(
+	operatorPath("database", "/tables/:table/rows/:id"),
 	operator.handle("row-update", async (c, caller) => {
 		const table = await requireTable(c.env, caller.projectId, param(c, "table"));
 		const result = await updateRows(
@@ -520,8 +525,8 @@ operator.route("row-update").patch(
 		return json(result.rows[0]);
 	}),
 );
-operator.route("row-delete").delete(
-	`${operatorPrefix}/tables/:table/rows/:id`,
+operator.route("row-delete", "database").delete(
+	operatorPath("database", "/tables/:table/rows/:id"),
 	operator.handle("row-delete", async (c, caller) => {
 		const table = await requireTable(c.env, caller.projectId, param(c, "table"));
 		const result = await deleteRows(c.env, caller, caller.projectId, table, { id: param(c, "id") });
@@ -529,35 +534,35 @@ operator.route("row-delete").delete(
 		return json({ deleted: true });
 	}),
 );
-operator.route("objects-list").get(
-	`${operatorPrefix}/buckets/:bucket/objects`,
+operator.route("objects-list", "storage").get(
+	operatorPath("storage", "/buckets/:bucket/objects"),
 	operator.handle("objects-list", async (c, caller) => {
 		const bucket = await requireBucket(c.env, caller.projectId, param(c, "bucket"));
 		return json(await listObjects(c.env, caller, bucket, searchParams(c)));
 	}),
 );
-operator.route("object-get").get(
-	`${operatorPrefix}/buckets/:bucket/objects/*`,
+operator.route("object-get", "storage").get(
+	operatorPath("storage", "/buckets/:bucket/objects/*"),
 	operator.handle("object-get", async (c, caller) => {
 		const bucket = await requireBucket(c.env, caller.projectId, param(c, "bucket"));
-		const path = wildcardPath(c, `${operatorPrefix}/buckets/${bucket.name}/objects/`);
+		const path = wildcardPath(c, `${operatorPath("storage", "/buckets")}/${bucket.name}/objects/`);
 		const object = await readableObject(c.env, caller, bucket, path);
 		return objectResponse(c.env, caller.projectId, object, c.req.raw, "private, no-store");
 	}),
 );
-operator.route("object-put").put(
-	`${operatorPrefix}/buckets/:bucket/objects/*`,
+operator.route("object-put", "storage").put(
+	operatorPath("storage", "/buckets/:bucket/objects/*"),
 	operator.handle("object-put", async (c, caller) => {
 		const bucket = await requireBucket(c.env, caller.projectId, param(c, "bucket"));
-		const path = wildcardPath(c, `${operatorPrefix}/buckets/${bucket.name}/objects/`);
+		const path = wildcardPath(c, `${operatorPath("storage", "/buckets")}/${bucket.name}/objects/`);
 		return json(await putObject(c.env, caller, bucket, path, c.req.raw, true), 201);
 	}),
 );
-operator.route("object-delete").delete(
-	`${operatorPrefix}/buckets/:bucket/objects/*`,
+operator.route("object-delete", "storage").delete(
+	operatorPath("storage", "/buckets/:bucket/objects/*"),
 	operator.handle("object-delete", async (c, caller) => {
 		const bucket = await requireBucket(c.env, caller.projectId, param(c, "bucket"));
-		const path = wildcardPath(c, `${operatorPrefix}/buckets/${bucket.name}/objects/`);
+		const path = wildcardPath(c, `${operatorPath("storage", "/buckets")}/${bucket.name}/objects/`);
 		return json({ deleted: true, item: await deleteObject(c.env, caller, bucket, path) });
 	}),
 );

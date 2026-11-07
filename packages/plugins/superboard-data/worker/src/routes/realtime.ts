@@ -8,12 +8,12 @@ import { DataError, isRecord, json, readJsonObject } from "../platform/http.js";
 import { publicOrigin, signToken, verifyToken } from "../platform/signing.js";
 import { IDENTITY_HEADER, type RealtimeIdentity } from "../realtime/hub.js";
 import { realtimeStub } from "../realtime/publish.js";
-import { DATA_PLUGIN_ID, action, deferralOf } from "./context.js";
+import { DATA_PLUGINS, action, deferralOf } from "./context.js";
 
 export const realtimeRoutes = registerRouter(new Hono<{ Bindings: DataEnv }>(), {
 	service: "files",
 	module: "realtime",
-	pluginId: DATA_PLUGIN_ID,
+	pluginId: DATA_PLUGINS.database,
 	surface: "internal",
 	access: "sdk-key",
 });

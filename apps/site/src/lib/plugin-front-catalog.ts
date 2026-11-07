@@ -19,7 +19,11 @@ import { nativeFrontPlugin as mcp } from "../../../../packages/plugins/superboar
 import { nativeFrontPlugin as observability } from "../../../../packages/plugins/superboard-core/src/front-observability.js";
 import { nativeFrontPlugin as settings } from "../../../../packages/plugins/superboard-core/src/front-settings.js";
 import { nativeFrontPlugin as content } from "../../../../packages/plugins/superboard-data/src/front-content.js";
+import { nativeFrontPlugin as database } from "../../../../packages/plugins/superboard-data/src/front-database.js";
 import { nativeFrontPlugin as files } from "../../../../packages/plugins/superboard-data/src/front-files.js";
+import { nativeFrontPlugin as functions } from "../../../../packages/plugins/superboard-data/src/front-functions.js";
+import { nativeFrontPlugin as storage } from "../../../../packages/plugins/superboard-data/src/front-storage.js";
+import { nativeFrontPlugin as vectors } from "../../../../packages/plugins/superboard-data/src/front-vectors.js";
 import { nativeFrontPlugin as billing } from "../../../../packages/plugins/superboard-monetization/src/front-billing.js";
 import { nativeFrontPlugin as products } from "../../../../packages/plugins/superboard-monetization/src/front-products.js";
 import { nativeFrontPlugin as support } from "../../../../packages/plugins/superboard-support/src/front-support.js";
@@ -46,6 +50,10 @@ export const parityFrontPluginCatalog = Object.freeze([
 	email,
 	dynamicLinks,
 	files,
+	database,
+	storage,
+	functions,
+	vectors,
 	paywalls,
 	onboardings,
 	observability,

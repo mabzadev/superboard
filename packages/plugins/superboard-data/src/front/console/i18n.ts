@@ -213,8 +213,9 @@ const en = {
 		noResult: "The query returned no rows.",
 	},
 	storage: {
-		title: "Storage",
-		description: "Buckets for application files, with access rules, size limits and file types.",
+		title: "Application buckets",
+		description:
+			"Buckets that your applications read and write through the SDK, with access rules, size limits and file types. Site media stays in Files and media.",
 		noBuckets: "No buckets yet. Create one to store files.",
 		backToBuckets: "Back to buckets",
 		createTitle: "Create a bucket",
@@ -375,7 +376,7 @@ const en = {
 		service: "Vector search",
 	},
 	api: {
-		title: "API and keys",
+		title: "Data settings",
 		description:
 			"Connect applications and servers to the database, storage, functions and vectors.",
 		overviewTab: "Overview",
@@ -652,9 +653,9 @@ const messages: { en: DataConsoleMessages; fr: DataConsoleMessages } = {
 			noResult: "La requête n’a renvoyé aucune ligne.",
 		},
 		storage: {
-			title: "Stockage",
+			title: "Buckets d’application",
 			description:
-				"Des buckets pour les fichiers des applications, avec règles d’accès, taille maximale et types de fichiers.",
+				"Les buckets que vos applications lisent et écrivent via le SDK, avec règles d’accès, taille maximale et types de fichiers. Les médias du site restent dans Fichiers et médias.",
 			noBuckets: "Aucun bucket. Créez-en un pour stocker des fichiers.",
 			backToBuckets: "Retour aux buckets",
 			createTitle: "Créer un bucket",
@@ -818,7 +819,7 @@ const messages: { en: DataConsoleMessages; fr: DataConsoleMessages } = {
 			service: "Recherche vectorielle",
 		},
 		api: {
-			title: "API et clés",
+			title: "Paramètres Data",
 			description:
 				"Connectez applications et serveurs à la base de données, au stockage, aux fonctions et aux vecteurs.",
 			overviewTab: "Vue d’ensemble",

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 
-import StoragePage from "../../../../../packages/plugins/superboard-data/src/front/files/data/StoragePage.js";
+import StoragePage from "../../../../../packages/plugins/superboard-data/src/front/storage/StoragePage.js";
 import {
 	FrontContextProvider,
 	type FrontContextValue,
@@ -23,12 +23,12 @@ const api = vi.hoisted(() => ({
 	PATCH: vi.fn(),
 	DELETE: vi.fn(),
 }));
-vi.mock("../../../../../packages/plugins/superboard-data/src/front/files/transport.js", () => api);
+vi.mock("../../../../../packages/plugins/superboard-data/src/front/storage/transport.js", () => api);
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "prod" } }),
 }));
 
-const base = "/api/v1/files/projects/prod/data";
+const base = "/api/v1/data/storage/projects/prod";
 const avatars = {
 	name: "avatars",
 	public: false,
@@ -61,13 +61,13 @@ function serve() {
 function renderIn(locale: "en" | "fr", ui: ReactNode) {
 	const value: FrontContextValue = {
 		instanceId: "1",
-		pluginId: "superboard-files",
+		pluginId: "superboard-storage",
 		path: "/data/storage",
 		parameters: {},
 		locale,
 		operator: null,
 		projectScope: null,
-		activePluginIds: ["superboard-files"],
+		activePluginIds: ["superboard-storage"],
 	};
 	return render(<FrontContextProvider value={value}>{ui}</FrontContextProvider>);
 }
@@ -88,7 +88,7 @@ afterEach(() => {
 it("lists the buckets with their limits in French", async () => {
 	serve();
 	renderIn("fr", <StoragePage />);
-	expect(await screen.findByRole("heading", { name: "Stockage" })).toBeVisible();
+	expect(await screen.findByRole("heading", { name: "Buckets d’application" })).toBeVisible();
 	const row = (await screen.findByRole("button", { name: "avatars" })).closest("tr");
 	if (!row) throw new Error("Bucket row missing");
 	expect(within(row).getByText("Privé")).toBeVisible();

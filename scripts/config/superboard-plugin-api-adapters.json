@@ -20,152 +20,156 @@
 			"id": "superboard-marketing.data_source.notifications"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_status"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_status"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_tables"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_tables"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_table"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_table"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_rows"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_rows"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_settings"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_settings"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_buckets"
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.data_source.data_buckets"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_bucket_objects"
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.data_source.data_bucket_objects"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_functions"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.data_source.data_functions"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_function"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.data_source.data_function"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_function_runs"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.data_source.data_function_runs"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_vector_collections"
+			"plugin_id": "superboard-vectors",
+			"id": "superboard-vectors.data_source.data_vector_collections"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_keys"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_keys"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.create_data_table"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.create_data_table"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_table"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.update_data_table"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_table"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.delete_data_table"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.add_data_column"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.add_data_column"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_column"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.update_data_column"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_column"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.delete_data_column"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.insert_data_row"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.insert_data_row"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_row"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.update_data_row"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_row"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.delete_data_row"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.run_data_sql"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.run_data_sql"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_settings"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.update_data_settings"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.create_data_bucket"
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.command.create_data_bucket"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_bucket"
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.command.update_data_bucket"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_bucket"
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.command.delete_data_bucket"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.deploy_data_function"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.deploy_data_function"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_function"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.delete_data_function"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.rollback_data_function"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.rollback_data_function"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.invoke_data_function"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.invoke_data_function"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.schedule_data_function"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.schedule_data_function"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.unschedule_data_function"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.unschedule_data_function"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.create_vector_collection"
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.data_source.data_function_status"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_vector_collection"
+			"plugin_id": "superboard-vectors",
+			"id": "superboard-vectors.command.create_vector_collection"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_vector_collection"
+			"plugin_id": "superboard-vectors",
+			"id": "superboard-vectors.command.update_vector_collection"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.create_service_key"
+			"plugin_id": "superboard-vectors",
+			"id": "superboard-vectors.command.delete_vector_collection"
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.revoke_service_key"
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.create_service_key"
+		},
+		{
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.revoke_service_key"
 		}
 	],
 	"adapters": [
@@ -2840,13 +2844,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_status",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_status",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:status",
+					"route_id": "api:data-database:operator-proxy->data:operator:status",
 					"parameters": [
 						"projectRef"
 					],
@@ -2860,13 +2864,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_tables",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_tables",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:tables-list",
+					"route_id": "api:data-database:operator-proxy->data:operator:tables-list",
 					"parameters": [
 						"projectRef"
 					],
@@ -2880,13 +2884,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_table",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_table",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:table-get",
+					"route_id": "api:data-database:operator-proxy->data:operator:table-get",
 					"parameters": [
 						"projectRef",
 						"table"
@@ -2901,13 +2905,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_rows",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_rows",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:rows-list",
+					"route_id": "api:data-database:operator-proxy->data:operator:rows-list",
 					"parameters": [
 						"projectRef",
 						"table"
@@ -2922,13 +2926,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_settings",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_settings",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:settings-get",
+					"route_id": "api:data-database:operator-proxy->data:operator:settings-get",
 					"parameters": [
 						"projectRef"
 					],
@@ -2942,13 +2946,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_buckets",
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.data_source.data_buckets",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:buckets-list",
+					"route_id": "api:data-storage:operator-proxy->data:operator:buckets-list",
 					"parameters": [
 						"projectRef"
 					],
@@ -2962,13 +2966,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_bucket_objects",
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.data_source.data_bucket_objects",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:objects-list",
+					"route_id": "api:data-storage:operator-proxy->data:operator:objects-list",
 					"parameters": [
 						"projectRef",
 						"bucket"
@@ -2983,13 +2987,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_functions",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.data_source.data_functions",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:functions-list",
+					"route_id": "api:data-functions:operator-proxy->data:operator:functions-list",
 					"parameters": [
 						"projectRef"
 					],
@@ -3003,13 +3007,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_function",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.data_source.data_function",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:function-get",
+					"route_id": "api:data-functions:operator-proxy->data:operator:function-get",
 					"parameters": [
 						"projectRef",
 						"name"
@@ -3024,13 +3028,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_function_runs",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.data_source.data_function_runs",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:function-runs",
+					"route_id": "api:data-functions:operator-proxy->data:operator:function-runs",
 					"parameters": [
 						"projectRef",
 						"name"
@@ -3045,13 +3049,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_vector_collections",
+			"plugin_id": "superboard-vectors",
+			"id": "superboard-vectors.data_source.data_vector_collections",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:vector-collections-list",
+					"route_id": "api:data-vectors:operator-proxy->data:operator:vector-collections-list",
 					"parameters": [
 						"projectRef"
 					],
@@ -3065,13 +3069,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.data_source.data_keys",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.data_source.data_keys",
 			"kind": "data_source",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:keys-list",
+					"route_id": "api:data-database:operator-proxy->data:operator:keys-list",
 					"parameters": [
 						"projectRef"
 					],
@@ -3085,13 +3089,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.create_data_table",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.create_data_table",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:tables-create",
+					"route_id": "api:data-database:operator-proxy->data:operator:tables-create",
 					"parameters": [
 						"projectRef"
 					],
@@ -3105,13 +3109,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_table",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.update_data_table",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:table-update",
+					"route_id": "api:data-database:operator-proxy->data:operator:table-update",
 					"parameters": [
 						"projectRef",
 						"table"
@@ -3126,13 +3130,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_table",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.delete_data_table",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:table-delete",
+					"route_id": "api:data-database:operator-proxy->data:operator:table-delete",
 					"parameters": [
 						"projectRef",
 						"table"
@@ -3147,13 +3151,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.add_data_column",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.add_data_column",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:column-add",
+					"route_id": "api:data-database:operator-proxy->data:operator:column-add",
 					"parameters": [
 						"projectRef",
 						"table"
@@ -3168,13 +3172,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_column",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.update_data_column",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:column-update",
+					"route_id": "api:data-database:operator-proxy->data:operator:column-update",
 					"parameters": [
 						"projectRef",
 						"table",
@@ -3190,13 +3194,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_column",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.delete_data_column",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:column-delete",
+					"route_id": "api:data-database:operator-proxy->data:operator:column-delete",
 					"parameters": [
 						"projectRef",
 						"table",
@@ -3212,13 +3216,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.insert_data_row",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.insert_data_row",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:rows-insert",
+					"route_id": "api:data-database:operator-proxy->data:operator:rows-insert",
 					"parameters": [
 						"projectRef",
 						"table"
@@ -3233,13 +3237,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_row",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.update_data_row",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:row-update",
+					"route_id": "api:data-database:operator-proxy->data:operator:row-update",
 					"parameters": [
 						"projectRef",
 						"table",
@@ -3255,13 +3259,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_row",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.delete_data_row",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:row-delete",
+					"route_id": "api:data-database:operator-proxy->data:operator:row-delete",
 					"parameters": [
 						"projectRef",
 						"table",
@@ -3277,13 +3281,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.run_data_sql",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.run_data_sql",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:sql",
+					"route_id": "api:data-database:operator-proxy->data:operator:sql",
 					"parameters": [
 						"projectRef"
 					],
@@ -3297,13 +3301,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_settings",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.update_data_settings",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:settings-update",
+					"route_id": "api:data-database:operator-proxy->data:operator:settings-update",
 					"parameters": [
 						"projectRef"
 					],
@@ -3317,13 +3321,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.create_data_bucket",
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.command.create_data_bucket",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:buckets-create",
+					"route_id": "api:data-storage:operator-proxy->data:operator:buckets-create",
 					"parameters": [
 						"projectRef"
 					],
@@ -3337,13 +3341,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_data_bucket",
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.command.update_data_bucket",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:bucket-update",
+					"route_id": "api:data-storage:operator-proxy->data:operator:bucket-update",
 					"parameters": [
 						"projectRef",
 						"bucket"
@@ -3358,13 +3362,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_bucket",
+			"plugin_id": "superboard-storage",
+			"id": "superboard-storage.command.delete_data_bucket",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:bucket-delete",
+					"route_id": "api:data-storage:operator-proxy->data:operator:bucket-delete",
 					"parameters": [
 						"projectRef",
 						"bucket"
@@ -3379,13 +3383,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.deploy_data_function",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.deploy_data_function",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:function-deploy",
+					"route_id": "api:data-functions:operator-proxy->data:operator:function-deploy",
 					"parameters": [
 						"projectRef",
 						"name"
@@ -3400,13 +3404,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_data_function",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.delete_data_function",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:function-delete",
+					"route_id": "api:data-functions:operator-proxy->data:operator:function-delete",
 					"parameters": [
 						"projectRef",
 						"name"
@@ -3421,13 +3425,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.rollback_data_function",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.rollback_data_function",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:function-rollback",
+					"route_id": "api:data-functions:operator-proxy->data:operator:function-rollback",
 					"parameters": [
 						"projectRef",
 						"name"
@@ -3442,13 +3446,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.invoke_data_function",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.invoke_data_function",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:function-invoke",
+					"route_id": "api:data-functions:operator-proxy->data:operator:function-invoke",
 					"parameters": [
 						"projectRef",
 						"name"
@@ -3463,13 +3467,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.schedule_data_function",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.schedule_data_function",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:function-schedule-set",
+					"route_id": "api:data-functions:operator-proxy->data:operator:function-schedule-set",
 					"parameters": [
 						"projectRef",
 						"name"
@@ -3484,13 +3488,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.unschedule_data_function",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.command.unschedule_data_function",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:function-schedule-delete",
+					"route_id": "api:data-functions:operator-proxy->data:operator:function-schedule-delete",
 					"parameters": [
 						"projectRef",
 						"name"
@@ -3505,13 +3509,33 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.create_vector_collection",
+			"plugin_id": "superboard-functions",
+			"id": "superboard-functions.data_source.data_function_status",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"route_id": "api:data-functions:operator-proxy->data:operator:functions-status",
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none"
+				}
+			]
+		},
+		{
+			"plugin_id": "superboard-vectors",
+			"id": "superboard-vectors.command.create_vector_collection",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:vector-collections-create",
+					"route_id": "api:data-vectors:operator-proxy->data:operator:vector-collections-create",
 					"parameters": [
 						"projectRef"
 					],
@@ -3525,13 +3549,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.update_vector_collection",
+			"plugin_id": "superboard-vectors",
+			"id": "superboard-vectors.command.update_vector_collection",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:vector-collection-update",
+					"route_id": "api:data-vectors:operator-proxy->data:operator:vector-collection-update",
 					"parameters": [
 						"projectRef",
 						"collection"
@@ -3546,13 +3570,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.delete_vector_collection",
+			"plugin_id": "superboard-vectors",
+			"id": "superboard-vectors.command.delete_vector_collection",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:vector-collection-delete",
+					"route_id": "api:data-vectors:operator-proxy->data:operator:vector-collection-delete",
 					"parameters": [
 						"projectRef",
 						"collection"
@@ -3567,13 +3591,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.create_service_key",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.create_service_key",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:keys-create",
+					"route_id": "api:data-database:operator-proxy->data:operator:keys-create",
 					"parameters": [
 						"projectRef"
 					],
@@ -3587,13 +3611,13 @@
 			]
 		},
 		{
-			"plugin_id": "superboard-files",
-			"id": "superboard-files.command.revoke_service_key",
+			"plugin_id": "superboard-database",
+			"id": "superboard-database.command.revoke_service_key",
 			"kind": "command",
 			"status": "verified",
 			"operations": [
 				{
-					"route_id": "api:files:operator-proxy->data:operator:key-revoke",
+					"route_id": "api:data-database:operator-proxy->data:operator:key-revoke",
 					"parameters": [
 						"projectRef",
 						"id"

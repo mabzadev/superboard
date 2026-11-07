@@ -5,15 +5,15 @@ import type { Env } from "../types.js";
 import { resolveSdkProjectContext } from "./domain-modules.js";
 
 export const DATA_FAMILIES = [
-	"db",
-	"storage",
-	"realtime",
-	"functions",
-	"vectors",
-	"ai",
-	"manage",
+	["db", "superboard-database"],
+	["storage", "superboard-storage"],
+	["realtime", "superboard-database"],
+	["functions", "superboard-functions"],
+	["vectors", "superboard-vectors"],
+	["ai", "superboard-vectors"],
+	["manage", "superboard-database"],
 ] as const;
-type DataFamily = (typeof DATA_FAMILIES)[number];
+type DataFamily = (typeof DATA_FAMILIES)[number][0];
 
 const FORWARDED_HEADERS = [
 	"authorization",

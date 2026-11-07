@@ -11,6 +11,7 @@ import {
 	assertRouteCoverage,
 	routeManifest,
 	dispatchRegisteredRoute,
+	projectDestinationRoute,
 } from "../../../../../../../packages/contracts/src/route-registry.js";
 import api from "../../../../../../../packages/plugins/superboard-core/api/src/index.js";
 import { sqliteD1 } from "../../helpers/sqlite-d1.js";
@@ -398,6 +399,30 @@ test("the Files bridge remains owned by Files when executed by the API service",
 			access: "operator",
 		}),
 	);
+});
+
+test("each Data brique reaches only the operator routes of its own component", async () => {
+	const { app: apiRouter } =
+		await import("../../../../../../../packages/plugins/superboard-core/api/src/index.js");
+	const { default: dataWorker } =
+		await import("../../../../../../../packages/plugins/superboard-data/worker/src/index.js");
+	const targets = registeredRoutes(dataWorker);
+	const reached = new Map<string, Set<string>>();
+	for (const proxy of registeredRoutes(apiRouter).filter(
+		(route) => route.routeId === "api:files:operator-proxy" || route.routeId.startsWith("api:data-"),
+	))
+		for (const projected of targets.flatMap((target) => projectDestinationRoute(proxy, target) ?? []))
+			reached.set(
+				proxy.routeId,
+				new Set([...(reached.get(proxy.routeId) ?? []), projected.pluginId]),
+			);
+	expect(Object.fromEntries([...reached].map(([id, owners]) => [id, [...owners]]))).toEqual({
+		"api:files:operator-proxy": ["superboard-files"],
+		"api:data-database:operator-proxy": ["superboard-database"],
+		"api:data-storage:operator-proxy": ["superboard-storage"],
+		"api:data-functions:operator-proxy": ["superboard-functions"],
+		"api:data-vectors:operator-proxy": ["superboard-vectors"],
+	});
 });
 
 test("nested router changes after mounting fail coverage instead of silently disappearing", () => {

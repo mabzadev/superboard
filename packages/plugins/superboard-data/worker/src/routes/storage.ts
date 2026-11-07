@@ -29,7 +29,7 @@ import {
 	uploadStatus,
 } from "../storage/objects.js";
 import {
-	DATA_PLUGIN_ID,
+	DATA_PLUGINS,
 	action,
 	deferralOf,
 	searchParams,
@@ -41,7 +41,7 @@ import {
 export const storageRoutes = registerRouter(new Hono<{ Bindings: DataEnv }>(), {
 	service: "files",
 	module: "storage",
-	pluginId: DATA_PLUGIN_ID,
+	pluginId: DATA_PLUGINS.storage,
 	surface: "internal",
 	access: "sdk-key",
 });

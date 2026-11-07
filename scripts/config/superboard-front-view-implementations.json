@@ -562,39 +562,39 @@
 			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.system_files.tsx"
 		},
 		{
-			"plugin_id": "superboard-files",
+			"plugin_id": "superboard-database",
 			"route_id": "superboard.data_database",
 			"path": "/data/database",
 			"status": "registered",
-			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_database.tsx"
+			"module": "packages/plugins/superboard-data/src/front/database/views/superboard.data_database.tsx"
 		},
 		{
-			"plugin_id": "superboard-files",
+			"plugin_id": "superboard-storage",
 			"route_id": "superboard.data_storage",
 			"path": "/data/storage",
 			"status": "registered",
-			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_storage.tsx"
+			"module": "packages/plugins/superboard-data/src/front/storage/views/superboard.data_storage.tsx"
 		},
 		{
-			"plugin_id": "superboard-files",
+			"plugin_id": "superboard-functions",
 			"route_id": "superboard.data_functions",
 			"path": "/data/functions",
 			"status": "registered",
-			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_functions.tsx"
+			"module": "packages/plugins/superboard-data/src/front/functions/views/superboard.data_functions.tsx"
 		},
 		{
-			"plugin_id": "superboard-files",
+			"plugin_id": "superboard-vectors",
 			"route_id": "superboard.data_vectors",
 			"path": "/data/vectors",
 			"status": "registered",
-			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_vectors.tsx"
+			"module": "packages/plugins/superboard-data/src/front/vectors/views/superboard.data_vectors.tsx"
 		},
 		{
-			"plugin_id": "superboard-files",
+			"plugin_id": "superboard-database",
 			"route_id": "superboard.data_api",
 			"path": "/data/api",
 			"status": "registered",
-			"module": "packages/plugins/superboard-data/src/front/files/views/superboard.data_api.tsx"
+			"module": "packages/plugins/superboard-data/src/front/database/views/superboard.data_api.tsx"
 		},
 		{
 			"plugin_id": "superboard-flows",

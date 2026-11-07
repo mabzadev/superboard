@@ -65,6 +65,7 @@ const communicationRoots = new Set(["/communication/campaigns", "/communication/
 
 const pendingLabel = "superboard-front-menu:initializing";
 const cssClassSeparator = /\s+/u;
+const menuQuerySeparator = /[?#]/u;
 
 export async function ensureNativeFrontMenus(
 	db: Parameters<typeof applySeed>[0],
@@ -591,32 +592,28 @@ export async function ensureNativeFrontMenus(
 			);
 			if (dataParent) {
 				const fr = locale === "fr";
-				const entries = [
+				const dataEntries = [
+					["/data/content", null],
 					["/data/database", fr ? "Base de données" : "Database"],
-					["/data/storage", fr ? "Stockage" : "Storage"],
+					["/data/storage", fr ? "Buckets d’application" : "Application buckets"],
+					["/data/files", null],
 					["/data/functions", fr ? "Fonctions" : "Functions"],
 					["/data/vectors", fr ? "Vecteurs" : "Vectors"],
-					["/data/api", fr ? "API et clés" : "API and keys"],
 				] as const;
-				let sortOrder =
-					Math.max(
-						-1,
-						...items
-							.filter((item) => item.parentId === dataParent.id)
-							.map((item) => item.sortOrder),
-					) + 1;
-				for (const [customUrl, label] of entries) {
-					if (items.some((item) => canonicalFrontHref(item.customUrl ?? "") === customUrl))
-						continue;
-					await repository.createItem(menu.id, locale, {
-						type: "custom",
-						label,
-						customUrl,
-						parentId: dataParent.id,
-						sortOrder,
-					});
-					sortOrder += 1;
-				}
+				await placeMenuEntries(
+					repository,
+					menu.id,
+					locale,
+					dataParent.id,
+					settingsGroup
+						? dataEntries
+						: [...dataEntries, ["/data/api", fr ? "Paramètres Data" : "Data settings"]],
+				);
+				if (settingsGroup)
+					await placeMenuEntries(repository, menu.id, locale, settingsGroup.id, [
+						["/auth/settings", null],
+						["/data/api", "Data"],
+					]);
 			}
 			const monetizationParent = items.find(
 				(i) => i.customUrl === "/monetization/customers" && i.parentId === null,
@@ -636,6 +633,51 @@ export async function ensureNativeFrontMenus(
 				});
 			}
 		}
+	}
+}
+
+function menuPath(href: string | null): string {
+	return canonicalFrontHref(href ?? "").split(menuQuerySeparator, 1)[0] ?? "";
+}
+
+async function placeMenuEntries(
+	repository: MenuRepository,
+	menuId: string,
+	locale: string,
+	parentId: string,
+	entries: readonly (readonly [path: string, label: string | null])[],
+) {
+	const items = await repository.findItems(menuId);
+	const order: (MenuItem | { path: string; label: string })[] = items
+		.filter((item) => item.parentId === parentId)
+		.toSorted((left, right) => left.sortOrder - right.sortOrder);
+	let anchor = -1;
+	let changed = false;
+	for (const [path, label] of entries) {
+		const index = order.findIndex((entry) =>
+			"id" in entry ? menuPath(entry.customUrl) === path : entry.path === path,
+		);
+		if (index >= 0) {
+			anchor = index;
+			continue;
+		}
+		if (label === null || items.some((item) => menuPath(item.customUrl) === path)) continue;
+		anchor += 1;
+		order.splice(anchor, 0, { path, label });
+		changed = true;
+	}
+	if (!changed) return;
+	for (const [sortOrder, entry] of order.entries()) {
+		if (!("id" in entry))
+			await repository.createItem(menuId, locale, {
+				type: "custom",
+				label: entry.label,
+				customUrl: entry.path,
+				parentId,
+				sortOrder,
+			});
+		else if (entry.sortOrder !== sortOrder)
+			await repository.updateItem(menuId, entry.id, { sortOrder });
 	}
 }
 

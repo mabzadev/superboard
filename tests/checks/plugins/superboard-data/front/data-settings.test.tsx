@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 
-import ApiPage from "../../../../../packages/plugins/superboard-data/src/front/files/data/ApiPage.js";
-import VectorsPage from "../../../../../packages/plugins/superboard-data/src/front/files/data/VectorsPage.js";
+import DataSettingsPage from "../../../../../packages/plugins/superboard-data/src/front/database/SettingsPage.js";
 import {
 	FrontContextProvider,
 	type FrontContextValue,
@@ -23,12 +22,12 @@ const api = vi.hoisted(() => ({
 	PATCH: vi.fn(),
 	DELETE: vi.fn(),
 }));
-vi.mock("../../../../../packages/plugins/superboard-data/src/front/files/transport.js", () => api);
+vi.mock("../../../../../packages/plugins/superboard-data/src/front/database/transport.js", () => api);
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "prod" } }),
 }));
 
-const base = "/api/v1/files/projects/prod/data";
+const base = "/api/v1/data/database/projects/prod";
 const key = {
 	id: "key-1",
 	name: "Backend",
@@ -62,21 +61,6 @@ function serve({ realtime = true, vectors = false } = {}) {
 			return {
 				data: { items: [key, { ...key, id: "key-0", name: "Old", revoked_at: key.created_at }] },
 			};
-		if (route === `${base}/vector-collections`)
-			return {
-				data: {
-					available: vectors,
-					items: [
-						{
-							name: "docs",
-							rules: { read: "public", write: "service" },
-							item_count: 7,
-							created_at: key.created_at,
-							updated_at: key.created_at,
-						},
-					],
-				},
-			};
 		throw new Error(`Unexpected GET ${path}`);
 	});
 }
@@ -84,13 +68,13 @@ function serve({ realtime = true, vectors = false } = {}) {
 function renderIn(locale: "en" | "fr", ui: ReactNode, sdk = "https://sdk.example.test") {
 	const value: FrontContextValue = {
 		instanceId: "1",
-		pluginId: "superboard-files",
+		pluginId: "superboard-database",
 		path: "/data/api",
 		parameters: {},
 		locale,
 		operator: null,
 		projectScope: null,
-		activePluginIds: ["superboard-files"],
+		activePluginIds: ["superboard-database"],
 		publicEndpoints: { sdk },
 	};
 	return render(<FrontContextProvider value={value}>{ui}</FrontContextProvider>);
@@ -111,8 +95,8 @@ afterEach(() => {
 
 it("shows every feature with its state and the public API address in French", async () => {
 	serve();
-	renderIn("fr", <ApiPage />);
-	expect(await screen.findByRole("heading", { name: "API et clés" })).toBeVisible();
+	renderIn("fr", <DataSettingsPage />);
+	expect(await screen.findByRole("heading", { name: "Paramètres Data" })).toBeVisible();
 	const secrets = (await screen.findByText("Secrets des fonctions")).closest("div");
 	if (!secrets) throw new Error("Feature row missing");
 	expect(within(secrets).getByText("Secret manquant")).toBeVisible();
@@ -126,7 +110,7 @@ it("shows every feature with its state and the public API address in French", as
 it("saves the anonymous realtime switch automatically", async () => {
 	serve();
 	api.PATCH.mockResolvedValue({ data: { realtime_anonymous: true } });
-	renderIn("en", <ApiPage />);
+	renderIn("en", <DataSettingsPage />);
 	fireEvent.click(
 		await screen.findByRole("switch", {
 			name: "Let visitors join realtime channels without signing in",
@@ -143,7 +127,7 @@ it("saves the anonymous realtime switch automatically", async () => {
 
 it("hides the anonymous realtime switch when realtime is unavailable", async () => {
 	serve({ realtime: false });
-	renderIn("en", <ApiPage />);
+	renderIn("en", <DataSettingsPage />);
 	const realtime = (await screen.findByText("Realtime")).closest("div");
 	if (!realtime) throw new Error("Feature row missing");
 	expect(within(realtime).getByText("Unavailable")).toBeVisible();
@@ -154,7 +138,7 @@ it("shows a new server key once, with a warning, and forgets it when dismissed",
 	window.history.replaceState(null, "", "/data/api?tab=keys");
 	serve();
 	api.POST.mockResolvedValue({ data: { key: { ...key, id: "key-2", name: "Worker" }, secret } });
-	renderIn("en", <ApiPage />);
+	renderIn("en", <DataSettingsPage />);
 	expect(await screen.findByText("Revoked")).toBeVisible();
 	expect(screen.queryByDisplayValue(secret)).not.toBeInTheDocument();
 	fireEvent.change(screen.getByLabelText("Key name"), { target: { value: "Worker" } });
@@ -174,7 +158,7 @@ it("asks for confirmation before revoking a server key", async () => {
 	window.history.replaceState(null, "", "/data/api?tab=keys");
 	serve();
 	api.DELETE.mockResolvedValue({ data: { revoked: true } });
-	renderIn("en", <ApiPage />);
+	renderIn("en", <DataSettingsPage />);
 	fireEvent.click(await screen.findByRole("button", { name: "Revoke the key Backend" }));
 	expect(api.DELETE).not.toHaveBeenCalled();
 	const dialog = screen.getByRole("alertdialog", { name: "Revoke the key Backend" });
@@ -188,7 +172,7 @@ it("asks for confirmation before revoking a server key", async () => {
 it("gives the OpenAPI address and a CLI snippet in the Advanced tab", async () => {
 	window.history.replaceState(null, "", "/data/api?tab=advanced");
 	serve();
-	renderIn("en", <ApiPage />);
+	renderIn("en", <DataSettingsPage />);
 	expect(await screen.findByText("https://sdk.example.test/v1/data/openapi.json")).toBeVisible();
 	expect(
 		screen.getByText(
@@ -201,50 +185,9 @@ it("gives the OpenAPI address and a CLI snippet in the Advanced tab", async () =
 it("marks the API address as incomplete when no SDK domain is configured", async () => {
 	window.history.replaceState(null, "", "/data/api?tab=advanced");
 	serve();
-	renderIn("fr", <ApiPage />, "");
+	renderIn("fr", <DataSettingsPage />, "");
 	expect(
 		await screen.findByText("Le domaine SDK n’est pas configuré pour cet environnement."),
 	).toBeVisible();
 	expect(screen.getByText("À compléter")).toBeVisible();
-});
-
-it("explains that vectors are unavailable and still lists the collections", async () => {
-	serve({ vectors: false });
-	renderIn("fr", <VectorsPage />);
-	expect(await screen.findByText(/Les vecteurs ne sont pas disponibles/u)).toBeVisible();
-	expect(screen.getByText("Indisponible")).toBeVisible();
-	expect(screen.getByText("docs")).toBeVisible();
-	expect(screen.getByText("7 éléments")).toBeVisible();
-});
-
-it("creates a vector collection with its rules", async () => {
-	serve({ vectors: true });
-	api.POST.mockResolvedValue({ data: { name: "faq", rules: { read: "owner", write: "owner" } } });
-	renderIn("en", <VectorsPage />);
-	expect(await screen.findByText("Enabled")).toBeVisible();
-	fireEvent.change(screen.getByLabelText("Collection name"), { target: { value: "faq" } });
-	fireEvent.click(screen.getByRole("button", { name: "Create the collection" }));
-	await waitFor(() => {
-		expect(api.POST).toHaveBeenCalledWith(`${base}/vector-collections`, {
-			name: "faq",
-			rules: { read: "owner", write: "owner" },
-		});
-	});
-});
-
-it("deletes a vector collection only after its name is typed", async () => {
-	serve({ vectors: true });
-	api.DELETE.mockResolvedValue({ data: { deleted: true } });
-	renderIn("en", <VectorsPage />);
-	fireEvent.click(await screen.findByRole("button", { name: "Delete the collection docs" }));
-	const dialog = screen.getByRole("alertdialog");
-	const confirm = within(dialog).getByRole("button", { name: "Delete" });
-	expect(confirm).toBeDisabled();
-	fireEvent.change(within(dialog).getByLabelText("Type docs to confirm."), {
-		target: { value: "docs" },
-	});
-	fireEvent.click(confirm);
-	await waitFor(() => {
-		expect(api.DELETE).toHaveBeenCalledWith(`${base}/vector-collections/docs?confirm=docs`);
-	});
 });

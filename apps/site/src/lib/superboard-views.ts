@@ -7,7 +7,7 @@ import { nativeFrontPluginCatalog } from "./native-front-plugins.js";
 import { retiredFrontPageDestination } from "./retired-front-pages.js";
 
 const VIEWS_BOOTSTRAP_KEY = Symbol.for("superboard:views-bootstrap");
-const VIEWS_BOOTSTRAP_VERSION = "10.6.0";
+const VIEWS_BOOTSTRAP_VERSION = "10.7.0";
 const seed = readSeedFile(seedJson);
 
 interface ViewsBootstrapState {

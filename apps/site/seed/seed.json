@@ -110,18 +110,18 @@
 						},
 						{
 							"type": "custom",
-							"label": "Files and media",
-							"url": "/data/files"
-						},
-						{
-							"type": "custom",
 							"label": "Database",
 							"url": "/data/database"
 						},
 						{
 							"type": "custom",
-							"label": "Storage",
+							"label": "Application buckets",
 							"url": "/data/storage"
+						},
+						{
+							"type": "custom",
+							"label": "Files and media",
+							"url": "/data/files"
 						},
 						{
 							"type": "custom",
@@ -132,11 +132,6 @@
 							"type": "custom",
 							"label": "Vectors",
 							"url": "/data/vectors"
-						},
-						{
-							"type": "custom",
-							"label": "API and keys",
-							"url": "/data/api"
 						}
 					]
 				},
@@ -283,6 +278,11 @@
 						},
 						{
 							"type": "custom",
+							"label": "Data",
+							"url": "/data/api"
+						},
+						{
+							"type": "custom",
 							"label": "Monetization",
 							"url": "/monetization/settings"
 						},
@@ -380,18 +380,18 @@
 						},
 						{
 							"type": "custom",
-							"label": "Fichiers et médias",
-							"url": "/data/files"
-						},
-						{
-							"type": "custom",
 							"label": "Base de données",
 							"url": "/data/database"
 						},
 						{
 							"type": "custom",
-							"label": "Stockage",
+							"label": "Buckets d’application",
 							"url": "/data/storage"
+						},
+						{
+							"type": "custom",
+							"label": "Fichiers et médias",
+							"url": "/data/files"
 						},
 						{
 							"type": "custom",
@@ -402,11 +402,6 @@
 							"type": "custom",
 							"label": "Vecteurs",
 							"url": "/data/vectors"
-						},
-						{
-							"type": "custom",
-							"label": "API et clés",
-							"url": "/data/api"
 						}
 					]
 				},
@@ -550,6 +545,11 @@
 							"type": "custom",
 							"label": "Authentification",
 							"url": "/auth/settings?lang=fr"
+						},
+						{
+							"type": "custom",
+							"label": "Data",
+							"url": "/data/api"
 						},
 						{
 							"type": "custom",

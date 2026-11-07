@@ -19,7 +19,7 @@ describe("Application database", () => {
 	});
 
 	it("creates typed tables with owner-only rules by default", async () => {
-		const response = await operator("/tables/todos");
+		const response = await operator("database", "/tables/todos");
 		expect(response.status).toBe(200);
 		const table = await jsonOf<{
 			rules: Record<string, string>;
@@ -37,7 +37,7 @@ describe("Application database", () => {
 			["priority", "integer"],
 			["meta", "json"],
 		]);
-		const duplicate = await operator("/tables", { method: "POST", body: { name: "todos" } });
+		const duplicate = await operator("database", "/tables", { method: "POST", body: { name: "todos" } });
 		expect(duplicate.status).toBe(409);
 	});
 
@@ -204,12 +204,12 @@ describe("Application database", () => {
 		const tables = await service("/v1/manage/tables", secret);
 		expect(tables.status).toBe(200);
 		const keys = await jsonOf<{ items: { id: string; name: string; hint: string }[] }>(
-			await operator("/keys"),
+			await operator("database", "/keys"),
 		);
 		const key = keys.items.find((item) => item.name === "ci")!;
 		expect(key.hint.startsWith("sb_secret_")).toBe(true);
 		expect(JSON.stringify(keys)).not.toContain(secret);
-		expect((await operator(`/keys/${key.id}`, { method: "DELETE" })).status).toBe(200);
+		expect((await operator("database", `/keys/${key.id}`, { method: "DELETE" })).status).toBe(200);
 		const revoked = await service("/v1/manage/tables", secret);
 		expect(revoked.status).toBe(401);
 		const forged = await publicRequest("/v1/manage/tables", {
@@ -265,33 +265,33 @@ describe("Application database", () => {
 
 	it("adds, alters and removes columns on a table with rows", async () => {
 		await sdk("/v1/db/todos", { method: "POST", user: "gina", body: { title: "Existing" } });
-		const required = await operator("/tables/todos/columns", {
+		const required = await operator("database", "/tables/todos/columns", {
 			method: "POST",
 			body: { name: "category", type: "text", nullable: false },
 		});
 		expect(await jsonOf(required)).toMatchObject({ error: { code: "column_default_required" } });
-		const added = await operator("/tables/todos/columns", {
+		const added = await operator("database", "/tables/todos/columns", {
 			method: "POST",
 			body: { name: "category", type: "text", nullable: false, default: "general" },
 		});
 		expect(added.status).toBe(201);
 		const rows = await jsonOf<Page>(await sdk("/v1/db/todos?title=eq.Existing", { user: "gina" }));
 		expect(rows.items[0]).toMatchObject({ category: "general" });
-		const indexed = await operator("/tables/todos/columns/category", {
+		const indexed = await operator("database", "/tables/todos/columns/category", {
 			method: "PATCH",
 			body: { indexed: true },
 		});
 		expect(indexed.status).toBe(200);
-		const unconfirmed = await operator("/tables/todos/columns/category", { method: "DELETE" });
+		const unconfirmed = await operator("database", "/tables/todos/columns/category", { method: "DELETE" });
 		expect(await jsonOf(unconfirmed)).toMatchObject({ error: { code: "confirmation_required" } });
-		const removed = await operator("/tables/todos/columns/category?confirm=category", {
+		const removed = await operator("database", "/tables/todos/columns/category?confirm=category", {
 			method: "DELETE",
 		});
 		expect(removed.status).toBe(200);
 	});
 
 	it("runs read-only SQL limited to the project tables", async () => {
-		const result = await operator("/sql", {
+		const result = await operator("database", "/sql", {
 			method: "POST",
 			body: {
 				query: "SELECT title FROM adb_12_todos WHERE owner_id = 'carol' ORDER BY title LIMIT 2",
@@ -309,7 +309,7 @@ describe("Application database", () => {
 			["SELECT 1; SELECT 2", "sql_single_statement"],
 		])
 			expect(
-				await jsonOf(await operator("/sql", { method: "POST", body: { query } })),
+				await jsonOf(await operator("database", "/sql", { method: "POST", body: { query } })),
 			).toMatchObject({
 				error: { code },
 			});

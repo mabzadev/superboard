@@ -28,7 +28,7 @@ describe("Application storage", () => {
 			{ name: "avatars", allowed_types: ["image/*"], max_bytes: 1_000_000 },
 			{ name: "assets", public: true, rules: { write: "authenticated" } },
 		]) {
-			const response = await operator("/buckets", { method: "POST", body: bucket });
+			const response = await operator("storage", "/buckets", { method: "POST", body: bucket });
 			expect(response.status).toBe(201);
 		}
 	});
@@ -179,7 +179,7 @@ describe("Application storage", () => {
 	});
 
 	it("deletes objects and keeps non-empty buckets", async () => {
-		expect((await operator("/buckets/assets?confirm=assets", { method: "DELETE" })).status).toBe(
+		expect((await operator("storage", "/buckets/assets?confirm=assets", { method: "DELETE" })).status).toBe(
 			409,
 		);
 		expect(
